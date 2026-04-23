@@ -12,19 +12,18 @@
 ## 1. Matriz de Avaliação de Valor - Oceano Azul (Peso 2,5)
 
 &emsp; A Estratégia do Oceano Azul, desenvolvida por W. Chan Kim e Renée Mauborgne [1], parte da premissa de que o crescimento competitivo mais relevante não vem da disputa por participação em mercados saturados (oceanos vermelhos), mas da criação de espaços de mercado inexplorados onde a concorrência torna-se irrelevante. Para operacionalizar essa lógica, os autores propõem a Matriz de Avaliação de Valor (Strategy Canvas), ferramenta que permite mapear visualmente como diferentes soluções se posicionam em relação a um conjunto de atributos relevantes para o cliente, revelando eixos de diferenciação.
-No contexto deste projeto, a aplicação da matriz serve a dois propósitos complementares: primeiro, mapear o posicionamento relativo da solução proposta frente às alternativas hoje disponíveis no mercado brasileiro para definição de limites pré-aprovados de crédito; segundo, identificar onde a proposta gera valor diferenciado o suficiente para justificar sua adoção pelo Banco PAN em um setor no qual a concorrência por clientes de cartão é intensa. A análise se organiza em torno de oito atributos estratégicos selecionados pela equipe e comparados entre três abordagens representativas do espectro competitivo.
+No contexto deste projeto, a aplicação da matriz serve a dois propósitos complementares: primeiro, mapear o posicionamento relativo da solução proposta frente às alternativas hoje disponíveis no mercado brasileiro para definição de limites pré-aprovados de crédito; segundo, identificar onde a proposta gera valor diferenciado o suficiente para justificar sua adoção pelo Banco PAN em um setor no qual a concorrência por clientes de cartão é intensa. A análise se organiza em torno de oito atributos estratégicos selecionados pela equipe e comparados entre três abordagens representativas do espectro competitivo.a
 
-### 1.1 Quem está sendo comparado
+### 1.1 Abordagens Comparadas
 
-*O roteiro da Profa. Natália pede comparar **abordagens**, não bancos concorrentes. Ex: prática tradicional, solução baseada em regras, solução do grupo.*
+A comparação envolve três abordagens distintas que representam o espectro real de soluções adotadas no mercado para definição de limites de crédito pré-aprovado. A escolha deliberada desse trio — em vez de comparar apenas prática tradicional versus solução proposta — permite mostrar que a diferenciação da proposta não se resume a "ser mais moderna", mas a ocupar um ponto ótimo entre sofisticação analítica e transparência.
 
-A análise compara três **abordagens de definição de limites de crédito pré-aprovados**:
+**Abordagem A** — Prática tradicional do setor. Corresponde ao modelo dominante em instituições financeiras brasileiras de médio porte: definição de limites a partir de regras fixas por faixa de score de crédito, complementadas por calibragem manual de parâmetros realizada empiricamente pelo time de estratégia de crédito. A decisão costuma ser operacionalmente escalável, mas pouco granular e metodologicamente opaca.
 
-| Abordagem | Descrição |
-|:---|:---|
-| **Prática tradicional (comitê/regras de mesa)** | Decisão baseada em experiência dos analistas, regras internas informais e revisão periódica por comitê de crédito. Comum em bancos médios e na operação histórica do Pan para produtos não-colateralizados. |
-| **Solução baseada em scoring + regras fixas** | Modelos de credit scoring (regressão logística, gradient boosting) geram um score por cliente, mapeado a limites pré-definidos por tabela (ex: score 700–750 → R$ 3.000). Padrão atual de mercado. O Pan já usa IA em 100% das decisões de crédito ([Consumidor Moderno](https://consumidormoderno.com.br/inteligencia-artificial-banco-pan/)). |
-| **Solução do grupo (otimização matemática)** | Modelo de otimização que maximiza retorno esperado sujeito a restrições de risco (NPL máximo), capacidade de pagamento e regras de negócio, definindo o limite ótimo por cliente ou cluster. `[APÓS MODELAGEM: detalhar o tipo — LP, MIP, etc.]` |
+**Abordagem B** — Modelos de Machine Learning Black-Box. Corresponde a abordagens mais sofisticadas adotadas por fintechs e bancos digitais, tipicamente baseadas em modelos de aprendizado supervisionado (XGBoost, redes neurais) que preveem diretamente o "limite ótimo" a partir de features do cliente. Essa abordagem é consistente com práticas internacionais consolidadas em Credit Limit Optimization [2], mas apresenta limitações estruturais em explicabilidade e em incorporação de restrições agregadas de carteira.
+Nota: o TAPI descreve a prática atual do Banco PAN como scoring + regras fixas (mais próxima da Abordagem A), não como ML black-box. A inclusão da Abordagem B como comparador serve para demonstrar que a solução proposta não perde em sofisticação frente ao estado da arte em modelagem preditiva, ao mesmo tempo em que supera essa alternativa em rastreabilidade e controle.
+
+**Abordagem C** - Nossa Solução (Otimização Matemática). Corresponde à proposta do grupo: um modelo de otimização linear que determina limites pré-aprovados por cliente ou cluster (mínimo 100 clusters), maximizando o retorno esperado da carteira — definido a partir da receita de interchange a taxa fixa, conforme orientação do TAPI — sujeito a restrições explícitas de apetite de risco (tetos de inadimplência física e financeira), capacidade de pagamento individual com alavancagem diferenciada por perfil de risco, metas de produção configuráveis e regras operacionais (limite mínimo de R\$200, discretização em múltiplos de R\$50). A solução é complementarmente informada pelo arcabouço de perda esperada da Resolução CMN nº 4.966/2021 [3] — contribuição analítica do grupo, não requisito formal do parceiro — e articula sofisticação matemática com rastreabilidade da decisão.
 
 ### 1.2 Os 8 atributos
 
@@ -394,10 +393,6 @@ O ROI calculado é extraordinariamente alto (~101.000%). Isso **não é um erro*
 
 ## Fontes
 
-1. [Banco Pan - Relações com Investidores](https://ri.bancopan.com.br/)
-2. [Banco Pan - Resultados 2T25 (Nord Investimentos)](https://www.nordinvestimentos.com.br/blog/banco-pan-bpan4-resultados-2t25/)
-3. [Banco Pan - IA em decisões de crédito (Consumidor Moderno)](https://consumidormoderno.com.br/inteligencia-artificial-banco-pan/)
-4. [LGPD - Lei 13.709/2018](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm)
-5. [Glassdoor - Salários Brasil 2025](https://www.glassdoor.com.br/Salarios)
-6. [AWS Pricing - EC2](https://aws.amazon.com/ec2/pricing/)
-7. [Strategyzer - Value Proposition Canvas](https://www.strategyzer.com/library/the-value-proposition-canvas)
+[1] KIM, W. Chan; MAUBORGNE, Renée. A Estratégia do Oceano Azul: Como Criar Novos Mercados e Tornar a Concorrência Irrelevante. Rio de Janeiro: Sextante, 2005.
+[2] EXPERIAN. Balancing Growth and Risk with Credit Limit Optimization. Experian Insights, 2024. Disponível em: https://www.experian.com/blogs/insights/credit-limit-optimization/. Acesso em: [data].
+[3] BRASIL. Conselho Monetário Nacional. Resolução CMN nº 4.966, de 25 de novembro de 2021. Dispõe sobre os conceitos e os critérios contábeis aplicáveis a instrumentos financeiros e sobre a mensuração das provisões para perdas esperadas associadas ao risco de crédito. Brasília: Banco Central do Brasil, 2021. Disponível em: https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolução%20CMN&numero=4966. Acesso em: [data].
