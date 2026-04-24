@@ -29,6 +29,7 @@ Nota: o TAPI descreve a prática atual do Banco PAN como scoring + regras fixas 
 
 Os oito atributos a seguir foram selecionados com base em três critérios: **relevância direta para o usuário interno do modelo** (analista de estratégia de crédito do Banco PAN), **impacto observável sobre o cliente final** (correntista elegível) e **aderência ao contexto regulatório brasileiro**. A seleção prioriza atributos onde há diferenciação efetiva entre as três abordagens, evitando itens genéricos como "qualidade" ou "eficiência" que não discriminam.
 
+<div align="center">Tabela X: Matriz de Atributos</div>
 
 | # | Atributo| Descrição|
 | - | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -42,35 +43,44 @@ Os oito atributos a seguir foram selecionados com base em três critérios: **re
 | 8 | Arbitragem quantitativa entre apetite comercial e apetite de risco            | Capacidade de mediar objetivamente o conflito de interesses entre áreas comercial (que busca conversão e volume) e de risco (que busca proteção da carteira). No modelo proposto, o retorno é definido a partir da receita de interchange a taxa fixa — conforme orientação do TAPI para manter a linearidade — e a perda esperada é derivada da PD e da exposição, formalizando o trade-off na função objetivo |
 
 
-Fonte: Material produzido pelos autores
+<div align="center">Fonte: Material produzido pelos autores</div>
 
-### 1.3 Matriz de avaliação
+### 1.3 Matriz de avaliação e Curva de Valor
 
-*Justificar **cada nota** na seção seguinte. Não preencher a matriz sem justificativa.*
+A tabela a seguir apresenta as pontuações atribuídas a cada abordagem nos oito atributos, em escala de 0 a 10. Os valores refletem avaliação comparativa qualitativa fundamentada no funcionamento estrutural de cada abordagem. As justificativas acompanham cada linha para explicitar o raciocínio.
 
-| Atributo | Tradicional | Scoring + Regras | Solução do Grupo |
-|:---|:---:|:---:|:---:|
-| Precisão na definição do limite | 4 | 6 | 9 |
-| Controle de risco da carteira | 5 | 6 | 9 |
-| Aderência à capacidade de pagamento | 5 | 5 | 9 |
-| Personalização por perfil de cliente | 3 | 5 | 9 |
-| Rapidez da decisão | 3 | 8 | 8 |
-| Transparência/explicabilidade | 7 | 4 | 8 |
-| Escalabilidade | 2 | 8 | 7 |
-| Governança da decisão | 6 | 5 | 8 |
 
-> `[VALIDAR]` As notas da coluna "Scoring + Regras" refletem o estado atual do Pan. Confirmar com o parceiro no kickoff se os scores internos correspondem à realidade operacional.
+<div align="center">Tabela X: Matriz de Avaliação de Valor</div>
 
-**Justificativa das notas:**
 
-- **Precisão (4 / 6 / 9):** A abordagem tradicional usa julgamento humano, sujeito a viés. Scoring + regras melhora com dados, mas o mapeamento score→limite por tabela ignora variáveis como utilização esperada. A solução do grupo otimiza considerando múltiplas variáveis simultaneamente. `[APÓS MODELAGEM: especificar quais variáveis]`
-- **Controle de risco (5 / 6 / 9):** Tradicional é reativa (revisão periódica). Scoring define limites por faixa individual, mas não controla o NPL agregado. A solução inclui restrição explícita de NPL máximo — controle agregado.
-- **Aderência à capacidade (5 / 5 / 9):** Tradicional considera renda qualitativamente. Scoring usa renda como input, mas o limite final vem de tabela. A solução modela capacidade como restrição hard. Os dados mostram a variável `capacidade_pagamento` disponível (mediana R$ 550, max R$ 25.000).
-- **Personalização (3 / 5 / 9):** Tradicional usa grandes segmentos informais. Scoring tipicamente 5-10 faixas. A solução pode definir limite por cliente individual ou por cluster refinado.
-- **Rapidez (3 / 8 / 8):** Tradicional depende de analista humano. Scoring e otimização são automatizados. A solução do grupo recebe 8 (não 9) porque o tempo de solver pode ser maior que lookup de tabela, mas ainda near-real-time.
-- **Transparência (7 / 4 / 8):** Tradicional é transparente (o analista explica), mas subjetiva. Scoring com ML pode ser black-box. A solução de otimização gera decisões rastreáveis — cada limite resulta de restrições explícitas.
-- **Escalabilidade (2 / 8 / 7):** Tradicional não escala. Scoring escala muito bem (tabela). A solução exige solver, que escala mas com custo computacional crescente — por isso 7 e não 9. `[APÓS MODELAGEM: estimar tempo de solver para 14,5M clientes]`
-- **Governança (6 / 5 / 8):** Tradicional tem governança via comitê, mas informal. Scoring tem modelo documentado, mas tradução score→limite é ad hoc. A solução explicita todas as restrições — auditável e versionável.
+| # | Atributo | Tradicional (A) | Otimização (C) | ML Black-Box (B) | Justificativa das Notas|
+| - | ----------------------------------------------------------------------------- | --------------- | -------------- | ---------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 | Retrabalho analítico manual                                                   | 9               | 5              | 2                | Na prática tradicional, cada revisão de política exige recalibragem manual extensa (9). O ML exige retraining mas é parcialmente automatizável (5). A otimização exige apenas alterar parâmetros e rerodar (2). **Neste atributo, valor menor indica melhor desempenho.**                                                                                                                                                                                         |
+| 2 | Dependência de decisão empírica caso a caso                                   | 8               | 3              | 0                | A prática tradicional depende fortemente de julgamento humano em casos de borda (8). O ML automatiza mas ainda exige intervenção em retraining (3). A otimização substitui completamente a decisão empírica por solução matemática (0). **Neste atributo, valor menor indica melhor desempenho.**                                                                                                                                                                 |
+| 3 | Explicabilidade e rastreabilidade da decisão                                  | 5               | 9              | 2                | Regras fixas são superficialmente explicáveis mas a calibragem é opaca (5). Modelos ML são a pior em explicabilidade (2). Na otimização, cada limite rastreia-se até a função objetivo e às restrições ativas (9).                                                                                                                                                                                                                                                |
+| 4 | Personalização por perfil do cliente                                          | 3               | 7              | 9                | Regras por faixa de score ignoram heterogeneidade intra-faixa (3). ML captura padrões não-lineares complexos e personaliza profundamente (9). Otimização personaliza por cluster, capturando parte dessa heterogeneidade (7).                                                                                                                                                                                                                                     |
+| 5 | Controle do risco agregado da carteira (inadimplência física e financeira)    | 5               | 9              | 3                | A prática tradicional controla via apetite fixo por faixa (5). ML otimiza cliente por cliente sem visão agregada estrutural (3). A otimização inclui como restrições formais tanto a inadimplência física (média simples da PD ≤ nível atual) quanto a financeira (média ponderada da PD pelo limite ≤ nível atual), conforme exigido pelo TAPI, além de tetos de PDD e exposição por faixa de risco (9).                                                         |
+| 6 | Aderência ao conceito de perda esperada (PD × exposição)                      | 5               | 9              | 3                | Instituições tradicionais possuem infraestrutura regulatória madura mas desacoplada da decisão de limite (5). ML dificulta mapear aderência por opacidade (3). A otimização formaliza a perda esperada como PD × exposição diretamente na função objetivo e nas restrições, conforme orientação do TAPI — e em linha com o conceito de ECL da Resolução CMN nº 4.966/2021 \[3], referência complementar do grupo (9).                                             |
+| 7 | Aderência estrutural à capacidade de pagamento (com alavancagem diferenciada) | 2               | 9              | 2                | A prática tradicional usa renda declarada de forma superficial, sem garantia estrutural (2). ML pode capturar via features mas não garante aderência formal (2). A otimização impõe a capacidade de pagamento como restrição rígida, com multiplicador de alavancagem diferenciado por perfil de risco — clientes de melhor perfil podem ter maior alavancagem, enquanto clientes mais arriscados têm o multiplicador restringido, conforme diretriz do TAPI (9). |
+| 8 | Arbitragem quantitativa entre comercial e risco                               | 1               | 9              | 4                | No modelo tradicional, a arbitragem é política e subjetiva (1). ML oferece um número mas não formaliza o trade-off (4). Otimização formaliza na função objetivo a maximização sujeita a restrições, tornando o trade-off matematicamente explícito (9).|
+
+<div align="center">Fonte: Material produzido pelos autores</div>
+
+
+
+A matriz foi construída no Google Sheets, onde a tabela acima foi convertida em um gráfico de linhas que materializa a curva de valor comparativa entre as três abordagens analisadas. A planilha completa, contendo os dados, o gráfico e o ERRC Grid em aba complementar, está disponível em:
+Link da planilha: [Canvas Estratégico do Oceano Azul - Banco PAN](https://docs.google.com/spreadsheets/d/16oclIvccqD7WkzTtpc5Tf-_E_1N4REQIbCu5e-1wRwY/edit?gid=262777086#gid=262777086)
+
+---
+
+<div align="center">Figura X: Curva de Valor (Strategy Canvas)</div>
+<img src="/artefatos/assets/curva_de_valor.png">
+<div align="center">Fonte: Material produzido pelos autores</div>
+
+
+
+A visualização da curva de valor revela uma característica fundamental da solução proposta: ela não busca dominar em todos os atributos, mas adota um perfil estrategicamente seletivo. Nos atributos onde importa (explicabilidade, controle agregado, capacidade de pagamento, arbitragem), a curva se destaca acentuadamente; nos atributos menos críticos (como granularidade máxima de personalização), a solução abdica conscientemente de competir com o ML, reconhecendo que a diferença marginal não compensa a perda de transparência.
+
 
 ### 1.4 As quatro ações
 
