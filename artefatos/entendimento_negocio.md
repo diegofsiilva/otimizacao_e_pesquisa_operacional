@@ -82,31 +82,18 @@ Link da planilha: [Canvas Estratégico do Oceano Azul - Banco PAN](https://docs.
 A visualização da curva de valor revela uma característica fundamental da solução proposta: ela não busca dominar em todos os atributos, mas adota um perfil estrategicamente seletivo. Nos atributos onde importa (explicabilidade, controle agregado, capacidade de pagamento, arbitragem), a curva se destaca acentuadamente; nos atributos menos críticos (como granularidade máxima de personalização), a solução abdica conscientemente de competir com o ML, reconhecendo que a diferença marginal não compensa a perda de transparência.
 
 
-### 1.4 As quatro ações
+### 1.4 Aplicação das Quatro Ações (ERRC Grid)
 
-> **NÃO FAZER (roteiro):** ~~Descrever o conceito de Oceano Azul sem aplicá-lo ao projeto~~
+O framework ERRC (Eliminate-Reduce-Raise-Create) do Oceano Azul propõe que uma estratégia diferenciadora não se constrói apenas somando atributos, mas também reduzindo e eliminando atributos que o mercado atual aceita como necessários mas que geram pouco valor para o cliente final. A análise a seguir distribui os oito atributos selecionados nas quatro ações.
+#### Reduzir
+O atributo "Retrabalho analítico manual" (atributo 1) é substancialmente reduzido em relação à prática tradicional: o modelo de otimização automatiza o ciclo completo de calibragem da política, exigindo apenas ajuste de parâmetros para rerodar toda a base elegível. Isso libera o time de estratégia de crédito para atividades analíticas de maior valor agregado, como interpretação de cenários e desenho de novas políticas, em vez de operação manual de planilhas.
+#### Eliminar
+O atributo "Dependência de decisão empírica caso a caso" (atributo 2) é completamente eliminado na solução proposta. Ao rodar sobre toda a base elegível com função objetivo e restrições explícitas, o modelo substitui a intervenção humana pontual por uma política estruturada, aplicada uniformemente. Essa eliminação não apenas reduz custo operacional — ela remove uma fonte estrutural de subjetividade e vieses que comprometia a defensabilidade do processo em auditorias.
+#### Aumentar
+Quatro atributos são estruturalmente elevados em relação ao estado da arte atual: explicabilidade e rastreabilidade da decisão (atributo 3), controle do risco agregado da carteira - agora com distinção entre inadimplência física e financeira conforme TAPI (atributo 5), aderência ao conceito de perda esperada (atributo 6) e, em relação à prática tradicional, personalização por perfil do cliente (atributo 4). Essas elevações respondem diretamente a pressões que o setor bancário brasileiro enfrenta: maior rigor na gestão de carteiras (com monitoramento simultâneo de métricas físicas e financeiras de inadimplência, como exigido pelo parceiro), maior exigência de rastreabilidade perante auditorias e maior necessidade de calibragem fina para sustentar rentabilidade. Adicionalmente, a incorporação do score de propensão à conversão (score_propensao_contrato, disponível nos dados do TAPI) como variável do modelo eleva a assertividade da seleção de clientes, focando a oferta de limites nos correntistas com maior probabilidade de contratação efetiva — dimensão não atendida pelas abordagens concorrentes.
+#### Criar
+Três elementos são estruturalmente criados pela solução - no sentido de que nenhuma das abordagens alternativas os entrega de forma sistemática. O primeiro é a aderência estrutural à capacidade de pagamento com alavancagem diferenciada por perfil de risco (atributo 7), operacionalizada como restrição rígida do modelo (limite ≤ multiplicador × capacidade de pagamento, onde o multiplicador é maior para clientes de melhor perfil e menor para clientes mais arriscados, conforme diretriz do TAPI), que transforma uma diretriz genérica em mecanismo formal de proteção do correntista. O segundo é a arbitragem quantitativa entre apetite comercial e apetite de risco (atributo 8), tradicionalmente resolvida por negociação política entre áreas: ao incorporar essa tensão diretamente na função objetivo — com retorno definido pela receita de interchange a taxa fixa e perda esperada derivada da PD e exposição — e nas restrições, o modelo cria uma linguagem quantitativa comum que desarma o conflito e o converte em decisão auditável. O terceiro é a explicitação de restrições operacionais como parâmetros configuráveis do modelo: limite mínimo de R\$ 200, discretização em múltiplos de R\$ 50, tetos simultâneos de inadimplência física e financeira, e metas flexíveis de produção (quantidade de clientes aprovados e volume financeiro de limite ofertado) — todas especificações do TAPI que saem do "conhecimento tácito" e se tornam elementos formais da otimização.
 
-**Reduzir**
-
-- **Subjetividade da decisão:** a prática tradicional depende do julgamento do analista. A solução reduz isso ao tornar a decisão resultado de otimização com parâmetros explícitos.
-- **Exposição desnecessária ao risco:** modelos de scoring + regras fixas podem conceder limites elevados a clientes que "passam" no score mas têm baixa capacidade. Os dados mostram `delta_capacidade_pagamento` negativo para parte da base — indicando piora na capacidade. A solução usa `capacidade_pagamento` como restrição direta.
-
-**Eliminar**
-
-- **Concessão padronizada sem segmentação:** a tabela fixa (score → limite) trata todos de um mesmo score como iguais. Os dados mostram que clientes com o mesmo `score_interno` podem ter `capacidade_pagamento` entre R$ 0 e R$ 25.000 — são perfis completamente diferentes. A solução elimina essa padronização.
-- **Decisões empíricas sem critério formal:** decisões "para esse perfil costumamos dar X" são eliminadas pela lógica estruturada de otimização.
-
-**Aumentar**
-
-- **Assertividade da oferta:** limites mais aderentes ao perfil aumentam probabilidade de ativação. Os dados mostram que dos ~117K que receberam oferta, apenas ~6.500 contrataram (5,6%) e ~5.700 ativaram. Limites inadequados ao perfil podem estar contribuindo para essa baixa conversão.
-- **Controle de risco da carteira:** a solução eleva o nível de controle ao tratar o NPL máximo como restrição do modelo, não como consequência observada ex post.
-- **Uso de dados na decisão:** a otimização consome mais variáveis simultaneamente do que uma tabela de regras (PD, capacidade, renda, score de propensão, etc.). Os dados disponíveis incluem pelo menos 10 variáveis de input relevantes.
-
-**Criar**
-
-- **Lógica estruturada de otimização:** nenhuma das abordagens atuais **otimiza** — elas classificam e mapeiam. A solução busca o **melhor limite possível** dado as restrições. `[APÓS MODELAGEM: referenciar a função objetivo aqui]`
-- **Balanceamento simultâneo entre risco e retorno:** hoje o trade-off é resolvido informalmente. A solução formaliza na função objetivo. `[APÓS MODELAGEM: mencionar λ ou ponderação explícita]`
-- **Explicitação das restrições de negócio:** restrições como NPL máximo, budget, limite mínimo/máximo saem do "conhecimento tácito" e entram como parâmetros configuráveis do modelo.
 
 ---
 
