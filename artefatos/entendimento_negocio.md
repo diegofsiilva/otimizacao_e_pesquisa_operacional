@@ -16,14 +16,14 @@ No contexto deste projeto, a aplicação da matriz serve a dois propósitos comp
 
 ### 1.1 Abordagens Comparadas
 
-A comparação envolve três abordagens distintas que representam o espectro real de soluções adotadas no mercado para definição de limites de crédito pré-aprovado. A escolha deliberada desse trio — em vez de comparar apenas prática tradicional versus solução proposta — permite mostrar que a diferenciação da proposta não se resume a "ser mais moderna", mas a ocupar um ponto ótimo entre sofisticação analítica e transparência.
+A comparação envolve três abordagens distintas que representam o espectro real de soluções adotadas no mercado para definição de limites de crédito pré-aprovado. A escolha deliberada desse trio - em vez de comparar apenas prática tradicional versus solução proposta - permite mostrar que a diferenciação da proposta não se resume a "ser mais moderna", mas a ocupar um ponto ótimo entre sofisticação analítica e transparência.
 
-**Abordagem A** — Prática tradicional do setor. Corresponde ao modelo dominante em instituições financeiras brasileiras de médio porte: definição de limites a partir de regras fixas por faixa de score de crédito, complementadas por calibragem manual de parâmetros realizada empiricamente pelo time de estratégia de crédito. A decisão costuma ser operacionalmente escalável, mas pouco granular e metodologicamente opaca.
+**Abordagem A** - Prática tradicional do setor. Corresponde ao modelo dominante em instituições financeiras brasileiras de médio porte: definição de limites a partir de regras fixas por faixa de score de crédito, complementadas por calibragem manual de parâmetros realizada empiricamente pelo time de estratégia de crédito. A decisão costuma ser operacionalmente escalável, mas pouco granular e metodologicamente opaca.
 
-**Abordagem B** — Modelos de Machine Learning Black-Box. Corresponde a abordagens mais sofisticadas adotadas por fintechs e bancos digitais, tipicamente baseadas em modelos de aprendizado supervisionado (XGBoost, redes neurais) que preveem diretamente o "limite ótimo" a partir de features do cliente. Essa abordagem é consistente com práticas internacionais consolidadas em Credit Limit Optimization [2], mas apresenta limitações estruturais em explicabilidade e em incorporação de restrições agregadas de carteira.
+**Abordagem B** - Modelos de Machine Learning Black-Box. Corresponde a abordagens mais sofisticadas adotadas por fintechs e bancos digitais, tipicamente baseadas em modelos de aprendizado supervisionado (XGBoost, redes neurais) que preveem diretamente o "limite ótimo" a partir de features do cliente. Essa abordagem é consistente com práticas internacionais consolidadas em Credit Limit Optimization [2], mas apresenta limitações estruturais em explicabilidade e em incorporação de restrições agregadas de carteira.
 Nota: o TAPI descreve a prática atual do Banco PAN como scoring + regras fixas (mais próxima da Abordagem A), não como ML black-box. A inclusão da Abordagem B como comparador serve para demonstrar que a solução proposta não perde em sofisticação frente ao estado da arte em modelagem preditiva, ao mesmo tempo em que supera essa alternativa em rastreabilidade e controle.
 
-**Abordagem C** - Nossa Solução (Otimização Matemática). Corresponde à proposta do grupo: um modelo de otimização linear que determina limites pré-aprovados por cliente ou cluster (mínimo 100 clusters), maximizando o retorno esperado da carteira — definido a partir da receita de interchange a taxa fixa, conforme orientação do TAPI — sujeito a restrições explícitas de apetite de risco (tetos de inadimplência física e financeira), capacidade de pagamento individual com alavancagem diferenciada por perfil de risco, metas de produção configuráveis e regras operacionais (limite mínimo de R\$200, discretização em múltiplos de R\$50). A solução é complementarmente informada pelo arcabouço de perda esperada da Resolução CMN nº 4.966/2021 [3] — contribuição analítica do grupo, não requisito formal do parceiro — e articula sofisticação matemática com rastreabilidade da decisão.
+**Abordagem C** - Nossa Solução (Otimização Matemática). Corresponde à proposta do grupo: um modelo de otimização linear que determina limites pré-aprovados por cliente ou cluster (mínimo 100 clusters), maximizando o retorno esperado da carteira - definido a partir da receita de interchange a taxa fixa, conforme orientação do TAPI - sujeito a restrições explícitas de apetite de risco (tetos de inadimplência física e financeira), capacidade de pagamento individual com alavancagem diferenciada por perfil de risco, metas de produção configuráveis e regras operacionais (limite mínimo de R\$200, discretização em múltiplos de R\$50). A solução é complementarmente informada pelo arcabouço de perda esperada da Resolução CMN nº 4.966/2021 [3] - contribuição analítica do grupo, não requisito formal do parceiro - e articula sofisticação matemática com rastreabilidade da decisão.
 
 ### 1.2 Atributos de Valores Selecionados
 
@@ -38,9 +38,9 @@ Os oito atributos a seguir foram selecionados com base em três critérios: **re
 | 3 | Explicabilidade e rastreabilidade da decisão                                  | Capacidade de justificar, em termos quantitativos e auditáveis, por que cada limite foi atribuído                                                                                                                                                                                                                                                                                                              |
 | 4 | Personalização por perfil do cliente                                          | Granularidade com que a solução diferencia limites entre clientes com características distintas, mesmo dentro da mesma faixa de score                                                                                                                                                                                                                                                                           |
 | 5 | Controle do risco agregado da carteira (inadimplência física e financeira)    | Capacidade de impor limites formais de exposição agregada que transcendem o risco individual do cliente. Conforme o TAPI, o monitoramento exige duas métricas distintas: inadimplência física (média simples da PD) e inadimplência financeira (média ponderada da PD pelo limite concedido), ambas com teto não superior ao nível atual da carteira                                                            |
-| 6 | Aderência ao conceito de perda esperada (PD × exposição)                      | Grau em que a solução incorpora estruturalmente os elementos de perda esperada na decisão de limite. O TAPI orienta que a perda esperada seja considerada a partir da PD (derivada do score interno) e da exposição a risco do cliente. A Resolução CMN nº 4.966/2021 \[3] — referência complementar do grupo — formaliza esse conceito no arcabouço regulatório                                                |
-| 7 | Aderência estrutural à capacidade de pagamento (com alavancagem diferenciada) | Garantia formal de que o limite ofertado é compatível com a renda comprometida do correntista, com multiplicador de alavancagem diferenciado por perfil de risco: clientes de melhor perfil podem estar mais alavancados, enquanto clientes mais arriscados têm alavancagem limitada — conforme diretriz explícita do TAPI                                                                                      |
-| 8 | Arbitragem quantitativa entre apetite comercial e apetite de risco            | Capacidade de mediar objetivamente o conflito de interesses entre áreas comercial (que busca conversão e volume) e de risco (que busca proteção da carteira). No modelo proposto, o retorno é definido a partir da receita de interchange a taxa fixa — conforme orientação do TAPI para manter a linearidade — e a perda esperada é derivada da PD e da exposição, formalizando o trade-off na função objetivo |
+| 6 | Aderência ao conceito de perda esperada (PD × exposição)                      | Grau em que a solução incorpora estruturalmente os elementos de perda esperada na decisão de limite. O TAPI orienta que a perda esperada seja considerada a partir da PD (derivada do score interno) e da exposição a risco do cliente. A Resolução CMN nº 4.966/2021 \[3] - referência complementar do grupo - formaliza esse conceito no arcabouço regulatório                                                |
+| 7 | Aderência estrutural à capacidade de pagamento (com alavancagem diferenciada) | Garantia formal de que o limite ofertado é compatível com a renda comprometida do correntista, com multiplicador de alavancagem diferenciado por perfil de risco: clientes de melhor perfil podem estar mais alavancados, enquanto clientes mais arriscados têm alavancagem limitada - conforme diretriz explícita do TAPI                                                                                      |
+| 8 | Arbitragem quantitativa entre apetite comercial e apetite de risco            | Capacidade de mediar objetivamente o conflito de interesses entre áreas comercial (que busca conversão e volume) e de risco (que busca proteção da carteira). No modelo proposto, o retorno é definido a partir da receita de interchange a taxa fixa - conforme orientação do TAPI para manter a linearidade - e a perda esperada é derivada da PD e da exposição, formalizando o trade-off na função objetivo |
 
 
 <div align="center">Fonte: Material produzido pelos autores</div>
@@ -60,8 +60,8 @@ A tabela a seguir apresenta as pontuações atribuídas a cada abordagem nos oit
 | 3 | Explicabilidade e rastreabilidade da decisão                                  | 5               | 9              | 2                | Regras fixas são superficialmente explicáveis mas a calibragem é opaca (5). Modelos ML são a pior em explicabilidade (2). Na otimização, cada limite rastreia-se até a função objetivo e às restrições ativas (9).                                                                                                                                                                                                                                                |
 | 4 | Personalização por perfil do cliente                                          | 3               | 7              | 9                | Regras por faixa de score ignoram heterogeneidade intra-faixa (3). ML captura padrões não-lineares complexos e personaliza profundamente (9). Otimização personaliza por cluster, capturando parte dessa heterogeneidade (7).                                                                                                                                                                                                                                     |
 | 5 | Controle do risco agregado da carteira (inadimplência física e financeira)    | 5               | 9              | 3                | A prática tradicional controla via apetite fixo por faixa (5). ML otimiza cliente por cliente sem visão agregada estrutural (3). A otimização inclui como restrições formais tanto a inadimplência física (média simples da PD ≤ nível atual) quanto a financeira (média ponderada da PD pelo limite ≤ nível atual), conforme exigido pelo TAPI, além de tetos de PDD e exposição por faixa de risco (9).                                                         |
-| 6 | Aderência ao conceito de perda esperada (PD × exposição)                      | 5               | 9              | 3                | Instituições tradicionais possuem infraestrutura regulatória madura mas desacoplada da decisão de limite (5). ML dificulta mapear aderência por opacidade (3). A otimização formaliza a perda esperada como PD × exposição diretamente na função objetivo e nas restrições, conforme orientação do TAPI — e em linha com o conceito de ECL da Resolução CMN nº 4.966/2021 \[3], referência complementar do grupo (9).                                             |
-| 7 | Aderência estrutural à capacidade de pagamento (com alavancagem diferenciada) | 2               | 9              | 2                | A prática tradicional usa renda declarada de forma superficial, sem garantia estrutural (2). ML pode capturar via features mas não garante aderência formal (2). A otimização impõe a capacidade de pagamento como restrição rígida, com multiplicador de alavancagem diferenciado por perfil de risco — clientes de melhor perfil podem ter maior alavancagem, enquanto clientes mais arriscados têm o multiplicador restringido, conforme diretriz do TAPI (9). |
+| 6 | Aderência ao conceito de perda esperada (PD × exposição)                      | 5               | 9              | 3                | Instituições tradicionais possuem infraestrutura regulatória madura mas desacoplada da decisão de limite (5). ML dificulta mapear aderência por opacidade (3). A otimização formaliza a perda esperada como PD × exposição diretamente na função objetivo e nas restrições, conforme orientação do TAPI - e em linha com o conceito de ECL da Resolução CMN nº 4.966/2021 \[3], referência complementar do grupo (9).                                             |
+| 7 | Aderência estrutural à capacidade de pagamento (com alavancagem diferenciada) | 2               | 9              | 2                | A prática tradicional usa renda declarada de forma superficial, sem garantia estrutural (2). ML pode capturar via features mas não garante aderência formal (2). A otimização impõe a capacidade de pagamento como restrição rígida, com multiplicador de alavancagem diferenciado por perfil de risco - clientes de melhor perfil podem ter maior alavancagem, enquanto clientes mais arriscados têm o multiplicador restringido, conforme diretriz do TAPI (9). |
 | 8 | Arbitragem quantitativa entre comercial e risco                               | 1               | 9              | 4                | No modelo tradicional, a arbitragem é política e subjetiva (1). ML oferece um número mas não formaliza o trade-off (4). Otimização formaliza na função objetivo a maximização sujeita a restrições, tornando o trade-off matematicamente explícito (9).|
 
 <div align="center">Fonte: Material produzido pelos autores</div>
@@ -69,6 +69,7 @@ A tabela a seguir apresenta as pontuações atribuídas a cada abordagem nos oit
 
 
 A matriz foi construída no Google Sheets, onde a tabela acima foi convertida em um gráfico de linhas que materializa a curva de valor comparativa entre as três abordagens analisadas. A planilha completa, contendo os dados, o gráfico e o ERRC Grid em aba complementar, está disponível em:
+
 Link da planilha: [Canvas Estratégico do Oceano Azul - Banco PAN](https://docs.google.com/spreadsheets/d/16oclIvccqD7WkzTtpc5Tf-_E_1N4REQIbCu5e-1wRwY/edit?gid=262777086#gid=262777086)
 
 ---
@@ -88,12 +89,27 @@ O framework ERRC (Eliminate-Reduce-Raise-Create) do Oceano Azul propõe que uma 
 #### Reduzir
 O atributo "Retrabalho analítico manual" (atributo 1) é substancialmente reduzido em relação à prática tradicional: o modelo de otimização automatiza o ciclo completo de calibragem da política, exigindo apenas ajuste de parâmetros para rerodar toda a base elegível. Isso libera o time de estratégia de crédito para atividades analíticas de maior valor agregado, como interpretação de cenários e desenho de novas políticas, em vez de operação manual de planilhas.
 #### Eliminar
-O atributo "Dependência de decisão empírica caso a caso" (atributo 2) é completamente eliminado na solução proposta. Ao rodar sobre toda a base elegível com função objetivo e restrições explícitas, o modelo substitui a intervenção humana pontual por uma política estruturada, aplicada uniformemente. Essa eliminação não apenas reduz custo operacional — ela remove uma fonte estrutural de subjetividade e vieses que comprometia a defensabilidade do processo em auditorias.
+O atributo "Dependência de decisão empírica caso a caso" (atributo 2) é completamente eliminado na solução proposta. Ao rodar sobre toda a base elegível com função objetivo e restrições explícitas, o modelo substitui a intervenção humana pontual por uma política estruturada, aplicada uniformemente. Essa eliminação não apenas reduz custo operacional - ela remove uma fonte estrutural de subjetividade e vieses que comprometia a defensabilidade do processo em auditorias.
 #### Aumentar
-Quatro atributos são estruturalmente elevados em relação ao estado da arte atual: explicabilidade e rastreabilidade da decisão (atributo 3), controle do risco agregado da carteira - agora com distinção entre inadimplência física e financeira conforme TAPI (atributo 5), aderência ao conceito de perda esperada (atributo 6) e, em relação à prática tradicional, personalização por perfil do cliente (atributo 4). Essas elevações respondem diretamente a pressões que o setor bancário brasileiro enfrenta: maior rigor na gestão de carteiras (com monitoramento simultâneo de métricas físicas e financeiras de inadimplência, como exigido pelo parceiro), maior exigência de rastreabilidade perante auditorias e maior necessidade de calibragem fina para sustentar rentabilidade. Adicionalmente, a incorporação do score de propensão à conversão (score_propensao_contrato, disponível nos dados do TAPI) como variável do modelo eleva a assertividade da seleção de clientes, focando a oferta de limites nos correntistas com maior probabilidade de contratação efetiva — dimensão não atendida pelas abordagens concorrentes.
+Quatro atributos são estruturalmente elevados em relação ao estado da arte atual: explicabilidade e rastreabilidade da decisão (atributo 3), controle do risco agregado da carteira - agora com distinção entre inadimplência física e financeira conforme TAPI (atributo 5), aderência ao conceito de perda esperada (atributo 6) e, em relação à prática tradicional, personalização por perfil do cliente (atributo 4). Essas elevações respondem diretamente a pressões que o setor bancário brasileiro enfrenta: maior rigor na gestão de carteiras (com monitoramento simultâneo de métricas físicas e financeiras de inadimplência, como exigido pelo parceiro), maior exigência de rastreabilidade perante auditorias e maior necessidade de calibragem fina para sustentar rentabilidade. Adicionalmente, a incorporação do score de propensão à conversão (score_propensao_contrato, disponível nos dados do TAPI) como variável do modelo eleva a assertividade da seleção de clientes, focando a oferta de limites nos correntistas com maior probabilidade de contratação efetiva - dimensão não atendida pelas abordagens concorrentes.
 #### Criar
-Três elementos são estruturalmente criados pela solução - no sentido de que nenhuma das abordagens alternativas os entrega de forma sistemática. O primeiro é a aderência estrutural à capacidade de pagamento com alavancagem diferenciada por perfil de risco (atributo 7), operacionalizada como restrição rígida do modelo (limite ≤ multiplicador × capacidade de pagamento, onde o multiplicador é maior para clientes de melhor perfil e menor para clientes mais arriscados, conforme diretriz do TAPI), que transforma uma diretriz genérica em mecanismo formal de proteção do correntista. O segundo é a arbitragem quantitativa entre apetite comercial e apetite de risco (atributo 8), tradicionalmente resolvida por negociação política entre áreas: ao incorporar essa tensão diretamente na função objetivo — com retorno definido pela receita de interchange a taxa fixa e perda esperada derivada da PD e exposição — e nas restrições, o modelo cria uma linguagem quantitativa comum que desarma o conflito e o converte em decisão auditável. O terceiro é a explicitação de restrições operacionais como parâmetros configuráveis do modelo: limite mínimo de R\$ 200, discretização em múltiplos de R\$ 50, tetos simultâneos de inadimplência física e financeira, e metas flexíveis de produção (quantidade de clientes aprovados e volume financeiro de limite ofertado) — todas especificações do TAPI que saem do "conhecimento tácito" e se tornam elementos formais da otimização.
+Três elementos são estruturalmente criados pela solução - no sentido de que nenhuma das abordagens alternativas os entrega de forma sistemática. O primeiro é a aderência estrutural à capacidade de pagamento com alavancagem diferenciada por perfil de risco (atributo 7), operacionalizada como restrição rígida do modelo (limite ≤ multiplicador × capacidade de pagamento, onde o multiplicador é maior para clientes de melhor perfil e menor para clientes mais arriscados, conforme diretriz do TAPI), que transforma uma diretriz genérica em mecanismo formal de proteção do correntista. O segundo é a arbitragem quantitativa entre apetite comercial e apetite de risco (atributo 8), tradicionalmente resolvida por negociação política entre áreas: ao incorporar essa tensão diretamente na função objetivo - com retorno definido pela receita de interchange a taxa fixa e perda esperada derivada da PD e exposição - e nas restrições, o modelo cria uma linguagem quantitativa comum que desarma o conflito e o converte em decisão auditável. O terceiro é a explicitação de restrições operacionais como parâmetros configuráveis do modelo: limite mínimo de R\$ 200, discretização em múltiplos de R\$ 50, tetos simultâneos de inadimplência física e financeira, e metas flexíveis de produção (quantidade de clientes aprovados e volume financeiro de limite ofertado) - todas especificações do TAPI que saem do "conhecimento tácito" e se tornam elementos formais da otimização.
 
+### 1.5 Diferenciação Estratégica
+
+A análise consolidada revela que a diferenciação da solução proposta não se apoia em um único eixo, mas em uma combinação deliberada: ela captura parte dos ganhos de sofisticação analítica típicos de abordagens de ML, sem incorrer em sua opacidade; e supera amplamente a prática tradicional nos atributos de rastreabilidade, governança agregada da carteira e aderência às especificações do parceiro. Essa combinação é particularmente valiosa no contexto do Banco PAN, onde a adoção institucional depende simultaneamente de precisão técnica, defensabilidade em comitê e aderência a requisitos operacionais concretos - como controle simultâneo de inadimplência física e financeira, alavancagem diferenciada por perfil de risco, limite mínimo de R\$ 200, discretização em múltiplos de R\$ 50, e metas flexíveis de produção, todos formalizados no TAPI. O oceano azul aqui identificado não é o da "melhor previsão possível" - espaço já saturado por abordagens de ML - mas o da decisão otimizada, explicável e operacionalmente aderente ao briefing do parceiro, no qual a concorrência ainda é escassa e o valor percebido é elevado.
+
+### 1.6. Teste das Três Características de uma Boa Estratégia (Ir Além)
+
+Além da construção da matriz, Kim e Mauborgne [1] propõem um teste adicional para validar a robustez de uma estratégia de Oceano Azul: toda curva de valor genuinamente diferenciadora deve apresentar três características simultâneas - foco, divergência e slogan cativante. A aplicação desse teste à solução proposta funciona como verificação de consistência estratégica complementar à análise da matriz.
+
+**Foco.** Uma boa estratégia concentra-se em poucos atributos decisivos em vez de tentar desempenho médio em todos. A curva de valor da solução proposta satisfaz esse critério: em vez de competir com o ML em personalização máxima ou com o modelo tradicional em simplicidade operacional, a proposta concentra esforço em quatro eixos - explicabilidade, controle agregado, capacidade de pagamento e arbitragem quantitativa - que são precisamente os mais valorizados pelo cliente direto (analista de estratégia de crédito) e pelo cliente final (correntista elegível).
+
+**Divergência.** A curva deve destacar-se visualmente das curvas concorrentes. A análise da matriz evidencia essa divergência: nos atributos 3, 5, 6, 7 e 8, a distância entre a solução proposta e as alternativas é significativa, indicando que não se trata de melhoria incremental, mas de reposicionamento estratégico.
+
+**Slogan Cativante.** Uma estratégia robusta deve caber em uma frase clara que comunique seu diferencial. A proposta do grupo pode ser resumida como: "Decisões de crédito matematicamente ótimas, estruturalmente explicáveis e regulatoriamente aderentes." Essa formulação captura o essencial da proposta em três adjetivos, cada um correspondendo a um dos grupos de atributos destacados na matriz.
+
+A aplicação desse teste reforça que a diferenciação identificada não é fortuita nem puramente incremental, mas corresponde a um reposicionamento estratégico sustentável da solução no mercado de ferramentas de decisão de crédito. Essa verificação, embora não exigida no barema, eleva o rigor da análise ao conectar a construção quantitativa da matriz com o arcabouço teórico completo da Estratégia do Oceano Azul.
 
 ---
 
@@ -109,7 +125,7 @@ Três elementos são estruturalmente criados pela solução - no sentido de que 
 | **Baixo (2)** | 5–20% | Impacto menor, contornável sem replanejar |
 | **Médio (3)** | 20–50% | Impacto moderado, exige ação corretiva |
 | **Alto (4)** | 50–75% | Impacto significativo no escopo, prazo ou resultado |
-| **Muito Alto (5)** | > 75% | Impacto crítico — pode inviabilizar o projeto |
+| **Muito Alto (5)** | > 75% | Impacto crítico - pode inviabilizar o projeto |
 
 ### 2.2 Riscos identificados
 
@@ -122,7 +138,7 @@ Três elementos são estruturalmente criados pela solução - no sentido de que 
 > - ~~Confundir risco do projeto com limitação natural do problema~~
 >
 > **NÃO FAZER (feedback M5):**
-> - ~~Classificar como "baixo impacto" riscos que podem afetar a credibilidade do modelo~~ — calibrar com cuidado
+> - ~~Classificar como "baixo impacto" riscos que podem afetar a credibilidade do modelo~~ - calibrar com cuidado
 
 | # | Risco | Causa provável | Impacto esperado | Prob. | Imp. | Posição |
 |:---:|:---|:---|:---|:---:|:---:|:---:|
@@ -132,21 +148,21 @@ Três elementos são estruturalmente criados pela solução - no sentido de que 
 | 4 | Uso inadequado das variáveis disponíveis | Dados sem dicionário claro; variáveis correlacionadas; inclusão de variáveis sensíveis como proxy (CEP → raça) | Modelo enviesado ou com baixo poder preditivo; risco LGPD | 4 | 4 | **Crítico** |
 | 5 | Simplificações que prejudicam a interpretação econômica | Uso de proxies inadequadas sem justificar; linearização de relações não-lineares | Resultados matematicamente válidos mas economicamente sem sentido | 3 | 4 | **Alto** |
 | 6 | Descumprimento de restrições de risco da carteira | Restrições não formalizadas no modelo ou com valores incorretos | Carteira resultante viola políticas internas ou exigências regulatórias | 2 | 5 | **Alto** |
-| 7 | Dificuldade de implementação prática no ambiente do parceiro | Stack tecnológico incompatível; dados em formato indisponível | Solução não pode ser integrada — valor apenas teórico | 3 | 4 | **Alto** |
+| 7 | Dificuldade de implementação prática no ambiente do parceiro | Stack tecnológico incompatível; dados em formato indisponível | Solução não pode ser integrada - valor apenas teórico | 3 | 4 | **Alto** |
 | 8 | Baixa explicabilidade da solução | Modelo complexo demais; documentação insuficiente dos parâmetros | Compliance/auditoria recusa a solução; descumprimento LGPD Art. 20 | 3 | 4 | **Alto** |
-| 9 | Qualidade insuficiente dos dados fornecidos | Missing values, outliers, período não representativo, viés de seleção | "Garbage in, garbage out" — modelo gera decisões ruins | 4 | 4 | **Crítico** |
+| 9 | Qualidade insuficiente dos dados fornecidos | Missing values, outliers, período não representativo, viés de seleção | "Garbage in, garbage out" - modelo gera decisões ruins | 4 | 4 | **Crítico** |
 | 10 | Dependência excessiva de premissas não justificadas | Falta de dados reais para calibrar parâmetros (LGD, utilização); valores arbitrários | Resultados são artefato das premissas, sem validade prática | 4 | 4 | **Crítico** |
-| 11 | Viés de seleção nos dados de inadimplência | `over30mob3` só existe para os ~5K que ativaram (0,03% da base) — não observamos os demais | Modelo treinado com subconjunto não representativo da população | 4 | 4 | **Crítico** |
+| 11 | Viés de seleção nos dados de inadimplência | `over30mob3` só existe para os ~5K que ativaram (0,03% da base) - não observamos os demais | Modelo treinado com subconjunto não representativo da população | 4 | 4 | **Crítico** |
 | 12 | Atrasos no time devido ao prazo curto da sprint | Sprint 1 com poucos dias de dev efetivo | Entregas incompletas ou com qualidade inferior | 4 | 3 | **Alto** |
 
-> **Nota sobre o Risco 11:** Este risco foi identificado diretamente dos dados (`base_ref_M1_v2.parquet`). Dos 14,5M de clientes, apenas ~5K têm `over30mob3` preenchido. Isso é um viés de seleção clássico em crédito ("reject inference") — não sabemos como os clientes que não receberam oferta se comportariam.
+> **Nota sobre o Risco 11:** Este risco foi identificado diretamente dos dados (`base_ref_M1_v2.parquet`). Dos 14,5M de clientes, apenas ~5K têm `over30mob3` preenchido. Isso é um viés de seleção clássico em crédito ("reject inference") - não sabemos como os clientes que não receberam oferta se comportariam.
 
 ### 2.3 Justificativa do posicionamento
 
 *O roteiro pede justificativa do posicionamento de cada risco.*
 
 **Posição = Probabilidade × Impacto:**
-- **Críticos (≥ 15):** Riscos 4, 9, 10 e 11 têm probabilidade alta (4) porque o grupo ainda não recebeu o TAPI nem analisou os dados em profundidade — são riscos inerentes ao estágio atual. Riscos 1 e 3 têm impacto muito alto (5) porque comprometem a razão de existir da solução.
+- **Críticos (≥ 15):** Riscos 4, 9, 10 e 11 têm probabilidade alta (4) porque o grupo ainda não recebeu o TAPI nem analisou os dados em profundidade - são riscos inerentes ao estágio atual. Riscos 1 e 3 têm impacto muito alto (5) porque comprometem a razão de existir da solução.
 - **Altos (8–14):** Riscos 2, 5, 6, 7, 8 e 12 são significativos mas mais controláveis com ações de mitigação.
 
 ### 2.4 Análise dos riscos mais críticos
@@ -177,7 +193,7 @@ Três elementos são estruturalmente criados pela solução - no sentido de que 
 
 Neste projeto, o "cliente" opera em dois níveis:
 
-- **Cliente direto da solução**: times internos do Banco Pan que utilizarão o modelo — áreas de **crédito, estratégia de crédito e Data Science**. São eles que configuram parâmetros, executam cenários e implementam os limites resultantes. `[APÓS UX: referenciar as personas criadas — ex: "Persona Renata (gestora de risco)"]`
+- **Cliente direto da solução**: times internos do Banco Pan que utilizarão o modelo - áreas de **crédito, estratégia de crédito e Data Science**. São eles que configuram parâmetros, executam cenários e implementam os limites resultantes. `[APÓS UX: referenciar as personas criadas - ex: "Persona Renata (gestora de risco)"]`
 - **Cliente final impactado**: **correntistas do Banco Pan elegíveis à concessão de cartão de crédito pré-aprovado**. Não interagem diretamente com o modelo, mas são afetados pelo resultado (limites mais ou menos aderentes ao perfil). Os dados mostram ~14,5M de clientes na base, dos quais ~12,7M passam nos filtros de elegibilidade.
 
 A análise foca no **cliente direto** (times internos), pois são os usuários efetivos da solução.
@@ -194,16 +210,16 @@ A análise foca no **cliente direto** (times internos), pois são os usuários e
 
 **Dores:**
 
-> **NÃO FAZER (feedback M5 da profa. de UX — mesma professora):**
+> **NÃO FAZER (feedback M5 da profa. de UX - mesma professora):**
 > - ~~Ganhos ligados à alta gestão e não ao usuário principal~~
 > - Isso vale também aqui no Canvas de negócios
 
-- Pressão constante por reduzir NPL crescente (8,3% e subindo) sem sacrificar receita — a sensação de estar "escolhendo qual problema criar"
+- Pressão constante por reduzir NPL crescente (8,3% e subindo) sem sacrificar receita - a sensação de estar "escolhendo qual problema criar"
 - Sobrecarga cognitiva ao revisar políticas que envolvem dezenas de variáveis simultâneas, sem ferramenta que integre todas
 - Risco reputacional pessoal quando decisões de limite resultam em inadimplência acima do esperado
-- Falta de base objetiva para defender decisões em reuniões com produto e comercial — "intuição" não convence stakeholders que querem mais receita
+- Falta de base objetiva para defender decisões em reuniões com produto e comercial - "intuição" não convence stakeholders que querem mais receita
 
-`[APÓS UX: cruzar com as dores das personas — garantir coerência]`
+`[APÓS UX: cruzar com as dores das personas - garantir coerência]`
 
 **Ganhos esperados:**
 
@@ -220,7 +236,7 @@ A análise foca no **cliente direto** (times internos), pois são os usuários e
 
 *O roteiro pede: "o que exatamente o grupo está propondo?"*
 
-- Modelo de otimização matemática que define limites pré-aprovados por cliente ou cluster, respeitando restrições de risco e negócio `[APÓS MODELAGEM: especificar tipo — LP, MIP, etc.]`
+- Modelo de otimização matemática que define limites pré-aprovados por cliente ou cluster, respeitando restrições de risco e negócio `[APÓS MODELAGEM: especificar tipo - LP, MIP, etc.]`
 - Interface para configurar parâmetros (NPL máximo, budget, limite min/max) e executar cenários `[APÓS UX: alinhar com User Stories]`
 - Módulo de explicabilidade (quais variáveis mais influenciaram cada decisão de limite)
 
@@ -228,10 +244,10 @@ A análise foca no **cliente direto** (times internos), pois são os usuários e
 
 *Como a solução reduz ou elimina os problemas identificados?*
 
-- Substitui intuição por base matemática — elimina o "operar no escuro"
-- NPL máximo como restrição do modelo — ataca diretamente a pressão pelo NPL, que simplesmente não é violado
+- Substitui intuição por base matemática - elimina o "operar no escuro"
+- NPL máximo como restrição do modelo - ataca diretamente a pressão pelo NPL, que simplesmente não é violado
 - Cenários pré-configurados permitem comparar resultados sem refazer análises manuais
-- Decisões rastreáveis e documentáveis — em caso de auditoria, a lógica é reproduzível
+- Decisões rastreáveis e documentáveis - em caso de auditoria, a lógica é reproduzível
 
 **Criadores de ganho:**
 
@@ -239,7 +255,7 @@ A análise foca no **cliente direto** (times internos), pois são os usuários e
 
 - Simulação what-if rápida: testar "o que acontece se eu reduzir o NPL máximo de 8% para 7%?" leva minutos
 - Argumentação objetiva: fornece dados concretos para reuniões entre áreas
-- Para o cliente final: limites mais aderentes à capacidade de pagamento — reduz tanto sub-concessão quanto sobre-concessão
+- Para o cliente final: limites mais aderentes à capacidade de pagamento - reduz tanto sub-concessão quanto sobre-concessão
 
 ### 3.4 Figura do Canvas
 
@@ -269,12 +285,12 @@ A análise foca no **cliente direto** (times internos), pois são os usuários e
 |:---:|:---|:---|:---|
 | P1 | Carteira de crédito do Pan | R$ 57,8 bi | RI Banco Pan, Q2 2025 |
 | P2 | NPL >90 dias | 8,3% | RI Banco Pan, Q2 2025 |
-| P3 | Perda estimada associada ao NPL | ~R$ 4,8 bi/ano | P1 × P2 (simplificação — assume perda = carteira × NPL, sem considerar recuperação) |
+| P3 | Perda estimada associada ao NPL | ~R$ 4,8 bi/ano | P1 × P2 (simplificação - assume perda = carteira × NPL, sem considerar recuperação) |
 | P4 | Salário/hora dev júnior | R$ 23,17/h | Glassdoor Brasil, média 2025 |
 | P5 | Salário/hora tech lead | R$ 79,55/h | Glassdoor Brasil, média 2025 |
 | P6 | Carga horária do projeto | ~100h por pessoa | 10 semanas × 10h/semana |
 | P7 | Infraestrutura cloud | AWS EC2 t3.medium | Pricing público AWS, sa-east-1 |
-| P8 | Redução de NPL pelo modelo | 0,1pp a 0,5pp | **Premissa assumida** — literatura reporta melhorias nessa faixa para modelos de otimização de crédito. `[APÓS TAPI: validar com parceiro]` |
+| P8 | Redução de NPL pelo modelo | 0,1pp a 0,5pp | **Premissa assumida** - literatura reporta melhorias nessa faixa para modelos de otimização de crédito. `[APÓS TAPI: validar com parceiro]` |
 
 ### 4.2 Investimento inicial
 
@@ -282,7 +298,7 @@ A análise foca no **cliente direto** (times internos), pois são os usuários e
 |:---|:---|---:|
 | Equipe de desenvolvimento (7 devs júnior) | 7 × 100h × R$ 23,17/h (P4, P6) | 16.219 |
 | Orientação técnica (1 tech lead) | 1 × 100h × R$ 79,55/h (P5, P6) | 7.955 |
-| Testes e validação | Incluso nas horas de dev | — |
+| Testes e validação | Incluso nas horas de dev | - |
 | Equipamentos (notebooks) | 7 × R$ 4.200 (amortização do período) | 29.400 |
 | **Subtotal investimento inicial** | | **53.574** |
 
@@ -293,7 +309,7 @@ A análise foca no **cliente direto** (times internos), pois são os usuários e
 | Infraestrutura cloud (EC2 t3.medium) | 160 | 1.920 |
 | Banco de dados (Supabase Pro) | 130 | 1.560 |
 | Armazenamento (S3, 50GB) | 6 | 72 |
-| Manutenção e monitoramento | Equipe interna do banco | — |
+| Manutenção e monitoramento | Equipe interna do banco | - |
 | **Subtotal operacional** | **296** | **3.552** |
 
 **Investimento total Ano 1:** R$ 53.574 + R$ 3.552 = **R$ 57.126**
@@ -334,18 +350,18 @@ $$
 
 *O roteiro pede interpretação, não apenas o número.*
 
-O ROI calculado é extraordinariamente alto (~101.000%). Isso **não é um erro** — reflete uma característica estrutural: o investimento é muito baixo (projeto acadêmico, ~R$ 57 mil) enquanto o benefício potencial é muito alto (redução de perdas em carteira de R$ 57,8 bi). Esse tipo de ROI é comum em projetos de otimização aplicados a grandes carteiras financeiras.
+O ROI calculado é extraordinariamente alto (~101.000%). Isso **não é um erro** - reflete uma característica estrutural: o investimento é muito baixo (projeto acadêmico, ~R$ 57 mil) enquanto o benefício potencial é muito alto (redução de perdas em carteira de R$ 57,8 bi). Esse tipo de ROI é comum em projetos de otimização aplicados a grandes carteiras financeiras.
 
 **Limitações importantes:**
 
-1. **Os custos refletem apenas o projeto acadêmico.** Uma implementação real exigiria investimento ordens de grandeza maior (equipe, infra enterprise, integração, compliance) — o que reduziria o ROI substancialmente, embora provavelmente se mantivesse positivo.
+1. **Os custos refletem apenas o projeto acadêmico.** Uma implementação real exigiria investimento ordens de grandeza maior (equipe, infra enterprise, integração, compliance) - o que reduziria o ROI substancialmente, embora provavelmente se mantivesse positivo.
 2. **A premissa de redução de NPL (P8) é assumida.** O ROI real depende da efetividade do modelo, que só será conhecida após backtesting com dados reais.
 3. **Não foram considerados** custos de oportunidade, riscos de implementação, nem tempo de maturação do modelo.
 
 > **NÃO FAZER (roteiro):**
-> - ~~Apresentar números sem explicar de onde vieram~~ — todas as premissas estão na tabela 4.1
-> - ~~Fazer conta sem premissas~~ — cada número tem fonte
-> - ~~Produzir análise apenas descritiva, sem cálculo~~ — ROI calculado acima
+> - ~~Apresentar números sem explicar de onde vieram~~ - todas as premissas estão na tabela 4.1
+> - ~~Fazer conta sem premissas~~ - cada número tem fonte
+> - ~~Produzir análise apenas descritiva, sem cálculo~~ - ROI calculado acima
 
 `[APÓS TAPI: recalcular com custos reais de implementação e metas de NPL do parceiro]`
 
