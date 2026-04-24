@@ -25,24 +25,24 @@ Nota: o TAPI descreve a prática atual do Banco PAN como scoring + regras fixas 
 
 **Abordagem C** - Nossa Solução (Otimização Matemática). Corresponde à proposta do grupo: um modelo de otimização linear que determina limites pré-aprovados por cliente ou cluster (mínimo 100 clusters), maximizando o retorno esperado da carteira — definido a partir da receita de interchange a taxa fixa, conforme orientação do TAPI — sujeito a restrições explícitas de apetite de risco (tetos de inadimplência física e financeira), capacidade de pagamento individual com alavancagem diferenciada por perfil de risco, metas de produção configuráveis e regras operacionais (limite mínimo de R\$200, discretização em múltiplos de R\$50). A solução é complementarmente informada pelo arcabouço de perda esperada da Resolução CMN nº 4.966/2021 [3] — contribuição analítica do grupo, não requisito formal do parceiro — e articula sofisticação matemática com rastreabilidade da decisão.
 
-### 1.2 Os 8 atributos
+### 1.2 Atributos de Valores Selecionados
 
-*O roteiro pede exatamente **8 atributos relevantes para o cliente e/ou parceiro**, com justificativa de cada um para o problema do Banco Pan.*
+Os oito atributos a seguir foram selecionados com base em três critérios: **relevância direta para o usuário interno do modelo** (analista de estratégia de crédito do Banco PAN), **impacto observável sobre o cliente final** (correntista elegível) e **aderência ao contexto regulatório brasileiro**. A seleção prioriza atributos onde há diferenciação efetiva entre as três abordagens, evitando itens genéricos como "qualidade" ou "eficiência" que não discriminam.
 
-> **NÃO FAZER (roteiro):**
-> - ~~Atributos genéricos como "qualidade" ou "eficiência" sem explicar~~
-> - ~~Confundir atributo do cliente com característica técnica sem relação com valor percebido~~
 
-| # | Atributo | Por que é relevante para o Banco Pan |
-|:---:|:---|:---|
-| 1 | **Precisão na definição do limite** | O Pan tem NPL >90d em 8,3% (Q2 2025) — limites mal calibrados são uma das causas diretas. Definir o limite certo reduz inadimplência e aumenta utilização. |
-| 2 | **Controle de risco da carteira** | Com NPL crescente há 12 meses, controlar o risco agregado da carteira (não apenas individual) é prioridade. |
-| 3 | **Aderência à capacidade de pagamento** | O projeto exige que limites respeitem capacidade de pagamento do cliente — é critério-chave. `[VALIDAR: confirmar peso deste critério com parceiro]` |
-| 4 | **Personalização por perfil de cliente** | O Pan tem 32,1M de clientes com perfis diversos. Tratá-los de forma homogênea por faixa de score gera sub ou sobre-concessão. |
-| 5 | **Rapidez da decisão** | Crédito pré-aprovado exige decisão em tempo quase real para não perder o momento de conversão. |
-| 6 | **Transparência/explicabilidade** | LGPD Art. 20 exige explicabilidade de decisões automatizadas. Áreas internas (risco, compliance) também precisam entender a lógica. |
-| 7 | **Escalabilidade** | Os dados mostram ~14,5M de clientes na base e ~12,7M elegíveis. A solução precisa funcionar nessa escala. |
-| 8 | **Governança da decisão** | Bacen e compliance exigem rastreabilidade e controle sobre os parâmetros que definem limites. |
+| # | Atributo| Descrição|
+| - | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1 | Retrabalho analítico manual                                                   | Volume de esforço humano exigido para recalibragem da política de limites a cada mudança de cenário                                                                                                                                                                                                                                                                                                             |
+| 2 | Dependência de decisão empírica caso a caso                                   | Grau em que a decisão final sobre cada cliente ou cluster depende de julgamento individual                                                                                                                                                                                                                                                                                                                      |
+| 3 | Explicabilidade e rastreabilidade da decisão                                  | Capacidade de justificar, em termos quantitativos e auditáveis, por que cada limite foi atribuído                                                                                                                                                                                                                                                                                                              |
+| 4 | Personalização por perfil do cliente                                          | Granularidade com que a solução diferencia limites entre clientes com características distintas, mesmo dentro da mesma faixa de score                                                                                                                                                                                                                                                                           |
+| 5 | Controle do risco agregado da carteira (inadimplência física e financeira)    | Capacidade de impor limites formais de exposição agregada que transcendem o risco individual do cliente. Conforme o TAPI, o monitoramento exige duas métricas distintas: inadimplência física (média simples da PD) e inadimplência financeira (média ponderada da PD pelo limite concedido), ambas com teto não superior ao nível atual da carteira                                                            |
+| 6 | Aderência ao conceito de perda esperada (PD × exposição)                      | Grau em que a solução incorpora estruturalmente os elementos de perda esperada na decisão de limite. O TAPI orienta que a perda esperada seja considerada a partir da PD (derivada do score interno) e da exposição a risco do cliente. A Resolução CMN nº 4.966/2021 \[3] — referência complementar do grupo — formaliza esse conceito no arcabouço regulatório                                                |
+| 7 | Aderência estrutural à capacidade de pagamento (com alavancagem diferenciada) | Garantia formal de que o limite ofertado é compatível com a renda comprometida do correntista, com multiplicador de alavancagem diferenciado por perfil de risco: clientes de melhor perfil podem estar mais alavancados, enquanto clientes mais arriscados têm alavancagem limitada — conforme diretriz explícita do TAPI                                                                                      |
+| 8 | Arbitragem quantitativa entre apetite comercial e apetite de risco            | Capacidade de mediar objetivamente o conflito de interesses entre áreas comercial (que busca conversão e volume) e de risco (que busca proteção da carteira). No modelo proposto, o retorno é definido a partir da receita de interchange a taxa fixa — conforme orientação do TAPI para manter a linearidade — e a perda esperada é derivada da PD e da exposição, formalizando o trade-off na função objetivo |
+
+
+Fonte: Material produzido pelos autores
 
 ### 1.3 Matriz de avaliação
 
