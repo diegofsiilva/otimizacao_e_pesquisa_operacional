@@ -1,14 +1,5 @@
 # Entendimento do Negócio
-
-> **Status:** Rascunho pré-TAPI. Seções preenchidas com base em dados públicos do Banco Pan e na descrição do projeto. Trechos com `[PREENCHER]` precisam do TAPI. Trechos com `[VALIDAR]` devem ser confirmados com o parceiro.
->
-> **Dependências com outros artefatos:**
-> - `[APÓS UX]` = preencher quando as personas estiverem prontas
-> - `[APÓS MODELAGEM]` = preencher quando a formulação matemática estiver pronta
-> - `[APÓS TAPI]` = preencher quando o TAPI for recebido
-
 ---
-
 ## 1. Matriz de Avaliação de Valor - Oceano Azul (Peso 2,5)
 
 &emsp; A Estratégia do Oceano Azul, desenvolvida por W. Chan Kim e Renée Mauborgne [1], parte da premissa de que o crescimento competitivo mais relevante não vem da disputa por participação em mercados saturados (oceanos vermelhos), mas da criação de espaços de mercado inexplorados onde a concorrência torna-se irrelevante. Para operacionalizar essa lógica, os autores propõem a Matriz de Avaliação de Valor (Strategy Canvas), ferramenta que permite mapear visualmente como diferentes soluções se posicionam em relação a um conjunto de atributos relevantes para o cliente, revelando eixos de diferenciação.
@@ -75,7 +66,9 @@ Link da planilha: [Canvas Estratégico do Oceano Azul - Banco PAN](https://docs.
 ---
 
 <div align="center">Figura X: Curva de Valor (Strategy Canvas)</div>
-<img src="/artefatos/assets/curva_de_valor.png">
+<div align="center">
+  <img src="/artefatos/assets/curva_de_valor.png">
+</div>
 <div align="center">Fonte: Material produzido pelos autores</div>
 
 
