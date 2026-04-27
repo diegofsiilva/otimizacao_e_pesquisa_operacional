@@ -272,26 +272,25 @@ _Escolha uma e **justifique**._
 4. **Marcar proxies**: "utilização constante é proxy" (G06: perdeu pontos por omitir)
 5. **FO simples** — poucos parâmetros calibráveis (G02: penalizado por excesso)
 
-**Dica de apresentação (G03 perdeu pontos por fórmulas difíceis de ler):**
-Escrever a FO em forma expandida com labels:
+_[TODO: Escrever 2-3 parágrafos explicando o objetivo do modelo — o que significa "maximizar o lucro" neste contexto de negócio, por que essa é a métrica certa para o Pan, e como o parceiro vai avaliar o resultado (comparando rentabilidade do limite atual vs. sugerido).]_
 
-$$\max \underbrace{\sum_{k} [\text{receita}_k]}_{\text{(A)}} - \underbrace{\sum_{k} [\text{perda}_k]}_{\text{(B)}}$$
+**Justificativa da formulação escolhida:** A função objetivo adota a forma **FO = receita − perda** (sem ponderador $\lambda$), delegando o controle de risco inteiramente às restrições (R1–R4). Essa separação é preferível por três razões: (i) o TAPI define explicitamente os tetos de inadimplência como restrições, não como penalidades na FO; (ii) um ponderador $\lambda$ entre receita e perda introduziria um hiperparâmetro difícil de calibrar sem dados históricos de recuperação — justamente um dado que o parceiro não forneceu; (iii) manter a FO como lucro líquido puro (R$) garante que todos os termos estejam na mesma unidade e escala, evitando a mistura de escalas penalizada nos feedbacks (G02). Dessa forma, a FO responde a uma única pergunta: _"qual alocação de limites gera o maior retorno esperado?"_, enquanto as restrições garantem que esse retorno não viole os limiares de risco aceitáveis pelo banco.
 
-E depois expandir cada termo separadamente, com explicação abaixo.
+A receita é restrita a interchange sobre o volume transacionado — conforme orientação do TAPI, que exclui receita de rotativo e outros produtos. Isso torna a FO conservadora (subestima a receita real), mas mantém a linearidade e elimina a necessidade de modelar comportamento de parcelamento ou rolagem de dívida.
 
 $$
-\max \underbrace{[\text{termo de receita}]}_{\text{(A) Receita esperada de interchange}} \; - \; \underbrace{[\text{termo de perda}]}_{\text{(B) Perda esperada por inadimplência}}
+\max \sum_{k=1}^{K} z_k \cdot \left[ \underbrace{\left(\sum_{i \in \mathcal{C}_k} \pi_i \right) \cdot \bar{u} \cdot t \cdot L_k}_{\text{(A) Receita esperada de interchange}} \; - \; \underbrace{\left(\sum_{i \in \mathcal{C}_k} PD_i \right) \cdot L_k}_{\text{(B) Perda esperada}} \right]
 $$
-
-_[Expandir cada termo. Abaixo, explicar o que (A) e (B) representam e marcar proxies.]_
 
 **Onde:**
 
-- _(A) = ... **Proxy:** utilização constante $\bar{u}$ = 0,40_
-- _(B) = ... **Proxy:** LGD = 1 (sem recuperação)_
+- **(A) Receita esperada de interchange:** Para cada cliente $i$ no cluster $k$, a receita esperada é $\pi_i \cdot \bar{u} \cdot t \cdot L_k$ — o cliente converte com probabilidade $\pi_i$, utiliza fração $\bar{u}$ do limite $L_k$, gerando receita de interchange à taxa $t$. **Proxies:** utilização constante $\bar{u} = 0{,}40$ e taxa de interchange $t = 0{,}015$.
 
-**Nota sobre linearidade:**
-A FO é linear em $L_k$ porque todos os demais termos ($\pi_i$, $\bar{u}$, $t$, $PD_i$) são **parâmetros**, não variáveis de decisão. O produto $z_k \cdot L_k$ é bilinear se ambos forem variáveis — tratar via abordagem em duas etapas (fixar $z_k$ primeiro, depois otimizar $L_k$) para manter LP puro.
+- **(B) Perda esperada:** Para cada cliente $i$ no cluster $k$ que recebe oferta, a perda esperada é $PD_i \cdot L_k$ — probabilidade de default vezes exposição (limite). **Proxy:** LGD = 1 (perda total em caso de default, sem recuperação).
+
+- A FO é linear em $L_k$, pois todos os demais termos ($\pi_i$, $\bar{u}$, $t$, $PD_i$) são parâmetros. O produto $z_k \cdot L_k$ é bilinear — tratado via abordagem em duas etapas: (1) fixar $z_k$ por ranking de retorno unitário, (2) otimizar $L_k$ como LP puro.
+
+_[TODO: Após implementar a clusterização, incluir aqui um exemplo numérico com 2-3 clusters reais mostrando como a FO calcula o retorno líquido para cada um — isso torna a formulação concreta e ajuda a professora a verificar consistência.]_
 
 ---
 
