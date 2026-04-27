@@ -220,7 +220,9 @@ Como cientista de dados, eu quero carregar a base de dados do banco no formato _
 
 - *[Carrega corretamente bases com até ~1,8 milhões de registros elegíveis.]*
 
-- *[Exibe mensagem de erro clara caso o arquivo esteja corrompido ou com variáveis ausentes.]
+- *[Exibe mensagem de erro clara caso o arquivo esteja corrompido ou com variáveis ausentes.]*
+
+- *[Também executa com base de teste mock (ex.: 1.000 registros), sem depender da etapa de otimização de limites.]*
 
 ---
 
@@ -234,7 +236,9 @@ Como cientista de dados, eu quero configurar o número de clusters utilizados na
 
 - *[Executa a clusterização em ≤ 5 minutos para a base M1 (~1,8M registros).]*
 
-- *[Exibe mensagem de erro se o número de clusters for inferior ao mínimo permitido.]
+- *[Exibe mensagem de erro se o número de clusters for inferior ao mínimo permitido.]*
+
+- *[Executa clusterização com base mock de 1.000 registros, sem depender da execução da otimização de limites.]*
 
 ---
 
@@ -248,7 +252,9 @@ Como analista de estratégia de crédito, eu quero configurar metas de produçã
 
 - *[O modelo executa a otimização considerando as metas informadas.]*
 
-- *[Exibe mensagem de validação se as metas estiverem fora dos limites operacionais definidos pelo negócio.]
+- *[A validação e o salvamento das metas funcionam sem necessidade de executar o solver de otimização.]*
+
+- *[Bloqueia valores fora das faixas válidas e exibe erro específico: a quantidade de clientes aprovados deve ficar entre zero e o total de clientes elegíveis, e o volume total de limite deve ficar entre zero e dois bilhões de reais.]*
 
 ---
 
@@ -260,9 +266,9 @@ Como analista de estratégia de crédito, eu quero consultar quais restrições 
 
 - *[Permite visualizar, para cada cluster ou cliente, quais restrições limitaram o valor final do limite (ex: teto de inadimplência, capacidade, mínimo, múltiplo).]*
 
-- *[Exibe a lista de restrições ativas de forma clara e auditável.]*
+- *[Para cada cluster ou cliente, exibe no mínimo: identificador, limite sugerido, restrição ativa, valor-limite da restrição e timestamp de execução.]*
 
-- *[Disponibiliza exportação das informações em formato legível (ex: CSV ou tabela Python).]
+- *[Permite buscar por identificador de cluster ou cliente e retorna as restrições ativas em até 3 segundos para consultas de até 10.000 registros.]*
 
 ---
 
@@ -276,9 +282,39 @@ Como cientista de dados, eu quero validar que todos os limites gerados respeitam
 
 - *[Todos os limites são múltiplos exatos de R$50.]*
 
-- *[O sistema exibe mensagem de erro caso alguma dessas regras seja violada.]
+- *[O sistema exibe mensagem de erro caso alguma dessas regras seja violada.]*
+
+- *[Executa a validação de limites mínimos e múltiplos em até 2 minutos para bases com até 1,8 milhão de registros.]*
 
 ---
+
+### US06 - *[Visualizar distribuição dos limites]* 
+
+Como analista de estratégia de crédito, eu quero visualizar a distribuição dos limites otimizados por cluster ou faixa de risco, para analisar o impacto das configurações e tomar decisões mais embasadas.
+
+**Critérios de aceitação:**
+
+- *[Permite visualizar a distribuição dos limites por cluster ou faixa de risco em formato de tabela ou gráfico.]*
+
+- *[Exibe métricas agregadas: média, mediana, mínimo, máximo e desvio padrão dos limites por grupo.]*
+
+- *[Permite filtrar e ordenar os resultados por diferentes critérios (ex: cluster, faixa de risco).]*
+
+- *[A visualização funciona com dataset mock pré-carregado, sem depender da execução de clusterização no mesmo fluxo.]*
+
+---
+
+### US07 - *[Exportar resultados]* 
+
+Como cientista de dados, eu quero exportar os resultados finais da otimização em formato Python ou CSV, para facilitar a integração com motores internos e o compartilhamento com outros times.
+
+**Critérios de aceitação:**
+
+- *[Exporta CSV e objeto Python contendo obrigatoriamente: identificador_cluster_ou_cliente, limite_atribuido, restricoes_ativas, receita_esperada, inadimplencia_fisica_projetada e inadimplencia_financeira_projetada.]*
+
+- *[A exportação funciona a partir de arquivo de resultados já existente, sem depender da execução imediata do modelo.]*
+
+- *[Exibe mensagem de confirmação ao concluir a exportação e mensagem de erro clara em caso de falha.]*
 
 ---
 
