@@ -103,31 +103,88 @@ Este problema pode ser formulado como um _problema de programação linear (LP) 
 
 ### Dados disponíveis relevantes
 
-_O parceiro forneceu 3 bases Parquet (safras M1, M2, M3) com 17 variáveis. Listar as que entram diretamente na FO ou nas restrições, com estatísticas reais._
+O parceiro forneceu três bases de dados em formato Parquet, correspondentes a três safras temporais (M1, M2, M3), contendo o universo de correntistas do Banco Pan. A tabela abaixo resume a dimensão e o funil de conversão de cada safra:
 
-**Estatísticas-chave da base M1 (extraídas dos dados reais):**
+| Safra | Clientes totais | Elegíveis (`flag_filtros = 0`) | Receberam oferta | Contrataram | Ativaram | `over30mob3` observado |
+|:---:|---:|---:|---:|---:|---:|---:|
+| M1 | 14.569.142 | 1.836.085 | 117.367 | 6.506 | 5.704 | 4.966 (377 eventos) |
+| M2 | 13.808.309 | 1.805.274 | 120.573 | 6.684 | 5.642 | 4.959 (372 eventos) |
+| M3 | 13.868.729 | 3.137.258 | 382.692 | 9.930 | 8.347 | 7.465 (556 eventos) |
 
-- `pd_produto`: min=0,037, mediana=0,709, max=0,940 — **maioria da base tem PD alta**
-- `capacidade_pagamento`: min=0, mediana=550, max=25.000. **Nulls: 0,3% em M1, ~22% em M2/M3**
-- `score_propensao_contrato`: range [4, 840] — **não é [0,1]**, requer normalização
-- `flag_filtros`: **1 = restrito** (12,7M), **0 = elegível** (~1,8M)
-- `limite_ofertado`: **99,2% null** — só 117K receberam oferta
-- `renda_estimada`: min=1.300, mediana=1.925, max=16.875
-- Funil: 14,5M → 1,8M elegíveis → 117K com oferta → 6,5K contrataram → 5,7K ativaram
+A tabela a seguir detalha as 17 variáveis fornecidas, com estatísticas descritivas reais da safra M1 e o papel de cada uma no modelo.
 
-**PROFESSORA:** Ela valoriza quando o grupo mostra que **entende os dados de verdade**, não apenas lista. Dizer "mediana de PD é 0,71, portanto a maioria da base tem risco alto e a seleção de quem recebe oferta é tão importante quanto o limite" é o tipo de insight que impressiona.
+| Variável | Descrição | Estatísticas (M1) | Papel no modelo |
+|:---|:---|:---|:---|
+| `token` | Identificador anônimo por safra | 0 a 14.569.141 | Chave de identificação |
+| `safra_ref_uso` | Safra de referência | M1, M2, M3 | Permite backtesting entre safras |
+| `score_interno` | Score de crédito interno | min=54, med=292, max=975 | Não utilizado diretamente no modelo — serve apenas como input interno do banco para gerar `pd_produto` |
+| `pd_produto` | Probabilidade de default no produto | min=0,025, med=0,71, max=0,946 | **Parâmetro central da FO (termo B) e das restrições R1 e R2.** Mediana de 0,71 indica que a maioria da base elegível tem PD alta — a seleção de quem recebe oferta é tão importante quanto a calibração do limite |
+| `score_generico_1` | Score de bureau (bureau 1) | min=49, med=409, max=995. Nulls: 0,1% | Variável de entrada para clusterização (ver seção Pré-processamento) |
+| `score_generico_2` | Score de bureau (bureau 2) | min=1, med=713, max=942. Nulls: <0,01% | Variável de entrada para clusterização (ver seção Pré-processamento) |
+| `capacidade_pagamento` | Estimativa interna de capacidade de pagamento | min=0, med=548, max=25.000. **Nulls: 0,3% M1; 42,2% M2; 43,5% M3** | **Restrição R3 (alavancagem).** Nulls em M2/M3 são limitação severa — ver seção (b) |
+| `delta_capacidade_pagamento` | Capacidade deduzida dos saldos a vencer | min=−25.000, med=55, max=25.000. Nulls: idem | Versão conservadora da capacidade — valores negativos indicam comprometimento além da capacidade |
+| `renda_estimada` | Estimativa interna de renda | min=1.275, med=1.908, max=17.950. Nulls: 0,3% | Proxy alternativa para R3 quando `capacidade_pagamento` é null |
+| `fx_idade` | Faixa etária | 9 faixas: 21-30 (35,5%), 31-40 (31,1%), 41-50 (18,8%) | Variável de entrada para clusterização (ver seção Pré-processamento) |
+| `flag_filtros` | Indicador de perfil restrito | **0 = elegível** (1,84M), **1 = restrito** (12,73M) | Restrição hard: clientes com `flag_filtros = 1` são excluídos da otimização |
+| `score_propensao_contrato` | Score de propensão à conversão | min=3, med=315, max=846 | Parâmetro $\pi_i$ na FO (termo A). **Range [3, 846], não [0,1]** — requer normalização min-max |
+| `score_credito_cross` | Score de crédito multiproduto | min=103, med=706, max=954 | Variável de entrada para clusterização (ver seção Pré-processamento); pode informar o multiplicador de alavancagem $m_k$ |
+| `limite_ofertado` | Limite ofertado na política atual | min=200, med=806, max=20.000. **99,2% null** | Baseline para backtesting — apenas 117K têm referência |
+| `flag_contrato` | Indicadora de contratação (1 = contratou) | 6.506 (0,04%) | Backtesting. Taxa de conversão ~5,5% entre os que receberam oferta |
+| `flag_ativacao` | Indicadora de ativação (1 = ativou) | 5.704 (87,7% dos que contrataram) | Backtesting |
+| `over30mob3` | Atraso >30 dias nas 3 primeiras parcelas | 4.966 válidos, **377 eventos** (7,6%). 99,97% null | Inadimplência realizada. Viés de seleção severo — só observável para quem ativou |
 
-| Variável                                                       | Descrição | Estatísticas (M1) | Papel no modelo |
-| :------------------------------------------------------------- | :-------- | :---------------- | :-------------- |
-| _[Preencher para cada variável que entra na FO ou restrições]_ |           |                   |                 |
+**Observações críticas sobre os dados:**
 
-_Focar nas que entram na FO ou nas restrições. Para cada uma, dizer **por que** é relevante e **como** entra._
+**Funil de conversão (M1):** Dos 14,5M clientes, ~1,8M são elegíveis. Desses, 117K receberam oferta (6,4% dos elegíveis). Dos que receberam, 6.506 contrataram (5,5%) e 5.704 ativaram (87,7%). Apenas 4.966 têm `over30mob3` observado, dos quais 377 (7,6%) tiveram evento de inadimplência. Esse funil confirma que a **seleção de quem recebe oferta** é tão relevante quanto a **definição do limite**.
 
-**PARA NOTA 10:**
+**PD da base é alta:** A mediana de `pd_produto` é 0,71 nas três safras — a maioria da base tem PD > 50%. Isso é esperado: a base inclui todos os correntistas, não apenas os pré-aprovados. Clientes de baixo risco são minoria. Implicação: o modelo precisa ser eficiente na seleção (quais clusters recebem oferta), não apenas na calibração do limite.
 
-- Explicitar variáveis **não fornecidas** que seriam úteis: LGD, taxa de interchange, utilização
-- Documentar o problema de `capacidade_pagamento` null em M2/M3 (~22%)
-- Mostrar que entende o viés de seleção: `over30mob3` só existe para ~5K que ativaram
+**`capacidade_pagamento` null em M2/M3:** Em M1, apenas 0,3% dos registros não têm essa variável. Porém, **em M2 o percentual sobe para 42,2% e em M3 para 43,5%** — quase metade da base. Isso é uma limitação severa para a restrição R3 (alavancagem), discutida na seção (b).
+
+**Variáveis não fornecidas que seriam relevantes:**
+- **LGD (Loss Given Default):** Não fornecida. Perda = PD × limite (LGD = 1). **Simplificação MVP** — assumimos perda total em caso de default (conservador). No Target, substituir por LGD calibrada com dados de recuperação do parceiro.
+- **Taxa de interchange:** Valor exato não fornecido. **Simplificação MVP:** $t$ = 1,5% sobre volume transacionado (média de mercado brasileiro para cartão de crédito). No Target, validar taxa real com o parceiro.
+- **Utilização esperada do limite:** Não fornecida. **Simplificação MVP:** constante $\bar{u}$ = 0,40. Parâmetro de **alta sensibilidade** (ver Análise de Sensibilidade) — variação de 0,20 a 0,50 altera a receita em ~150%. No Target, estimar $\bar{u}$ por cluster a partir de dados de ativação.
+
+---
+
+### Pré-processamento: Clusterização dos clientes elegíveis
+
+O modelo de otimização opera sobre **clusters de clientes**, não sobre indivíduos — cada cluster $k$ recebe um único limite $L_k$. A clusterização é uma etapa de pré-processamento que agrupa clientes com perfil de risco e comportamento semelhantes, reduzindo a dimensionalidade do problema de ~1,8M variáveis individuais para $K \geq 100$ variáveis de cluster (conforme TAPI).
+
+**Status atual:** A clusterização ainda não foi implementada. A definição a seguir descreve a abordagem planejada.
+
+**Variáveis de entrada para clusterização:**
+
+| Variável | Justificativa |
+|:---|:---|
+| `pd_produto` | Risco de default — dimensão central para segmentar perfis |
+| `score_generico_1` | Score de bureau 1 — proxy de histórico de crédito externo |
+| `score_generico_2` | Score de bureau 2 — complementa bureau 1 com fonte distinta |
+| `fx_idade` | Faixa etária — correlacionada com perfil de consumo e risco |
+| `score_credito_cross` | Score multiproduto — captura risco cross-selling |
+| `capacidade_pagamento` | Capacidade de pagamento — define teto de alavancagem (R3). Para nulls em M2/M3, usar `renda_estimada × 0,30` como proxy |
+
+**Abordagem planejada:**
+
+- **Algoritmo:** K-Means como baseline (escalável para a dimensão da base), com avaliação de alternativas como DBSCAN ou clusterização hierárquica caso os clusters apresentem formatos não-esféricos.
+- **Normalização:** As variáveis possuem escalas distintas (PD em [0,1], scores em [0, ~1000], capacidade em R$). Será aplicada normalização z-score ou min-max antes da clusterização.
+- **Número de clusters ($K$):** Mínimo 100 (TAPI). O valor final será definido via método do cotovelo (elbow method) e silhouette score, testando $K \in \{100, 200, 500, 1000\}$.
+- **Tratamento de variáveis categóricas:** `fx_idade` é ordinal (9 faixas) — será codificada como inteiro ordenado.
+- **Ferramenta:** scikit-learn (`sklearn.cluster.KMeans`), com pré-processamento via `sklearn.preprocessing`.
+
+**Saídas da clusterização (parâmetros do modelo):**
+
+Para cada cluster $k$, serão calculados os parâmetros agregados que alimentam a função objetivo e as restrições:
+
+| Parâmetro agregado | Cálculo | Usado em |
+|:---|:---|:---|
+| $\sum_{i \in \mathcal{C}_k} PD_i$ | Soma das PDs dos clientes do cluster | FO (termo B), R1, R2 |
+| $\sum_{i \in \mathcal{C}_k} \pi_i$ | Soma das propensões normalizadas | FO (termo A) |
+| $\min_{i \in \mathcal{C}_k} CP_i$ | Menor capacidade de pagamento do cluster | R3 (alavancagem) |
+| $\|\mathcal{C}_k\|$ | Número de clientes no cluster | R1, R5, R6 |
+
+Dessa forma, a clusterização transforma os dados brutos individuais nos parâmetros agregados que o LP consome — sem ela, o modelo não tem inputs.
 
 ---
 
