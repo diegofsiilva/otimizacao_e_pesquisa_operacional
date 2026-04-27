@@ -208,59 +208,51 @@ Segundo Max Rehkopf, gerente de _Marketing_ de Produto na **_Atlassian_** (empre
 
 As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir que as histórias criadas são independentes umas das outras, negociáveis (podem ser ajustadas futuramente), geram valor para os usuários, estimáveis, concisas e testáveis.
 
-*Mínimo **5 User Stories**. Formato: "como [quem], eu quero [o que], para [por que]". Cada US conectada a uma persona e dor.*
+---
 
-> **INVEST — o professor cobra fortemente (feedback M5):**
->
-> | Critério | O que significa | Erro comum neste projeto |
-> |:---|:---|:---|
-> | **I**ndependent | Cada US testável isoladamente | ~~US de visualização que depende de importação estar pronta — usar dados mock~~ |
-> | **N**egotiable | O "como" é negociável, o "para que" não | ~~Especificar "usar React" ou "API REST" na US~~ |
-> | **V**aluable | Valor direto para o usuário | ~~"Como dev, eu quero refatorar"~~ |
-> | **E**stimable | Equipe consegue estimar esforço | ~~US gigante sem escopo claro~~ |
-> | **S**mall | **UMA responsabilidade.** Se tem "e", são duas. | ~~"importar dados **e** rodar o modelo **e** ver resultados"~~ |
-> | **T**estable | Critérios **sem ambiguidade** | ~~"funciona corretamente", "principais resultados", "parâmetros definidos"~~ |
+### US01 - *[Carregar base de dados]*
 
-> **TAPI — funcionalidades que o MVP deve ter:**
-> - Seleção ótima e atribuição de limites de cartão por cliente ou cluster (≥100 clusters)
-> - Formulação teórica (função objetivo + restrições)
-> - Restrições configuráveis: inadimplência física e financeira, capacidade de pagamento com alavancagem diferenciada, limite mínimo R$200, múltiplos de R$50, metas de produção
-> - Comparação com política atual (`limite_ofertado`)
-> - Output em Python
-> - Descrição técnica dos algoritmos e métodos
->
-> **TAPI — o que NÃO está no escopo:**
-> - ~~Ajuste de modelos de score de crédito~~ — scores são fornecidos prontos
-> - ~~Programação não-linear ou estocástica~~
-> - ~~Dashboard web sofisticado~~ — o TAPI não pede interface gráfica, pede software Python
-> - ~~Monitoramento em tempo real~~
-> - ~~Integração direta com sistemas do banco~~ — o TAPI pede output Python para integração posterior
+Como cientista de dados, eu quero carregar a base de dados do banco no formato _parquet_, para garantir que o modelo utilize as informações corretas e completas para a otimização de limites.
 
-> **Sugestões de User Stories alinhadas ao TAPI:**
->
-> *Agrupadas por persona — escolher, adaptar e detalhar critérios de aceite:*
->
-> **Para a persona de Estratégia de Crédito:**
-> - Configurar teto de inadimplência física (média simples de PD ≤ valor atual)
-> - Configurar teto de inadimplência financeira (média ponderada de PD por limite ≤ valor atual)
-> - Configurar multiplicadores de alavancagem por faixa de risco
-> - Configurar metas de produção (quantidade de clientes aprovados, volume de limite)
-> - Visualizar distribuição dos limites otimizados por cluster/faixa de risco
-> - Comparar limites otimizados vs. `limite_ofertado` (política atual) em termos de rentabilidade
-> - Consultar quais restrições foram ativas para um dado cluster (explicabilidade/auditoria)
-> - Executar cenários alternativos (ex: "e se o teto de inadimplência fosse 1pp menor?")
->
-> **Para a persona de Data Science:**
-> - Carregar base de dados do parceiro (parquet com as 17 variáveis do TAPI)
-> - Executar clusterização com número configurável de clusters (≥100)
-> - Executar o solver de otimização e obter limites ótimos por cluster
-> - Exportar resultados em formato Python/CSV para integração com motores internos
-> - Validar que os limites respeitam R$200 mínimo e são múltiplos de R$50
-> - Rodar backtesting contra safras históricas (M1, M2, M3)
->
-> **Atenção:** Cada item acima é uma US potencial. **Não** juntar vários em uma só.
+**Critérios de aceitação:**
+
+- *[Aceita arquivos no formato parquet contendo as 17 variáveis do TAPI.]*
+
+- *[Carrega corretamente bases com até ~1,8 milhões de registros elegíveis.]*
+
+- *[Exibe mensagem de erro clara caso o arquivo esteja corrompido ou com variáveis ausentes.]
 
 ---
+
+### US02 - *[Ajustar clusterização]*
+
+Como cientista de dados, eu quero configurar o número de clusters utilizados na segmentação dos clientes, para testar diferentes cenários e melhorar a precisão da atribuição de limites.
+
+**Critérios de aceitação:**
+
+- *[Permite definir o número de clusters, com valor mínimo de 100.]*
+
+- *[Executa a clusterização em ≤ 5 minutos para a base M1 (~1,8M registros).]*
+
+- *[Exibe mensagem de erro se o número de clusters for inferior ao mínimo permitido.]
+
+---
+
+### US03 - *[Ajustar metas de produção]* 
+
+Como analista de estratégia de crédito, eu quero configurar metas de produção (quantidade de clientes aprovados e volume total de limite), para alinhar a otimização dos limites aos objetivos do negócio.
+
+**Critérios de aceitação:**
+
+- *[Permite definir metas numéricas para quantidade de clientes aprovados e volume total de limite.]*
+
+- *[O modelo executa a otimização considerando as metas informadas.]*
+
+- *[Exibe mensagem de validação se as metas estiverem fora dos limites operacionais definidos pelo negócio.]
+
+---
+
+
 
 ### US1 — *[Título curto]*
 
@@ -276,46 +268,6 @@ As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir 
 > - ~~"Exibe os resultados"~~ → "Exibe: receita esperada total (R$), inadimplência física projetada (%), inadimplência financeira projetada (%), quantidade de clientes aprovados, volume total de limite"
 > - ~~"Funciona para a base"~~ → "Processa a base M1 (~1,8M elegíveis) em ≤ X minutos com ≥ 100 clusters"
 > - ~~"Compara com o atual"~~ → "Para os ~117K clientes com `limite_ofertado` não nulo, exibe: diferença média de limite (R$), variação de rentabilidade esperada (%), variação de inadimplência projetada (pp)"
-
----
-
-### US2 — *[Título]*
-
-**Como** *[Persona]*, **eu quero** *[ação]*, **para** *[benefício]*.
-
-**Critérios de Aceitação:**
-- *[...]*
-
----
-
-### US3 — *[Título]*
-
-**Como** *[Persona]*, **eu quero** *[ação]*, **para** *[benefício]*.
-
-**Critérios de Aceitação:**
-- *[...]*
-
----
-
-### US4 — *[Título]*
-
-**Como** *[Persona]*, **eu quero** *[ação]*, **para** *[benefício]*.
-
-**Critérios de Aceitação:**
-- *[...]*
-
----
-
-### US5 — *[Título]*
-
-**Como** *[Persona]*, **eu quero** *[ação]*, **para** *[benefício]*.
-
-**Critérios de Aceitação:**
-- *[...]*
-
----
-
-*[Adicionar mais US — recomendação: 7-9 US pequenas e focadas. Melhor ter mais US pequenas do que poucas grandes.]*
 
 ---
 
