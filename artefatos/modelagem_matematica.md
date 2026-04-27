@@ -79,49 +79,20 @@ Tudo em uma única seção integrada. A professora quer ver **coesão** — não
 
 ### Contexto do problema
 
-*Descrever o problema do Banco Pan e explicar **por que ele é um problema de otimização**.*
+O Banco Pan precisa definir, para cada cliente correntista elegível, qual limite pré-aprovado de cartão de crédito oferecer. Trata-se de um problema mono-produto: o escopo é exclusivamente o cartão de crédito pré-aprovado, sem considerar outros produtos de crédito da instituição. A prática vigente combina modelos de scoring com tabelas fixas de política de crédito, uma abordagem que trata de forma homogênea clientes com perfis de risco e capacidade de pagamento distintos. Isso significa que o risco agregado da carteira não é controlado diretamente pela decisão de limite, e que o potencial de retorno de parte da base elegível não é aproveitado. A validação do modelo desenvolvido neste projeto será feita pelo parceiro comparando a rentabilidade esperada entre o limite_ofertado praticado atualmente e o limite sugerido pelo modelo otimizado.
 
-*Deve responder:*
-- *Qual é o problema? → Definir limite pré-aprovado de cartão de crédito por cliente/cluster*
-- *Por que a prática atual é insuficiente? → Scoring + tabela fixa ignora heterogeneidade, não controla risco agregado*
-- *Qual é o trade-off? → Receita (interchange) vs. risco (inadimplência)*
+O núcleo do problema é um trade-off entre duas forças opostas. Um limite alto demais aumenta a receita de interchange, mas eleva a exposição à inadimplência e pode comprometer a saúde financeira do cliente. Um limite baixo demais reduz o risco, mas diminui a receita e pode frustrar o cliente a ponto de migrá-lo para um concorrente. A tabela abaixo resume esse trade-off:
 
-**PROFESSORA — OBRIGATÓRIO (G01 perdeu pontos por não fazer):**
-Incluir uma frase explícita classificando o tipo de problema. Exemplo:
-*"Este problema pode ser formulado como um problema de **programação linear (LP) de alocação de crédito**, no qual a variável de decisão é o limite (contínuo) por cluster de clientes, a função objetivo maximiza o retorno líquido (receita de interchange menos perda esperada), e as restrições impõem tetos de inadimplência agregada, capacidade de pagamento individual e regras operacionais."*
+| Decisão     | Se o limite for alto demais               | Se o limite for baixo demais           |
+| :---------- | :---------------------------------------- | :------------------------------------- |
+| *Receita* | Mais interchange, maior retorno potencial | Menos uso do cartão, menos receita     |
+| *Risco*   | Maior exposição, inadimplência sobe       | Menor inadimplência, carteira mais sã  |
+| *Cliente* | Risco de superendividamento               | Frustração, migração para concorrentes |
+| *Banco*   | Provisão maior, NPL sobe                  | Perda de competitividade no produto    |
 
-**TAPI — pontos que devem aparecer no contexto:**
-- Mono-produto (cartão de crédito pré-aprovado)
-- Correntistas elegíveis à concessão
-- **Otimização linear** — não-linear, estocástica e inteira fora do escopo (TAPI: "restrições que comprometam a continuidade poderão ser simplificadas")
-- O parceiro avalia comparando rentabilidade entre `limite_ofertado` (atual) e limite sugerido
+Esse equilíbrio entre retorno esperado e risco é amplamente estudado na literatura de otimização de crédito ao consumidor. Instituições como FICO (2021), Experian (2022) e Moody's Analytics (2020) tratam a definição de limite como um problema de otimização, onde a rentabilidade esperada é maximizada sujeita a restrições de risco da carteira e capacidade de pagamento individual.
 
-**Frase sugerida sobre LP vs MIP:**
-*"O TAPI orienta que o problema seja tratado como programação linear, permitindo simplificação de restrições que comprometam a continuidade do modelo. Embora a discretização dos limites em múltiplos de R$ 50 e a decisão binária de oferta tornem o problema naturalmente misto-inteiro, a escala da base (~1,8M elegíveis) e o escopo do curso direcionam para uma formulação LP contínua, com arredondamento dos limites em etapa de pós-processamento."*
-
-**PARA NOTA 10:**
-- Dimensionar com dados reais: ~14,5M clientes, **~1,8M elegíveis** (`flag_filtros = 0`)
-- Apresentar uma **tabela de trade-offs** (professora elogiou em G01 como "excelente"):
-
-| Decisão | Se limite alto demais... | Se limite baixo demais... |
-|:---|:---|:---|
-| Receita | ↑ Mais interchange | ↓ Menos uso, menos receita |
-| Risco | ↑ Mais exposição, mais inadimplência | ↓ Menor inadimplência |
-| Cliente | Risco de sobre-endividamento | Frustração, migração pra concorrente |
-| Banco | Provisão maior, NPL sobe | Perda de competitividade |
-
-- Citar referências de Credit Limit Optimization (FICO, Moody's, Experian)
-- Ir direto ao problema — **não** explicar "o que é otimização"
-
-**NÃO FAZER:**
-- ~~"Otimização é uma área da matemática que..."~~
-- ~~Falar do setor bancário em geral sem conectar ao Pan~~
-- ~~Tratar como multi-produto~~ — o TAPI é só cartão
-- ~~Classificar como MIP sem justificar por que o TAPI aceita LP~~
-
-*[Escrever 2-3 parágrafos + classificação do tipo de problema + tabela de trade-offs]*
-
----
+Este problema pode ser formulado como um *problema de programação linear (LP) de alocação de crédito*, no qual a variável de decisão é o limite contínuo por cluster de clientes, a função objetivo maximiza o retorno líquido esperado (receita de interchange menos perda esperada por inadimplência), e as restrições impõem tetos de inadimplência agregada, capacidade de pagamento individual e regras operacionais do banco. Embora a discretização em múltiplos de R$ 50 e a seleção de quais clusters recebem oferta tornem o problema naturalmente misto-inteiro, o escopo do curso e a escala da base direcionam para uma formulação LP contínua, com arredondamento dos limites aplicado em pós-processamento ($L_k^{\text{final}} = 50 \cdot \lceil L_k / 50 \rceil$, com piso de R$ 200).
 
 ### Dados disponíveis relevantes
 
