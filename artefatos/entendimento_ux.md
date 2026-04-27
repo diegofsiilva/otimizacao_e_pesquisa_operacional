@@ -252,22 +252,33 @@ Como analista de estratégia de crédito, eu quero configurar metas de produçã
 
 ---
 
+### US04 - *[Consultar restrições ativas]* 
 
+Como analista de estratégia de crédito, eu quero consultar quais restrições do modelo estavam ativas para cada cluster ou cliente, para justificar decisões e facilitar auditorias.
 
-### US1 — *[Título curto]*
+**Critérios de aceitação:**
 
-**Como** *[Persona]*, **eu quero** *[ação única e específica]*, **para** *[benefício conectado a uma dor]*.
+- *[Permite visualizar, para cada cluster ou cliente, quais restrições limitaram o valor final do limite (ex: teto de inadimplência, capacidade, mínimo, múltiplo).]*
 
-**Critérios de Aceitação:**
-- *[Critério 1 — mensurável, sem ambiguidade. Ex: "aceita valores entre 0,0 e 15,0"]*
-- *[Critério 2 — com valores numéricos. Ex: "executa em ≤ 5 minutos para ≥ 100 clusters"]*
-- *[Critério 3 — verificável. Ex: "nenhum limite gerado é inferior a R$ 200"]*
+- *[Exibe a lista de restrições ativas de forma clara e auditável.]*
 
-> **Dicas para critérios testáveis neste projeto:**
-> - ~~"O modelo respeita as restrições"~~ → "Nenhum limite gerado viola: (a) teto de inadimplência física, (b) teto financeiro, (c) capacidade × multiplicador, (d) R$ 200 mínimo, (e) múltiplo de R$ 50"
-> - ~~"Exibe os resultados"~~ → "Exibe: receita esperada total (R$), inadimplência física projetada (%), inadimplência financeira projetada (%), quantidade de clientes aprovados, volume total de limite"
-> - ~~"Funciona para a base"~~ → "Processa a base M1 (~1,8M elegíveis) em ≤ X minutos com ≥ 100 clusters"
-> - ~~"Compara com o atual"~~ → "Para os ~117K clientes com `limite_ofertado` não nulo, exibe: diferença média de limite (R$), variação de rentabilidade esperada (%), variação de inadimplência projetada (pp)"
+- *[Disponibiliza exportação das informações em formato legível (ex: CSV ou tabela Python).]
+
+---
+
+### US05 - *[Validar limites mínimos]* 
+
+Como cientista de dados, eu quero validar que todos os limites gerados respeitam o valor mínimo de R$200 e são múltiplos de R$50, para garantir conformidade com as regras do negócio.
+
+**Critérios de aceitação:**
+
+- *[Nenhum limite gerado é inferior a R$200.]*
+
+- *[Todos os limites são múltiplos exatos de R$50.]*
+
+- *[O sistema exibe mensagem de erro caso alguma dessas regras seja violada.]
+
+---
 
 ---
 
@@ -337,9 +348,11 @@ Como analista de estratégia de crédito, eu quero configurar metas de produçã
 
 ## Fontes
 
-1. [Princípio INVEST - Adapt Works](https://blog.adapt.works/como-escrever-as-melhores-user-stories-com-invest/)
+
 2. [Template Jornada do Usuário (Miro)](https://miro.com/app/board/uXjVOi3EFh4=/?share_link_id=503534748467)
 3. *[Dados do parceiro — TAPI, bases M1/M2/M3]*
 4. *[Referências adicionais]*
 
-REHKOPF, Max. Histórias de usuários | Exemplos e template. Disponível em: <https://www.atlassian.com/br/agile/project-management/user-stories>. 
+BONILHA, D. Como escrever as melhores User Stories com INVEST - Blog Adaptworks. Disponível em: <https://blog.adapt.works/como-escrever-as-melhores-user-stories-com-invest>. Acesso em: 27 abr. 2026. 
+
+REHKOPF, Max. Histórias de usuários | Exemplos e template. Disponível em: <https://www.atlassian.com/br/agile/project-management/user-stories>.  Acesso em: 27 abr. 2026.
