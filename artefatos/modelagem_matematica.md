@@ -86,7 +86,7 @@ Tudo em uma única seção integrada. A professora quer ver **coesão** — não
 
 ### Contexto do problema
 
-O Banco Pan precisa definir, para cada cliente correntista elegível, qual limite pré-aprovado de cartão de crédito oferecer. Trata-se de um problema mono-produto: o escopo é exclusivamente o cartão de crédito pré-aprovado, sem considerar outros produtos de crédito da instituição. A prática vigente combina modelos de scoring com tabelas fixas de política de crédito, uma abordagem que trata de forma homogênea clientes com perfis de risco e capacidade de pagamento distintos. Isso significa que o risco agregado da carteira não é controlado diretamente pela decisão de limite, e que o potencial de retorno de parte da base elegível não é aproveitado. A validação do modelo desenvolvido neste projeto será feita pelo parceiro comparando a rentabilidade esperada entre o limite_ofertado praticado atualmente e o limite sugerido pelo modelo otimizado.
+O Banco Pan precisa definir, para cada cliente correntista elegível, qual limite pré-aprovado de cartão de crédito oferecer. Trata-se de um problema mono-produto: o escopo é exclusivamente o cartão de crédito pré-aprovado, sem considerar outros produtos de crédito da instituição. A prática vigente combina modelos de scoring com tabelas fixas de política de crédito, uma abordagem que trata de forma homogênea clientes com perfis de risco e capacidade de pagamento distintos. Isso significa que o risco agregado da carteira não é controlado diretamente pela decisão de limite, e que o potencial de retorno de parte da base elegível não é aproveitado. A validação do modelo desenvolvido neste projeto será feita pelo parceiro comparando a rentabilidade esperada entre o `limite_ofertado` praticado atualmente e o limite sugerido pelo modelo otimizado.
 
 O núcleo do problema é um trade-off entre duas forças opostas. Um limite alto demais aumenta a receita de interchange, mas eleva a exposição à inadimplência e pode comprometer a saúde financeira do cliente. Um limite baixo demais reduz o risco, mas diminui a receita e pode frustrar o cliente a ponto de migrá-lo para um concorrente. A tabela abaixo resume esse trade-off:
 
@@ -106,32 +106,32 @@ Este problema pode ser formulado como um _problema de programação linear (LP) 
 O parceiro forneceu três bases de dados em formato Parquet, correspondentes a três safras temporais (M1, M2, M3), contendo o universo de correntistas do Banco Pan. A tabela abaixo resume a dimensão e o funil de conversão de cada safra:
 
 | Safra | Clientes totais | Elegíveis (`flag_filtros = 0`) | Receberam oferta | Contrataram | Ativaram | `over30mob3` observado |
-|:---:|---:|---:|---:|---:|---:|---:|
-| M1 | 14.569.142 | 1.836.085 | 117.367 | 6.506 | 5.704 | 4.966 (377 eventos) |
-| M2 | 13.808.309 | 1.805.274 | 120.573 | 6.684 | 5.642 | 4.959 (372 eventos) |
-| M3 | 13.868.729 | 3.137.258 | 382.692 | 9.930 | 8.347 | 7.465 (556 eventos) |
+| :---: | --------------: | -----------------------------: | ---------------: | ----------: | -------: | ---------------------: |
+|  M1   |      14.569.142 |                      1.836.085 |          117.367 |       6.506 |    5.704 |    4.966 (377 eventos) |
+|  M2   |      13.808.309 |                      1.805.274 |          120.573 |       6.684 |    5.642 |    4.959 (372 eventos) |
+|  M3   |      13.868.729 |                      3.137.258 |          382.692 |       9.930 |    8.347 |    7.465 (556 eventos) |
 
 A tabela a seguir detalha as 17 variáveis fornecidas, com estatísticas descritivas reais da safra M1 e o papel de cada uma no modelo.
 
-| Variável | Descrição | Estatísticas (M1) | Papel no modelo |
-|:---|:---|:---|:---|
-| `token` | Identificador anônimo por safra | 0 a 14.569.141 | Chave de identificação |
-| `safra_ref_uso` | Safra de referência | M1, M2, M3 | Permite backtesting entre safras |
-| `score_interno` | Score de crédito interno | min=54, med=292, max=975 | Não utilizado diretamente no modelo — serve apenas como input interno do banco para gerar `pd_produto` |
-| `pd_produto` | Probabilidade de default no produto | min=0,025, med=0,71, max=0,946 | **Parâmetro central da FO (termo B) e das restrições R1 e R2.** Mediana de 0,71 indica que a maioria da base elegível tem PD alta — a seleção de quem recebe oferta é tão importante quanto a calibração do limite |
-| `score_generico_1` | Score de bureau (bureau 1) | min=49, med=409, max=995. Nulls: 0,1% | Variável de entrada para clusterização (ver seção Pré-processamento) |
-| `score_generico_2` | Score de bureau (bureau 2) | min=1, med=713, max=942. Nulls: <0,01% | Variável de entrada para clusterização (ver seção Pré-processamento) |
-| `capacidade_pagamento` | Estimativa interna de capacidade de pagamento | min=0, med=548, max=25.000. **Nulls: 0,3% M1; 42,2% M2; 43,5% M3** | **Restrição R3 (alavancagem).** Nulls em M2/M3 são limitação severa — ver seção (b) |
-| `delta_capacidade_pagamento` | Capacidade deduzida dos saldos a vencer | min=−25.000, med=55, max=25.000. Nulls: idem | Versão conservadora da capacidade — valores negativos indicam comprometimento além da capacidade |
-| `renda_estimada` | Estimativa interna de renda | min=1.275, med=1.908, max=17.950. Nulls: 0,3% | Proxy alternativa para R3 quando `capacidade_pagamento` é null |
-| `fx_idade` | Faixa etária | 9 faixas: 21-30 (35,5%), 31-40 (31,1%), 41-50 (18,8%) | Variável de entrada para clusterização (ver seção Pré-processamento) |
-| `flag_filtros` | Indicador de perfil restrito | **0 = elegível** (1,84M), **1 = restrito** (12,73M) | Restrição hard: clientes com `flag_filtros = 1` são excluídos da otimização |
-| `score_propensao_contrato` | Score de propensão à conversão | min=3, med=315, max=846 | Parâmetro $\pi_i$ na FO (termo A). **Range [3, 846], não [0,1]** — requer normalização min-max |
-| `score_credito_cross` | Score de crédito multiproduto | min=103, med=706, max=954 | Variável de entrada para clusterização (ver seção Pré-processamento); pode informar o multiplicador de alavancagem $m_k$ |
-| `limite_ofertado` | Limite ofertado na política atual | min=200, med=806, max=20.000. **99,2% null** | Baseline para backtesting — apenas 117K têm referência |
-| `flag_contrato` | Indicadora de contratação (1 = contratou) | 6.506 (0,04%) | Backtesting. Taxa de conversão ~5,5% entre os que receberam oferta |
-| `flag_ativacao` | Indicadora de ativação (1 = ativou) | 5.704 (87,7% dos que contrataram) | Backtesting |
-| `over30mob3` | Atraso >30 dias nas 3 primeiras parcelas | 4.966 válidos, **377 eventos** (7,6%). 99,97% null | Inadimplência realizada. Viés de seleção severo — só observável para quem ativou |
+| Variável                     | Descrição                                     | Estatísticas (M1)                                                  | Papel no modelo                                                                                                                                                                                                    |
+| :--------------------------- | :-------------------------------------------- | :----------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `token`                      | Identificador anônimo por safra               | 0 a 14.569.141                                                     | Chave de identificação                                                                                                                                                                                             |
+| `safra_ref_uso`              | Safra de referência                           | M1, M2, M3                                                         | Permite backtesting entre safras                                                                                                                                                                                   |
+| `score_interno`              | Score de crédito interno                      | min=54, med=292, max=975                                           | Não utilizado diretamente no modelo — serve apenas como input interno do banco para gerar `pd_produto`                                                                                                             |
+| `pd_produto`                 | Probabilidade de default no produto           | min=0,025, med=0,71, max=0,946                                     | **Parâmetro central da FO (termo B) e das restrições R1 e R2.** Mediana de 0,71 indica que a maioria da base elegível tem PD alta — a seleção de quem recebe oferta é tão importante quanto a calibração do limite |
+| `score_generico_1`           | Score de bureau (bureau 1)                    | min=49, med=409, max=995. Nulls: 0,1%                              | Variável de entrada para clusterização (ver seção Pré-processamento)                                                                                                                                               |
+| `score_generico_2`           | Score de bureau (bureau 2)                    | min=1, med=713, max=942. Nulls: <0,01%                             | Variável de entrada para clusterização (ver seção Pré-processamento)                                                                                                                                               |
+| `capacidade_pagamento`       | Estimativa interna de capacidade de pagamento | min=0, med=548, max=25.000. **Nulls: 0,3% M1; 42,2% M2; 43,5% M3** | **Restrição R3 (alavancagem).** Nulls em M2/M3 são limitação severa — ver seção (b)                                                                                                                                |
+| `delta_capacidade_pagamento` | Capacidade deduzida dos saldos a vencer       | min=−25.000, med=55, max=25.000. Nulls: idem                       | Versão conservadora da capacidade — valores negativos indicam comprometimento além da capacidade                                                                                                                   |
+| `renda_estimada`             | Estimativa interna de renda                   | min=1.275, med=1.908, max=17.950. Nulls: 0,3%                      | Proxy alternativa para R3 quando `capacidade_pagamento` é null                                                                                                                                                     |
+| `fx_idade`                   | Faixa etária                                  | 9 faixas: 21-30 (35,5%), 31-40 (31,1%), 41-50 (18,8%)              | Variável de entrada para clusterização (ver seção Pré-processamento)                                                                                                                                               |
+| `flag_filtros`               | Indicador de perfil restrito                  | **0 = elegível** (1,84M), **1 = restrito** (12,73M)                | Restrição hard: clientes com `flag_filtros = 1` são excluídos da otimização                                                                                                                                        |
+| `score_propensao_contrato`   | Score de propensão à conversão                | min=3, med=315, max=846                                            | Parâmetro $\pi_i$ na FO (termo A). **Range [3, 846], não [0,1]** — requer normalização min-max                                                                                                                     |
+| `score_credito_cross`        | Score de crédito multiproduto                 | min=103, med=706, max=954                                          | Variável de entrada para clusterização (ver seção Pré-processamento); pode informar o multiplicador de alavancagem $m_k$                                                                                           |
+| `limite_ofertado`            | Limite ofertado na política atual             | min=200, med=806, max=20.000. **99,2% null**                       | Baseline para backtesting — apenas 117K têm referência                                                                                                                                                             |
+| `flag_contrato`              | Indicadora de contratação (1 = contratou)     | 6.506 (0,04%)                                                      | Backtesting. Taxa de conversão ~5,5% entre os que receberam oferta                                                                                                                                                 |
+| `flag_ativacao`              | Indicadora de ativação (1 = ativou)           | 5.704 (87,7% dos que contrataram)                                  | Backtesting                                                                                                                                                                                                        |
+| `over30mob3`                 | Atraso >30 dias nas 3 primeiras parcelas      | 4.966 válidos, **377 eventos** (7,6%). 99,97% null                 | Inadimplência realizada. Viés de seleção severo — só observável para quem ativou                                                                                                                                   |
 
 **Observações críticas sobre os dados:**
 
@@ -142,6 +142,7 @@ A tabela a seguir detalha as 17 variáveis fornecidas, com estatísticas descrit
 **`capacidade_pagamento` null em M2/M3:** Em M1, apenas 0,3% dos registros não têm essa variável. Porém, **em M2 o percentual sobe para 42,2% e em M3 para 43,5%** — quase metade da base. Isso é uma limitação severa para a restrição R3 (alavancagem), discutida na seção (b).
 
 **Variáveis não fornecidas que seriam relevantes:**
+
 - **LGD (Loss Given Default):** Não fornecida. Perda = PD × limite (LGD = 1). **Simplificação MVP** — assumimos perda total em caso de default (conservador). No Target, substituir por LGD calibrada com dados de recuperação do parceiro.
 - **Taxa de interchange:** Fornecida pelo parceiro: $t = 0{,}0175$ (1,75% sobre volume transacionado).
 - **Utilização esperada do limite:** Não fornecida. **Simplificação MVP:** constante $\bar{u}$ = 0,40. Parâmetro de **alta sensibilidade** (ver Análise de Sensibilidade) — variação de 0,20 a 0,50 altera a receita em ~150%. No Target, estimar $\bar{u}$ por cluster a partir de dados de ativação.
@@ -156,13 +157,13 @@ O modelo de otimização opera sobre **clusters de clientes**, não sobre indiv�
 
 **Variáveis de entrada para clusterização:**
 
-| Variável | Justificativa |
-|:---|:---|
-| `pd_produto` | Risco de default — dimensão central para segmentar perfis |
-| `score_generico_1` | Score de bureau 1 — proxy de histórico de crédito externo |
-| `score_generico_2` | Score de bureau 2 — complementa bureau 1 com fonte distinta |
-| `fx_idade` | Faixa etária — correlacionada com perfil de consumo e risco |
-| `score_credito_cross` | Score multiproduto — captura risco cross-selling |
+| Variável               | Justificativa                                                                                                           |
+| :--------------------- | :---------------------------------------------------------------------------------------------------------------------- |
+| `pd_produto`           | Risco de default — dimensão central para segmentar perfis                                                               |
+| `score_generico_1`     | Score de bureau 1 — proxy de histórico de crédito externo                                                               |
+| `score_generico_2`     | Score de bureau 2 — complementa bureau 1 com fonte distinta                                                             |
+| `fx_idade`             | Faixa etária — correlacionada com perfil de consumo e risco                                                             |
+| `score_credito_cross`  | Score multiproduto — captura risco cross-selling                                                                        |
 | `capacidade_pagamento` | Capacidade de pagamento — define teto de alavancagem (R3). Para nulls em M2/M3, usar `renda_estimada × 0,30` como proxy |
 
 **Abordagem planejada:**
@@ -177,12 +178,12 @@ O modelo de otimização opera sobre **clusters de clientes**, não sobre indiv�
 
 Para cada cluster $k$, serão calculados os parâmetros agregados que alimentam a função objetivo e as restrições:
 
-| Parâmetro agregado | Cálculo | Usado em |
-|:---|:---|:---|
-| $\sum_{i \in \mathcal{C}_k} PD_i$ | Soma das PDs dos clientes do cluster | FO (termo B), R1, R2 |
-| $\sum_{i \in \mathcal{C}_k} \pi_i$ | Soma das propensões normalizadas | FO (termo A) |
-| $\min_{i \in \mathcal{C}_k} CP_i$ | Menor capacidade de pagamento do cluster | R3 (alavancagem) |
-| $\|\mathcal{C}_k\|$ | Número de clientes no cluster | R1, R5, R6 |
+| Parâmetro agregado                 | Cálculo                                  | Usado em             |
+| :--------------------------------- | :--------------------------------------- | :------------------- |
+| $\sum_{i \in \mathcal{C}_k} PD_i$  | Soma das PDs dos clientes do cluster     | FO (termo B), R1, R2 |
+| $\sum_{i \in \mathcal{C}_k} \pi_i$ | Soma das propensões normalizadas         | FO (termo A)         |
+| $\min_{i \in \mathcal{C}_k} CP_i$  | Menor capacidade de pagamento do cluster | R3 (alavancagem)     |
+| $\|\mathcal{C}_k\|$                | Número de clientes no cluster            | R1, R5, R6           |
 
 Dessa forma, a clusterização transforma os dados brutos individuais nos parâmetros agregados que o LP consome — sem ela, o modelo não tem inputs.
 
@@ -190,35 +191,30 @@ Dessa forma, a clusterização transforma os dados brutos individuais nos parâm
 
 ### Variáveis de decisão
 
-**TAPI — LP contínuo:**
+O modelo possui duas variáveis de decisão, uma para cada aspecto da escolha que o banco precisa fazer: se oferece o cartão para um determinado grupo de clientes, e quanto de limite oferece caso decida ofertar.
 
-- O TAPI exige "otimização linear" e permite simplificar restrições que comprometam continuidade
-- Portanto: variável de limite é **contínua** ($L_k \in \mathbb{R}^+$), não inteira
-- A discretização (R$ 50) é aplicada em **pós-processamento**, não como restrição do modelo
-- A variável de seleção $z_k$ pode ser relaxada para $[0,1]$ ou tratada em etapa separada
+**$z_k$ — Decisão de oferta (variável binária)**
 
-**PROFESSORA (padrões do feedback):**
+$z_k$ representa se o cluster $k$ receberá ou não uma oferta de cartão de crédito. Ela assume apenas dois valores possíveis: $z_k = 1$ se o cluster recebe oferta, e $z_k = 0$ caso contrário. Por natureza, essa é uma variável binária — não faz sentido dizer que um cluster "recebe metade de uma oferta". No entanto, variáveis binárias pertencem ao domínio da programação inteira mista (MIP), que foge ao escopo do curso. Por isso, $z_k$ é tratada em etapa separada ao problema de otimização: antes de rodar o LP, os clusters são ordenados por retorno líquido unitário esperado (retorno total do cluster dividido pelo número de clientes) e os de maior retorno são selecionados até que as restrições de produção sejam satisfeitas. Feita essa seleção, $z_k$ assume valor fixo — 1 para os selecionados e 0 para os demais — e deixa de ser variável, passando a ser um parâmetro conhecido. Apenas então o LP é executado para otimizar $L_k$.
 
-- Variáveis **segmentadas** ($L_k$, não $L$ genérico) — cobrado em 3 de 4 grupos
-- **Não forçar binária** se não for necessário (G02). Neste projeto, $z_k$ é justificável mas deve ser justificada
-- Usar domínio contínuo para manter LP conforme TAPI
+$$z_k \in \{0, 1\}, \quad \forall k \in \{1, \dots, K\}$$
 
-| Símbolo | Descrição                    | Domínio                                                    | Justificativa do tipo                                                                                                                                                        |
-| :------ | :--------------------------- | :--------------------------------------------------------- | :--------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| _$L_k$_ | _[Limite por cluster]_       | _$L_k \in \mathbb{R}^+$ (contínuo, ≥ 0)_                   | _[Contínua: TAPI exige LP. Discretização em múltiplos de R$ 50 é pós-processamento: $L_k^{final} = 50 \cdot \lceil L_k / 50 \rceil$, com piso de R$ 200]_                    |
-| _$z_k$_ | _[Cluster k recebe oferta?]_ | _$z_k \in [0, 1]$ (relaxação LP) ou fixado em pré-seleção_ | _[Decisão de oferta é genuinamente binária; no LP, tratada como contínua e arredondada em pós-processamento, ou resolvida via ranking por retorno unitário em etapa prévia]_ |
+**$L_k$ — Limite de crédito por cluster (variável contínua)**
 
-**Conjuntos e índices (legenda obrigatória):**
+$L_k$ representa o valor do limite de crédito, em reais, atribuído a todos os clientes do cluster $k$ que receberem oferta (ou seja, para os clusters onde $z_k = 1$). Como todos os clientes de um mesmo cluster recebem o mesmo limite, o modelo precisa encontrar apenas $K$ valores de limite — um por cluster — em vez de um valor individual para cada um dos milhões de clientes elegíveis. Essa é a principal variável de decisão do LP: o solver determina o valor de $L_k$ para cada cluster selecionado que maximiza o retorno líquido total, respeitando todas as restrições.
 
-| Símbolo                   | Descrição                            |
-| :------------------------ | :----------------------------------- |
-| _$i \in \{1, \dots, n\}$_ | _Clientes elegíveis. n ≈ 1,8M em M1_ |
-| _$k \in \{1, \dots, K\}$_ | _Clusters de risco, K ≥ 100_         |
-| _$\mathcal{C}_k$_         | _Clientes pertencentes ao cluster k_ |
+$L_k$ é definida como variável contínua, podendo assumir qualquer valor real não-negativo, o que mantém o problema na categoria de programação linear. Os limites finais sugeridos ao banco são obtidos arredondando $L_k$ para o múltiplo de R$ 50 mais próximo acima em pós-processamento, aplicando também o piso mínimo de R$ 200 exigido pelo banco:
 
-**CONSISTÊNCIA (G01 perdeu pontos por isso):** Se a variável de decisão é $L_k$ (por cluster), TUDO usa $k$, não $i$. Se depois individualizar ($L_i$), atualizar conjuntos, parâmetros, FO e restrições.
+$$L_k^{\text{final}} = \max\!\left(200,\; 50 \cdot \left\lceil \frac{L_k}{50} \right\rceil\right), \quad \forall k \in \{1, \dots, K\}$$
 
----
+$$L_k \in \mathbb{R}^+, \quad \forall k \in \{1, \dots, K\}$$
+
+| Símbolo                 | Descrição                                        | Domínio                                             |
+| :---------------------- | :----------------------------------------------- | :-------------------------------------------------- |
+| $z_k$                   | Indicador de oferta para o cluster $k$           | $\{0, 1\}$, tratado como parâmetro fixo antes do LP |
+| $L_k$                   | Limite de crédito atribuído ao cluster $k$       | $\mathbb{R}^+$ (contínuo, otimizado pelo LP)        |
+| $k \in \{1, \dots, K\}$ | Índice de cluster, com $K \geq 100$              | —                                                   |
+| $\mathcal{C}_k$         | Conjunto de clientes pertencentes ao cluster $k$ | —                                                   |
 
 ### Parâmetros (dados de entrada)
 
