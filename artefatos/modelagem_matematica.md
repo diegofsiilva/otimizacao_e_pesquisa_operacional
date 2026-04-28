@@ -250,9 +250,7 @@ Em termos de negócio, maximizar o retorno líquido é a métrica correta porque
 
 A receita é restrita a interchange sobre o volume transacionado, à taxa fixa de 1,75% fornecida pelo parceiro. Embora existam outras fontes de receita (como rotativo), a modelagem por interchange mantém a linearidade da FO e elimina a necessidade de modelar comportamento de parcelamento ou rolagem de dívida. Isso torna a FO conservadora (subestima a receita real) mas simplifica a formulação sem comprometer a direção da solução ótima.
 
-$$
-\max \sum_{k=1}^{K} z_k \cdot \left[ \underbrace{\left(\sum_{i \in \mathcal{C}_k} \pi_i \right) \cdot \bar{u} \cdot t \cdot L_k}_{\text{(A) Receita esperada de interchange}} \; - \; \underbrace{\left(\sum_{i \in \mathcal{C}_k} PD_i \right) \cdot L_k}_{\text{(B) Perda esperada}} \right]
-$$
+$$\max \sum_{k=1}^{K} z_k \cdot \left[ \underbrace{\left(\sum_{i \in \mathcal{C}_k} \pi_i \right) \cdot \bar{u} \cdot t \cdot L_k}_{\text{(A) Receita esperada de interchange}} \; - \; \underbrace{\left(\sum_{i \in \mathcal{C}_k} PD_i \right) \cdot L_k}_{\text{(B) Perda esperada}} \right]$$
 
 #### Interpretação da função objetivo
 
@@ -312,15 +310,11 @@ O parceiro espera que a PD média da carteira ofertada pelo modelo não ultrapas
 
 **Versão original (razão - não-linear):**
 
-$$
-\frac{\sum_{k=1}^{K} z_k \cdot \sum_{i \in \mathcal{C}_k} PD_i}{\sum_{k=1}^{K} z_k \cdot |\mathcal{C}_k|} \leq \overline{PD}_{fis}^{atual}
-$$
+$$\frac{\sum_{k=1}^{K} z_k \cdot \sum_{i \in \mathcal{C}_k} PD_i}{\sum_{k=1}^{K} z_k \cdot |\mathcal{C}_k|} \leq \overline{PD}_{fis}^{atual}$$
 
 **Linearização:** Multiplicando ambos os lados pelo denominador $\sum_{k} z_k \cdot |\mathcal{C}_k|$ (estritamente positivo, pois ao menos um cluster é selecionado), a razão se transforma em uma desigualdade linear:
 
-$$
-\sum_{k=1}^{K} z_k \cdot \sum_{i \in \mathcal{C}_k} \left(PD_i - \overline{PD}_{fis}^{atual}\right) \leq 0
-$$
+$$\sum_{k=1}^{K} z_k \cdot \sum_{i \in \mathcal{C}_k} \left(PD_i - \overline{PD}_{fis}^{atual}\right) \leq 0$$
 
 Nessa forma, cada cluster $k$ contribui com o excesso (ou déficit) de PD em relação ao teto. Clusters com PD média acima de $\overline{PD}_{fis}^{atual}$ contribuem positivamente (consumindo folga da restrição), enquanto clusters com PD abaixo do teto contribuem negativamente (gerando folga). A soma total precisa ser não-positiva para que a carteira como um todo respeite o limite de inadimplência física.
 
@@ -332,15 +326,11 @@ O parceiro exige que a inadimplência financeira (média da PD ponderada pelo li
 
 **Versão original (razão - não-linear):**
 
-$$
-\frac{\sum_{k=1}^{K} z_k \cdot L_k \cdot \sum_{i \in \mathcal{C}_k} PD_i}{\sum_{k=1}^{K} z_k \cdot L_k \cdot |\mathcal{C}_k|} \leq \overline{PD}_{fin}^{atual}
-$$
+$$\frac{\sum_{k=1}^{K} z_k \cdot L_k \cdot \sum_{i \in \mathcal{C}_k} PD_i}{\sum_{k=1}^{K} z_k \cdot L_k \cdot |\mathcal{C}_k|} \leq \overline{PD}_{fin}^{atual}$$
 
 **Linearização:** Mesmo procedimento de R1 - multiplicando ambos os lados pelo denominador:
 
-$$
-\sum_{k=1}^{K} z_k \cdot L_k \cdot \sum_{i \in \mathcal{C}_k} \left(PD_i - \overline{PD}_{fin}^{atual}\right) \leq 0
-$$
+$$\sum_{k=1}^{K} z_k \cdot L_k \cdot \sum_{i \in \mathcal{C}_k} \left(PD_i - \overline{PD}_{fin}^{atual}\right) \leq 0$$
 
 O termo $z_k \cdot L_k$ é bilinear quando ambas são variáveis de decisão. Na abordagem em duas etapas, com $z_k$ fixado na etapa de seleção, a expressão torna-se linear em $L_k$: para clusters não selecionados ($z_k = 0$), o termo desaparece; para os selecionados ($z_k = 1$), resta $L_k \cdot \sum_{i \in \mathcal{C}_k}(PD_i - \overline{PD}_{fin}^{atual})$, que é linear na variável de decisão.
 
@@ -350,9 +340,7 @@ O parceiro exige que o limite respeite a capacidade de pagamento do cliente e qu
 
 Como todos os clientes de um mesmo cluster recebem o mesmo limite $L_k$, a formulação usa o mínimo da capacidade de pagamento dentro do cluster como referência. Essa é uma abordagem conservadora: garante que mesmo o cliente com menor capacidade do grupo não seja exposto a um limite incompatível.
 
-$$
-L_k \leq m_k \cdot \min_{i \in \mathcal{C}_k} CP_i, \quad \forall k
-$$
+$$L_k \leq m_k \cdot \min_{i \in \mathcal{C}_k} CP_i, \quad \forall k$$
 
 O multiplicador $m_k$ varia continuamente entre 0,3 e 1,8 conforme o perfil de risco do cluster. Na implementação, $m_k$ é interpolado a partir do score médio do cluster: clusters de menor risco recebem $m_k$ próximo de 1,8, e clusters de maior risco recebem $m_k$ próximo de 0,3. Esta restrição é linear em $L_k$ e não envolve bilinearidade.
 
@@ -360,9 +348,7 @@ O multiplicador $m_k$ varia continuamente entre 0,3 e 1,8 conforme o perfil de r
 
 O parceiro estabelece um piso de R\$ 200 para qualquer limite de cartão de crédito ofertado. Abaixo desse valor, o cartão perde competitividade frente a concorrentes e o custo operacional de emissão, manutenção e processamento não se justifica pela receita gerada. A formulação vincula o piso à variável de seleção $z_k$: quando o cluster recebe oferta ($z_k = 1$), o limite deve ser ao menos R\$ 200; quando não recebe ($z_k = 0$), o limite é livre para ser zero.
 
-$$
-L_k \geq L^{min} \cdot z_k = 200 \cdot z_k, \quad \forall k
-$$
+$$L_k \geq L^{min} \cdot z_k = 200 \cdot z_k, \quad \forall k$$
 
 A discretização em múltiplos de R\$ 50 ($L_k^{final} = 50 \cdot \lceil L_k / 50 \rceil$) é aplicada em pós-processamento, não como restrição do modelo, de modo a preservar a continuidade da formulação LP.
 
@@ -370,9 +356,7 @@ A discretização em múltiplos de R\$ 50 ($L_k^{final} = 50 \cdot \lceil L_k / 
 
 O parceiro indicou um teto absoluto de R\$ 25.000 para o limite ofertado. Contudo, na prática esse teto não é fixo: ele varia conforme o perfil de risco do cliente — clientes de maior risco devem ter tetos substancialmente menores. A restrição R3 (alavancagem) já captura essa diferenciação, pois o produto $m_k \cdot \min CP_i$ gera tetos naturalmente mais baixos para clusters de alto risco. O teto de R\$ 25.000 funciona como um limite absoluto que impede valores extremos mesmo para clusters de baixo risco com alta capacidade de pagamento.
 
-$$
-L_k \leq L^{max} = 25000, \quad \forall k
-$$
+$$L_k \leq L^{max} = 25000, \quad \forall k$$
 
 Na prática, R3 é a restrição ativa para a maioria dos clusters (pois $m_k \cdot \min CP_i < 25000$ para quase todos), e R5 atua apenas como salvaguarda nos casos em que a capacidade de pagamento é excepcionalmente alta.
 
@@ -382,9 +366,7 @@ Além das quatro restrições acima, o parceiro indicou que o modelo deve suport
 
 #### Restrições de domínio
 
-$$
-L_k \geq 0, \quad z_k \in [0, 1], \quad \forall k
-$$
+$$L_k \geq 0, \quad z_k \in [0, 1], \quad \forall k$$
 
 Limites não podem ser negativos. A variável $z_k$ é naturalmente binária (oferta ou não oferta), mas relaxada para o intervalo contínuo $[0, 1]$ para manter a formulação como programação linear. Na abordagem em duas etapas, $z_k$ é fixado em 0 ou 1 antes da otimização de limites, de modo que a relaxação não afeta a solução final.
 
