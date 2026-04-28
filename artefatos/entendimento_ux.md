@@ -224,35 +224,26 @@ A solução proposta deve garantir transparência, usabilidade e alinhamento ent
 
 ## 3. Jornada do Usuário (Opcional — vale 2 pontos extras)
 
-*Mapear o percurso de **uma persona específica** (a primária) usando a solução.*
 
-> **PARA NOTA MÁXIMA:**
-> - Conectar a uma persona específica
-> - Cada etapa deve corresponder a uma ou mais User Stories
-> - Incluir pensamentos e sentimentos realistas
-> - Identificar oportunidades de melhoria
+### Persona 1 — Rodinei Filho (Política de Crédito)
 
-> **Sugestão de jornada para a persona de Estratégia de Crédito:**
->
-> | Etapa | Correspondência com US |
-> |:---|:---|
-> | 1. Receber dados processados do time de DS | US de carregamento de dados |
-> | 2. Configurar parâmetros (tetos de inadimplência, alavancagem, metas) | US de configuração |
-> | 3. Executar otimização | US de execução |
-> | 4. Analisar resultados agregados (receita, inadimplência física/financeira) | US de visualização |
-> | 5. Comparar com política atual (`limite_ofertado`) | US de comparação |
-> | 6. Investigar clusters específicos (quais restrições foram ativas) | US de explicabilidade |
-> | 7. Ajustar parâmetros e re-executar (cenário alternativo) | US de cenários |
-> | 8. Exportar resultado final para apresentar no comitê | US de exportação |
+**Persona:** Rodinei Filho, analista de Política de Crédito do Banco PAN.  
+
+**Cenário:** Definir e comunicar uma estratégia de concessão de limites pré-aprovados com base no modelo de otimização linear, equilibrando retorno esperado, risco de inadimplência e capacidade de pagamento dos correntistas.  
+
+**Expectativa central:** Decisões seguras, simples, rastreáveis e orientadas por dados.
+
+<img src="/assets/jornadaRodinei.jpg">
+
+#### Mapa da Jornada
 
 | Etapa | Ação | Pensamento | Sentimento | Oportunidade |
 |:---|:---|:---|:---|:---|
-| *[1]* | *[O que faz]* | *[O que pensa]* | *[Como se sente]* | *[O que melhorar]* |
-| *[2]* | | | | |
-| *[3]* | | | | |
-| *[4]* | | | | |
-| *[5]* | | | | |
-| *[6]* | | | | |
+| **1. Receber análise** | Acessa o sistema e visualiza a distribuição dos limites sugeridos pelo modelo, junto às métricas de risco e retorno da carteira. Consulta o contexto da recomendação para entender o que o modelo está propondo. | *"O que o modelo está sugerindo? Faz sentido com o que eu já sei da carteira?"* | Curioso, levemente desconfiante — precisa entender a lógica por trás dos números antes de confiar. | Exibir junto ao output um resumo da função objetivo e das restrições ativas, para que a recomendação venha acompanhada de seu racional matemático desde o primeiro contato. **US relacionada: US06** |
+| **2. Interpretar outputs** | Avalia o impacto dos limites sugeridos sobre a inadimplência física e financeira. Analisa o retorno esperado da estratégia e compara os resultados com as metas de negócio vigentes. | *"Qual o impacto em risco e retorno? Estou dentro das restrições que o banco exige?"* | Analítico e pressionado — precisa traduzir números técnicos em decisão defensável para a gestão. | Disponibilizar uma visão comparativa direta entre o output do modelo e as metas, com destaque automático para restrições próximas do limite. **US relacionada: US06** |
+| **3. Simular cenários** | Ajusta metas de produção (volume de clientes aprovados e volume financeiro de limite ofertado) e testa o impacto das mudanças nos resultados. Compara cenários alternativos para identificar o melhor equilíbrio. | *"Posso melhorar esse equilíbrio? O que acontece se eu relaxar a meta de inadimplência em 0,5 ponto?"* | Engajado e investigativo — sente que tem controle sobre a política, mas anseia por um retorno de simulação mais rápido. | Oferecer um simulador de cenários baseado diretamente na função objetivo, sem dependência do time de Data Science para cada rodada. **US relacionada: US03** |
+| **4. Decidir estratégia** | Consulta as restrições ativas que impactam cada decisão (capacidade de pagamento, alavancagem, PDD), valida a aderência às políticas de crédito vigentes e define a estratégia final de concessão. | *"Qual decisão maximiza o resultado com segurança? Consigo justificar essa escolha em comitê?"* | Cauteloso e responsável — o peso da decisão é real, pois erros afetam a carteira e os correntistas. | Gerar templates de decisão com as restrições utilizadas explicitadas, facilitando a documentação e a defesa da estratégia em auditorias e comitês. **US relacionada: US04** |
+| **5. Comunicar e revisar** | Exporta os resultados e os compartilha com as áreas envolvidas (gestão, engenharia, produto). Acompanha o desempenho da carteira ao longo do tempo e ajusta a estratégia conforme os resultados observados. | *"Funcionou ou preciso ajustar? O modelo continua válido para o cenário atual?"* | Reflexivo e responsável pelo ciclo completo — busca evidências de que a política entregou o que prometia. | Criar um dashboard com impacto esperado versus realizado (retorno, inadimplência, volume concedido), com alertas automáticos quando o desempenho divergir das premissas do modelo. **US relacionada: US07** |
 
 ---
 
