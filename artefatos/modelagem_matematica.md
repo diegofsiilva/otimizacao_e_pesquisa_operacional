@@ -282,6 +282,12 @@ Quando o LP for implementado, os preços-sombra serão extraídos diretamente do
 
 ## b) Análise crítica (Peso 4 — MÁXIMO 12 LINHAS)
 
+**Limitação 1 — LGD = 1 (sem recuperação):** O termo de perda da FO, $PD_i \cdot L_i$, assume que o banco perde o valor integral do limite em caso de default. Na prática, bancos recuperam entre 20–50% do saldo inadimplente via cobrança ou cessão de carteira. Essa proxy superestima a perda esperada, tornando $c_i = \pi_i \cdot \bar{u} \cdot t - PD_i$ sistematicamente mais negativo para clientes de PD moderada — que podem ser excluídos de $S$ na Etapa 1 mesmo sendo rentáveis com LGD real. Tratamento no Target: substituir por $PD_i \cdot \text{LGD} \cdot L_i$ com LGD calibrada pelo parceiro.
+
+**Limitação 2 — `capacidade_pagamento` null em M2/M3:** A restrição R3 ($L_i \leq m_i \cdot CP_i$) depende diretamente de $CP_i$. Em M2 e M3, 42–43% dos clientes elegíveis não têm essa variável, tornando R3 inaplicável para quase metade da base. A proxy adotada ($CP_i = \text{renda\_estimada}_i \times 0{,}30$) subestima a capacidade real de clientes com múltiplas fontes de renda, reduzindo artificialmente o teto de $L_i$ para esse grupo. Tratamento: solicitar ao parceiro a imputação de $CP_i$ para M2/M3 ou calibrar o fator 0,30 com dados da carteira aprovada.
+
+**Sensibilidade — $\bar{u}$:** A utilização entra linearmente em $c_i = \pi_i \cdot \bar{u} \cdot t - PD_i$ e no termo (A) da FO. Variando $\bar{u}$ de 0,20 a 0,50, a receita esperada total varia em até 150% — alterando o sinal de $c_i$ para clientes de PD moderada e, consequentemente, quais clientes entram em $S$ na Etapa 1 e quais limites o LP atribui na Etapa 2. Uma redução de 0,40 para 0,25 concentra a solução em perfis de baixíssimo risco, reduzindo volume e retorno total da carteira.
+
 **ATENÇÃO: O roteiro exige objetividade — máximo 12 linhas.**
 São ~4 linhas por limitação (2 limitações) + ~4 linhas para sensibilidade. Cada linha deve contar.
 
