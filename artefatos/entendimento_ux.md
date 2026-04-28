@@ -277,6 +277,16 @@ A jornada de Rodinei só se sustenta se cada área cumpre seu papel de forma coo
 | **4. Comunicar ao negócio** | Apresenta a distribuição dos limites por cluster de risco, exibe métricas agregadas (média, mínimo, máximo por segmento) e explica os trade-offs entre risco e retorno de forma acessível para a área de Política de Crédito. | *"Como explicar isso para o negócio? Consigo traduzir PD e EL em linguagem que o Rodinei consiga usar em comitê?"* | Mediadora entre dois mundos — sente a responsabilidade de não deixar que a sofisticação técnica se torne um obstáculo para a adoção da solução. | Padronizar a tradução de métricas técnicas para métricas de negócio (por exemplo, PD expressa como impacto financeiro esperado), reduzindo o esforço de comunicação a cada ciclo. **US relacionada: US06** |
 | **5. Monitorar produção** | Exporta os resultados para integração com sistemas internos, acompanha a performance do modelo em produção e ajusta parâmetros conforme mudanças de cenário macroeconômico ou de comportamento da carteira. | *"O modelo continua performando bem? Houve deriva nos dados que exige recalibração?"* | Vigilante e comprometida com a longevidade da solução — sabe que um modelo bem construído pode degradar se não for monitorado continuamente. | Implementar monitoramento contínuo de inadimplência e retorno da carteira com alertas automáticos de deriva, integrando o ciclo de revisão ao calendário de gestão do banco. **US relacionada: US07** |
 
+#### Oportunidades Consolidadas
+
+A jornada de Larissa revela um desafio que começa antes do modelo: a ausência de um protocolo estruturado para receber e formalizar a demanda do negócio. Quando a função objetivo e as restrições chegam de forma ambígua ou verbal, o retrabalho técnico é inevitável. Ao longo do desenvolvimento, a maior fragilidade está na falta de versionamento das premissas — qualquer alteração na política de crédito pode invalidar silenciosamente um modelo já treinado. Na validação, a ausência de um ambiente de simulação pré-produção força Larissa a depender de análises manuais em dados históricos, o que consome tempo e aumenta o risco de erros não detectados.
+
+As oportunidades se organizam em torno de cinco eixos: (1) canal estruturado com o negócio para definição e versionamento da função objetivo e restrições; (2) ferramenta de simulação para testar cenários antes da produção; (3) monitoramento contínuo de inadimplência e retorno com alertas de deriva; (4) padronização da tradução de métricas técnicas para linguagem de negócio; e (5) alinhamento dos ciclos de revisão do modelo ao calendário de gestão da carteira.
+
+#### Responsabilidades da Larissa
+
+O sucesso da jornada de Larissa depende de uma divisão de responsabilidades clara entre quatro frentes. O time de Data Science, liderado por Larissa, desenvolve o modelo de otimização linear com função objetivo e restrições formalizadas. A Política de Crédito fornece as regras de negócio e valida as restrições que o modelo deve respeitar. O Produto disponibiliza a ferramenta de simulação e visualização dos resultados. Engenharia e TI implementam o pipeline de integração e o monitoramento em produção. A Gestão, por fim, alinha os ciclos de revisão do modelo com base na performance da carteira, fechando o ciclo entre decisão técnica e estratégia de negócio.
+
 ---
 
 ## Checklist pré-entrega
