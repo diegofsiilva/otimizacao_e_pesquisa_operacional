@@ -163,77 +163,86 @@ A FO é linear em $L_i$: todos os demais termos ($\pi_i$, $\bar{u}$, $t$, $PD_i$
 
 ### Restrições
 
-As restrições do modelo traduzem as políticas de crédito do Banco Pan em limites matemáticos para o espaço de soluções factíveis. Elas se dividem em três grupos: (i) **controle de risco da carteira** (R1 e R2), que impedem que a maximização do lucro deteriore a qualidade de crédito agregada; (ii) **proteção individual** (R3 e R4), que garantem que nenhum cliente receba um limite incompatível com sua capacidade de pagamento ou abaixo do piso operacional do produto; e (iii) **metas de produção** (R5–R7), configuráveis conforme a estratégia comercial do banco.
+As restrições traduzem as políticas de crédito do Banco Pan em limites matemáticos para o espaço de soluções factíveis. Dividem-se em três categorias: (i) **controle de risco da carteira** (R1, R2), (ii) **proteção individual e bounds** (R3–R5), e (iii) **metas de produção** (R6–R8). As restrições R1 e R6 são garantidas na Etapa 1 (seleção de clientes); as demais entram no LP da Etapa 2.
 
-As restrições R1 e R2 são naturalmente expressas como razões, uma de média simples e outra de média ponderada, o que as torna não-lineares. Para manter a formulação como programação linear, cada uma é apresentada primeiro na forma original e depois na forma linearizada, com o passo algébrico explícito. Além disso, as restrições R2, R6 e R7 contêm o produto $z_k \cdot L_k$, que é bilinear quando ambas são variáveis de decisão. Na abordagem em duas etapas adotada, primeiro fixa-se $z_k$ via ranking de retorno unitário e, depois, otimiza-se $L_k$; assim, esse produto se torna linear em $L_k$, pois $z_k$ passa a ser um parâmetro fixo (0 ou 1). Todo o desenvolvimento abaixo assume que $z_k$ já foi fixado na etapa de seleção.
+#### R1 — Teto de inadimplência física (Etapa 1)
 
-#### R1 - Teto de inadimplência física
+A inadimplência física mede o risco da carteira pela média simples da probabilidade de default dos clientes selecionados, sem ponderar pelo volume de crédito concedido. Essa métrica depende de **quem** é selecionado, não de **quanto** limite recebe — por isso é controlada na Etapa 1, não no LP.
 
-A inadimplência física mede o risco da carteira pela média simples da probabilidade de default dos clientes que recebem oferta, sem ponderar pelo volume de crédito concedido. Se o modelo selecionar apenas clusters de PD baixa, a inadimplência física cai, mas a carteira pode ficar pequena demais para atender as metas comerciais. Se selecionar clusters de PD alta, o lucro potencial é maior, mas o perfil médio de risco se deteriora.
+$$\frac{\sum_{i \in S} PD_i}{|S|} \leq \overline{PD}_{fis}^{atual}$$
 
-O parceiro espera que a PD média da carteira ofertada pelo modelo não ultrapasse a inadimplência física observada na carteira atualmente aprovada ($\overline{PD}_{fis}^{atual}$). Isso garante que o modelo não piore o perfil médio de risco em relação à política vigente, um requisito mínimo de governança de crédito.
+A seleção via ranking de $c_i$ na Etapa 1 garante essa restrição: clientes são incluídos em $S$ em ordem decrescente de $c_i$ (que penaliza PD alta), e a inclusão para quando a PD média atinge o teto $\overline{PD}_{fis}^{atual}$. O parceiro espera que a PD média da carteira ofertada pelo modelo não ultrapasse a inadimplência física observada na carteira atualmente aprovada, garantindo que o modelo não piore o perfil médio de risco em relação à política vigente.
 
-**Versão original (razão - não-linear):**
+#### R2 — Teto de inadimplência financeira (LP)
 
-$$\frac{\sum_{k=1}^{K} z_k \cdot \sum_{i \in \mathcal{C}_k} PD_i}{\sum_{k=1}^{K} z_k \cdot |\mathcal{C}_k|} \leq \overline{PD}_{fis}^{atual}$$
+Enquanto R1 trata cada cliente com o mesmo peso, R2 pondera a PD pelo limite atribuído, medindo o risco em termos de exposição financeira. A decisão de **quanto** limite conceder impacta diretamente essa métrica — por isso entra no LP, diferente de R1.
 
-**Linearização:** Multiplicando ambos os lados pelo denominador $\sum_{k} z_k \cdot |\mathcal{C}_k|$ (estritamente positivo, pois ao menos um cluster é selecionado), a razão se transforma em uma desigualdade linear:
+**Versão original (razão — não-linear):**
 
-$$\sum_{k=1}^{K} z_k \cdot \sum_{i \in \mathcal{C}_k} \left(PD_i - \overline{PD}_{fis}^{atual}\right) \leq 0$$
+$$\frac{\sum_{i \in S} PD_i \cdot L_i}{\sum_{i \in S} L_i} \leq \overline{PD}_{fin}^{atual}$$
 
-Nessa forma, cada cluster $k$ contribui com o excesso (ou déficit) de PD em relação ao teto. Clusters com PD média acima de $\overline{PD}_{fis}^{atual}$ contribuem positivamente (consumindo folga da restrição), enquanto clusters com PD abaixo do teto contribuem negativamente (gerando folga). A soma total precisa ser não-positiva para que a carteira como um todo respeite o limite de inadimplência física.
+**Versão linearizada** (multiplicando ambos os lados pelo denominador, estritamente positivo pois $L_i \geq 200$ para todo $i \in S$):
 
-#### R2 - Teto de inadimplência financeira
+$$\sum_{i \in S} (PD_i - \overline{PD}_{fin}^{atual}) \cdot L_i \leq 0$$
 
-Enquanto R1 trata cada cliente com o mesmo peso independentemente do limite que recebe, R2 pondera a PD pelo limite atribuído, ou seja, mede o risco em termos de exposição financeira. Um cluster pequeno com PD alta e limite elevado pode atender R1 (poucos clientes, baixo impacto na média simples), mas violar R2 porque a exposição financeira é desproporcional ao tamanho do grupo. Na prática, R2 é a restrição mais restritiva quando limites altos são atribuídos a clusters arriscados, impedindo que o modelo concentre crédito em segmentos de alto risco/alto retorno.
+Cada cliente $i$ contribui com um excesso ou déficit de inadimplência: clientes com $PD_i > \overline{PD}_{fin}^{atual}$ consomem folga (coeficiente positivo), enquanto clientes com $PD_i < \overline{PD}_{fin}^{atual}$ geram folga (coeficiente negativo). A restrição é naturalmente linear em $L_i$. R2 é tipicamente a restrição mais restritiva quando limites altos são atribuídos a clientes arriscados — controla o risco "em reais".
 
-O parceiro exige que a inadimplência financeira (média da PD ponderada pelo limite concedido) da carteira ofertada não exceda o nível financeiro atual. Essa restrição complementa R1 ao controlar não apenas a frequência esperada de default, mas também a magnitude da perda.
+#### R3 — Capacidade de pagamento com alavancagem diferenciada (LP)
 
-**Versão original (razão - não-linear):**
+$$L_i \leq m_i \cdot CP_i, \quad \forall i \in S$$
 
-$$\frac{\sum_{k=1}^{K} z_k \cdot L_k \cdot \sum_{i \in \mathcal{C}_k} PD_i}{\sum_{k=1}^{K} z_k \cdot L_k \cdot |\mathcal{C}_k|} \leq \overline{PD}_{fin}^{atual}$$
+O limite de cada cliente é limitado pela sua capacidade de pagamento, multiplicada pelo fator de alavancagem $m_i \in [0{,}3;\; 1{,}8]$, interpolado pelo score de risco (`score_credito_cross`): clientes de menor risco recebem $m_i$ próximo de 1,8, e clientes de maior risco recebem $m_i$ próximo de 0,3. Essa diferenciação evita tanto o superendividamento de clientes vulneráveis quanto a subutilização do potencial de clientes de baixo risco.
 
-**Linearização:** Mesmo procedimento de R1 - multiplicando ambos os lados pelo denominador:
+A restrição é individual — cada cliente é limitado pela **sua própria** capacidade, não pela de outros clientes. Em uma formulação clusterizada, essa restrição usaria $\min_{i \in C_k} CP_i$, penalizando todo o grupo pelo cliente com menor capacidade; a formulação individual elimina essa penalização e permite alocação estritamente mais precisa.
 
-$$\sum_{k=1}^{K} z_k \cdot L_k \cdot \sum_{i \in \mathcal{C}_k} \left(PD_i - \overline{PD}_{fin}^{atual}\right) \leq 0$$
+#### R4 — Limite mínimo (LP)
 
-O termo $z_k \cdot L_k$ é bilinear quando ambas são variáveis de decisão. Na abordagem em duas etapas, com $z_k$ fixado na etapa de seleção, a expressão torna-se linear em $L_k$: para clusters não selecionados ($z_k = 0$), o termo desaparece; para os selecionados ($z_k = 1$), resta $L_k \cdot \sum_{i \in \mathcal{C}_k}(PD_i - \overline{PD}_{fin}^{atual})$, que é linear na variável de decisão.
+$$L_i \geq 200, \quad \forall i \in S$$
 
-#### R3 - Capacidade de pagamento com alavancagem diferenciada
+Piso operacional: nenhum limite ofertado pode ser inferior a R$ 200 (TAPI). Como o LP opera apenas sobre clientes selecionados ($i \in S$), essa restrição é um bound simples na variável $L_i$, sem necessidade de variável binária. A discretização em múltiplos de R$ 50 é aplicada em pós-processamento, preservando a continuidade da formulação LP.
 
-O parceiro exige que o limite respeite a capacidade de pagamento do cliente e que o grau de alavancagem permitido seja diferenciado por perfil de risco. Conforme dados fornecidos pelo parceiro, clientes com score alto podem receber até 1,8 vezes sua capacidade de pagamento ($m_k = 1{,}8$), enquanto clientes com score baixo são limitados a 0,3 vezes ($m_k = 0{,}3$). Essa diferenciação evita tanto o superendividamento de clientes vulneráveis quanto a subutilização do potencial de clientes de baixo risco.
+#### R5 — Teto máximo de limite (LP)
 
-Como todos os clientes de um mesmo cluster recebem o mesmo limite $L_k$, a formulação usa o mínimo da capacidade de pagamento dentro do cluster como referência. Essa é uma abordagem conservadora: garante que mesmo o cliente com menor capacidade do grupo não seja exposto a um limite incompatível.
+$$L_i \leq 25\,000, \quad \forall i \in S$$
 
-$$L_k \leq m_k \cdot \min_{i \in \mathcal{C}_k} CP_i, \quad \forall k$$
+Teto absoluto definido pelo parceiro. Na prática, R3 é a restrição ativa para a maioria dos clientes (pois $m_i \cdot CP_i < 25\,000$ para quase todos), e R5 atua apenas como salvaguarda para clientes com capacidade de pagamento excepcionalmente alta.
 
-O multiplicador $m_k$ varia continuamente entre 0,3 e 1,8 conforme o perfil de risco do cluster. Na implementação, $m_k$ é interpolado a partir do score médio do cluster: clusters de menor risco recebem $m_k$ próximo de 1,8, e clusters de maior risco recebem $m_k$ próximo de 0,3. Esta restrição é linear em $L_k$ e não envolve bilinearidade.
+#### R6 — Meta de clientes aprovados (Etapa 1)
 
-#### R4 - Limite mínimo
+$$|S| \geq N^{meta}$$
 
-O parceiro estabelece um piso de R\$ 200 para qualquer limite de cartão de crédito ofertado. Abaixo desse valor, o cartão perde competitividade frente a concorrentes e o custo operacional de emissão, manutenção e processamento não se justifica pela receita gerada. A formulação vincula o piso à variável de seleção $z_k$: quando o cluster recebe oferta ($z_k = 1$), o limite deve ser ao menos R\$ 200; quando não recebe ($z_k = 0$), o limite é livre para ser zero.
+Número mínimo de clientes que devem receber oferta, para evitar que o modelo concentre a carteira em poucos clientes de perfil ideal. Garantida na Etapa 1: a seleção via ranking continua incluindo clientes até que $|S| \geq N^{meta}$, mesmo que isso exija incluir clientes com $c_i$ marginalmente positivo.
 
-$$L_k \geq L^{min} \cdot z_k = 200 \cdot z_k, \quad \forall k$$
+#### R7 — Meta de volume total de limite (LP)
 
-A discretização em múltiplos de R\$ 50 ($L_k^{final} = 50 \cdot \lceil L_k / 50 \rceil$) é aplicada em pós-processamento, não como restrição do modelo, de modo a preservar a continuidade da formulação LP.
+$$\sum_{i \in S} L_i \geq V^{meta}$$
 
-#### R5 - Teto máximo de limite
+Volume financeiro mínimo de limite ofertado, garantindo massa suficiente na carteira. Restrição linear em $L_i$.
 
-O parceiro indicou um teto absoluto de R\$ 25.000 para o limite ofertado. Contudo, na prática esse teto não é fixo: ele varia conforme o perfil de risco do cliente — clientes de maior risco devem ter tetos substancialmente menores. A restrição R3 (alavancagem) já captura essa diferenciação, pois o produto $m_k \cdot \min CP_i$ gera tetos naturalmente mais baixos para clusters de alto risco. O teto de R\$ 25.000 funciona como um limite absoluto que impede valores extremos mesmo para clusters de baixo risco com alta capacidade de pagamento.
+#### R8 — Rentabilidade mínima (LP)
 
-$$L_k \leq L^{max} = 25000, \quad \forall k$$
+$$\sum_{i \in S} c_i \cdot L_i \geq R^{meta}$$
 
-Na prática, R3 é a restrição ativa para a maioria dos clusters (pois $m_k \cdot \min CP_i < 25000$ para quase todos), e R5 atua apenas como salvaguarda nos casos em que a capacidade de pagamento é excepcionalmente alta.
+Retorno líquido total mínimo, impedindo soluções de alto volume mas baixa margem. Como $c_i$ é parâmetro fixo, a restrição é linear em $L_i$.
 
-#### Restrições adicionais de produção
+#### Domínio
 
-Além das quatro restrições acima, o parceiro indicou que o modelo deve suportar metas de produção configuráveis, que podem ser ativadas ou desativadas conforme a estratégia comercial de cada safra. São elas: (i) **quantidade mínima de clientes aprovados** ($N^{meta}$), para evitar que o modelo concentre a oferta em poucos clusters de perfil ideal; (ii) **volume mínimo de limite total** ($V^{meta}$), para garantir massa financeira suficiente na carteira; e (iii) **rentabilidade mínima** ($R^{meta}$), para impedir soluções de alto volume mas baixa margem. Essas restrições são lineares em $L_k$ (após fixar $z_k$ na etapa de seleção) e serão formalizadas na implementação conforme os valores definidos pelo parceiro.
+$$L_i \geq 0, \quad \forall i \in S$$
 
-#### Restrições de domínio
+Na prática, R4 ($L_i \geq 200$) é mais restritivo, tornando o bound de não-negatividade redundante — mas incluído por completude formal.
 
-$$L_k \geq 0, \quad z_k \in [0, 1], \quad \forall k$$
+#### Resumo das restrições
 
-Limites não podem ser negativos. A variável $z_k$ é naturalmente binária (oferta ou não oferta), mas relaxada para o intervalo contínuo $[0, 1]$ para manter a formulação como programação linear. Na abordagem em duas etapas, $z_k$ é fixado em 0 ou 1 antes da otimização de limites, de modo que a relaxação não afeta a solução final.
+| ID | Restrição | Etapa | Tipo | Obrigatória? |
+| :- | :-------- | :---- | :--- | :----------- |
+| R1 | Teto de inadimplência física ($\overline{PD}$ média $\leq$ teto) | Etapa 1 | Seleção | Sim |
+| R2 | Teto de inadimplência financeira ($\overline{PD}$ ponderada $\leq$ teto) | Etapa 2 (LP) | Linear (após linearização) | Sim |
+| R3 | Capacidade de pagamento ($L_i \leq m_i \cdot CP_i$) | Etapa 2 (LP) | Linear | Sim |
+| R4 | Limite mínimo ($L_i \geq 200$) | Etapa 2 (LP) | Bound | Sim |
+| R5 | Teto máximo ($L_i \leq 25\,000$) | Etapa 2 (LP) | Bound | Sim |
+| R6 | Meta de clientes ($|S| \geq N^{meta}$) | Etapa 1 | Seleção | Configurável |
+| R7 | Meta de volume ($\sum L_i \geq V^{meta}$) | Etapa 2 (LP) | Linear | Configurável |
+| R8 | Rentabilidade mínima ($\sum c_i L_i \geq R^{meta}$) | Etapa 2 (LP) | Linear | Configurável |
 
 ---
 
