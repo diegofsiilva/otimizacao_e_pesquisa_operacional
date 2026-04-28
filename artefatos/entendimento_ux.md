@@ -256,6 +256,27 @@ Essas tensões convergem para cinco oportunidades estruturais: (1) simulador de 
 A jornada de Rodinei só se sustenta se cada área cumpre seu papel de forma coordenada. A Política de Crédito define e mantém as regras de negócio — risco, alavancagem e capacidade de pagamento. O próprio Rodinei documenta as decisões com base na função objetivo e nas restrições utilizadas em cada rodada. O time de Data Science entrega os outputs interpretáveis, especialmente as variáveis de risco e retorno esperado por cluster. O Produto constrói a interface de simulação e decisão. Engenharia e TI implementam o pipeline de integração e monitoramento em produção. A Gestão, por fim, define as metas de inadimplência, rentabilidade e volume que balizam a função objetivo.
 
 ---
+
+### Persona 2 — Larissa Paiva (Data Science)
+
+**Persona:** Larissa Paiva, cientista de dados responsável pelo desenvolvimento e manutenção do modelo de otimização de limites de crédito.  
+
+**Cenário:** Desenvolver o modelo de otimização linear para definição de limites pré-aprovados, considerando função objetivo, restrições de negócio e integração com sistemas de produção do banco.  
+
+**Expectativa central:** Clareza técnica, robustez matemática e confiança na tomada de decisão.
+
+<img src="/assets/jornadaLarissa.jpg">
+
+#### Mapa da Jornada
+
+| Etapa | Ação | Pensamento | Sentimento | Oportunidade |
+|:---|:---|:---|:---|:---|
+| **1. Receber a demanda** | Carrega e valida a base de dados no formato adequado. Analisa as variáveis de risco, renda e capacidade de pagamento disponíveis. Entende os objetivos de negócio e as restrições iniciais fornecidas pela Política de Crédito. | *"Qual o problema e quais as restrições? O que o negócio quer maximizar e o que não pode ser violado?"* | Investigativa e meticulosa — qualquer ambiguidade na demanda se propaga como erro no modelo. | Criar um canal estruturado e versionado entre negócio e Data Science para formalização da função objetivo e das restrições, evitando retrabalho por interpretações divergentes. **US relacionada: US01** |
+| **2. Desenvolver o modelo** | Configura a segmentação de clientes (clusterização), define metas de produção e restrições formais do modelo, e estrutura a otimização com função objetivo e conjunto de restrições explícitas. | *"Como otimizar isso matematicamente? A formulação que escolhi é válida e resolve o problema real?"* | Concentrada e tecnicamente exigente consigo mesma — sente responsabilidade pela robustez da solução que vai orientar decisões de crédito reais. | Disponibilizar um ambiente de versionamento de regras e premissas para evitar inconsistências entre o modelo em desenvolvimento e a política em vigor. **US relacionadas: US02, US03** |
+| **3. Validar resultados** | Garante que os limites gerados respeitam o mínimo de R$ 200 e os múltiplos de R$ 50. Testa a consistência da solução com dados históricos e avalia o impacto projetado em risco e rentabilidade da carteira. | *"O resultado é melhor que o atual? Consigo provar que o modelo não viola nenhuma restrição operacional?"* | Rigorosa e crítica — a comparação com a baseline histórica é o momento de maior tensão técnica da jornada. | Fornecer uma ferramenta de simulação que permita testar o modelo contra cenários históricos antes de qualquer exposição em produção. **US relacionada: US05** |
+| **4. Comunicar ao negócio** | Apresenta a distribuição dos limites por cluster de risco, exibe métricas agregadas (média, mínimo, máximo por segmento) e explica os trade-offs entre risco e retorno de forma acessível para a área de Política de Crédito. | *"Como explicar isso para o negócio? Consigo traduzir PD e EL em linguagem que o Rodinei consiga usar em comitê?"* | Mediadora entre dois mundos — sente a responsabilidade de não deixar que a sofisticação técnica se torne um obstáculo para a adoção da solução. | Padronizar a tradução de métricas técnicas para métricas de negócio (por exemplo, PD expressa como impacto financeiro esperado), reduzindo o esforço de comunicação a cada ciclo. **US relacionada: US06** |
+| **5. Monitorar produção** | Exporta os resultados para integração com sistemas internos, acompanha a performance do modelo em produção e ajusta parâmetros conforme mudanças de cenário macroeconômico ou de comportamento da carteira. | *"O modelo continua performando bem? Houve deriva nos dados que exige recalibração?"* | Vigilante e comprometida com a longevidade da solução — sabe que um modelo bem construído pode degradar se não for monitorado continuamente. | Implementar monitoramento contínuo de inadimplência e retorno da carteira com alertas automáticos de deriva, integrando o ciclo de revisão ao calendário de gestão do banco. **US relacionada: US07** |
+
 ---
 
 ## Checklist pré-entrega
