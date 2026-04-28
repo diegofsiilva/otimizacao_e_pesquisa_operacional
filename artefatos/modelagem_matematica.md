@@ -143,7 +143,7 @@ A tabela a seguir detalha as 17 variáveis fornecidas, com estatísticas descrit
 
 **Variáveis não fornecidas que seriam relevantes:**
 - **LGD (Loss Given Default):** Não fornecida. Perda = PD × limite (LGD = 1). **Simplificação MVP** — assumimos perda total em caso de default (conservador). No Target, substituir por LGD calibrada com dados de recuperação do parceiro.
-- **Taxa de interchange:** Valor exato não fornecido. **Simplificação MVP:** $t$ = 1,5% sobre volume transacionado (média de mercado brasileiro para cartão de crédito). No Target, validar taxa real com o parceiro.
+- **Taxa de interchange:** Fornecida pelo parceiro: $t = 0{,}0175$ (1,75% sobre volume transacionado).
 - **Utilização esperada do limite:** Não fornecida. **Simplificação MVP:** constante $\bar{u}$ = 0,40. Parâmetro de **alta sensibilidade** (ver Análise de Sensibilidade) — variação de 0,20 a 0,50 altera a receita em ~150%. No Target, estimar $\bar{u}$ por cluster a partir de dados de ativação.
 
 ---
@@ -230,9 +230,9 @@ _Para cada parâmetro: símbolo, descrição, unidade, fonte._
 - $CP_i$ ← `capacidade_pagamento`
 - $\pi_i$ ← `score_propensao_contrato`, normalizado de [4, 840] para [0,1]
 - Teto inadimplência física e financeira (atuais da carteira aprovada)
-- Multiplicador de alavancagem $m_k$ por perfil de risco
+- Multiplicador de alavancagem $m_k \in [0{,}3;\; 1{,}8]$ por perfil de risco (fornecido pelo parceiro)
 - $L^{min} = 200$ (TAPI)
-- Taxa de interchange $t$ (**proxy:** ~1,5%)
+- Taxa de interchange $t = 0{,}0175$ (fornecida pelo parceiro)
 - Utilização $\bar{u}$ (**proxy:** ~0,40)
 - Metas de produção opcionais
 
@@ -276,7 +276,7 @@ _[TODO: Escrever 2-3 parágrafos explicando o objetivo do modelo — o que signi
 
 **Justificativa da formulação escolhida:** A função objetivo adota a forma **FO = receita − perda** (sem ponderador $\lambda$), delegando o controle de risco inteiramente às restrições (R1–R4). Essa separação é preferível por três razões: (i) o TAPI define explicitamente os tetos de inadimplência como restrições, não como penalidades na FO; (ii) um ponderador $\lambda$ entre receita e perda introduziria um hiperparâmetro difícil de calibrar sem dados históricos de recuperação — justamente um dado que o parceiro não forneceu; (iii) manter a FO como lucro líquido puro (R$) garante que todos os termos estejam na mesma unidade e escala, evitando a mistura de escalas penalizada nos feedbacks (G02). Dessa forma, a FO responde a uma única pergunta: _"qual alocação de limites gera o maior retorno esperado?"_, enquanto as restrições garantem que esse retorno não viole os limiares de risco aceitáveis pelo banco.
 
-A receita é restrita a interchange sobre o volume transacionado — conforme orientação do TAPI, que exclui receita de rotativo e outros produtos. Isso torna a FO conservadora (subestima a receita real), mas mantém a linearidade e elimina a necessidade de modelar comportamento de parcelamento ou rolagem de dívida.
+A receita é restrita a interchange sobre o volume transacionado, à taxa fixa de 1,75% fornecida pelo parceiro. Embora existam outras fontes de receita (como rotativo), a modelagem por interchange mantém a linearidade da FO e elimina a necessidade de modelar comportamento de parcelamento ou rolagem de dívida. Isso torna a FO conservadora (subestima a receita real) mas simplifica a formulação sem comprometer a direção da solução ótima.
 
 $$
 \max \sum_{k=1}^{K} z_k \cdot \left[ \underbrace{\left(\sum_{i \in \mathcal{C}_k} \pi_i \right) \cdot \bar{u} \cdot t \cdot L_k}_{\text{(A) Receita esperada de interchange}} \; - \; \underbrace{\left(\sum_{i \in \mathcal{C}_k} PD_i \right) \cdot L_k}_{\text{(B) Perda esperada}} \right]
@@ -284,7 +284,7 @@ $$
 
 **Onde:**
 
-- **(A) Receita esperada de interchange:** Para cada cliente $i$ no cluster $k$, a receita esperada é $\pi_i \cdot \bar{u} \cdot t \cdot L_k$ — o cliente converte com probabilidade $\pi_i$, utiliza fração $\bar{u}$ do limite $L_k$, gerando receita de interchange à taxa $t$. **Proxies:** utilização constante $\bar{u} = 0{,}40$ e taxa de interchange $t = 0{,}015$.
+- **(A) Receita esperada de interchange:** Para cada cliente $i$ no cluster $k$, a receita esperada é $\pi_i \cdot \bar{u} \cdot t \cdot L_k$ — o cliente converte com probabilidade $\pi_i$, utiliza fração $\bar{u}$ do limite $L_k$, gerando receita de interchange à taxa $t$. A taxa de interchange $t = 0{,}0175$ foi fornecida pelo parceiro. **Proxy:** utilização constante $\bar{u} = 0{,}40$.
 
 - **(B) Perda esperada:** Para cada cliente $i$ no cluster $k$ que recebe oferta, a perda esperada é $PD_i \cdot L_k$ — probabilidade de default vezes exposição (limite). **Proxy:** LGD = 1 (perda total em caso de default, sem recuperação).
 
@@ -294,47 +294,95 @@ _[TODO: Após implementar a clusterização, incluir aqui um exemplo numérico c
 
 ---
 
-### Restrições (pelo menos 2 obrigatórias)
+### Restrições
 
-_Para cada restrição: expressão + explicação em linguagem de negócio._
+As restrições do modelo traduzem as políticas de crédito do Banco Pan em limites matemáticos para o espaço de soluções factíveis. Elas se dividem em três grupos: (i) **controle de risco da carteira** (R1 e R2), que impedem que a maximização do lucro deteriore a qualidade de crédito agregada; (ii) **proteção individual** (R3 e R4), que garantem que nenhum cliente receba um limite incompatível com sua capacidade de pagamento ou abaixo do piso operacional do produto; e (iii) **metas de produção** (R5–R7), configuráveis conforme a estratégia comercial do banco.
 
-**PROFESSORA:** Ela quer ver a restrição **e** a explicação de negócio. Se a restrição é **não-linear** (como razão), **documentar a linearização** (G06 elogiado).
+As restrições R1 e R2 são naturalmente expressas como razões, uma de média simples e outra de média ponderada, o que as torna não-lineares. Para manter a formulação como programação linear, cada uma é apresentada primeiro na forma original e depois na forma linearizada, com o passo algébrico explícito. Além disso, as restrições R2, R6 e R7 contêm o produto $z_k \cdot L_k$, que é bilinear quando ambas são variáveis de decisão. Na abordagem em duas etapas adotada, primeiro fixa-se $z_k$ via ranking de retorno unitário e, depois, otimiza-se $L_k$; assim, esse produto se torna linear em $L_k$, pois $z_k$ passa a ser um parâmetro fixo (0 ou 1). Todo o desenvolvimento abaixo assume que $z_k$ já foi fixado na etapa de seleção.
 
-**TAPI — restrições obrigatórias:**
+#### R1 - Teto de inadimplência física
 
-| Restrição                        | Exigência do TAPI                                                                       | Formulação                                                                               |
-| :------------------------------- | :-------------------------------------------------------------------------------------- | :--------------------------------------------------------------------------------------- |
-| **R1: Inadimplência física**     | Média simples da PD ≤ nível atual                                                       | Razão → linearizar multiplicando pelo denominador                                        |
-| **R2: Inadimplência financeira** | Média PD ponderada por limite ≤ nível atual                                             | Ponderada por $L_k$. Contém produto $z_k \cdot L_k$ — tratar via duas etapas             |
-| **R3: Capacidade de pagamento**  | Limite ≤ multiplicador × capacidade. Multiplicador **diferenciado** por perfil de risco | $L_k \leq m_k \cdot \min_{i \in C_k} CP_i$                                               |
-| **R4: Limite mínimo**            | ≥ R$200                                                                                 | $L_k \geq 200$ (para clusters selecionados). Discretização R$ 50 é **pós-processamento** |
-| **R5-R7: Metas de produção**     | Quantidade aprovados, volume, rentabilidade (opcionais)                                 | Restrições de piso configuráveis                                                         |
+A inadimplência física mede o risco da carteira pela média simples da probabilidade de default dos clientes que recebem oferta, sem ponderar pelo volume de crédito concedido. Se o modelo selecionar apenas clusters de PD baixa, a inadimplência física cai, mas a carteira pode ficar pequena demais para atender as metas comerciais. Se selecionar clusters de PD alta, o lucro potencial é maior, mas o perfil médio de risco se deteriora.
 
-**Sobre bilinearidade ($z_k \cdot L_k$) dentro do LP:**
-Os termos da FO e de R2/R6/R7 contêm o produto $z_k \cdot L_k$. Se ambos forem variáveis, isso é bilinear. Tratamento recomendado para LP:
-**Duas etapas:** Etapa 1 — selecionar clusters (fixar $z_k$) via ranking de retorno unitário. Etapa 2 — otimizar $L_k$ para os selecionados (LP puro, todas as variáveis contínuas).
+O parceiro espera que a PD média da carteira ofertada pelo modelo não ultrapasse a inadimplência física observada na carteira atualmente aprovada ($\overline{PD}_{fis}^{atual}$). Isso garante que o modelo não piore o perfil médio de risco em relação à política vigente, um requisito mínimo de governança de crédito.
 
-**CONSISTÊNCIA:** Verificar que **cada variável na restrição existe na tabela de parâmetros ou variáveis de decisão**. Se $m_k$ aparece em R3, ele deve estar definido na tabela de parâmetros.
-
-#### R1 — _[Nome: Teto de inadimplência física]_
+**Versão original (razão - não-linear):**
 
 $$
-\text{[expressão — legível, não amontoada]}
+\frac{\sum_{k=1}^{K} z_k \cdot \sum_{i \in \mathcal{C}_k} PD_i}{\sum_{k=1}^{K} z_k \cdot |\mathcal{C}_k|} \leq \overline{PD}_{fis}^{atual}
 $$
 
-_[Explicação de negócio: o que garante]_
-
-_[Se linearizou: mostrar versão original (razão) → versão linearizada, com o passo]_
-
-#### R2 — _[Nome: Teto de inadimplência financeira]_
+**Linearização:** Multiplicando ambos os lados pelo denominador $\sum_{k} z_k \cdot |\mathcal{C}_k|$ (estritamente positivo, pois ao menos um cluster é selecionado), a razão se transforma em uma desigualdade linear:
 
 $$
-\text{[expressão]}
+\sum_{k=1}^{K} z_k \cdot \sum_{i \in \mathcal{C}_k} \left(PD_i - \overline{PD}_{fis}^{atual}\right) \leq 0
 $$
 
-_[Explicação + linearização + tratamento da bilinearidade]_
+Nessa forma, cada cluster $k$ contribui com o excesso (ou déficit) de PD em relação ao teto. Clusters com PD média acima de $\overline{PD}_{fis}^{atual}$ contribuem positivamente (consumindo folga da restrição), enquanto clusters com PD abaixo do teto contribuem negativamente (gerando folga). A soma total precisa ser não-positiva para que a carteira como um todo respeite o limite de inadimplência física.
 
-_[Continuar para R3, R4, R5... R1-R4 são as restrições do TAPI. Pelo menos 2 obrigatórias pelo roteiro.]_
+#### R2 - Teto de inadimplência financeira
+
+Enquanto R1 trata cada cliente com o mesmo peso independentemente do limite que recebe, R2 pondera a PD pelo limite atribuído, ou seja, mede o risco em termos de exposição financeira. Um cluster pequeno com PD alta e limite elevado pode atender R1 (poucos clientes, baixo impacto na média simples), mas violar R2 porque a exposição financeira é desproporcional ao tamanho do grupo. Na prática, R2 é a restrição mais restritiva quando limites altos são atribuídos a clusters arriscados, impedindo que o modelo concentre crédito em segmentos de alto risco/alto retorno.
+
+O parceiro exige que a inadimplência financeira (média da PD ponderada pelo limite concedido) da carteira ofertada não exceda o nível financeiro atual. Essa restrição complementa R1 ao controlar não apenas a frequência esperada de default, mas também a magnitude da perda.
+
+**Versão original (razão - não-linear):**
+
+$$
+\frac{\sum_{k=1}^{K} z_k \cdot L_k \cdot \sum_{i \in \mathcal{C}_k} PD_i}{\sum_{k=1}^{K} z_k \cdot L_k \cdot |\mathcal{C}_k|} \leq \overline{PD}_{fin}^{atual}
+$$
+
+**Linearização:** Mesmo procedimento de R1 - multiplicando ambos os lados pelo denominador:
+
+$$
+\sum_{k=1}^{K} z_k \cdot L_k \cdot \sum_{i \in \mathcal{C}_k} \left(PD_i - \overline{PD}_{fin}^{atual}\right) \leq 0
+$$
+
+O termo $z_k \cdot L_k$ é bilinear quando ambas são variáveis de decisão. Na abordagem em duas etapas, com $z_k$ fixado na etapa de seleção, a expressão torna-se linear em $L_k$: para clusters não selecionados ($z_k = 0$), o termo desaparece; para os selecionados ($z_k = 1$), resta $L_k \cdot \sum_{i \in \mathcal{C}_k}(PD_i - \overline{PD}_{fin}^{atual})$, que é linear na variável de decisão.
+
+#### R3 - Capacidade de pagamento com alavancagem diferenciada
+
+O parceiro exige que o limite respeite a capacidade de pagamento do cliente e que o grau de alavancagem permitido seja diferenciado por perfil de risco. Conforme dados fornecidos pelo parceiro, clientes com score alto podem receber até 1,8 vezes sua capacidade de pagamento ($m_k = 1{,}8$), enquanto clientes com score baixo são limitados a 0,3 vezes ($m_k = 0{,}3$). Essa diferenciação evita tanto o superendividamento de clientes vulneráveis quanto a subutilização do potencial de clientes de baixo risco.
+
+Como todos os clientes de um mesmo cluster recebem o mesmo limite $L_k$, a formulação usa o mínimo da capacidade de pagamento dentro do cluster como referência. Essa é uma abordagem conservadora: garante que mesmo o cliente com menor capacidade do grupo não seja exposto a um limite incompatível.
+
+$$
+L_k \leq m_k \cdot \min_{i \in \mathcal{C}_k} CP_i, \quad \forall k
+$$
+
+O multiplicador $m_k$ varia continuamente entre 0,3 e 1,8 conforme o perfil de risco do cluster. Na implementação, $m_k$ é interpolado a partir do score médio do cluster: clusters de menor risco recebem $m_k$ próximo de 1,8, e clusters de maior risco recebem $m_k$ próximo de 0,3. Esta restrição é linear em $L_k$ e não envolve bilinearidade.
+
+#### R4 - Limite mínimo
+
+O parceiro estabelece um piso de R\$ 200 para qualquer limite de cartão de crédito ofertado. Abaixo desse valor, o cartão perde competitividade frente a concorrentes e o custo operacional de emissão, manutenção e processamento não se justifica pela receita gerada. A formulação vincula o piso à variável de seleção $z_k$: quando o cluster recebe oferta ($z_k = 1$), o limite deve ser ao menos R\$ 200; quando não recebe ($z_k = 0$), o limite é livre para ser zero.
+
+$$
+L_k \geq L^{min} \cdot z_k = 200 \cdot z_k, \quad \forall k
+$$
+
+A discretização em múltiplos de R\$ 50 ($L_k^{final} = 50 \cdot \lceil L_k / 50 \rceil$) é aplicada em pós-processamento, não como restrição do modelo, de modo a preservar a continuidade da formulação LP.
+
+#### R5 - Teto máximo de limite
+
+O parceiro indicou um teto absoluto de R\$ 25.000 para o limite ofertado. Contudo, na prática esse teto não é fixo: ele varia conforme o perfil de risco do cliente — clientes de maior risco devem ter tetos substancialmente menores. A restrição R3 (alavancagem) já captura essa diferenciação, pois o produto $m_k \cdot \min CP_i$ gera tetos naturalmente mais baixos para clusters de alto risco. O teto de R\$ 25.000 funciona como um limite absoluto que impede valores extremos mesmo para clusters de baixo risco com alta capacidade de pagamento.
+
+$$
+L_k \leq L^{max} = 25000, \quad \forall k
+$$
+
+Na prática, R3 é a restrição ativa para a maioria dos clusters (pois $m_k \cdot \min CP_i < 25000$ para quase todos), e R5 atua apenas como salvaguarda nos casos em que a capacidade de pagamento é excepcionalmente alta.
+
+#### Restrições adicionais de produção
+
+Além das quatro restrições acima, o parceiro indicou que o modelo deve suportar metas de produção configuráveis, que podem ser ativadas ou desativadas conforme a estratégia comercial de cada safra. São elas: (i) **quantidade mínima de clientes aprovados** ($N^{meta}$), para evitar que o modelo concentre a oferta em poucos clusters de perfil ideal; (ii) **volume mínimo de limite total** ($V^{meta}$), para garantir massa financeira suficiente na carteira; e (iii) **rentabilidade mínima** ($R^{meta}$), para impedir soluções de alto volume mas baixa margem. Essas restrições são lineares em $L_k$ (após fixar $z_k$ na etapa de seleção) e serão formalizadas na implementação conforme os valores definidos pelo parceiro.
+
+#### Restrições de domínio
+
+$$
+L_k \geq 0, \quad z_k \in [0, 1], \quad \forall k
+$$
+
+Limites não podem ser negativos. A variável $z_k$ é naturalmente binária (oferta ou não oferta), mas relaxada para o intervalo contínuo $[0, 1]$ para manter a formulação como programação linear. Na abordagem em duas etapas, $z_k$ é fixado em 0 ou 1 antes da otimização de limites, de modo que a relaxação não afeta a solução final.
 
 ---
 
