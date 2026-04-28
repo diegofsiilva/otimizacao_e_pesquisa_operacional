@@ -246,6 +246,58 @@ O banco precisa de uma regra que diga, de forma sistemática, qual limite atribu
 
 Em termos de negócio, maximizar o retorno líquido é a métrica correta porque o produto em análise é exclusivamente o cartão de crédito pré-aprovado, onde toda a receita relevante vem do uso do cartão e toda a perda relevante vem do default do cliente. Minimizar inadimplência pura levaria o modelo a oferecer limites mínimos a todos os clientes — trivialmente seguro, mas sem valor comercial. Maximizar receita bruta ignoraria o risco e deterioraria a qualidade da carteira. O retorno líquido captura esse equilíbrio diretamente, e é também a métrica pela qual o parceiro avaliará o modelo: comparando a rentabilidade esperada entre o `limite_ofertado` praticado atualmente e o limite sugerido pelo modelo para cada cluster.
 
+**Justificativa da formulação escolhida:** A função objetivo adota a forma **FO = receita − perda** (sem ponderador $\lambda$), delegando o controle de risco inteiramente às restrições (R1–R4). Essa separação é preferível por três razões: (i) o parceiro define explicitamente os tetos de inadimplência como restrições, não como penalidades na FO; (ii) um ponderador $\lambda$ entre receita e perda introduziria um hiperparâmetro difícil de calibrar sem dados históricos de recuperação — justamente um dado que o parceiro não forneceu; (iii) manter a FO como lucro líquido puro (R$) garante que todos os termos estejam na mesma unidade e escala, evitando a mistura de escalas. Dessa forma, a FO responde a uma única pergunta: _"qual alocação de limites gera o maior retorno esperado?"_, enquanto as restrições garantem que esse retorno não viole os limiares de risco aceitáveis pelo banco.
+
+A receita é restrita a interchange sobre o volume transacionado, à taxa fixa de 1,75% fornecida pelo parceiro. Embora existam outras fontes de receita (como rotativo), a modelagem por interchange mantém a linearidade da FO e elimina a necessidade de modelar comportamento de parcelamento ou rolagem de dívida. Isso torna a FO conservadora (subestima a receita real) mas simplifica a formulação sem comprometer a direção da solução ótima.
+
+$$
+\max \sum_{k=1}^{K} z_k \cdot \left[ \underbrace{\left(\sum_{i \in \mathcal{C}_k} \pi_i \right) \cdot \bar{u} \cdot t \cdot L_k}_{\text{(A) Receita esperada de interchange}} \; - \; \underbrace{\left(\sum_{i \in \mathcal{C}_k} PD_i \right) \cdot L_k}_{\text{(B) Perda esperada}} \right]
+$$
+
+#### Interpretação da função objetivo
+
+Para entender o que a fórmula calcula, é útil analisá-la de dentro para fora, começando pelos termos mais internos.
+
+##### O que é $\pi_i$?
+
+$\pi_i$ é a probabilidade de o cliente $i$ contratar o cartão caso receba a oferta. Antes de qualquer coisa, vale esclarecer que o símbolo $\pi$ aqui não tem nenhuma relação com o número 3,14159 da geometria — é apenas uma letra grega escolhida por convenção para dar nome a essa variável, assim como se usaria $x$ ou $p$. Poderia ser qualquer letra; a área de crédito convencionou usar $\pi$ para probabilidade de conversão e $PD$ para probabilidade de default, justamente para não confundir as duas.
+
+Ela é derivada diretamente da variável `score_propensao_contrato` da base de dados, que originalmente varia entre 3 e 846. Como probabilidade precisa estar entre 0 e 1, essa variável é normalizada via min-max antes de entrar no modelo. Essa transformação é simples: pega o valor do cliente, subtrai o mínimo (3) e divide pela diferença entre o máximo e o mínimo (846 − 3 = 843):
+
+$$\pi_i = \frac{\text{score}_i - 3}{843}$$
+
+Um cliente com score 3 vira $\pi_i = 0$ (praticamente nenhuma chance de contratar). Um cliente com score 846 vira $\pi_i = 1$ (certeza de contratar). Um cliente com score 424 vira $\pi_i \approx 0{,}50$ (50% de chance). Depois dessa transformação, o nome que damos ao resultado é $\pi_i$ — e é esse valor que entra na fórmula. A soma $\sum_{i \in \mathcal{C}_k} \pi_i$ acumula essa probabilidade para todos os clientes do cluster $k$, funcionando como uma estimativa do número esperado de contratantes dentro daquele grupo.
+
+##### O que é o termo (A) — Receita esperada de interchange?
+
+$$\left(\sum_{i \in \mathcal{C}_k} \pi_i \right) \cdot \bar{u} \cdot t \cdot L_k$$
+
+Esse termo calcula a receita total esperada de interchange para o cluster $k$. O raciocínio é: dos clientes do cluster $k$, espera-se que $\sum_{i \in \mathcal{C}_k} \pi_i$ deles contratem o cartão. Cada contratante utilizará, em média, uma fração $\bar{u}$ do limite $L_k$ — ou seja, o volume transacionado esperado por cliente é $\bar{u} \cdot L_k$. Sobre esse volume, o banco recebe uma taxa de interchange $t$, que representa a receita obtida a cada real gasto pelo cliente no cartão. Multiplicando tudo: número esperado de contratantes × volume transacionado esperado × taxa de interchange = receita esperada de interchange do cluster $k$.
+
+Duas simplificações estão embutidas nesse termo e precisam ser declaradas explicitamente:
+
+- **Utilização constante** $\bar{u} = 0{,}40$ _(proxy)_: assume-se que todos os clientes de todos os clusters utilizam, em média, 40% do limite disponível. Na realidade, clientes de perfis distintos têm comportamentos de uso muito diferentes. Essa simplificação é necessária porque a base não fornece dados de utilização histórica para os clientes elegíveis, apenas para uma fração pequena que já ativou o cartão, o que introduziria viés de seleção severo caso fosse usada. O impacto dessa proxy é discutido na análise de sensibilidade.
+
+- **Taxa de interchange** $t = 0{,}0175$ _(fornecida pelo parceiro)_: o banco recebe 1,75% sobre cada real transacionado. Essa taxa é fixa e independente do perfil do cliente, o que mantém a linearidade da função objetivo. Modelar receita de rotativo (juros sobre saldo devedor) tornaria o problema não-linear e foge ao escopo.
+
+##### O que é o termo (B) — Perda esperada por inadimplência?
+
+$$\left(\sum_{i \in \mathcal{C}_k} PD_i \right) \cdot L_k$$
+
+Esse termo calcula a perda financeira esperada do cluster $k$ em caso de inadimplência. $PD_i$ é a probabilidade de default do cliente $i$, fornecida diretamente pela variável `pd_produto` da base. A soma $\sum_{i \in \mathcal{C}_k} PD_i$ representa o número esperado de clientes do cluster $k$ que entrarão em default. Cada cliente inadimplente gera uma perda igual ao limite que recebeu, $L_k$, pois assumimos que o banco não recupera nenhum valor. Multiplicando: número esperado de inadimplentes × perda por inadimplente = perda esperada total do cluster $k$.
+
+Uma simplificação central está embutida aqui:
+
+- **LGD = 1** _(proxy)_: LGD significa _Loss Given Default_, ou seja, a fração do valor devido que o banco efetivamente perde quando um cliente entra em default. Assumir LGD = 1 significa dizer que o banco não recupera absolutamente nada — nem via cobrança, nem via venda da dívida para terceiros. Na realidade, bancos tipicamente recuperam entre 20% e 50% do valor em default. Essa simplificação é conservadora: superestima a perda, tornando o modelo mais cauteloso ao alocar limites altos para clusters de risco elevado.
+
+##### O que é $z_k$ e por que aparece na fórmula?
+
+$z_k$ é a variável de seleção definida na seção anterior: vale 1 se o cluster $k$ recebe oferta e 0 caso contrário. Na fórmula, ela garante que apenas os clusters selecionados contribuam para o somatório — clusters com $z_k = 0$ têm sua parcela zerada automaticamente. Como explicado na seção de variáveis de decisão, $z_k$ é fixado antes do LP via ranking de retorno unitário, o que elimina o produto $z_k \cdot L_k$ da otimização e mantém a formulação linear.
+
+##### Juntando tudo
+
+Para cada cluster $k$ selecionado ($z_k = 1$), a função objetivo calcula o retorno líquido como receita (A) menos perda (B). O $\max$ instrui o solver a encontrar os valores de $L_k$ que tornam essa soma total a maior possível, dentro dos limites impostos pelas restrições R1 a R5. Em outras palavras: o modelo procura os limites que maximizam o quanto o banco ganha com interchange, descontando o quanto pode perder com inadimplência, garantindo ao mesmo tempo que a carteira resultante respeite os critérios de risco e capacidade de pagamento exigidos pelo banco.
+
 ### Restrições
 
 As restrições do modelo traduzem as políticas de crédito do Banco Pan em limites matemáticos para o espaço de soluções factíveis. Elas se dividem em três grupos: (i) **controle de risco da carteira** (R1 e R2), que impedem que a maximização do lucro deteriore a qualidade de crédito agregada; (ii) **proteção individual** (R3 e R4), que garantem que nenhum cliente receba um limite incompatível com sua capacidade de pagamento ou abaixo do piso operacional do produto; e (iii) **metas de produção** (R5–R7), configuráveis conforme a estratégia comercial do banco.
