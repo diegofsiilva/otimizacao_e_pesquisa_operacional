@@ -242,53 +242,9 @@ _Para cada parâmetro: símbolo, descrição, unidade, fonte._
 
 ### Objetivo do modelo e função objetivo
 
-**PROFESSORA — OBRIGATÓRIO (G01 perdeu pontos):**
-O objetivo deve estar **formalizado matematicamente**, não apenas descrito em texto.
+O banco precisa de uma regra que diga, de forma sistemática, qual limite atribuir a cada cluster de clientes. Sem um critério formal, a decisão se baseia em tabelas fixas que não consideram a heterogeneidade entre perfis e não controlam o risco agregado da carteira. O objetivo do modelo é substituir essa regra empírica por uma decisão matemática: encontrar o conjunto de limites $L_k$ que maximize o retorno líquido total esperado do banco, entendido como a soma da receita esperada de interchange menos a perda esperada por inadimplência, sobre todos os clusters que recebem oferta.
 
-**TAPI — definição do objetivo:**
-
-- **Maximizar retorno esperado** sujeito a restrições
-- Receita = **interchange a taxa fixa** (NÃO rotativo) — mantém linearidade
-- Perda = **PD × exposição** (limite)
-- Parceiro avalia comparando rentabilidade entre limite atual e sugerido
-
-**Decisão de design — controle de risco:**
-Duas abordagens válidas:
-
-- **(a) FO = receita − λ·perda** — ponderação explícita na FO
-- **(b) FO = receita − perda** — risco controlado via restrições (mais alinhado ao TAPI)
-
-_Escolha uma e **justifique**._
-
-**Regras da professora para a FO (feedbacks):**
-
-1. **Separar termos** com labels claros: (A) Receita, (B) Perda (G06: elogiado)
-2. **Mesma escala/unidade** em todos os termos — neste projeto ambos são R$, ok (G02: perdeu pontos por misturar)
-3. **Formalizar matematicamente**, não só descrever (G01: perdeu pontos)
-4. **Marcar proxies**: "utilização constante é proxy" (G06: perdeu pontos por omitir)
-5. **FO simples** — poucos parâmetros calibráveis (G02: penalizado por excesso)
-
-_[TODO: Escrever 2-3 parágrafos explicando o objetivo do modelo — o que significa "maximizar o lucro" neste contexto de negócio, por que essa é a métrica certa para o Pan, e como o parceiro vai avaliar o resultado (comparando rentabilidade do limite atual vs. sugerido).]_
-
-**Justificativa da formulação escolhida:** A função objetivo adota a forma **FO = receita − perda** (sem ponderador $\lambda$), delegando o controle de risco inteiramente às restrições (R1–R4). Essa separação é preferível por três razões: (i) o TAPI define explicitamente os tetos de inadimplência como restrições, não como penalidades na FO; (ii) um ponderador $\lambda$ entre receita e perda introduziria um hiperparâmetro difícil de calibrar sem dados históricos de recuperação — justamente um dado que o parceiro não forneceu; (iii) manter a FO como lucro líquido puro (R$) garante que todos os termos estejam na mesma unidade e escala, evitando a mistura de escalas penalizada nos feedbacks (G02). Dessa forma, a FO responde a uma única pergunta: _"qual alocação de limites gera o maior retorno esperado?"_, enquanto as restrições garantem que esse retorno não viole os limiares de risco aceitáveis pelo banco.
-
-A receita é restrita a interchange sobre o volume transacionado, à taxa fixa de 1,75% fornecida pelo parceiro. Embora existam outras fontes de receita (como rotativo), a modelagem por interchange mantém a linearidade da FO e elimina a necessidade de modelar comportamento de parcelamento ou rolagem de dívida. Isso torna a FO conservadora (subestima a receita real) mas simplifica a formulação sem comprometer a direção da solução ótima.
-
-$$
-\max \sum_{k=1}^{K} z_k \cdot \left[ \underbrace{\left(\sum_{i \in \mathcal{C}_k} \pi_i \right) \cdot \bar{u} \cdot t \cdot L_k}_{\text{(A) Receita esperada de interchange}} \; - \; \underbrace{\left(\sum_{i \in \mathcal{C}_k} PD_i \right) \cdot L_k}_{\text{(B) Perda esperada}} \right]
-$$
-
-**Onde:**
-
-- **(A) Receita esperada de interchange:** Para cada cliente $i$ no cluster $k$, a receita esperada é $\pi_i \cdot \bar{u} \cdot t \cdot L_k$ — o cliente converte com probabilidade $\pi_i$, utiliza fração $\bar{u}$ do limite $L_k$, gerando receita de interchange à taxa $t$. A taxa de interchange $t = 0{,}0175$ foi fornecida pelo parceiro. **Proxy:** utilização constante $\bar{u} = 0{,}40$.
-
-- **(B) Perda esperada:** Para cada cliente $i$ no cluster $k$ que recebe oferta, a perda esperada é $PD_i \cdot L_k$ — probabilidade de default vezes exposição (limite). **Proxy:** LGD = 1 (perda total em caso de default, sem recuperação).
-
-- A FO é linear em $L_k$, pois todos os demais termos ($\pi_i$, $\bar{u}$, $t$, $PD_i$) são parâmetros. O produto $z_k \cdot L_k$ é bilinear — tratado via abordagem em duas etapas: (1) fixar $z_k$ por ranking de retorno unitário, (2) otimizar $L_k$ como LP puro.
-
-_[TODO: Após implementar a clusterização, incluir aqui um exemplo numérico com 2-3 clusters reais mostrando como a FO calcula o retorno líquido para cada um — isso torna a formulação concreta e ajuda a professora a verificar consistência.]_
-
----
+Em termos de negócio, maximizar o retorno líquido é a métrica correta porque o produto em análise é exclusivamente o cartão de crédito pré-aprovado, onde toda a receita relevante vem do uso do cartão e toda a perda relevante vem do default do cliente. Minimizar inadimplência pura levaria o modelo a oferecer limites mínimos a todos os clientes — trivialmente seguro, mas sem valor comercial. Maximizar receita bruta ignoraria o risco e deterioraria a qualidade da carteira. O retorno líquido captura esse equilíbrio diretamente, e é também a métrica pela qual o parceiro avaliará o modelo: comparando a rentabilidade esperada entre o `limite_ofertado` praticado atualmente e o limite sugerido pelo modelo para cada cluster.
 
 ### Restrições
 
