@@ -245,6 +245,17 @@ A solução proposta deve garantir transparência, usabilidade e alinhamento ent
 | **4. Decidir estratégia** | Consulta as restrições ativas que impactam cada decisão (capacidade de pagamento, alavancagem, PDD), valida a aderência às políticas de crédito vigentes e define a estratégia final de concessão. | *"Qual decisão maximiza o resultado com segurança? Consigo justificar essa escolha em comitê?"* | Cauteloso e responsável — o peso da decisão é real, pois erros afetam a carteira e os correntistas. | Gerar templates de decisão com as restrições utilizadas explicitadas, facilitando a documentação e a defesa da estratégia em auditorias e comitês. **US relacionada: US04** |
 | **5. Comunicar e revisar** | Exporta os resultados e os compartilha com as áreas envolvidas (gestão, engenharia, produto). Acompanha o desempenho da carteira ao longo do tempo e ajusta a estratégia conforme os resultados observados. | *"Funcionou ou preciso ajustar? O modelo continua válido para o cenário atual?"* | Reflexivo e responsável pelo ciclo completo — busca evidências de que a política entregou o que prometia. | Criar um dashboard com impacto esperado versus realizado (retorno, inadimplência, volume concedido), com alertas automáticos quando o desempenho divergir das premissas do modelo. **US relacionada: US07** |
 
+#### Oportunidades Consolidadas
+
+A jornada de Rodinei expõe três tensões recorrentes que moldam as oportunidades de design da solução. A primeira é a tensão entre sofisticação do modelo e interpretabilidade operacional: cada fase exige que ele consiga traduzir outputs matemáticos em decisões justificáveis, sem mediação constante do time de Data Science. A segunda é a tensão entre agilidade e rigor: simular cenários hoje depende de ciclos longos de reprocessamento, o que limita a exploração de alternativas antes da decisão. A terceira é a tensão entre decisão pontual e governança contínua: Rodinei precisa não apenas decidir bem, mas documentar e monitorar a política ao longo do tempo.
+
+Essas tensões convergem para cinco oportunidades estruturais: (1) simulador de cenários autônomo baseado na função objetivo; (2) visualização clara do impacto em inadimplência física e financeira; (3) templates de decisão com restrições explícitas; (4) dashboard de acompanhamento de retorno, risco e volume; e (5) sandbox para testar políticas respeitando o motor de crédito e as restrições regulatórias do banco.
+
+#### Responsabilidades do Rodinei
+
+A jornada de Rodinei só se sustenta se cada área cumpre seu papel de forma coordenada. A Política de Crédito define e mantém as regras de negócio — risco, alavancagem e capacidade de pagamento. O próprio Rodinei documenta as decisões com base na função objetivo e nas restrições utilizadas em cada rodada. O time de Data Science entrega os outputs interpretáveis, especialmente as variáveis de risco e retorno esperado por cluster. O Produto constrói a interface de simulação e decisão. Engenharia e TI implementam o pipeline de integração e monitoramento em produção. A Gestão, por fim, define as metas de inadimplência, rentabilidade e volume que balizam a função objetivo.
+
+---
 ---
 
 ## Checklist pré-entrega
