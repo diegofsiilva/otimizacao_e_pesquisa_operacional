@@ -1,88 +1,6 @@
 # Modelagem Matemática
 
-**Guia de uso deste template:**
-
-- Trechos em _itálico entre colchetes_ `[...]` são instruções — substituir pelo conteúdo do grupo
-- Blocos **PROFESSORA**, **TAPI**, **PARA NOTA 10** e **NÃO FAZER** são lembretes internos — **remover antes de entregar**
-
----
-
-### Perfil da professora (análise de 4 feedbacks do módulo passado, notas 7,5 a 9,0)
-
-**O que ela mais valoriza (aparece em TODO feedback positivo):**
-
-1. **Classificar o tipo clássico de problema** — ela quer ler "este é um problema de [tipo]" (G01: cobrou ausência disso)
-2. **Variáveis segmentadas** — flaggeou variável agregada em **3 de 4 grupos**. É o ponto #1 dela. Neste projeto: por cluster, não por produto.
-3. **Formulação limpa e legível** — G03 perdeu pontos por "fórmulas difíceis de ler"
-4. **Tabela de trade-offs** mostrando entendimento real do problema (G01: "excelente")
-5. **Consistência conceitual** entre texto e modelo — G01 perdeu 2pts por contradição texto↔modelo
-6. **MVP vs Target** e análise de sensibilidade — elogiou explicitamente no G06
-7. **Grafo presente e coerente** com o modelo — G03 perdeu pontos por grafo ausente (NÃO é obrigatório no roteiro novo, mas a professora claramente valoriza — forte candidato a **ir além**)
-
-**O que ela penaliza (padrões de desconto):**
-
-1. ~~Variável agregada quando deveria ser segmentada~~ — cobrou em G02, G03, G06
-2. ~~FO com escalas misturadas sem normalização~~ — G02 (tempo + km + R$ + índice)
-3. ~~FO descrita em texto mas não formalizada em equação~~ — G01
-4. ~~Binária desnecessária quando fluxo já indica uso~~ — G02
-5. ~~Proxy não marcada como simplificação~~ — G06
-6. ~~Inconsistência entre texto descritivo e formulação matemática~~ — G01 perdeu 2pts
-7. ~~FO com muitos parâmetros difíceis de calibrar~~ — G02: "terão dificuldade em calibrar os pesos"
-
-**Conclusão para nota 10:**
-
-- Nomear o tipo de problema logo no começo
-- Variáveis **sempre** segmentadas (por cluster neste projeto)
-- FO com termos **na mesma escala** (tudo em R$) e separados com labels claros
-- Cada proxy marcada explicitamente
-- Fórmulas **legíveis** (não amontoar tudo em uma linha)
-- Texto e modelo **dizem a mesma coisa** — se o texto diz "por cluster", a variável é $L_k$, não $L_i$
-
----
-
-### ALERTA CRÍTICO — LP, NÃO MIP
-
-O TAPI diz textualmente:
-
-- _"Todas as soluções apresentadas devem ser consideradas como problemas de **otimização linear**."_
-- _"Restrições que comprometam a linearidade **e/ou a continuidade** do modelo poderão ser simplificadas, aproximadas ou adaptadas."_
-
-Isso significa:
-
-- **Variáveis contínuas** — não usar inteiras ($\mathbb{Z}$) na formulação principal
-- **Discretização (R$ 50) é pós-processamento**, não restrição do modelo
-- A decisão binária ($z_k$: oferecer ou não) pode ser **relaxada para [0,1]** no LP — ou resolvida em duas etapas (primeiro selecionar clusters, depois otimizar limites)
-- No mundo ideal, MIP capturaria melhor a realidade (limite discreto + seleção binária). Mas a escala (~1,8M elegíveis) e a orientação do TAPI direcionam para **LP contínuo com arredondamento posterior**
-
----
-
-### ESTRUTURA DO ARTEFATO (roteiro atualizado)
-
-O artefato tem **duas seções** com pesos distintos:
-
-| Seção                        | Peso | O que pede                                                                           |
-| :--------------------------- | :--: | :----------------------------------------------------------------------------------- |
-| **(a) Modelagem matemática** |  6   | Contexto + dados + variáveis de decisão + formulação (FO + ≥2 restrições) + objetivo |
-| **(b) Análise crítica**      |  4   | ≥2 limitações + sensibilidade de ≥1 parâmetro. **MÁXIMO 12 LINHAS.**                 |
-
-**Atenção:** O roteiro NÃO pede mais grafos nem MVP vs Target como itens separados. Esses podem ser **ir além** (a professora valoriza ambos nos feedbacks).
-
-**CUIDADO com o item (b):** 12 linhas é MUITO pouco. Cada limitação precisa de ~3 linhas (descrição + impacto + tratamento) e a sensibilidade ~3-4 linhas. Ser cirúrgico.
-
----
-
 ## a) Modelagem matemática do problema (Peso 6)
-
-**O que o roteiro pede, na ordem:**
-
-1. Contexto do problema a ser modelado
-2. Dados disponíveis relevantes
-3. Definição das variáveis de decisão
-4. Formulação matemática da tomada de decisão da empresa
-5. Objetivo do modelo
-6. Pelo menos duas restrições que impactem a solução ótima
-
-Tudo em uma única seção integrada. A professora quer ver **coesão** — não 6 blocos desconectados, mas um texto que flui do problema para a formulação.
 
 ### Contexto do problema
 
@@ -507,7 +425,11 @@ Ir além das 12 linhas com tabela de parâmetros, valores testados e hipóteses 
 
 ## Fontes
 
-1. _[Referências de Credit Limit Optimization: FICO, Moody's, Experian]_
-2. _[Referências acadêmicas: Hillier & Lieberman, artigos de otimização de crédito]_
-3. _[Dados do parceiro: RI Banco Pan, TAPI]_
-4. _[Metodologia de sensibilidade: Pannell (1997), Saltelli et al. (2000)]_
+1. FICO. [How Decision Optimization Improves Credit Line Management](https://www.fico.com/blogs/how-decision-optimization-improves-credit-line-management). FICO Blog.
+2. Moody's Analytics. [Determining the Optimal Dynamic Credit Card Limit](https://www.moodys.com/web/en/us/insights/resources/Determining-the-Optimal-Dynamic-Credit-Card-Limit.pdf). White Paper.
+3. Experian. [Balancing Growth and Risk with Credit Limit Optimization](https://www.experian.com/blogs/insights/credit-limit-optimization/). Experian Insights, 2024.
+4. Budd, J. K.; Taylor, P. G. [Calculating Optimal Limits for Transacting Credit Card Customers](https://arxiv.org/pdf/1506.05376). arXiv:1506.05376, 2015.
+5. Hillier, F. S.; Lieberman, G. J. *Introduction to Operations Research*. 9th ed. McGraw-Hill, 2010.
+6. Pannell, D. J. (1997). Sensitivity analysis of normative economic models. *Agricultural Economics*, 16, 139-152.
+7. Banco Pan S.A. [Relações com Investidores](https://ri.bancopan.com.br/). Demonstrações Financeiras Padronizadas, 2024.
+8. BRASIL. Conselho Monetário Nacional. Resolução CMN nº 4.966/2021. Perda esperada associada ao risco de crédito.
