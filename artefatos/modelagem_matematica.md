@@ -67,94 +67,71 @@ A tabela a seguir detalha as 17 variáveis fornecidas, com estatísticas descrit
 
 ---
 
-### Pré-processamento: Clusterização dos clientes elegíveis
+### Estrutura do modelo: abordagem em duas etapas
 
-O modelo de otimização opera sobre **clusters de clientes**, não sobre indivíduos — cada cluster $k$ recebe um único limite $L_k$. A clusterização é uma etapa de pré-processamento que agrupa clientes com perfil de risco e comportamento semelhantes, reduzindo a dimensionalidade do problema de ~1,8M variáveis individuais para $K \geq 100$ variáveis de cluster (conforme TAPI).
+O modelo opera sobre **clientes individuais**: cada cliente elegível $i$ pode receber um limite $L_i$ próprio, sem necessidade de agrupamento prévio. A formulação adota uma abordagem em duas etapas para manter o problema como LP puro:
 
-**Status atual:** A clusterização ainda não foi implementada. A definição a seguir descreve a abordagem planejada.
+**Etapa 1 — Seleção de clientes (pré-processamento, fora do LP)**
 
-**Variáveis de entrada para clusterização:**
+Para cada cliente elegível $i$, calcula-se o coeficiente de retorno líquido unitário:
 
-| Variável               | Justificativa                                                                                                           |
-| :--------------------- | :---------------------------------------------------------------------------------------------------------------------- |
-| `pd_produto`           | Risco de default — dimensão central para segmentar perfis                                                               |
-| `score_generico_1`     | Score de bureau 1 — proxy de histórico de crédito externo                                                               |
-| `score_generico_2`     | Score de bureau 2 — complementa bureau 1 com fonte distinta                                                             |
-| `fx_idade`             | Faixa etária — correlacionada com perfil de consumo e risco                                                             |
-| `score_credito_cross`  | Score multiproduto — captura risco cross-selling                                                                        |
-| `capacidade_pagamento` | Capacidade de pagamento — define teto de alavancagem (R3). Para nulls em M2/M3, usar `renda_estimada × 0,30` como proxy |
+$$c_i = \pi_i \cdot \bar{u} \cdot t - PD_i$$
 
-**Abordagem planejada:**
+Clientes com $c_i > 0$ são potencialmente rentáveis. A seleção ordena os clientes por $c_i$ decrescente e inclui clientes até que as restrições da Etapa 1 sejam satisfeitas: R1 (teto de inadimplência física, $\overline{PD}$ média $\leq \overline{PD}_{fis}^{atual}$) e R6 (meta mínima de clientes aprovados, $|S| \geq N^{meta}$). O resultado é o parâmetro $z_i \in \{0,1\}$ fixo: $z_i = 1$ para clientes selecionados, $z_i = 0$ para os demais. O conjunto de clientes selecionados é $S = \{i : z_i = 1\}$.
 
-- **Algoritmo:** K-Means como baseline (escalável para a dimensão da base), com avaliação de alternativas como DBSCAN ou clusterização hierárquica caso os clusters apresentem formatos não-esféricos.
-- **Normalização:** As variáveis possuem escalas distintas (PD em [0,1], scores em [0, ~1000], capacidade em R$). Será aplicada normalização z-score ou min-max antes da clusterização.
-- **Número de clusters ($K$):** Mínimo 100 (TAPI). O valor final será definido via método do cotovelo (elbow method) e silhouette score, testando $K \in \{100, 200, 500, 1000\}$.
-- **Tratamento de variáveis categóricas:** `fx_idade` é ordinal (9 faixas) — será codificada como inteiro ordenado.
-- **Ferramenta:** scikit-learn (`sklearn.cluster.KMeans`), com pré-processamento via `sklearn.preprocessing`.
+**Etapa 2 — Otimização de limites (LP)**
 
-**Saídas da clusterização (parâmetros do modelo):**
+Com $S$ fixo, o LP otimiza os valores de $L_i$ para cada $i \in S$, maximizando o retorno líquido total sujeito às restrições R2–R5, R7 e R8. Como $z_i$ é parâmetro fixo, o problema é estritamente linear em $L_i$ — não há produto de variáveis de decisão.
 
-Para cada cluster $k$, serão calculados os parâmetros agregados que alimentam a função objetivo e as restrições:
+**Clusterização como ferramenta opcional de análise**
 
-| Parâmetro agregado                 | Cálculo                                  | Usado em             |
-| :--------------------------------- | :--------------------------------------- | :------------------- |
-| $\sum_{i \in \mathcal{C}_k} PD_i$  | Soma das PDs dos clientes do cluster     | FO (termo B), R1, R2 |
-| $\sum_{i \in \mathcal{C}_k} \pi_i$ | Soma das propensões normalizadas         | FO (termo A)         |
-| $\min_{i \in \mathcal{C}_k} CP_i$  | Menor capacidade de pagamento do cluster | R3 (alavancagem)     |
-| $\|\mathcal{C}_k\|$                | Número de clientes no cluster            | R1, R5, R6           |
-
-Dessa forma, a clusterização transforma os dados brutos individuais nos parâmetros agregados que o LP consome — sem ela, o modelo não tem inputs.
+Embora o modelo otimize por cliente individual, para comunicar resultados ao time de negócios os clientes podem ser agrupados em clusters a posteriori (por faixa de PD, capacidade de pagamento ou perfil de risco), permitindo visualizações como "clientes do perfil X receberam limites na faixa Y". Essa clusterização é ferramenta de explicabilidade, não etapa do modelo.
 
 ---
 
 ### Variáveis de decisão
 
-O modelo possui duas variáveis de decisão, uma para cada aspecto da escolha que o banco precisa fazer: se oferece o cartão para um determinado grupo de clientes, e quanto de limite oferece caso decida ofertar.
+O modelo possui uma única variável de decisão no LP:
 
-**$z_k$ — Decisão de oferta (variável binária)**
+**$L_i \in \mathbb{R}^+$ — Limite de crédito por cliente (variável contínua)**
 
-$z_k$ representa se o cluster $k$ receberá ou não uma oferta de cartão de crédito. Ela assume apenas dois valores possíveis: $z_k = 1$ se o cluster recebe oferta, e $z_k = 0$ caso contrário. Por natureza, essa é uma variável binária — não faz sentido dizer que um cluster "recebe metade de uma oferta". No entanto, variáveis binárias pertencem ao domínio da programação inteira mista (MIP), que foge ao escopo do curso. Por isso, $z_k$ é tratada em etapa separada ao problema de otimização: antes de rodar o LP, os clusters são ordenados por retorno líquido unitário esperado (retorno total do cluster dividido pelo número de clientes) e os de maior retorno são selecionados até que as restrições de produção sejam satisfeitas. Feita essa seleção, $z_k$ assume valor fixo — 1 para os selecionados e 0 para os demais — e deixa de ser variável, passando a ser um parâmetro conhecido. Apenas então o LP é executado para otimizar $L_k$.
+$L_i$ representa o valor do limite de crédito, em reais, atribuído ao cliente $i$ selecionado na Etapa 1. Essa é a variável que o solver otimiza na Etapa 2: para cada cliente $i \in S$, o LP determina o valor de $L_i$ que maximiza o retorno líquido total, respeitando todas as restrições. Os limites finais sugeridos ao banco são obtidos arredondando $L_i$ para o múltiplo de R$ 50 mais próximo acima em pós-processamento:
 
-$$z_k \in \{0, 1\}, \quad \forall k \in \{1, \dots, K\}$$
+$$L_i^{\text{final}} = \max\!\left(200,\; 50 \cdot \left\lceil \frac{L_i}{50} \right\rceil\right), \quad \forall i \in S$$
 
-**$L_k$ — Limite de crédito por cluster (variável contínua)**
+**$z_i \in \{0,1\}$ — Indicador de seleção (parâmetro fixo, NÃO variável de decisão)**
 
-$L_k$ representa o valor do limite de crédito, em reais, atribuído a todos os clientes do cluster $k$ que receberem oferta (ou seja, para os clusters onde $z_k = 1$). Como todos os clientes de um mesmo cluster recebem o mesmo limite, o modelo precisa encontrar apenas $K$ valores de limite — um por cluster — em vez de um valor individual para cada um dos milhões de clientes elegíveis. Essa é a principal variável de decisão do LP: o solver determina o valor de $L_k$ para cada cluster selecionado que maximiza o retorno líquido total, respeitando todas as restrições.
+$z_i$ indica se o cliente $i$ foi selecionado na Etapa 1 para receber oferta. Assume valor 1 se o cliente foi selecionado e 0 caso contrário. $z_i$ é determinado antes do LP via ranking de retorno unitário $c_i$ e **não participa da otimização** — é um dado de entrada do LP, não uma variável a ser otimizada.
 
-$L_k$ é definida como variável contínua, podendo assumir qualquer valor real não-negativo, o que mantém o problema na categoria de programação linear. Os limites finais sugeridos ao banco são obtidos arredondando $L_k$ para o múltiplo de R$ 50 mais próximo acima em pós-processamento, aplicando também o piso mínimo de R$ 200 exigido pelo banco:
+| Símbolo | Tipo | Descrição | Domínio |
+| :------ | :--- | :-------- | :------ |
+| $L_i$ | Variável de decisão | Limite de crédito atribuído ao cliente $i$ | $\mathbb{R}^+$ (contínuo, otimizado pelo LP) |
+| $z_i$ | Parâmetro fixo | Indicador de seleção do cliente $i$ (Etapa 1) | $\{0, 1\}$, fixado antes do LP |
+| $i \in \{1, \dots, N\}$ | Índice | Cliente elegível ($N = 1\,836\,085$ em M1) | — |
+| $S = \{i : z_i = 1\}$ | Conjunto | Clientes selecionados na Etapa 1 | — |
 
-$$L_k^{\text{final}} = \max\!\left(200,\; 50 \cdot \left\lceil \frac{L_k}{50} \right\rceil\right), \quad \forall k \in \{1, \dots, K\}$$
-
-$$L_k \in \mathbb{R}^+, \quad \forall k \in \{1, \dots, K\}$$
-
-| Símbolo                 | Descrição                                        | Domínio                                             |
-| :---------------------- | :----------------------------------------------- | :-------------------------------------------------- |
-| $z_k$                   | Indicador de oferta para o cluster $k$           | $\{0, 1\}$, tratado como parâmetro fixo antes do LP |
-| $L_k$                   | Limite de crédito atribuído ao cluster $k$       | $\mathbb{R}^+$ (contínuo, otimizado pelo LP)        |
-| $k \in \{1, \dots, K\}$ | Índice de cluster, com $K \geq 100$              | —                                                   |
-| $\mathcal{C}_k$         | Conjunto de clientes pertencentes ao cluster $k$ | —                                                   |
+---
 
 ### Parâmetros (dados de entrada)
 
-_Para cada parâmetro: símbolo, descrição, unidade, fonte._
-
-**TAPI — parâmetros obrigatórios:**
-
-- $PD_i$ ← `pd_produto`
-- $CP_i$ ← `capacidade_pagamento`
-- $\pi_i$ ← `score_propensao_contrato`, normalizado de [4, 840] para [0,1]
-- Teto inadimplência física e financeira (atuais da carteira aprovada)
-- Multiplicador de alavancagem $m_k \in [0{,}3;\; 1{,}8]$ por perfil de risco (fornecido pelo parceiro)
-- $L^{min} = 200$ (TAPI)
-- Taxa de interchange $t = 0{,}0175$ (fornecida pelo parceiro)
-- Utilização $\bar{u}$ (**proxy:** ~0,40)
-- Metas de produção opcionais
-
-| Símbolo       | Descrição | Unidade | Fonte |
-| :------------ | :-------- | :------ | :---- |
-| _[Preencher]_ |           |         |       |
-
-**PROFESSORA:** Ela quer ver a **legenda completa**. Todo símbolo que aparece na FO ou restrição deve estar nesta tabela. Não deixar nenhum "solto".
+| Símbolo | Descrição | Unidade / Domínio | Fonte |
+| :------ | :-------- | :---------------- | :---- |
+| $PD_i$ | Probabilidade de default do cliente $i$ | [0, 1] | `pd_produto` (fornecida pelo parceiro) |
+| $\pi_i$ | Propensão à contratação do cliente $i$, normalizada | [0, 1] | `score_propensao_contrato`, min-max: $\pi_i = \frac{score_i - 3}{843}$ |
+| $CP_i$ | Capacidade de pagamento do cliente $i$ | R$ | `capacidade_pagamento`. Proxy: `renda_estimada × 0,30` quando null |
+| $m_i$ | Multiplicador de alavancagem do cliente $i$ | [0,3; 1,8] | Interpolado pelo score de risco (`score_credito_cross`). Diretriz do parceiro |
+| $t$ | Taxa de interchange | adimensional | 0,0175 (fornecido pelo parceiro) |
+| $\bar{u}$ | Utilização esperada do limite | [0, 1] | **Proxy MVP:** 0,40 (constante). Alta sensibilidade |
+| $\overline{PD}_{fis}^{atual}$ | Teto de inadimplência física | [0, 1] | Média simples de PD da carteira aprovada vigente |
+| $\overline{PD}_{fin}^{atual}$ | Teto de inadimplência financeira | [0, 1] | Média ponderada (por limite) de PD da carteira aprovada vigente |
+| $L^{min}$ | Piso mínimo de limite | R$ | 200 (TAPI) |
+| $L^{max}$ | Teto máximo de limite | R$ | 25.000 (diretriz do parceiro) |
+| $N^{meta}$ | Meta de clientes aprovados | inteiro | Configurável pelo parceiro |
+| $V^{meta}$ | Meta de volume total de limite | R$ | Configurável pelo parceiro |
+| $R^{meta}$ | Meta de rentabilidade mínima | R$ | Configurável pelo parceiro |
+| $N$ | Total de clientes elegíveis | inteiro | $N = |\{i : \texttt{flag\_filtros}_i = 0\}|$ |
+| $S$ | Conjunto de clientes selecionados | — | $S = \{i : z_i = 1\}$ (resultado da Etapa 1) |
+| $c_i$ | Coeficiente de retorno líquido unitário | R$/R$ | $c_i = \pi_i \cdot \bar{u} \cdot t - PD_i$ |
 
 ---
 
