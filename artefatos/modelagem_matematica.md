@@ -77,7 +77,7 @@ Para cada cliente elegível $i$, calcula-se o coeficiente de retorno líquido un
 
 $$c_i = \pi_i \cdot \bar{u} \cdot t - PD_i$$
 
-Clientes com $c_i > 0$ são potencialmente rentáveis. A seleção ordena os clientes por $c_i$ decrescente e inclui clientes até que as restrições da Etapa 1 sejam satisfeitas: R1 (teto de inadimplência física, $\overline{PD}$ média $\leq \overline{PD}_{fis}^{atual}$) e R6 (meta mínima de clientes aprovados, $|S| \geq N^{meta}$). O resultado é o parâmetro $z_i \in \{0,1\}$ fixo: $z_i = 1$ para clientes selecionados, $z_i = 0$ para os demais. O conjunto de clientes selecionados é $S = \{i : z_i = 1\}$.
+Clientes com $c_i > 0$ são potencialmente rentáveis. A seleção ordena os clientes por $c_i$ decrescente e inclui clientes até que as restrições da Etapa 1 sejam satisfeitas: R1 (teto de inadimplência física, $\overline{PD}$ média $\leq \overline{PD}_{fis}^{atual}$) e R6 (meta mínima de clientes aprovados, $|S| \geq N^{meta}$). O resultado é o parâmetro $z_i \in \{0,1\}$ fixo: $z_i = 1$ para clientes selecionados, $z_i = 0$ para os demais. O conjunto de clientes selecionados é $S = \{i : z_i = 1\}$. Idealmente, $z_i$ seria uma variável binária integrada ao modelo (formulação MIP), permitindo ao solver otimizar seleção e alocação simultaneamente. Entretanto, o TAPI exige formulação LP e a escala (~1,8M elegíveis) torna um MIP computacionalmente proibitivo com solvers open-source. A separação em duas etapas é uma simplificação estrutural: pode excluir clientes que seriam rentáveis com limites altos mas marginais no ranking unitário. Nos sprints finais, com solver de escala (HiGHS ou Gurobi), essa limitação poderá ser eliminada.
 
 **Etapa 2 — Otimização de limites (LP)**
 
@@ -141,7 +141,7 @@ O banco precisa de uma regra que diga, de forma sistemática, qual limite atribu
 
 Maximizar o retorno líquido é a métrica correta porque o produto em análise é exclusivamente o cartão de crédito pré-aprovado, onde toda a receita relevante vem do uso do cartão e toda a perda relevante vem do default. Minimizar inadimplência pura levaria o modelo a oferecer limites mínimos — trivialmente seguro, mas sem valor comercial. Maximizar receita bruta ignoraria o risco. O retorno líquido captura esse equilíbrio diretamente, e é também a métrica pela qual o parceiro avaliará o modelo: comparando a rentabilidade esperada entre o `limite_ofertado` praticado atualmente e o limite sugerido pelo modelo.
 
-**Justificativa da formulação:** A FO adota a forma **receita − perda** (sem ponderador $\lambda$), delegando o controle de risco inteiramente às restrições (R1–R5). Essa separação é preferível por três razões: (i) o parceiro define explicitamente os tetos de inadimplência como restrições, não como penalidades na FO; (ii) um ponderador $\lambda$ entre receita e perda introduziria um hiperparâmetro difícil de calibrar sem dados históricos de recuperação — justamente um dado que o parceiro não forneceu; (iii) manter a FO como retorno líquido (R$) garante que todos os termos estejam na mesma unidade e escala. A receita é restrita a interchange sobre o volume transacionado, à taxa fixa de 1,75% fornecida pelo parceiro. Modelar receita de rotativo tornaria o problema não-linear e foge ao escopo.
+**Justificativa da formulação:** A FO adota a forma **receita − perda** (sem ponderador $\lambda$), delegando o controle de risco inteiramente às restrições (R1–R5). Essa separação é preferível por três razões: (i) o parceiro define explicitamente os tetos de inadimplência como restrições, não como penalidades na FO; (ii) um ponderador $\lambda$ entre receita e perda introduziria um hiperparâmetro difícil de calibrar sem dados históricos de recuperação — justamente um dado que o parceiro não forneceu; (iii) manter a FO como retorno líquido (R$) garante que todos os termos estejam na mesma unidade e escala. A receita é restrita a interchange sobre o volume transacionado, à taxa fixa de 1,75% fornecida pelo parceiro. A receita de rotativo (juros sobre saldo devedor) não é modelada porque introduziria não-linearidade (depende do comportamento de parcelamento), mas poderia ser incorporada nos sprints finais via aproximação linear ou modelo auxiliar de receita total.
 
 $$\max \sum_{i \in S} \left[\underbrace{\pi_i \cdot \bar{u} \cdot t \cdot L_i}_{\text{(A) Receita esperada}} \; - \; \underbrace{PD_i \cdot L_i}_{\text{(B) Perda esperada}}\right]$$
 
@@ -153,9 +153,9 @@ onde $S = \{i : z_i = 1\}$ é o conjunto de clientes selecionados na Etapa 1 e $
 
 #### Interpretação da função objetivo
 
-**Termo (A) — Receita:** $\pi_i \cdot \bar{u} \cdot t \cdot L_i$ é a receita de interchange esperada do cliente $i$. O cliente contrata com probabilidade $\pi_i$, derivada de `score_propensao_contrato` normalizado via min-max ($\pi_i = \frac{score_i - 3}{843}$, mapeando o range [3, 846] para [0, 1]). O contratante utiliza uma fração $\bar{u}$ do limite, e o banco recebe taxa de interchange $t$ sobre o volume transacionado. Proxies embutidas: $\bar{u} = 0{,}40$ _(constante, proxy MVP)_ e $t = 0{,}0175$ _(fornecida pelo parceiro)_.
+**Termo (A) — Receita:** $\pi_i \cdot \bar{u} \cdot t \cdot L_i$ é a receita de interchange esperada do cliente $i$. O cliente contrata com probabilidade $\pi_i$, derivada de `score_propensao_contrato` normalizado via min-max ($\pi_i = \frac{score_i - 3}{843}$, mapeando o range [3, 846] para [0, 1]). O contratante utiliza uma fração $\bar{u}$ do limite, e o banco recebe taxa de interchange $t$ sobre o volume transacionado. Proxies embutidas: $\bar{u} = 0{,}40$ _(constante, proxy MVP — na realidade, clientes de perfis distintos têm comportamentos de uso muito diferentes; nos sprints finais, $\bar{u}_i$ será estimado por perfil a partir de dados de ativação do parceiro, o que reduzirá a distorção alocativa entre perfis de alto e baixo uso)_ e $t = 0{,}0175$ _(fornecida pelo parceiro)_.
 
-**Termo (B) — Perda:** $PD_i \cdot L_i$ é a perda esperada por inadimplência do cliente $i$. $PD_i$ é a probabilidade de default (variável `pd_produto`), e $L_i$ é a exposição total. Proxy embutida: **LGD = 1** _(perda total em caso de default, sem recuperação — simplificação conservadora. Bancos tipicamente recuperam 20–50% do valor em default)_.
+**Termo (B) — Perda:** $PD_i \cdot L_i$ é a perda esperada por inadimplência do cliente $i$. $PD_i$ é a probabilidade de default (variável `pd_produto`), e $L_i$ é a exposição total. Proxy embutida: **LGD = 1** _(perda total em caso de default, sem recuperação — simplificação conservadora, pois bancos tipicamente recuperam 20–50% do valor em default. Essa premissa superestima a perda e faz o modelo rejeitar clientes que seriam rentáveis com recuperação parcial. Nos sprints finais, a LGD será calibrada com dados de recuperação do parceiro, reduzindo o viés conservador e expandindo a fronteira de clientes rentáveis)_.
 
 **Coeficiente $c_i$:** O retorno líquido unitário $c_i = \pi_i \cdot \bar{u} \cdot t - PD_i$ resume a rentabilidade marginal de cada real alocado ao cliente $i$. Clientes com $c_i > 0$ são rentáveis; clientes com $c_i \leq 0$ destroem valor a cada real adicional de limite. Na Etapa 1, $c_i$ é o critério de ranking para seleção; na Etapa 2, $c_i$ é o coeficiente objetivo do LP — o solver tende a maximizar $L_i$ para clientes com maior $c_i$, limitado pelas restrições.
 
@@ -199,7 +199,7 @@ A restrição é individual — cada cliente é limitado pela **sua própria** c
 
 $$L_i \geq 200, \quad \forall i \in S$$
 
-Piso operacional: nenhum limite ofertado pode ser inferior a R$ 200 (TAPI). Como o LP opera apenas sobre clientes selecionados ($i \in S$), essa restrição é um bound simples na variável $L_i$, sem necessidade de variável binária. A discretização em múltiplos de R$ 50 é aplicada em pós-processamento, preservando a continuidade da formulação LP.
+Piso operacional: nenhum limite ofertado pode ser inferior a R$ 200 (TAPI). Como o LP opera apenas sobre clientes selecionados ($i \in S$), essa restrição é um bound simples na variável $L_i$, sem necessidade de variável binária. A discretização em múltiplos de R$ 50 é aplicada em pós-processamento ($L_i^{\text{final}} = 50 \cdot \lceil L_i / 50 \rceil$), preservando a continuidade da formulação LP. Essa etapa de arredondamento introduz uma violação marginal das restrições (~R$ 25 por cliente na média); nos sprints finais, com formulação MIP, a restrição $L_i \in 50\mathbb{Z}$ poderá ser integrada diretamente ao modelo, eliminando a necessidade de pós-processamento.
 
 #### R5 — Teto máximo de limite (LP)
 
@@ -243,6 +243,40 @@ Na prática, R4 ($L_i \geq 200$) é mais restritivo, tornando o bound de não-ne
 | R6 | Meta de clientes ($|S| \geq N^{meta}$) | Etapa 1 | Seleção | Configurável |
 | R7 | Meta de volume ($\sum L_i \geq V^{meta}$) | Etapa 2 (LP) | Linear | Configurável |
 | R8 | Rentabilidade mínima ($\sum c_i L_i \geq R^{meta}$) | Etapa 2 (LP) | Linear | Configurável |
+
+#### Interpretação econômica das restrições via dualidade
+
+As restrições não são apenas limites técnicos — cada uma tem um significado econômico que pode ser quantificado. A dualidade em programação linear associa a cada restrição uma variável dual (preço-sombra) que mede o impacto marginal de relaxá-la sobre o valor ótimo da FO, conforme recomendado pelo TAPI ("detalhar e justificar as escolhas de forma das restrições adotadas, traduzindo-as para maior interpretação econômica").
+
+O primal da Etapa 2 é:
+
+$$\max \sum_{i \in S} c_i \, L_i$$
+
+sujeito a:
+
+$$\sum_{i \in S} (PD_i - \overline{PD}_{fin}^{atual}) \, L_i \leq 0 \quad [\lambda]$$
+
+$$\sum_{i \in S} L_i \geq V^{meta} \quad [\nu]$$
+
+$$\sum_{i \in S} c_i \, L_i \geq R^{meta} \quad [\rho]$$
+
+$$200 \leq L_i \leq \bar{L}_i, \quad \forall i \in S \quad [\mu_i^{inf},\; \mu_i^{sup}]$$
+
+onde $\bar{L}_i = \min(m_i \cdot CP_i,\; 25\,000)$. Denotando $d_i = PD_i - \overline{PD}_{fin}^{atual}$, o dual é:
+
+$$\min \; {-V^{meta} \cdot \nu} \; - \; {R^{meta} \cdot \rho} \; + \; \sum_{i \in S} \bar{L}_i \cdot \mu_i^{sup} \; - \; 200 \sum_{i \in S} \mu_i^{inf}$$
+
+sujeito a, $\forall i \in S$:
+
+$$d_i \cdot \lambda \; - \; \nu \; - \; c_i \cdot \rho \; + \; \mu_i^{sup} \; - \; \mu_i^{inf} \; = \; c_i, \qquad \lambda,\; \nu,\; \rho,\; \mu_i^{sup},\; \mu_i^{inf} \geq 0$$
+
+Cada variável dual traduz uma restrição em linguagem de negócio:
+
+- **$\lambda$ (R2 — inadimplência financeira):** custo marginal do risco — quanto retorno (R$) o banco sacrifica ao apertar o teto de inadimplência. Se $\lambda$ é alto, R2 é o principal limitante do lucro e o comitê de crédito pode avaliar o ganho de relaxá-lo ("relaxar de 8% para 9% gera R$ $\lambda$ adicionais").
+- **$\nu$ (R7 — volume mínimo):** custo de forçar volume — se binding, indica que o banco está alocando limite a clientes pouco rentáveis para atingir a meta. O valor absoluto diz quanto retorno se perde por real adicional de volume forçado.
+- **$\mu_i^{sup}$ (R3/R5 — teto de $L_i$):** valor marginal da capacidade de pagamento — para clientes com $L_i = \bar{L}_i$, indica quanto o banco ganharia se esse cliente tivesse R$ 1 a mais de capacidade. Identifica candidatos para aumento de limite futuro.
+
+Quando o LP for implementado, os preços-sombra serão extraídos diretamente do solver (em PuLP/CBC: `constraint.pi`; em OR-Tools: `constraint.dual_value()`). Essa informação é um subproduto natural do LP — não exige resolução adicional.
 
 ---
 
