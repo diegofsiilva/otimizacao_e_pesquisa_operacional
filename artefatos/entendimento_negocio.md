@@ -75,7 +75,6 @@ Link da planilha: [Canvas Estratégico do Oceano Azul - Banco PAN](https://docs.
 
 A visualização da curva de valor revela uma característica fundamental da solução proposta: ela não busca dominar em todos os atributos, mas adota um perfil estrategicamente seletivo. Nos atributos onde importa (explicabilidade, controle agregado, capacidade de pagamento, arbitragem), a curva se destaca acentuadamente; nos atributos menos críticos (como granularidade máxima de personalização), a solução abdica conscientemente de competir com o ML, reconhecendo que a diferença marginal não compensa a perda de transparência.
 
-
 ### 1.4 Aplicação das Quatro Ações (ERRC Grid)
 
 O framework ERRC (Eliminate-Reduce-Raise-Create) do Oceano Azul propõe que uma estratégia diferenciadora não se constrói apenas somando atributos, mas também reduzindo e eliminando atributos que o mercado atual aceita como necessários mas que geram pouco valor para o cliente final. A análise a seguir distribui os oito atributos selecionados nas quatro ações.
@@ -266,13 +265,13 @@ A análise foca no **cliente direto** (times internos), pois são os usuários e
 
 ---
 
-## 4. Análise Financeira do Projeto (Peso 2,5)
+## 4. Análise Financeira do Projeto
 
-*O roteiro pede análise para **horizonte de 1 ano** com **premissas justificadas**. "O mais importante é mostrar lógica econômica, coerência de premissas e capacidade de estimar o ROI."*
+Nesta seção, apresentamos a análise financeira preliminar da solução de otimização de limites pré-aprovados de cartão de crédito, considerando um horizonte de **1 ano**. O objetivo é demonstrar a viabilidade econômica da proposta por meio do cálculo do ROI (*Return on Investment*), com premissas justificadas.
 
-> **ATENÇÃO (roteiro):** O TAPI não apresenta orçamento fechado. O grupo deve trabalhar com **premissas justificadas**, não com números inventados. Quando uma estimativa for assumida, explicitar no texto.
+O TAPI não apresenta orçamento fechado do parceiro. Os valores abaixo são **estimativas baseadas em premissas justificadas e fontes públicas**. Quando uma estimativa é assumida pelo grupo, isso é explicitado.
 
-### 4.1 Premissas declaradas
+> **Nota sobre simplificações didáticas.** Para fins didáticos, esta análise adota três simplificações que, em um estudo de viabilidade corporativo, seriam tratadas de forma mais granular: (i) o CAPEX é amortizado integralmente no Ano 1, sem distribuição plurianual; (ii) assume-se LGD = 100% (perda total em caso de inadimplência), dispensando estimativa de taxa de recuperação além da já declarada em A3; e (iii) não se aplica taxa de desconto (WACC) ao fluxo de caixa do período, dado o horizonte de apenas 12 meses. Essas escolhas tornam o modelo mais transparente na leitura do resultado, sem comprometer a validade da conclusão qualitativa.
 
 | # | Premissa | Valor | Fonte / Justificativa |
 |:---:|:---|:---|:---|
@@ -285,78 +284,230 @@ A análise foca no **cliente direto** (times internos), pois são os usuários e
 | P7 | Infraestrutura cloud | AWS EC2 t3.medium | Pricing público AWS, sa-east-1 |
 | P8 | Redução de NPL pelo modelo | 0,1pp a 0,5pp | **Premissa assumida** - literatura reporta melhorias nessa faixa para modelos de otimização de crédito. `[APÓS TAPI: validar com parceiro]` |
 
-### 4.2 Investimento inicial
+### 4.1 Contexto financeiro do Banco Pan
 
-| Item | Detalhamento | Total (R$) |
-|:---|:---|---:|
-| Equipe de desenvolvimento (7 devs júnior) | 7 × 100h × R$ 23,17/h (P4, P6) | 16.219 |
-| Orientação técnica (1 tech lead) | 1 × 100h × R$ 79,55/h (P5, P6) | 7.955 |
-| Testes e validação | Incluso nas horas de dev | - |
-| Equipamentos (notebooks) | 7 × R$ 4.200 (amortização do período) | 29.400 |
-| **Subtotal investimento inicial** | | **53.574** |
+O Banco Pan opera uma carteira de crédito total de R\$ 57,8 bi (RI Q2 2025), concentrada em veículos (~57%) e consignado (~36%). O cartão de crédito representa ~5% da carteira (~R\$ 2,9 bi em 3T25), sendo o produto de **maior risco** do portfólio. O NPL >90 dias atingiu 8,3% em Q2 2025, tendência de alta que pressiona a provisão para perdas (PCLD), que chegou a R\$ 2,33 bi em 2024, equivalente a **~4,5× o lucro líquido IFRS** do mesmo ano (R\$ 528 mi). Esse dado é relevante porque mostra que qualquer melhoria marginal na qualidade da concessão de crédito tem impacto amplificado na linha final do resultado do banco. Em janeiro de 2026, o Pan foi incorporado ao BTG Pactual (Fontes: DFP/ITR depositadas na CVM; RI Banco Pan; Nord Investimentos; ADVFN).
 
-### 4.3 Custos operacionais anuais
+---
 
-| Item | Mensal (R$) | Anual (R$) |
-|:---|---:|---:|
-| Infraestrutura cloud (EC2 t3.medium) | 160 | 1.920 |
-| Banco de dados (Supabase Pro) | 130 | 1.560 |
-| Armazenamento (S3, 50GB) | 6 | 72 |
-| Manutenção e monitoramento | Equipe interna do banco | - |
-| **Subtotal operacional** | **296** | **3.552** |
+### 4.2 Premissas declaradas
 
-**Investimento total Ano 1:** R$ 53.574 + R$ 3.552 = **R$ 57.126**
+Toda estimativa repousa em premissas. A coluna **Confiança** indica o grau de certeza: **Alta** = dado público verificável; **Média** = estimativa com fonte indireta ou média de mercado; **Baixa** = premissa do grupo sem benchmark específico para o Pan.
 
-> **Nota:** Esses custos refletem o projeto acadêmico. Uma implementação em produção envolveria custos adicionais significativos (integração com sistemas, equipe dedicada de MLOps, infra de produção). Não incluídos por falta de informação do parceiro. `[APÓS TAPI: recalcular se houver dados de investimento real]`
+#### A. Operação do parceiro
 
-### 4.4 Benefícios econômicos estimados
+| # | Premissa | Valor | Conf. | Fonte / Justificativa |
+|:---:|:---|:---|:---:|:---|
+| A1 | Carteira de cartão de crédito | ~R\$ 2,9 bi | Média | RI Banco Pan, 3T25. ~5% da carteira total. |
+| A2 | NPL >90 dias (carteira total) | 8,3% | Alta | RI Banco Pan, Q2 2025 |
+| A3 | Taxa de recuperação (crédito sem garantia) | 30% | Média | BCB (Rel. Estab. Financeira, 2024). Média do sistema bancário. |
+| A4 | Perda líquida anual (carteira de cartões) | ~R\$ 168 mi | Média | Derivada: A1 × A2 × (1 − A3) = R\$ 2,9 bi × 8,3% × 70% |
 
-*Os benefícios são **economias por redução de perdas com inadimplência**, não receitas novas.*
+#### B. Modelo de receita (conforme TAPI)
 
-> **NÃO FAZER (roteiro):** ~~Confundir receita com economia~~
+| # | Premissa | Valor | Conf. | Fonte / Justificativa |
+|:---:|:---|:---|:---:|:---|
+| B1 | Receita do cartão = interchange a taxa fixa | Sim | Alta | TAPI, p. 4 (para manter linearidade do modelo) |
+| B2 | Taxa de interchange do emissor | ~1,6% | Média | Média ponderada do mercado brasileiro (ABECS/BCB, 2024). Faixa: 1,5–1,7%. |
+| B3 | Utilização média do limite | ~30% | Média | Benchmark ABECS para cartões sem garantia em perfil renda baixa |
+| B4 | Receita anual de interchange (baseline) | ~R\$ 167 mi | N/A | Derivada: A1 × B3 × B2 × 12 = R\$ 2,9 bi × 30% × 1,6% × 12 |
 
-Base de cálculo: perda anual estimada de ~R$ 4,8 bi (P3).
+#### C. Benefício esperado do modelo
 
-| Cenário | Redução de NPL (P8) | Economia anual | Tipo |
-|:---|:---:|---:|:---|
-| Conservador | 0,1 pp | R$ 57,8 mi | Economia (redução de provisão) |
-| Moderado | 0,3 pp | R$ 173,4 mi | Economia |
-| Otimista | 0,5 pp | R$ 289,0 mi | Economia |
+| # | Premissa | Valor | Conf. | Fonte / Justificativa |
+|:---:|:---|:---|:---:|:---|
+| C1 | Melhoria esperada pelo modelo sobre o resultado econômico combinado | 1,0% (cenário base) | Baixa | Thomas (2009) e Trench et al. (2003) reportam ganhos de 1–5% em carteiras já geridas por scoring. Adotamos o **piso da faixa** como cenário base, por ser a estimativa mais defensável na ausência de backtesting com dados do parceiro. |
+| C2 | Percentual de captura dos benefícios no Ano 1 | 25% (cenário base) | Baixa | Premissa conservadora que incorpora rampagem lenta da adoção interna, ciclo de validação com a área de crédito, atrasos de integração com sistemas legados e resistência organizacional à mudança de processo. Em projetos de otimização de carteira, o primeiro ano raramente captura mais de 30% do benefício potencial. |
 
-*Além da redução de perdas, a otimização pode gerar aumento de receita por melhor utilização dos limites (clientes bons recebem limites mais altos). Não quantificado por falta de dados de utilização.*
+#### D. Custos de implementação
 
-### 4.5 Cálculo do ROI
+| # | Premissa | Valor | Conf. | Fonte / Justificativa |
+|:---:|:---|:---|:---:|:---|
+| D1 | Cientista de dados sênior (líder técnico) | R\$ 30.000/mês (com encargos CLT ~35%) | Média | Glassdoor/Robert Half, 2025. Faixa: R\$ 18.000–30.000/mês. |
+| D2 | Cientista de dados pleno | R\$ 17.500/mês (com encargos) | Média | Glassdoor, 2025. Faixa: R\$ 10.000–18.000/mês. |
+| D3 | Engenheiro de dados pleno | R\$ 20.000/mês (com encargos) | Média | Glassdoor, 2025. Faixa: R\$ 12.000–20.000/mês. |
+| D4 | Tech Lead / Gerente de Projeto | R\$ 38.000/mês (com encargos) | Média | Glassdoor, 2025. Faixa: R\$ 22.000–38.000/mês. |
+| D5 | Prazo total de desenvolvimento + integração | 6 meses | Média | Estimativa do grupo |
+| D6 | Infraestrutura cloud (dev/staging) | R\$ 5.000/mês | Média | Pricing AWS/Azure para workloads analíticos |
+| D7 | Infraestrutura de produção (cloud enterprise) | R\$ 10.000/mês | Média | Pricing AWS/Azure com SLA bancário |
 
-*O roteiro pede a fórmula e o cálculo.*
+---
+
+### 4.3 Investimento inicial
+
+O investimento estima o custo que o **Banco Pan** incorreria para implementar a solução em produção, não o custo do projeto acadêmico do Inteli. A estimativa está organizada por **fase do projeto** e reflete o ciclo de vida de uma solução de analytics em crédito.
+
+| Fase | Escopo | Duração | Custo (R\$) |
+|:---|:---|:---:|---:|
+| **1. Desenvolvimento e modelagem** | Formulação matemática, implementação do solver, análise exploratória, definição de clusters | 3 meses | 230.000 |
+| **2. Backtesting e validação** | Testes com safras históricas (M1–M3), análise de sensibilidade, validação independente pelo time de risco do banco | 1 mês | 130.000 |
+| **3. Integração e homologação** | Conexão ao motor de crédito existente do Pan, construção dos pipelines de dados, deploy em ambiente segregado | 2 meses | 200.000 |
+| **4. Conformidade regulatória** | Revisão de compliance e proteção de dados, controles de acesso à base sigilosa, documentação de modelo, aprovação em comitê de crédito | Paralelo às Fases 2 e 3 (meses 4 a 6), ~0,5 FTE | 65.000 |
+| **Investimento inicial total** | | **~6 meses** | **R\$ 625.000** |
+
+**Composição dos custos por fase:**
+
+O time técnico core (D1 + D2 + D3) custa ~R\$ 67.500/mês. Ao longo dos 6 meses de desenvolvimento, esse time responde por ~R\$ 405.000 do investimento total. Os R\$ 220.000 restantes se distribuem em:
+
+- Infraestrutura de desenvolvimento (D6): R\$ 5.000/mês × 6 = R\$ 30.000
+- Gestão de projeto (D4, dedicação parcial ~18%): R\$ 38.000 × 18% × 6 = ~R\$ 41.000
+- Validação independente pelo time de risco do banco (~300h de analista sênior): ~R\$ 60.000 (embutido na Fase 2)
+- Integração com motor de crédito (especialistas do banco, ~4 semanas): ~R\$ 24.000 (embutido na Fase 3)
+- Conformidade e governança (Fase 4: revisão de compliance, controle de acesso, model card, aprovação em comitê): R\$ 65.000
+
+Total detalhado: R\$ 405k + R\$ 30k + R\$ 41k + R\$ 60k + R\$ 24k + R\$ 65k = **R\$ 625.000**.
+
+---
+
+### 4.4 Custos operacionais anuais
+
+Após a entrada em produção, o modelo requer manutenção contínua para manter performance e aderência regulatória.
+
+| Item | Anual (R\$) | Premissa |
+|:---|---:|:---|
+| Infraestrutura de produção (cloud) | 120.000 | D7: R\$ 10.000/mês |
+| Monitoramento do modelo (cientista de dados pleno, 30% dedicação) | 63.000 | D2: R\$ 17.500 × 30% |
+| Ajustes periódicos (recalibração trimestral, ~40h/ciclo) | 30.000 | D1: R\$ 30.000 ÷ 160h × 40h × 4 ciclos |
+| Suporte analítico e reportes ao comitê de crédito (~20h/mês) | 26.000 | D2: R\$ 17.500 ÷ 160h × 20h × 12 |
+| **Total custos anuais** | **R\$ 239.000** | |
+
+---
+
+### 4.5 Benefícios econômicos estimados
+
+O benefício vem da **redistribuição mais eficiente dos limites de crédito**: clientes de baixo risco recebem limites mais aderentes ao seu perfil (aumentando utilização e receita de interchange), enquanto clientes de alto risco têm limites reduzidos (diminuindo perdas por inadimplência). Trata-se de uma **única ação de otimização** que gera impacto simultâneo nos dois lados, receita e risco, da função objetivo definida pelo TAPI.
+
+Por essa razão, tratamos o benefício como uma **melhoria única sobre o resultado econômico combinado** da carteira, e não como duas melhorias independentes somadas. O baseline econômico combinado é:
 
 $$
-ROI = \frac{\text{Ganhos estimados} - \text{Custos do projeto}}{\text{Investimento total}} \times 100
+\text{Baseline combinado} = \text{Receita de interchange (B4)} + \text{Perda evitável (A4)} = R\$\ 167\ mi + R\$\ 168\ mi = R\$\ 335\ mi
 $$
 
-**Cenário conservador:**
+Aplicando a premissa C1 (melhoria de 1,0% no cenário base, **piso da faixa** reportada na literatura):
 
 $$
-ROI = \frac{R\$\ 57.800.000 - R\$\ 57.126}{R\$\ 57.126} \times 100 \approx 101.080\%
+\text{Ganho potencial (regime permanente)} = R\$\ 335\ mi \times 1,0\% = R\$\ 3.350.000
 $$
 
-### 4.6 Interpretação do resultado
+Esse ganho se materializa como uma combinação de mais receita de interchange (clientes bons usando mais o cartão) e menos perda por inadimplência (clientes arriscados com limites menores). A proporção exata entre os dois depende de como o modelo redistribui os limites, o que só será conhecido após o backtesting.
 
-*O roteiro pede interpretação, não apenas o número.*
+> **O ganho já é líquido de perdas por inadimplência.** É importante notar que o baseline combinado inclui, em sua composição, a perda líquida anual por inadimplência da carteira de cartões (A4 = R\$ 168 mi, já descontada a taxa de recuperação de 30%). A melhoria de 1% (C1) incide sobre esse baseline que já incorpora o custo da inadimplência, ou seja, o ganho estimado de R\$ 3,35 mi representa o saldo **líquido** entre receita incremental gerada e perdas evitadas, não apenas um aumento bruto de receita. Não há, portanto, necessidade de subtrair perdas por inadimplência em etapa posterior do cálculo: elas já estão contabilizadas na construção do baseline. Os benchmarks da literatura (Thomas, 2009; Trench et al., 2003) que fundamentam a premissa C1 também reportam ganhos líquidos, reforçando a consistência metodológica.
 
-O ROI calculado é extraordinariamente alto (~101.000%). Isso **não é um erro** - reflete uma característica estrutural: o investimento é muito baixo (projeto acadêmico, ~R$ 57 mil) enquanto o benefício potencial é muito alto (redução de perdas em carteira de R$ 57,8 bi). Esse tipo de ROI é comum em projetos de otimização aplicados a grandes carteiras financeiras.
+Contudo, o primeiro ano de operação não captura a totalidade do benefício potencial. A rampagem da adoção interna (integração com motor de crédito, validação pelo comitê, treinamento do time de estratégia) limita a captura efetiva. Aplicando a premissa C2 (captura de 25% no Ano 1):
 
-**Limitações importantes:**
+$$
+\text{Ganho efetivo no Ano 1} = R\$\ 3.350.000 \times 25\% = R\$\ 837.500
+$$
 
-1. **Os custos refletem apenas o projeto acadêmico.** Uma implementação real exigiria investimento ordens de grandeza maior (equipe, infra enterprise, integração, compliance) - o que reduziria o ROI substancialmente, embora provavelmente se mantivesse positivo.
-2. **A premissa de redução de NPL (P8) é assumida.** O ROI real depende da efetividade do modelo, que só será conhecida após backtesting com dados reais.
-3. **Não foram considerados** custos de oportunidade, riscos de implementação, nem tempo de maturação do modelo.
+> **Nota metodológica:** ao somar receita de interchange e perda evitada no mesmo baseline, tratamos as duas componentes como economicamente equivalentes. Na prática, R\$ 1 de perda evitada vai integralmente para a linha do lucro, enquanto R\$ 1 de receita bruta de interchange ainda carrega custos associados (taxa da bandeira, processamento, fraude). O efeito líquido no lucro não é perfeitamente simétrico. Optamos por manter a simplificação em primeira ordem porque (i) não dispomos das taxas internas do Pan para decompor o interchange líquido e (ii) o impacto dessa assimetria é marginal frente à incerteza já capturada na análise de sensibilidade (seção 4.6).
 
-> **NÃO FAZER (roteiro):**
-> - ~~Apresentar números sem explicar de onde vieram~~ - todas as premissas estão na tabela 4.1
-> - ~~Fazer conta sem premissas~~ - cada número tem fonte
-> - ~~Produzir análise apenas descritiva, sem cálculo~~ - ROI calculado acima
+> **Sensibilidade à premissa A3 (taxa de recuperação):** se a recuperação real for 20% em vez de 30%, a perda líquida (A4) sobe de R\$ 168 mi para R\$ 193 mi, e o baseline combinado vai de R\$ 335 mi para R\$ 360 mi. No cenário base (C1 = 1,0%), o ganho anual passaria de R\$ 3,35 mi para R\$ 3,60 mi, uma variação de ~7% que não altera a conclusão de viabilidade. Diferentemente de C1, a taxa de recuperação pode ser verificada com dados públicos do BCB ou obtida diretamente com o parceiro.
 
-`[APÓS TAPI: recalcular com custos reais de implementação e metas de NPL do parceiro]`
+---
+
+### 4.6 Cálculo do ROI
+
+$$
+ROI = \frac{\text{Benefício líquido}}{\text{Investimento inicial}} \times 100
+$$
+
+Onde:
+
+$$
+\text{Benefício líquido} = \text{Ganhos estimados (1 ano)} - \text{Custos operacionais anuais}
+$$
+
+#### Cenário base: passo a passo
+
+**Passo 1: Investimento inicial:** R\$ 625.000 (seção 4.3)
+
+**Passo 2: Custos operacionais anuais:** R\$ 239.000 (seção 4.4)
+
+**Passo 3: Ganhos efetivos no Ano 1:** R\$ 837.500 (seção 4.5, C1 = 1,0%, C2 = 25%)
+
+**Passo 4: Benefício líquido:**
+
+$$
+\text{Benefício líquido} = R\$\ 837.500 - R\$\ 239.000 = R\$\ 598.500
+$$
+
+**Passo 5: ROI:**
+
+$$
+ROI = \frac{R\$\ 598.500}{R\$\ 625.000} \times 100 \approx \textbf{95,8\%}
+$$
+
+**Passo 6: Payback:**
+
+$$
+\text{Payback} = \frac{R\$\ 625.000}{R\$\ 598.500 / 12} \approx \textbf{12{,}5\ meses}
+$$
+
+#### Análise de sensibilidade: cenários para C1 e C2
+
+As premissas C1 (melhoria) e C2 (captura no Ano 1) são os principais drivers de incerteza da análise (ambas com confiança Baixa). Para avaliar a robustez do resultado, recalculamos o ROI em três cenários que variam ambos os parâmetros simultaneamente:
+
+| Cenário | C1 (melhoria) | C2 (captura Y1) | Ganho efetivo Y1 | Custos anuais | Benefício líquido | **ROI** | **Payback** |
+|:---|:---:|:---:|---:|---:|---:|---:|---:|
+| Pessimista | 0,5% | 15% | R\$ 251 mil | R\$ 239 mil | R\$ 12 mil | **2%** | **não paga em 1 ano** |
+| **Base** | **1,0%** | **25%** | **R\$ 838 mil** | **R\$ 239 mil** | **R\$ 599 mil** | **96%** | **12,5 meses** |
+| Otimista | 2,0% | 40% | R\$ 2.680 mil | R\$ 239 mil | R\$ 2.441 mil | **391%** | **3,1 meses** |
+
+No cenário pessimista (C1 = 0,5%, captura de apenas 15%), o projeto gera valor marginalmente positivo, mas não se paga no horizonte de 1 ano, exigindo justificativa estratégica complementar (ganhos regulatórios, maturidade analítica) para aprovação em comitê. No cenário base, o ROI de ~96% indica que o projeto praticamente se paga no primeiro ano, com payback de ~12,5 meses.
+
+---
+
+### 4.7 Interpretação dos resultados
+
+**Viabilidade financeira.** O ROI base de **~96%** indica que o projeto é financeiramente viável: o ganho gerado no primeiro ano praticamente recupera o investimento total. O investimento de R\$ 625 mil equivale a apenas **0,07% do lucro ajustado** anual do Pan (~R\$ 855 mi em 2024, RI Banco Pan), o que mostra que se trata de um projeto de baixo risco financeiro para o banco. Pelo lado do ganho, os R\$ 599 mil de benefício líquido no cenário base representam **~0,07% do lucro ajustado**, um impacto marginal mas positivo para um projeto de otimização mono-produto. A modéstia do número é esperada e desejável: trata-se de uma calibragem cirúrgica em um produto específico, não de uma transformação estrutural da carteira.
+
+**Por que o ROI não é mais alto.** Embora a literatura reporte ROIs de três dígitos em projetos de analytics aplicados a grandes carteiras de crédito (Trench et al., 2003), esses valores se referem a regime permanente, após plena integração da solução ao processo decisório do banco. No Ano 1, a captura de apenas 25% do benefício potencial (premissa C2) reflete a realidade de rampagem: integração com motor de crédito, validação pelo comitê, treinamento do time de estratégia e resistência organizacional. Em regime permanente (captura plena), o ROI anualizado seria significativamente mais alto, mas seria desonesto apresentá-lo como resultado do Ano 1.
+
+**Ponto de equilíbrio (break-even).** Para que o benefício líquido seja zero no Ano 1, o ganho efetivo precisaria cobrir apenas os custos operacionais: R\$ 239 mil. Sobre o ganho potencial de R\$ 3,35 mi (regime permanente), isso equivale a uma captura de apenas **~7%**, um patamar muito baixo que só se materializaria em cenário de adoção quase nula da solução.
+
+**Benefício operacional para o usuário.** Além do ganho financeiro, a solução gera valor operacional direto para o analista de crédito e o time de estratégia (conforme detalhado no Canvas, seção 3). Estimativa preliminar: cada ciclo de revisão manual de política de limites consome ~40–60 horas de analista sênior (levantamento de dados, simulação de cenários, validação com comitê). Com a solução automatizando a geração de cenários, estimamos redução de ~50% desse tempo, equivalente a ~20–30 horas/ciclo. Em 4 ciclos anuais (recalibração trimestral), isso representa ~80–120 horas/ano de analista sênior, ou **~R\$ 15.000–22.500/ano** (a custo D1). Esse benefício não foi monetizado no cálculo do ROI para manter a análise conservadora.
+
+#### Limitações da análise
+
+- **Premissa C1 não validada com dados do parceiro.** A melhoria de 1,0% (cenário base) é extraída da literatura acadêmica, não de backtesting com dados do Banco Pan. O ROI real só será conhecido após a implementação do modelo com dados históricos das safras M1–M3. Por essa razão, adotamos o piso da faixa reportada (1%) como cenário base, e não o ponto médio.
+
+- **Custos dependem da infraestrutura interna do banco.** Os valores estimados para integração (Fase 3) e conformidade (Fase 4) pressupõem que o Pan já dispõe de motor de crédito e processos de governança estruturados. Se a infraestrutura for menos madura, esses custos podem ser significativamente maiores.
+
+- **Investimento 100% amortizado no primeiro ano.** Para fins didáticos, o ROI apresentado trata o investimento de R\$ 625 mil como integralmente consumido no Ano 1. Em uma análise corporativa real, esse investimento seria amortizado ao longo do ciclo de vida do modelo, tipicamente 3 anos, compatível com o ciclo de revisão e recalibração de modelos de risco em bancos regulados. Nesse caso, o custo anualizado do investimento seria ~R\$ 208 mil/ano (R\$ 625k ÷ 3), e o ROI do Ano 1 seria calculado contra essa parcela em vez do total, resultando em ROI mais alto. A conclusão de viabilidade, portanto, não é afetada pela simplificação; ao contrário, a abordagem adotada é a mais conservadora possível.
+
+- **Captura de 25% no Ano 1 é premissa do grupo.** A taxa de captura (C2) é a segunda maior fonte de incerteza da análise, após C1. O valor de 25% reflete a experiência típica de projetos de analytics em bancos (rampagem lenta, resistência organizacional), mas pode ser otimista ou pessimista dependendo da maturidade da infraestrutura de crédito do Pan.
+
+---
+
+## Referências da análise financeira
+
+> ASSOCIAÇÃO BRASILEIRA DAS EMPRESAS DE CARTÕES DE CRÉDITO E SERVIÇOS (ABECS). **Indicadores de mercado**. São Paulo: ABECS, 2023–2024. Disponível em: https://www.abecs.org.br/indicadores-de-mercado. Acesso em: 20 abr. 2026.
+>
+> ADVFN. Banco Pan reporta R\$ 209 milhões de lucro líquido e expansão de crédito sustenta BPAN4. *ADVFN Brasil*, nov. 2025. Disponível em: https://br.advfn.com/jornal/2025/11/banco-pan-reporta-r-209-milhoes-de-lucro-liquido-e-expansao-de-credito-sustenta-bpan4. Acesso em: 20 abr. 2026.
+>
+> ADVFN. Banco Pan registra queda de 9% no lucro do 2T25 com aumento da inadimplência. *ADVFN Brasil*, ago. 2025. Disponível em: https://br.advfn.com/jornal/2025/08/banco-pan-registra-queda-de-9-no-lucro-do-2t25-com-aumento-da-inadimplencia. Acesso em: 20 abr. 2026.
+>
+> BANCO CENTRAL DO BRASIL. **Relatório de Estabilidade Financeira**, 2º semestre de 2024. Brasília: BCB, 2024. Disponível em: https://www.bcb.gov.br/publicacoes/ref. Acesso em: 20 abr. 2026.
+>
+> BANCO CENTRAL DO BRASIL. **Arranjos de pagamento (taxas de intercâmbio)**. Brasília: BCB, [s.d.]. Disponível em: https://www.bcb.gov.br/estabilidadefinanceira/pagamentosarranjos. Acesso em: 20 abr. 2026.
+>
+> BANCO PAN. **Relações com Investidores (demonstrações financeiras e resultados trimestrais, 2T25 e 3T25)**. São Paulo, 2025. Disponível em: https://ri.bancopan.com.br/. Acesso em: 20 abr. 2026.
+>
+> BANCO PAN; INTELI. **TAPI (Termo de Abertura do Projeto Integrador: Otimização de limites pré-aprovados de cartão de crédito)**. São Paulo, 2026.
+>
+> COMISSÃO DE VALORES MOBILIÁRIOS (CVM). **Sistema RAD (DFP e ITR Banco Pan S.A.)**. Disponível em: https://www.rad.cvm.gov.br/. Acesso em: 20 abr. 2026.
+>
+> GLASSDOOR BRASIL. **Pesquisa salarial (Cientista de dados, Engenheiro de dados, Tech Lead)**. 2025. Disponível em: https://www.glassdoor.com.br/. Acesso em: 20 abr. 2026.
+>
+> NORD INVESTIMENTOS. Banco Pan (BPAN4), resultados 4T24. 2025. Disponível em: https://www.nordinvestimentos.com.br/blog/banco-pan-bpan4-resultados-4t24/. Acesso em: 20 abr. 2026.
+>
+> ROBERT HALF. **Guia Salarial 2025**. São Paulo: Robert Half, 2025. Disponível em: https://www.roberthalf.com.br/guia-salarial. Acesso em: 20 abr. 2026.
+>
+> THOMAS, L. C. **Consumer Credit Models: Pricing, Profit and Portfolios**. Oxford: Oxford University Press, 2009.
+>
+> TRENCH, M. S. *et al.* Managing credit lines and prices for Bank One credit cards. **Interfaces**, v. 33, n. 5, p. 4–21, 2003.
+
+
 
 ---
 
