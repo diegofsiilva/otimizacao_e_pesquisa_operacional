@@ -105,75 +105,82 @@ A aplicação desse teste reforça que a diferenciação identificada não é fo
 
 ---
 
-## 2. Matriz de Risco (Peso 2,5)
+## 2. Matriz de Risco
 
-### 2.1 Critérios de classificação
+Este projeto envolve modelagem quantitativa aplicada a decisões de crédito em ambiente regulado, o que exige mapeamento formal de riscos e oportunidades desde as primeiras etapas. O mapeamento a seguir cobre sete dimensões: técnica, operacional, de negócio, de dados, de implementação, de governança e de interpretação econômica, com planos de resposta associados a cada evento identificado [1][2].
 
-*O roteiro pede explicar os critérios usados para classificar impacto e probabilidade.*
+### 2.1 Critérios de Classificação
 
-| Nível | Probabilidade | Impacto |
-|:---:|:---|:---|
-| **Muito Baixo (1)** | < 5% de chance | Efeito negligenciável |
-| **Baixo (2)** | 5–20% | Impacto menor, contornável sem replanejar |
-| **Médio (3)** | 20–50% | Impacto moderado, exige ação corretiva |
-| **Alto (4)** | 50–75% | Impacto significativo no escopo, prazo ou resultado |
-| **Muito Alto (5)** | > 75% | Impacto crítico - pode inviabilizar o projeto |
+As tabelas utilizam duas dimensões de classificação: **probabilidade de ocorrência** e **magnitude do impacto**. As escalas abaixo definem o significado de cada faixa e garantem rastreabilidade das classificações atribuídas.
 
-### 2.2 Riscos identificados
+**Probabilidade**
 
-*O roteiro pede **pelo menos 10 riscos** com: descrição, **causa provável**, impacto esperado, probabilidade, **posição na matriz** e **justificativa da classificação**.*
+| Faixa | Classificação | Descrição |
+|:---:|---|---|
+| 10% | Muito Baixa | Evento improvável dado o contexto atual do projeto |
+| 30% | Baixa | Evento possível, mas com condições desfavoráveis à ocorrência |
+| 50% | Média | Evento com chances equilibradas de ocorrer ou não |
+| 70% | Alta | Evento provável dado o contexto da equipe e dependências externas |
+| 90% | Muito Alta | Evento quase certo, independente de ações preventivas |
 
-> **NÃO FAZER (roteiro):**
-> - ~~Listar riscos genéricos como "o projeto pode dar errado"~~
-> - ~~Citar riscos sem relação com a solução do grupo~~
-> - ~~Não justificar a posição do risco na matriz~~
-> - ~~Confundir risco do projeto com limitação natural do problema~~
->
-> **NÃO FAZER (feedback M5):**
-> - ~~Classificar como "baixo impacto" riscos que podem afetar a credibilidade do modelo~~ - calibrar com cuidado
+**Impacto**
 
-| # | Risco | Causa provável | Impacto esperado | Prob. | Imp. | Posição |
-|:---:|:---|:---|:---|:---:|:---:|:---:|
-| 1 | Concessão de limites excessivamente altos para clientes arriscados | Calibração inadequada da função objetivo (peso excessivo em receita vs risco) | Aumento de inadimplência, impacto direto em provisão | 3 | 5 | **Crítico** |
-| 2 | Concessão de limites muito baixos, reduzindo atratividade | Restrições de risco excessivamente conservadoras | Perda de competitividade, redução de ativação, churn | 3 | 4 | **Alto** |
-| 3 | Formulação do modelo sem aderência ao negócio | Falta de entendimento do TAPI ou ausência de validação com parceiro | Solução tecnicamente correta mas irrelevante para o Pan | 3 | 5 | **Crítico** |
-| 4 | Uso inadequado das variáveis disponíveis | Dados sem dicionário claro; variáveis correlacionadas; inclusão de variáveis sensíveis como proxy (CEP → raça) | Modelo enviesado ou com baixo poder preditivo; risco LGPD | 4 | 4 | **Crítico** |
-| 5 | Simplificações que prejudicam a interpretação econômica | Uso de proxies inadequadas sem justificar; linearização de relações não-lineares | Resultados matematicamente válidos mas economicamente sem sentido | 3 | 4 | **Alto** |
-| 6 | Descumprimento de restrições de risco da carteira | Restrições não formalizadas no modelo ou com valores incorretos | Carteira resultante viola políticas internas ou exigências regulatórias | 2 | 5 | **Alto** |
-| 7 | Dificuldade de implementação prática no ambiente do parceiro | Stack tecnológico incompatível; dados em formato indisponível | Solução não pode ser integrada - valor apenas teórico | 3 | 4 | **Alto** |
-| 8 | Baixa explicabilidade da solução | Modelo complexo demais; documentação insuficiente dos parâmetros | Compliance/auditoria recusa a solução; descumprimento LGPD Art. 20 | 3 | 4 | **Alto** |
-| 9 | Qualidade insuficiente dos dados fornecidos | Missing values, outliers, período não representativo, viés de seleção | "Garbage in, garbage out" - modelo gera decisões ruins | 4 | 4 | **Crítico** |
-| 10 | Dependência excessiva de premissas não justificadas | Falta de dados reais para calibrar parâmetros (LGD, utilização); valores arbitrários | Resultados são artefato das premissas, sem validade prática | 4 | 4 | **Crítico** |
-| 11 | Viés de seleção nos dados de inadimplência | `over30mob3` só existe para os ~5K que ativaram (0,03% da base) - não observamos os demais | Modelo treinado com subconjunto não representativo da população | 4 | 4 | **Crítico** |
-| 12 | Atrasos no time devido ao prazo curto da sprint | Sprint 1 com poucos dias de dev efetivo | Entregas incompletas ou com qualidade inferior | 4 | 3 | **Alto** |
+| Classificação | Descrição |
+|---|---|
+| Muito Baixo | Efeito negligenciável sobre qualidade, prazo ou adotabilidade |
+| Baixo | Efeito localizado, corrigível sem comprometer a entrega |
+| Moderado | Efeito relevante, exige retrabalho mas não compromete o MVP |
+| Alto | Efeito significativo sobre qualidade técnica ou credibilidade do modelo |
+| Muito Alto | Efeito crítico — compromete a adotabilidade ou validade da solução |
 
-> **Nota sobre o Risco 11:** Este risco foi identificado diretamente dos dados (`base_ref_M1_v2.parquet`). Dos 14,5M de clientes, apenas ~5K têm `over30mob3` preenchido. Isso é um viés de seleção clássico em crédito ("reject inference") - não sabemos como os clientes que não receberam oferta se comportariam.
+**Posição na Matriz**
 
-### 2.3 Justificativa do posicionamento
+A posição na matriz combina as duas dimensões e determina a prioridade de atenção: células vermelhas exigem monitoramento constante e ação preventiva imediata; células amarelas exigem plano de contingência; células verdes podem ser monitoradas com menor frequência.
 
-*O roteiro pede justificativa do posicionamento de cada risco.*
+### 2.2 Visualização da Matriz de Risco
 
-**Posição = Probabilidade × Impacto:**
-- **Críticos (≥ 15):** Riscos 4, 9, 10 e 11 têm probabilidade alta (4) porque o grupo ainda não recebeu o TAPI nem analisou os dados em profundidade - são riscos inerentes ao estágio atual. Riscos 1 e 3 têm impacto muito alto (5) porque comprometem a razão de existir da solução.
-- **Altos (8–14):** Riscos 2, 5, 6, 7, 8 e 12 são significativos mas mais controláveis com ações de mitigação.
+![Matriz de Riscos e Oportunidades](assets/Riscosg04.jpg)
 
-### 2.4 Análise dos riscos mais críticos
+*Figura X: Matriz de Riscos e Oportunidades do Projeto. Fonte: Material produzido pelos autores (2026).*
 
-*O roteiro pede análise dos riscos mais críticos.*
+### 2.3 Tabela de Ameaças
 
-**Riscos 1 e 2 (limites altos/baixos demais)** são faces opostas do mesmo problema: calibração inadequada do trade-off receita × risco. Ambos dependem da correta formulação da função objetivo (Risco 3). Se a formulação errar, ambos se materializam automaticamente.
+| ID | Descrição | Probabilidade | Impacto | Posição | Justificativa | Plano de Mitigação |
+|----|-----------|:---:|:---:|:---:|---|---|
+| A01 | Função objetivo desalinhada com o apetite de risco real do PAN | 50% | Muito Alto | Vermelho | Formulação incorreta produz soluções tecnicamente ótimas mas economicamente inadequadas, comprometendo toda a proposta. | Validar em Sprint Reviews com representantes do parceiro. Documentar trade-offs e submetê-los a revisão formal. |
+| A02 | Baixa qualidade dos dados para calibração | 70% | Muito Alto | Vermelho | A exploração da base identificou problemas concretos: 42% de nulos em `capacidade_pagamento` e 99,97% em `over30mob3`. A probabilidade permanece alta pois variáveis críticas seguem com cobertura insuficiente para calibração confiável. | Priorizar variáveis com cobertura adequada. Documentar limitações por variável. Preparar estratégia de imputação ou exclusão fundamentada para as colunas críticas. |
+| A03 | Viés amostral e uso inadequado de variáveis | 70% | Alto | Vermelho | Dados restritos a clientes já aprovados induzem o modelo a replicar vieses da política atual em vez de otimizá-la. | Validar variáveis com especialistas do PAN. Aplicar reponderação para corrigir survivorship bias e testar robustez com subconjuntos distintos. |
+| A04 | Premissas de modelagem não documentadas ou injustificadas | 70% | Moderado | Amarelo | Simplificações são inerentes a um MVP, mas sem registro tornam o modelo impossível de auditar ou ajustar quando a realidade muda. | Manter "caderno de hipóteses" com todas as premissas. Realizar análise de sensibilidade e validar premissas-chave com o parceiro. |
+| A05 | Expansão excessiva do escopo | 70% | Alto | Vermelho | Tentação de incorporar múltiplos segmentos e variáveis impede entrega funcional no prazo letivo — padrão recorrente em projetos acadêmicos com parceiro institucional. | Definir MVP rígido no Sprint 1. Congelar escopo por sprint e renegociar adições formalmente via comitê interno. |
+| A06 | Dificuldade de implementação no ambiente do parceiro | 50% | Moderado | Amarelo | Restrições de infraestrutura ou sistemas legados podem dificultar a adoção, mas num contexto de MVP acadêmico a inviabilização total é menos provável. | Mapear requisitos de infraestrutura no Sprint 1. Adotar arquitetura modular com stack simples e dependências claras. |
+| A07 | Baixa explicabilidade e defensabilidade em comitê | 50% | Alto | Amarelo | Otimização linear é inerentemente explicável, mas a ausência de documentação das restrições ativas pode comprometer a defesa em comitê de crédito ou auditoria. | Gerar relatório de restrições ativas por decisão. Construir dashboard de transparência rastreando cada limite até a função objetivo. |
+| A08 | Calibragem incorreta dos limites recomendados | 50% | Alto | Amarelo | Limites excessivos amplificam inadimplência; limites conservadores demais reduzem receita. Na dúvida, errar para o lado conservador é preferível enquanto o modelo amadurece. | Backtesting contra safras históricas, hard caps por faixa de PD e comparação sistemática contra a política atual como baseline. |
+| A09 | Não-aderência ao framework regulatório (CMN nº 4.966/2021) | 30% | Muito Alto | Vermelho | A CMN nº 4.966/2021 não é requisito explícito do TAPI, mas é referência complementar adotada pelo grupo. Não incorporar a lógica de perda esperada (PD × exposição) pode limitar a adotabilidade da solução no ambiente real do PAN. | Mapear as exigências aplicáveis e estruturar restrições com lógica aderente ao framework. Deixar explícito no artefato que essa aderência é iniciativa do grupo. |
+| A10 | Descasamento entre inadimplência física e financeira | 50% | Muito Alto | Vermelho | Otimizar apenas uma métrica pode violar a outra — limites altos a poucos clientes arriscados estouram a inadimplência financeira mesmo respeitando a física. | Implementar ambas como restrições independentes no modelo. Monitorar as duas métricas nos relatórios de backtesting. |
+| A11 | Modelo ignora propensão à conversão dos clientes | 50% | Moderado | Amarelo | Desconsiderar que parte dos clientes não converterá superestima o retorno esperado, mas não compromete a estrutura do modelo — é ajuste de calibragem, não de arquitetura. | Incorporar score de propensão à conversão na função objetivo ou como variável de segmentação. |
 
-**Riscos 4, 9, 10 e 11 (dados e premissas)** formam uma cadeia: dados com problemas (9) + viés de seleção (11) → premissas inadequadas (10) → uso errado de variáveis (4). A mitigação mais efetiva é uma EDA rigorosa e documentação explícita de toda premissa.
+*Tabela X: Tabela de Ameaças do Projeto. Fonte: Material produzido pelos autores (2026).*
 
-`[APÓS TAPI: recalibrar probabilidades e impactos com informações reais do parceiro]`
+### 2.4 Tabela de Oportunidades
 
-### 2.5 Representação visual da matriz
+| ID | Descrição | Probabilidade | Impacto | Posição | Justificativa | Plano de Potencialização |
+|----|-----------|:---:|:---:|:---:|---|---|
+| O01 | Alinhamento com a Resolução CMN nº 4.966/2021 e Basel | 70% | Muito Alto | Vermelho | Incorporar o framework de perda esperada (PD × LGD × EAD) desde o início transforma uma referência regulatória em diferencial competitivo da solução frente a abordagens mais simples. | Estruturar restrições com nomenclatura aderente ao framework. Explicitar a conformidade no artefato final como contribuição do grupo. |
+| O02 | Acesso a dados reais de safras históricas do PAN | 90% | Muito Alto | Vermelho | A base já foi disponibilizada via TAPI com variáveis de performance observada. Dados reais permitem calibração com nível de realismo inatingível por dados sintéticos. | Priorizar variáveis com boa cobertura identificadas na exploração. Estruturar dicionário de dados e validar qualidade continuamente ao longo dos sprints. |
+| O03 | Feedback contínuo do parceiro em Sprint Reviews | 90% | Alto | Vermelho | Checkpoints quinzenais permitem validar decisões cedo, evitando retrabalho custoso. É a oportunidade de maior frequência e menor custo de captura do projeto. | Preparar pautas objetivas e levar protótipos a cada review. Registrar decisões, pendências e responsáveis após cada encontro. |
+| O04 | Benchmark com literatura consolidada de CLO | 90% | Alto | Vermelho | Literatura madura em Credit Limit Optimization (Experian, Moody's Analytics, publicações acadêmicas recentes) ancora decisões de modelagem em práticas de mercado e evita reinvenção. | Revisão bibliográfica antes de fechar a função objetivo. Citar referências no artefato para fortalecer credibilidade junto ao parceiro. |
 
-*Inserir a imagem da matriz 5×5 com os riscos posicionados. Fazer em Figma, Canva ou Miro.*
+*Tabela X: Tabela de Oportunidades do Projeto. Fonte: Material produzido pelos autores (2026).*
 
-![Matriz de Risco](assets/matriz_risco.png)
+### 2.5 Conclusão
 
-`[PREENCHER: criar imagem da matriz 5×5 e inserir aqui]`
+A análise conjunta das ameaças e oportunidades revela que o maior desafio deste projeto não é técnico, mas de aderência — entre o modelo matemático e a realidade de negócio do Banco PAN, entre as premissas assumidas e os dados disponíveis, e entre a solução entregue e o arcabouço regulatório vigente.
+
+Do lado das ameaças, quatro concentrações exigem atenção prioritária. O eixo de interpretação econômica — função objetivo (A01), premissas de modelagem (A04) e explicabilidade (A07) — indica que a principal fragilidade do projeto é a tradução correta da estratégia de risco-retorno para linguagem matemática. Os riscos de dados e implementação (A02, A03, A06) são estruturalmente dependentes do parceiro, exigindo negociação clara desde o Sprint 1. A calibragem do modelo (A08) carrega assimetria relevante: errar para o lado conservador é preferível enquanto o modelo amadurece. Por fim, os riscos regulatórios e de dupla métrica de inadimplência (A09, A10) representam requisitos cujo não-atendimento pode comprometer a adotabilidade da solução independentemente de seu mérito técnico.
+
+Do lado das oportunidades, o projeto dispõe de quatro alavancas de alto potencial: ancoragem regulatória (O01), dados reais já disponíveis com performance observada (O02), validação contínua com o parceiro (O03) e benchmark com literatura especializada (O04). Nenhuma se realizará automaticamente — todas exigem ação deliberada a partir das primeiras semanas.
+
+Em síntese, o sucesso da entrega depende menos da sofisticação algorítmica e mais da disciplina de processo: validar premissas, documentar decisões, respeitar o escopo e capturar ativamente as condições favoráveis mapeadas.
 
 ---
 
@@ -550,6 +557,18 @@ No cenário pessimista (C1 = 0,5%, captura de apenas 15%), o projeto gera valor 
 
 ## Fontes
 
-[1] KIM, W. Chan; MAUBORGNE, Renée. A Estratégia do Oceano Azul: Como Criar Novos Mercados e Tornar a Concorrência Irrelevante. Rio de Janeiro: Sextante, 2005.
-[2] EXPERIAN. Balancing Growth and Risk with Credit Limit Optimization. Experian Insights, 2024. Disponível em: https://www.experian.com/blogs/insights/credit-limit-optimization/. Acesso em: 28 de abril de 2026.
-[3] BRASIL. Conselho Monetário Nacional. Resolução CMN nº 4.966, de 25 de novembro de 2021. Dispõe sobre os conceitos e os critérios contábeis aplicáveis a instrumentos financeiros e sobre a mensuração das provisões para perdas esperadas associadas ao risco de crédito. Brasília: Banco Central do Brasil, 2021. Disponível em: https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolução%20CMN&numero=4966. Acesso em: 28 de abril de 2026..
+1. [Banco Pan - Relações com Investidores](https://ri.bancopan.com.br/)
+2. [Banco Pan - Resultados 2T25 (Nord Investimentos)](https://www.nordinvestimentos.com.br/blog/banco-pan-bpan4-resultados-2t25/)
+3. [Banco Pan - IA em decisões de crédito (Consumidor Moderno)](https://consumidormoderno.com.br/inteligencia-artificial-banco-pan/)
+4. [LGPD - Lei 13.709/2018](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm)
+5. [Glassdoor - Salários Brasil 2025](https://www.glassdoor.com.br/Salarios)
+6. [AWS Pricing - EC2](https://aws.amazon.com/ec2/pricing/)
+7. [Strategyzer - Value Proposition Canvas](https://www.strategyzer.com/library/the-value-proposition-canvas)
+
+### 2.5 Referências
+
+[1] PROJECT MANAGEMENT INSTITUTE. *A Guide to the Project Management Body of Knowledge (PMBOK® Guide)*. 7. ed. Newtown Square: Project Management Institute, 2021.
+
+[2] BRASIL. Conselho Monetário Nacional. Resolução CMN nº 4.557, de 23 de fevereiro de 2017. Dispõe sobre a estrutura de gerenciamento de riscos e a estrutura de gerenciamento de capital em instituições financeiras. Brasília: Banco Central do Brasil, 2017. Disponível em: https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolução%20CMN&numero=4557. Acesso em: abr. 2026.
+
+[3] BRASIL. Conselho Monetário Nacional. Resolução CMN nº 4.966, de 25 de novembro de 2021. Dispõe sobre os conceitos e os critérios contábeis aplicáveis a instrumentos financeiros e sobre a mensuração das provisões para perdas esperadas associadas ao risco de crédito. Brasília: Banco Central do Brasil, 2021. Disponível em: https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolução%20CMN&numero=4966. Acesso em: abr. 2026.
