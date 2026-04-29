@@ -1,8 +1,8 @@
 # Entendimento do Negócio
----
+
 ## 1. Matriz de Avaliação de Valor - Oceano Azul (Peso 2,5)
 
-&emsp; A Estratégia do Oceano Azul, desenvolvida por W. Chan Kim e Renée Mauborgne [1], baseia-se de que o crescimento competitivo mais relevante não vem da disputa por participação em mercados saturados (oceanos vermelhos), mas da criação de espaços de mercado inexplorados onde a concorrência torna-se irrelevante. Para operacionalizar essa lógica, os autores propõem a Matriz de Avaliação de Valor (Strategy Canvas), ferramenta que permite mapear visualmente como diferentes soluções se posicionam em relação a um conjunto de atributos relevantes para o cliente, revelando eixos de diferenciação.
+A Estratégia do Oceano Azul, desenvolvida por W. Chan Kim e Renée Mauborgne [1], baseia-se de que o crescimento competitivo mais relevante não vem da disputa por participação em mercados saturados (oceanos vermelhos), mas da criação de espaços de mercado inexplorados onde a concorrência torna-se irrelevante. Para operacionalizar essa lógica, os autores propõem a Matriz de Avaliação de Valor (Strategy Canvas), ferramenta que permite mapear visualmente como diferentes soluções se posicionam em relação a um conjunto de atributos relevantes para o cliente, revelando eixos de diferenciação.
 No contexto deste projeto, a aplicação da matriz serve a dois propósitos complementares: mapear o posicionamento relativo da solução proposta frente às alternativas hoje disponíveis no mercado brasileiro para definição de limites pré-aprovados de crédito e identificar onde a proposta gera valor diferenciado o suficiente para justificar sua adoção pelo Banco PAN em um setor no qual a concorrência por clientes de cartão é intensa. A análise se organiza em torno de oito atributos estratégicos selecionados pela equipe e comparados entre três abordagens representativas do espectro competitivo.
 
 ### 1.1 Abordagens Comparadas
@@ -20,7 +20,7 @@ Segundo a TAPI<, o Banco PAN utiliza um sistema de scoring + regras fixas (mais 
 
 Os oito atributos a seguir foram selecionados com base em três critérios: **relevância direta para o usuário interno do modelo** (analista de estratégia de crédito do Banco PAN), **impacto observável sobre o cliente final** (correntista elegível) e **aderência ao contexto regulatório brasileiro**. A seleção prioriza atributos onde há diferenciação efetiva entre as três abordagens, evitando itens genéricos como "qualidade" ou "eficiência" que não discriminam.
 
-<div align="center">Tabela X: Matriz de Atributos</div>
+<div align="center">Tabela 1: Matriz de Atributos</div>
 
 | # | Atributo| Descrição|
 | - | ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -41,7 +41,7 @@ Os oito atributos a seguir foram selecionados com base em três critérios: **re
 A tabela a seguir apresenta as pontuações atribuídas a cada abordagem nos oito atributos, em escala de 0 a 10. Os valores refletem avaliação comparativa qualitativa fundamentada no funcionamento estrutural de cada abordagem. As justificativas acompanham cada linha para explicitar o raciocínio.
 
 
-<div align="center">Tabela X: Matriz de Avaliação de Valor</div>
+<div align="center">Tabela 2: Matriz de Avaliação de Valor</div>
 
 
 | # | Atributo | Tradicional (A) |  ML Black-Box (B) | Otimização (C) | Justificativa das Notas|
@@ -57,21 +57,17 @@ A tabela a seguir apresenta as pontuações atribuídas a cada abordagem nos oit
 
 <div align="center">Fonte: Material produzido pelos autores</div>
 
-
-
 A matriz foi construída no Google Sheets, onde a tabela acima foi convertida em um gráfico de linhas que materializa a curva de valor comparativa entre as três abordagens analisadas. A planilha completa, contendo os dados, o gráfico e o ERRC Grid em aba complementar, está disponível em:
 
 Link da planilha: [Canvas Estratégico do Oceano Azul - Banco PAN](https://docs.google.com/spreadsheets/d/16oclIvccqD7WkzTtpc5Tf-_E_1N4REQIbCu5e-1wRwY/edit?gid=262777086#gid=262777086)
 
 ---
 
-<div align="center">Figura X: Curva de Valor (Strategy Canvas)</div>
+<div align="center">Figura 1: Curva de Valor (Strategy Canvas)</div>
 <div align="center">
   <img src="/artefatos/assets/curva_de_valor.png">
 </div>
 <div align="center">Fonte: Material produzido pelos autores</div>
-
-
 
 A visualização da curva de valor revela uma característica fundamental da solução proposta: ela não busca dominar em todos os atributos, mas adota um perfil estrategicamente seletivo. Nos atributos onde importa (explicabilidade, controle agregado, capacidade de pagamento, arbitragem), a curva se destaca acentuadamente; nos atributos menos críticos (como granularidade máxima de personalização), a solução abdica conscientemente de competir com o ML, reconhecendo que a diferença marginal não compensa a perda de transparência.
 
@@ -107,7 +103,7 @@ A aplicação desse teste reforça que a diferenciação identificada não é fo
 
 ## 2. Matriz de Risco
 
-Este projeto envolve modelagem quantitativa aplicada a decisões de crédito em ambiente regulado, o que exige mapeamento formal de riscos e oportunidades desde as primeiras etapas. O mapeamento a seguir cobre sete dimensões: técnica, operacional, de negócio, de dados, de implementação, de governança e de interpretação econômica, com planos de resposta associados a cada evento identificado [1][2].
+Este projeto envolve modelagem quantitativa aplicada a decisões de crédito em ambiente regulado, o que exige mapeamento formal de riscos e oportunidades desde as primeiras etapas. O mapeamento a seguir cobre sete dimensões: técnica, operacional, de negócio, de dados, de implementação, de governança e de interpretação econômica, com planos de resposta associados a cada evento identificado.
 
 ### 2.1 Critérios de Classificação
 
@@ -141,7 +137,7 @@ A posição na matriz combina as duas dimensões e determina a prioridade de ate
 
 ![Matriz de Riscos e Oportunidades](assets/Riscosg04.jpg)
 
-*Figura X: Matriz de Riscos e Oportunidades do Projeto. Fonte: Material produzido pelos autores (2026).*
+*Figura 2: Matriz de Riscos e Oportunidades do Projeto. Fonte: Material produzido pelos autores (2026).*
 
 ### 2.3 Tabela de Ameaças
 
@@ -159,7 +155,7 @@ A posição na matriz combina as duas dimensões e determina a prioridade de ate
 | A10 | Descasamento entre inadimplência física e financeira | 50% | Muito Alto | Vermelho | Otimizar apenas uma métrica pode violar a outra — limites altos a poucos clientes arriscados estouram a inadimplência financeira mesmo respeitando a física. | Implementar ambas como restrições independentes no modelo. Monitorar as duas métricas nos relatórios de backtesting. |
 | A11 | Modelo ignora propensão à conversão dos clientes | 50% | Moderado | Amarelo | Desconsiderar que parte dos clientes não converterá superestima o retorno esperado, mas não compromete a estrutura do modelo — é ajuste de calibragem, não de arquitetura. | Incorporar score de propensão à conversão na função objetivo ou como variável de segmentação. |
 
-*Tabela X: Tabela de Ameaças do Projeto. Fonte: Material produzido pelos autores (2026).*
+*Tabela 3: Tabela de Ameaças do Projeto. Fonte: Material produzido pelos autores (2026).*
 
 ### 2.4 Tabela de Oportunidades
 
@@ -170,7 +166,7 @@ A posição na matriz combina as duas dimensões e determina a prioridade de ate
 | O03 | Feedback contínuo do parceiro em Sprint Reviews | 90% | Alto | Vermelho | Checkpoints quinzenais permitem validar decisões cedo, evitando retrabalho custoso. É a oportunidade de maior frequência e menor custo de captura do projeto. | Preparar pautas objetivas e levar protótipos a cada review. Registrar decisões, pendências e responsáveis após cada encontro. |
 | O04 | Benchmark com literatura consolidada de CLO | 90% | Alto | Vermelho | Literatura madura em Credit Limit Optimization (Experian, Moody's Analytics, publicações acadêmicas recentes) ancora decisões de modelagem em práticas de mercado e evita reinvenção. | Revisão bibliográfica antes de fechar a função objetivo. Citar referências no artefato para fortalecer credibilidade junto ao parceiro. |
 
-*Tabela X: Tabela de Oportunidades do Projeto. Fonte: Material produzido pelos autores (2026).*
+*Tabela 4: Tabela de Oportunidades do Projeto. Fonte: Material produzido pelos autores (2026).*
 
 ### 2.5 Conclusão
 
@@ -498,89 +494,48 @@ No cenário pessimista (C1 = 0,5%, captura de apenas 15%), o projeto gera valor 
 
 ---
 
-## Referências da análise financeira
+## Referências
 
-> ASSOCIAÇÃO BRASILEIRA DAS EMPRESAS DE CARTÕES DE CRÉDITO E SERVIÇOS (ABECS). **Indicadores de mercado**. São Paulo: ABECS, 2023–2024. Disponível em: https://www.abecs.org.br/indicadores-de-mercado. Acesso em: 20 abr. 2026.
->
-> ADVFN. Banco Pan reporta R\$ 209 milhões de lucro líquido e expansão de crédito sustenta BPAN4. *ADVFN Brasil*, nov. 2025. Disponível em: https://br.advfn.com/jornal/2025/11/banco-pan-reporta-r-209-milhoes-de-lucro-liquido-e-expansao-de-credito-sustenta-bpan4. Acesso em: 20 abr. 2026.
->
-> ADVFN. Banco Pan registra queda de 9% no lucro do 2T25 com aumento da inadimplência. *ADVFN Brasil*, ago. 2025. Disponível em: https://br.advfn.com/jornal/2025/08/banco-pan-registra-queda-de-9-no-lucro-do-2t25-com-aumento-da-inadimplencia. Acesso em: 20 abr. 2026.
->
-> BANCO CENTRAL DO BRASIL. **Relatório de Estabilidade Financeira**, 2º semestre de 2024. Brasília: BCB, 2024. Disponível em: https://www.bcb.gov.br/publicacoes/ref. Acesso em: 20 abr. 2026.
->
-> BANCO CENTRAL DO BRASIL. **Arranjos de pagamento (taxas de intercâmbio)**. Brasília: BCB, [s.d.]. Disponível em: https://www.bcb.gov.br/estabilidadefinanceira/pagamentosarranjos. Acesso em: 20 abr. 2026.
->
-> BANCO PAN. **Relações com Investidores (demonstrações financeiras e resultados trimestrais, 2T25 e 3T25)**. São Paulo, 2025. Disponível em: https://ri.bancopan.com.br/. Acesso em: 20 abr. 2026.
->
-> BANCO PAN; INTELI. **TAPI (Termo de Abertura do Projeto Integrador: Otimização de limites pré-aprovados de cartão de crédito)**. São Paulo, 2026.
->
-> COMISSÃO DE VALORES MOBILIÁRIOS (CVM). **Sistema RAD (DFP e ITR Banco Pan S.A.)**. Disponível em: https://www.rad.cvm.gov.br/. Acesso em: 20 abr. 2026.
->
-> GLASSDOOR BRASIL. **Pesquisa salarial (Cientista de dados, Engenheiro de dados, Tech Lead)**. 2025. Disponível em: https://www.glassdoor.com.br/. Acesso em: 20 abr. 2026.
->
-> NORD INVESTIMENTOS. Banco Pan (BPAN4), resultados 4T24. 2025. Disponível em: https://www.nordinvestimentos.com.br/blog/banco-pan-bpan4-resultados-4t24/. Acesso em: 20 abr. 2026.
->
-> ROBERT HALF. **Guia Salarial 2025**. São Paulo: Robert Half, 2025. Disponível em: https://www.roberthalf.com.br/guia-salarial. Acesso em: 20 abr. 2026.
->
-> THOMAS, L. C. **Consumer Credit Models: Pricing, Profit and Portfolios**. Oxford: Oxford University Press, 2009.
->
-> TRENCH, M. S. *et al.* Managing credit lines and prices for Bank One credit cards. **Interfaces**, v. 33, n. 5, p. 4–21, 2003.
+ASSOCIAÇÃO BRASILEIRA DAS EMPRESAS DE CARTÕES DE CRÉDITO E SERVIÇOS (ABECS). *Indicadores de mercado*. São Paulo: ABECS, 2023–2024. Disponível em: <https://www.abecs.org.br/indicadores-de-mercado>. Acesso em: 20 abr. 2026.
 
+ADVFN. Banco Pan registra queda de 9% no lucro do 2T25 com aumento da inadimplência. *ADVFN Brasil*, ago. 2025. Disponível em: <https://br.advfn.com/jornal/2025/08/banco-pan-registra-queda-de-9-no-lucro-do-2t25-com-aumento-da-inadimplencia>. Acesso em: 20 abr. 2026.
 
+ADVFN. Banco Pan reporta R$ 209 milhões de lucro líquido e expansão de crédito sustenta BPAN4. *ADVFN Brasil*, nov. 2025. Disponível em: <https://br.advfn.com/jornal/2025/11/banco-pan-reporta-r-209-milhoes-de-lucro-liquido-e-expansao-de-credito-sustenta-bpan4>. Acesso em: 20 abr. 2026.
 
----
+BANCO CENTRAL DO BRASIL. *Arranjos de pagamento (taxas de intercâmbio)*. Brasília: BCB, [s.d.]. Disponível em: <https://www.bcb.gov.br/estabilidadefinanceira/pagamentosarranjos>. Acesso em: 20 abr. 2026.
 
-## Checklist pré-entrega
+BANCO CENTRAL DO BRASIL. *Relatório de Estabilidade Financeira*, 2º semestre de 2024. Brasília: BCB, 2024. Disponível em: <https://www.bcb.gov.br/publicacoes/ref>. Acesso em: 20 abr. 2026.
 
-**Oceano Azul:**
-- [x] Explicação de quem está sendo comparado (3 abordagens)
-- [x] Definição dos 8 atributos com justificativa para o Pan
-- [x] Notas atribuídas com justificativa para cada uma
-- [x] 4 ações (Reduzir, Eliminar, Aumentar, Criar) aplicadas ao projeto
-- [ ] `[APÓS MODELAGEM]` Detalhar tipo de modelo na abordagem do grupo
-- [ ] `[APÓS TAPI]` Validar notas do Pan atual com parceiro
+BANCO PAN. *Relações com Investidores (demonstrações financeiras e resultados trimestrais, 2T25 e 3T25)*. São Paulo, 2025. Disponível em: <https://ri.bancopan.com.br/>. Acesso em: 20 abr. 2026.
 
-**Riscos:**
-- [x] Pelo menos 10 riscos apresentados (temos 12)
-- [x] Critérios de classificação de impacto e probabilidade
-- [x] Cada risco tem: descrição, causa provável, impacto, prob, posição, justificativa
-- [x] Análise dos riscos mais críticos
-- [ ] `[PREENCHER]` Imagem da matriz 5×5
+BANCO PAN; INTELI. *TAPI (Termo de Abertura do Projeto Integrador: Otimização de limites pré-aprovados de cartão de crédito)*. São Paulo, 2026.
 
-**Canvas:**
-- [x] Dois níveis de cliente identificados (direto + final)
-- [x] Dores do cliente direto
-- [x] Ganhos do cliente direto (do usuário, não da alta gestão)
-- [x] Produtos e serviços da solução
-- [x] Aliviadores de dor conectados às dores
-- [x] Criadores de ganho
-- [ ] `[PREENCHER]` Figura do Canvas (template Strategyzer)
-- [ ] `[APÓS UX]` Cruzar com personas
+BRASIL. Conselho Monetário Nacional. Resolução CMN nº 4.557, de 23 de fevereiro de 2017. Dispõe sobre a estrutura de gerenciamento de riscos e a estrutura de gerenciamento de capital em instituições financeiras. Brasília: Banco Central do Brasil, 2017. Disponível em: <https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolução%20CMN&numero=4557>. Acesso em: abr. 2026.
 
-**Financeira:**
-- [x] Premissas claramente declaradas com fonte
-- [x] Separação entre investimento, custo operacional e benefício
-- [x] Distinção entre receita e economia
-- [x] Cálculo do ROI com fórmula
-- [x] Interpretação do resultado com limitações
-- [ ] `[APÓS TAPI]` Recalcular com dados reais
+BRASIL. Conselho Monetário Nacional. Resolução CMN nº 4.966, de 25 de novembro de 2021. Dispõe sobre os conceitos e os critérios contábeis aplicáveis a instrumentos financeiros e sobre a mensuração das provisões para perdas esperadas associadas ao risco de crédito. Brasília: Banco Central do Brasil, 2021. Disponível em: <https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolução%20CMN&numero=4966>. Acesso em: abr. 2026.
+
+COMISSÃO DE VALORES MOBILIÁRIOS (CVM). *Sistema RAD (DFP e ITR Banco Pan S.A.)*. Disponível em: <https://www.rad.cvm.gov.br/>. Acesso em: 20 abr. 2026.
+
+GLASSDOOR BRASIL. *Pesquisa salarial (Cientista de dados, Engenheiro de dados, Tech Lead)*. 2025. Disponível em: <https://www.glassdoor.com.br/>. Acesso em: 20 abr. 2026.
+
+NORD INVESTIMENTOS. Banco Pan (BPAN4), resultados 4T24. 2025. Disponível em: <https://www.nordinvestimentos.com.br/blog/banco-pan-bpan4-resultados-4t24/>. Acesso em: 20 abr. 2026.
+
+PROJECT MANAGEMENT INSTITUTE. *A Guide to the Project Management Body of Knowledge (PMBOK® Guide)*. 7. ed. Newtown Square: Project Management Institute, 2021.
+
+ROBERT HALF. *Guia Salarial 2025*. São Paulo: Robert Half, 2025. Disponível em: <https://www.roberthalf.com.br/guia-salarial>. Acesso em: 20 abr. 2026.
+
+THOMAS, L. C. *Consumer Credit Models: Pricing, Profit and Portfolios*. Oxford: Oxford University Press, 2009.
+
+TRENCH, M. S. *et al.* Managing credit lines and prices for Bank One credit cards. *Interfaces*, v. 33, n. 5, p. 4–21, 2003.
 
 ---
 
 ## Fontes
 
-1. [Banco Pan - Relações com Investidores](https://ri.bancopan.com.br/)
-2. [Banco Pan - Resultados 2T25 (Nord Investimentos)](https://www.nordinvestimentos.com.br/blog/banco-pan-bpan4-resultados-2t25/)
-3. [Banco Pan - IA em decisões de crédito (Consumidor Moderno)](https://consumidormoderno.com.br/inteligencia-artificial-banco-pan/)
-4. [LGPD - Lei 13.709/2018](https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm)
-5. [Glassdoor - Salários Brasil 2025](https://www.glassdoor.com.br/Salarios)
-6. [AWS Pricing - EC2](https://aws.amazon.com/ec2/pricing/)
-7. [Strategyzer - Value Proposition Canvas](https://www.strategyzer.com/library/the-value-proposition-canvas)
-
-### 2.5 Referências
-
-[1] PROJECT MANAGEMENT INSTITUTE. *A Guide to the Project Management Body of Knowledge (PMBOK® Guide)*. 7. ed. Newtown Square: Project Management Institute, 2021.
-
-[2] BRASIL. Conselho Monetário Nacional. Resolução CMN nº 4.557, de 23 de fevereiro de 2017. Dispõe sobre a estrutura de gerenciamento de riscos e a estrutura de gerenciamento de capital em instituições financeiras. Brasília: Banco Central do Brasil, 2017. Disponível em: https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolução%20CMN&numero=4557. Acesso em: abr. 2026.
-
-[3] BRASIL. Conselho Monetário Nacional. Resolução CMN nº 4.966, de 25 de novembro de 2021. Dispõe sobre os conceitos e os critérios contábeis aplicáveis a instrumentos financeiros e sobre a mensuração das provisões para perdas esperadas associadas ao risco de crédito. Brasília: Banco Central do Brasil, 2021. Disponível em: https://www.bcb.gov.br/estabilidadefinanceira/exibenormativo?tipo=Resolução%20CMN&numero=4966. Acesso em: abr. 2026.
+1. Banco Pan - Relações com Investidores: <https://ri.bancopan.com.br/>
+2. Banco Pan - Resultados 2T25 (Nord Investimentos): <https://www.nordinvestimentos.com.br/blog/banco-pan-bpan4-resultados-2t25/>
+3. Banco Pan - IA em decisões de crédito (Consumidor Moderno): <https://consumidormoderno.com.br/inteligencia-artificial-banco-pan/>
+4. LGPD - Lei nº 13.709/2018: <https://www.planalto.gov.br/ccivil_03/_ato2015-2018/2018/lei/l13709.htm>
+5. Glassdoor - Salários Brasil 2025: <https://www.glassdoor.com.br/Salarios>
+6. AWS Pricing - EC2: <https://aws.amazon.com/ec2/pricing/>
+7. Strategyzer - Value Proposition Canvas: <https://www.strategyzer.com/library/the-value-proposition-canvas>
