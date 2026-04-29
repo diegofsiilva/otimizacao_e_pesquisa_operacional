@@ -14,193 +14,100 @@
 > - **Não incluir funcionalidades fora do escopo** — se o TAPI não prevê, a persona não pode precisar disso
 
 ---
+<br>
 
-## 1. Personas (5 pontos)
+## 1. Personas
 
-*Identificar os **usuários reais** da solução. Criar **2-3 personas** com perfis distintos.*
+Personas são representações fictícias de usuários reais, criadas com base em dados, comportamentos e necessidades observadas. Elas ajudam equipes a entender melhor quem são os usuários de um produto, orientando decisões de design, tecnologia e negócio, alinhando todos os times. Também, elas auxiliam na criação de soluções centradas no usuário, o que priorizar funcionalidades de mais impacto e melhora a experiência e usabilidade do sistema.
 
-> **TAPI — quem são os usuários:**
+
+> **Quem são os usuários:**
 >
 > | Área | Papel no projeto | Tipo de usuário |
 > |:---|:---|:---|
 > | **Time de Políticas de Crédito (Estratégia de Crédito)** | **Usuário final da solução.** Configura parâmetros, avalia cenários, decide qual política de limites implementar. É quem o TAPI chama de "usuário da solução". | **Persona primária** |
-> | **Time de Data Science (Crédito)** | Desenvolve e mantém a solução. Integra com motores internos. Valida resultados técnicos. Líderes deste time (Eduardo Schneider, Mateus Gonzalez) são os avaliadores do projeto. | **Persona primária ou secundária** |
-> | **Time de TI** | Implementação prática, integração com motores de precificação. Não usa diretamente, mas viabiliza a solução. | **Stakeholder (não persona)** |
-> | **Time de Dados e Segurança da Informação** | Governança de dados, compliance. Não usa diretamente. | **Stakeholder (não persona)** |
->
-> **Sugestão de personas (validar com parceiro):**
-> 1. **Analista/Gerente de Estratégia de Crédito** — quem efetivamente usa a solução no dia a dia para definir políticas de limites. Persona principal.
-> 2. **Cientista de Dados da área de Crédito** — quem integra, calibra e mantém o modelo. Persona técnica.
-> 3. (Opcional) **Gestor executivo / Líder de risco** — quem avalia resultados e toma decisão final. Persona secundária — cuidado para não atribuir funcionalidades que não existem.
+> | **Time de Data Science (Crédito)** | Desenvolve e mantém a solução. Integra com motores internos. Valida resultados técnicos. Líderes deste time (Eduardo Schneider, Mateus Gonzalez) são os avaliadores do projeto. | **Persona secundária** |
 
-> **PARA NOTA 10:**
-> - Validar personas com o parceiro no kickoff: "quem efetivamente usaria essa solução?"
-> - Cada persona deve ter conexão **direta** com a solução — se não interage com o sistema, não é persona
-> - O TAPI diz que o uso é "conjunto entre Data Science e Estratégia de Crédito" — ambos os times devem estar representados
->
-> **NÃO FAZER (feedback M5):**
-> - ~~"Segundo Cooper (2004), persona é uma representação fictícia..."~~ — ir direto
-> - ~~Incluir "monitoramento em tempo real" ou funcionalidades não previstas no TAPI~~
-> - ~~Ganhos ligados à alta gestão e não ao usuário principal~~ — professor cobrou isso explicitamente
-> - ~~Usar "desejos" ou "cenários de interação" no lugar de "como a solução ajuda"~~
+### Persona 1 — Rodinei Filho (Estratégia de Crédito)
 
----
+<div align = center>
+  <sub>FIGURA x - Persona do Time de  Políticas de Crédito </sub><br>
+  <img src= "../assets/Rodinei-Credito.png" 
+  alt="Rodinei Filho"><br>
+  <sup>Fonte: Material produzido pelos autores</sup>
+  </div>
+  <br>
 
-### Persona 1 — [Nome] (Estratégia de Crédito)
+  Para aprofundar a compreensão do usuário final da solução, foram detalhados os principais objetivos, dores e necessidades do analista de política de crédito no contexto do projeto. Esse detalhamento permite entender como as decisões estratégicas são tomadas e quais desafios estão envolvidos no equilíbrio entre risco e rentabilidade. A partir dessa análise, é possível orientar o desenvolvimento de uma solução mais intuitiva, transparente e alinhada às demandas do negócio.
 
-*Esta é a persona **principal** — o TAPI diz que "o time de políticas de crédito será o usuário final da solução".*
+**Objetivos**
+- Definir políticas de limite que maximizem retorno sem aumentar inadimplência da carteira
+- Garantir que as decisões estejam alinhadas com metas do banco (crescimento, risco, volume)
+- Conseguir justificar decisões para liderança com base em dados
+- Reduzir decisões manuais e subjetivas, tornando o processo mais consistente
+- Ajustar rapidamente estratégias conforme mudanças no mercado ou performance
 
-| | |
-|:---|:---|
-| **Nome** | *[Nome fictício realista]* |
-| **Idade** | *[Ex: 32-42 anos]* |
-| **Cargo** | *[Ex: Analista/Gerente de Estratégia de Crédito]* |
-| **Formação** | *[Ex: Economia, Engenharia, Estatística + MBA/especialização em risco]* |
-| **Localização** | *[São Paulo, SP — sede do Pan/BTG]* |
-| **Experiência** | *[Anos no mercado, tempo no Pan]* |
+**Dores**
+- Recebe outputs do modelo sem clareza de “por que” aquele limite foi sugerido
+- Dificuldade de traduzir métricas técnicas (ex: probabilidade de inadimplência) em decisão prática
+- Sensação de perda de controle quando o modelo parece “decidir sozinho”
+- Processo atual pode ser manual ou pouco padronizado
+- Pressão constante para equilibrar risco vs crescimento (trade-off difícil)
+- Dificuldade em prever impacto de mudanças antes de aplicá-las (falta de simulação)
+- Dependência do time de Data Science para ajustes simples
 
-> **Contexto do TAPI para esta persona:**
-> - Define políticas de limites pré-aprovados de cartão de crédito
-> - Trabalha em conjunto com Data Science — recebe outputs do modelo e decide o que implementar
-> - Avalia cenários de concessão (conservador/moderado/agressivo)
-> - Precisa justificar decisões para comitê de crédito e auditoria
-> - Monitora inadimplência física e financeira da carteira
-> - Lida com o trade-off entre área comercial (quer mais volume) e área de risco (quer menos inadimplência)
+**Necessidades**
+- Interface visual clara que traduza o modelo em informação de negócio
+- Explicabilidade: entender quais variáveis impactaram o limite sugerido
+- Ferramenta de simulação (ex: “e se eu aumentar o limite médio?”)
+- Controle sobre restrições (ex: risco máximo, capacidade de pagamento)
+- Visão agregada da carteira (risco, retorno, volume)
+- Comparação entre cenário atual vs cenário sugerido
+- Agilidade para testar e implementar mudanças
 
-**Background profissional:**
+### Persona 2 — Larissa Paiva (Data Science)
 
-*[1-2 parágrafos. Descrever o dia a dia, como se relaciona com o problema de limites, por que usaria a solução.]*
+<div align = center>
+  <sub>FIGURA x - Persona do Time de Data Science </sub><br>
+  <img src= "../assets/Larissa-Dados.png" 
+  alt="Larissa Paiva"><br>
+  <sup>Fonte: Material produzido pelos autores</sup>
+  </div>
+<br>
 
-**Dores:**
+**Objetivos**
+- Construir um modelo de otimização que maximize retorno ajustado ao risco
+- Garantir que o modelo respeite todas as restrições de negócio
+- Fazer com que o modelo seja utilizado na prática (não só tecnicamente correto)
+- Reduzir necessidade de ajustes manuais após entrega
+- Monitorar performance e identificar quando o modelo precisa ser recalibrado
 
-> **Lembrete:** Dores são **consequências emocionais, operacionais ou profissionais** — não atividades.
-> - ❌ "Faz calibragem manual em planilhas" → atividade
-> - ✅ "Sente pressão constante por cada decisão de limite, sabendo que um erro de calibração pode gerar milhões em provisão e colocar seu cargo em risco" → dor
+**Dores**
+- Regras de negócio nem sempre são claras ou formalizadas
+- Mudanças frequentes de política geram retrabalho no modelo
+- Dificuldade de explicar decisões complexas para stakeholders não técnicos
+- Falta de feedback estruturado do time de política
+- Output do modelo pode não ser interpretado corretamente
+- Tempo gasto ajustando pequenas regras que poderiam ser parametrizadas
+- Dificuldade em validar impacto real do modelo após implementação
 
-*Sugestões de dores para esta persona (adaptar/reescrever):*
-- *Pressão por reduzir inadimplência sem sacrificar receita — sensação de "escolher qual problema criar"*
-- *Incapacidade de defender decisões com argumentos quantitativos no comitê de crédito — depende de intuição*
-- *Sobrecarga ao equilibrar manualmente múltiplas variáveis (PD, capacidade, score, segmento) em planilhas*
-- *Tensão com a área comercial: sem ferramenta objetiva, a discussão sobre limites vira disputa política*
-- *Risco reputacional: como responsável pela política, qualquer aumento de inadimplência recai sobre essa pessoa*
+**Necessidades**
+- Estrutura clara de restrições (formalizadas e parametrizáveis)
+- Ferramenta para testar diferentes configurações do modelo
+- Visibilidade de como o modelo está sendo usado pela política
+- Métricas claras de avaliação (retorno, risco, inadimplência)
+- Integração com sistemas internos (motor de crédito)
+- Padronização de inputs e outputs
+-Redução de dependência de ajustes manuais
 
-- *[Dor 1]*
-- *[Dor 2]*
-- *[Dor 3]*
-- *[Dor 4]*
+## Considerações Finais
 
-**Como a solução ajuda [Nome]:**
+As personas mostram claramente a relação entre os dois principais perfis do sistema:
 
-> **Lembrete:** Ser concreto. Conectar cada item a uma dor acima.
-> - ❌ "A solução melhora a eficiência" → vago
-> - ✅ "Substitui intuição por decisão matematicamente fundamentada, permitindo defender escolhas com dados no comitê" → concreto
+- **Larissa (Data Science)** → foca na construção e qualidade do modelo  
+- **Rodinei (Política de Crédito)** → foca na decisão e estratégia  
 
-*Sugestões (adaptar):*
-- *O modelo define limites otimizados respeitando simultaneamente inadimplência física, financeira e capacidade de pagamento — elimina o "escolher qual problema criar"*
-- *Cenários configuráveis (alterar tetos de inadimplência, metas de produção) e execução em minutos — substitui semanas de calibragem manual*
-- *Cada limite é rastreável à função objetivo e restrições ativas — defensável em comitê e auditoria*
-- *O trade-off comercial vs. risco é formalizado na função objetivo — linguagem comum baseada em dado*
-
-- *[Como alivia Dor 1]*
-- *[Como alivia Dor 2]*
-- *[...]*
-
-**Necessidades (como outcomes):**
-
-> **Lembrete:** Outcomes, não features.
-> - ❌ "Ter um dashboard de cenários" → feature
-> - ✅ "Eliminar a incerteza sobre o impacto financeiro de cada decisão de limite" → outcome
-
-- *[Necessidade 1]*
-- *[Necessidade 2]*
-- *[Necessidade 3]*
-
----
-
-### Persona 2 — [Nome] (Data Science)
-
-*O TAPI diz que o time de Data Science "é responsável pelo desenvolvimento de tais soluções na instituição". São eles que integram o modelo aos motores internos do banco.*
-
-| | |
-|:---|:---|
-| **Nome** | *[Nome]* |
-| **Idade** | *[Ex: 27-35 anos]* |
-| **Cargo** | *[Ex: Cientista de Dados Sênior — Crédito]* |
-| **Formação** | *[Ex: Ciência da Computação, Estatística, Engenharia]* |
-| **Localização** | *[São Paulo, SP]* |
-| **Experiência** | *[Experiência em DS, tempo no Pan]* |
-
-> **Contexto do TAPI para esta persona:**
-> - Mantém os modelos de scoring que geram `score_interno` e `pd_produto`
-> - Integra outputs do modelo de otimização aos motores de crédito do banco
-> - O TAPI pede output preferencialmente em **Python** — esta persona é quem lida com isso
-> - Os líderes técnicos (Mateus Gonzalez) e executivos (Eduardo Schneider, Felipe Rubim) desta área avaliam o projeto
-> - Avalia o modelo comparando rentabilidade entre `limite_ofertado` e limite sugerido
-
-**Background profissional:**
-
-*[Descrição]*
-
-**Dores:**
-
-*Sugestões de dores (adaptar):*
-- *Frustração de que os modelos de ML (scoring) geram PD precisa, mas a tradução para limite é feita por regras simplistas — trabalho técnico subaproveitado*
-- *Conflito com compliance sobre explicabilidade: modelos sofisticados são rejeitados por serem "caixa preta"*
-- *Pressão por mostrar impacto financeiro mensurável do trabalho de Data Science*
-- *Dificuldade de integrar soluções novas aos motores de crédito legados do banco*
-
-- *[Dor 1]*
-- *[Dor 2]*
-- *[Dor 3]*
-
-**Como a solução ajuda [Nome]:**
-
-*Sugestões (adaptar):*
-- *Usa diretamente os outputs existentes (`pd_produto`, `score_propensao_contrato`) como inputs — dá uso real à infra de ML*
-- *Otimização linear é interpretável por construção — elimina conflito com compliance*
-- *Output em Python para integração direta com motores internos*
-- *Calcula impacto financeiro (receita esperada vs. perda) diretamente — métrica apresentável*
-
-- *[...]*
-
-**Necessidades (como outcomes):**
-
-- *[...]*
-
----
-
-### Persona 3 (secundária) — [Nome]
-
-*Opcional. Pode ser um gestor executivo, analista de produtos, ou outro perfil. Marcar como "secundária" se interage menos.*
-
-> **CUIDADO (feedback M5):** Ganhos NÃO devem ser da alta gestão — devem ser do **usuário direto**. Se incluir um gestor executivo, as dores/ganhos devem ser **dele como usuário** (ex: avaliar resultados do modelo), não como beneficiário indireto (ex: "o banco lucra mais").
-
-| | |
-|:---|:---|
-| **Nome** | |
-| **Idade** | |
-| **Cargo** | |
-| **Formação** | |
-| **Localização** | |
-| **Experiência** | |
-
-**Background profissional:**
-
-*[Descrição]*
-
-**Dores:**
-
-- *[...]*
-
-**Como a solução ajuda [Nome]:**
-
-- *[...]*
-
-**Necessidades (como outcomes):**
-
-- *[...]*
-
----
+A solução proposta deve garantir transparência, usabilidade e alinhamento entre técnica e negócio. Isso é essencial para que o modelo não apenas funcione bem, mas também seja confiável e utilizado na prática.
 
 ## 2. User Stories (5 pontos)
 
@@ -385,3 +292,5 @@
 2. [Template Jornada do Usuário (Miro)](https://miro.com/app/board/uXjVOi3EFh4=/?share_link_id=503534748467)
 3. *[Dados do parceiro — TAPI, bases M1/M2/M3]*
 4. *[Referências adicionais]*
+5. [What are Personas- IxDF](https://www.interaction-design.org/literature/topics/personas)
+6. [Personas Make Users Memorable - NN/Group](https://www.nngroup.com/articles/persona/)
