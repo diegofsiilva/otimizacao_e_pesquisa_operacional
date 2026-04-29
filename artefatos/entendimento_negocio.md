@@ -231,7 +231,50 @@ Embora o canvas foque no usuário direto, é no correntista elegível ao cartão
 
 Os ganhos esperados são acesso a crédito no momento certo, com limite compatível à renda e ao perfil de consumo, sem burocracia. Nesse contexto, a otimização matemática atua ao incorporar explicitamente a restrição de capacidade de pagamento, com multiplicadores de alavancagem diferenciados por perfil de risco — clientes mais arriscados recebem limites proporcionalmente menores.  
 
-Essa diretriz, alinhada ao TAPI, garante que o limite respeite a capacidade financeira do cliente e sustente uma relação de crédito mais equilibrada e sustentável no longo prazo.  
+Essa diretriz, alinhada ao TAPI, garante que o limite respeite a capacidade financeira do cliente e sustente uma relação de crédito mais equilibrada e sustentável no longo prazo.
+
+## 3.5 Matriz de Validação da Proposta de Valor (Dor → Elemento do Modelo → KPI)
+
+Uma proposta de valor só se consolida quando pode ser medida em produção. Esta análise estende o canvas de Osterwalder ao conectar diretamente cada dor mapeada ao elemento matemático da solução e ao KPI que validará, após a implementação, se o alívio proposto se concretiza. Esse encadeamento cumpre três funções: (i) conecta o canvas à modelagem matemática, garantindo o fit técnico-conceitual; (ii) sustenta a análise financeira (seção 4), ao traduzir benefícios qualitativos em métricas que embasam o ROI; e (iii) antecipa a mitigação de riscos como baixa explicabilidade e dificuldade de implementação (seção 2). Ao definir previamente como o valor será medido, a proposta deixa de ser apenas qualitativa e se torna um compromisso auditável.
+
+---
+
+## Matriz de Validação
+
+| # | Dor mapeada no canvas | Elemento do modelo que ataca | KPI de validação | Baseline → Target esperado |
+|---|----------------------|------------------------------|------------------|---------------------------|
+| 1 | Calibragem manual em planilhas | Modelo paramétrico executável em solver de otimização | Tempo médio de recalibragem completa | Dias → Minutos |
+| 2 | Regras fixas ignoram heterogeneidade | Variáveis de decisão por cluster | Variância intra-cluster dos limites | Zero → Diferenciação significativa |
+| 3 | Subjetividade e baixa explicabilidade | Restrições ativas identificáveis | % de decisões com restrição documentada | Não rastreável → 100% |
+| 4 | Tensão entre áreas comercial e risco | Função objetivo com restrição explícita de apetite (PDD ≤ teto) | Aderência entre PDD realizada e tolerada | Desvio → Dentro do apetite |
+| 5 | Limites incompatíveis com capacidade de pagamento | Restrição de limite baseada em renda com multiplicador por risco | % de clientes acima do teto de comprometimento | Não monitorado → ~0% |
+| 6 | Simulações lentas | Parametrização do apetite como input do modelo | Nº de cenários testados por ciclo | 1–2 → 10+ |
+| 7 | Descasamento entre risco individual e carteira | Restrições de inadimplência física e financeira + tetos por PD | Inadimplência e concentração por risco | Não controlada → Dentro dos limites |
+
+---
+
+## KPIs mais relevantes
+
+Três KPIs concentram maior relevância analítica:
+
+- **KPI #5 (% de clientes acima do teto de comprometimento)**  
+  Mede diretamente o impacto no cliente final, evidenciando que a solução não apenas otimiza retorno, mas reduz risco de sobre-endividamento.
+
+- **KPI #3 (% de decisões com restrição documentada)**  
+  Materializa a rastreabilidade e a defensabilidade no comitê, sendo essencial para adoção institucional.
+
+- **KPI #4 (aderência entre PDD realizada e tolerada)**  
+  Sustenta a análise financeira, pois dele deriva a estimativa de redução de perdas que compõe o ROI.
+
+Essa estrutura garante continuidade lógica entre proposta de valor, modelagem e avaliação econômica, ao associar cada benefício a uma métrica observável.
+
+---
+
+## Conclusão
+
+Em síntese, a análise valida a viabilidade estratégica do projeto ao conectar diretamente as dores do analista de crédito à lógica de otimização que fundamenta a solução. A convergência entre rastreabilidade decisória, proteção do correntista e maximização do retorno da carteira reforça a relevância do sistema.
+
+Embora baseado em premissas simplificadas, o modelo se apresenta como um ativo mensurável
 
 ---
 
