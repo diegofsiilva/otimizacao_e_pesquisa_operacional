@@ -239,10 +239,11 @@ O objetivo é evidenciar como cada perfil interage com o modelo de otimização,
 
 
 <div align = center>
-  <sub>FIGURA x - Jornada de Usuário do Time de Política de Crédito </sub><br>
+  <sub>FIGURA 3 - Jornada de Usuário do Time de Política de Crédito </sub><br>
   <img src="/assets/jornadaRODINEI.jpg"><br>
   <sup>Fonte: Material produzido pelos autores</sup>
   </div>
+
 ---
 
 ### Persona 2 — Larissa Paiva (Data Science)
@@ -255,7 +256,7 @@ O objetivo é evidenciar como cada perfil interage com o modelo de otimização,
 
 
 <div align = center>
-  <sub>FIGURA x - Jornada de Usuário do Time de Data Science </sub><br>
+  <sub>FIGURA 4 - Jornada de Usuário do Time de Data Science </sub><br>
   <img src="/assets/jornadaLARISSA.jpg"><br>
   <sup>Fonte: Material produzido pelos autores</sup>
 </div>
@@ -265,36 +266,6 @@ O objetivo é evidenciar como cada perfil interage com o modelo de otimização,
 ### Conclusão 
 &emsp; A análise das jornadas evidencia a necessidade de maior integração entre áreas técnicas e de negócio, além de maior transparência e autonomia no uso do modelo. 
 As oportunidades identificadas reforçam a importância de soluções que facilitem a interpretação dos resultados, a simulação de cenários e o monitoramento contínuo da estratégia, contribuindo para decisões mais seguras, ágeis e orientadas por dados.
-
----
-
-## Checklist pré-entrega
-
-**Personas:**
-- [ ] Nenhuma explicação conceitual ("o que é persona")
-- [ ] Personas correspondem aos **usuários reais** da solução (Estratégia de Crédito + Data Science, conforme TAPI)
-- [ ] Dores são **consequências emocionais/operacionais**, não atividades
-- [ ] "Como a solução ajuda" é **concreto** e conectado às dores
-- [ ] Necessidades são **outcomes**, não features
-- [ ] Nenhuma funcionalidade fora do escopo (TAPI não pede dashboard web, monitoramento real-time, integração direta)
-- [ ] Ganhos são do **usuário direto**, não da alta gestão (feedback M5)
-
-**User Stories:**
-- [ ] Mínimo 5 US, formato "como [quem], eu quero [o que], para [por que]"
-- [ ] Cada US tem **uma única responsabilidade** (SMALL — se tem "e", quebrar)
-- [ ] Cada US é **independente** (testável isoladamente, sem depender de outra)
-- [ ] Critérios de aceite **inline** (junto da US, não em seção separada)
-- [ ] Critérios **testáveis** — sem termos vagos ("parâmetros definidos", "funciona corretamente")
-- [ ] Critérios com **valores numéricos** quando aplicável (tempo, quantidade, limites)
-- [ ] US conectadas a personas e dores específicas
-- [ ] Nenhuma US referencia funcionalidade fora do escopo do TAPI
-
-**Alinhamento TAPI:**
-- [ ] Mencionado que o output é Python (não webapp)
-- [ ] Mencionado que a solução é usada em conjunto por DS e Estratégia de Crédito
-- [ ] Restrições do TAPI aparecem nas US: inadimplência física/financeira, alavancagem diferenciada, R$200 mínimo, múltiplos R$50, metas de produção
-- [ ] Backtesting contra `limite_ofertado` presente em alguma US
-- [ ] Dados do TAPI (17 variáveis, parquet, ~1,8M elegíveis) refletidos nas US de carregamento
 
 ---
 
