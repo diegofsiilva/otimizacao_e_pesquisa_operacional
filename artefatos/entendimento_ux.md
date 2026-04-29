@@ -117,111 +117,152 @@ As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir 
 
 ---
 
-### US01 - *[Carregar base de dados]*
+### US01 - Carregar base de dados
 
-Como cientista de dados, eu quero carregar a base de dados do banco no formato _parquet_, para garantir que o modelo utilize as informações corretas e completas para a otimização de limites.
+**Como** cientista de dados,  
+**eu quero** carregar a base de dados do banco no formato parquet,  
+**para** utilizar informações corretas e completas na segmentação e otimização de limites por cluster.
+
+**Dores relacionadas:**
+
+- Bases inconsistentes.
+- Retrabalho técnico.
+- Falta de padronização.
 
 **Critérios de aceitação:**
 
-- *[Aceita arquivos no formato parquet contendo as 17 variáveis do TAPI.]*
-
-- *[Carrega corretamente bases com até ~1,8 milhões de registros elegíveis.]*
-
-- *[Exibe mensagem de erro clara caso o arquivo esteja corrompido ou com variáveis ausentes.]*
-
-- *[Também executa com base de teste mock (ex.: 1.000 registros), sem depender da etapa de otimização de limites.]*
+- Aceita arquivos parquet contendo as 17 variáveis do TAPI.
+- Carrega bases com até ~1,8 milhões de registros elegíveis.
+- Exibe erro claro para arquivo corrompido ou colunas ausentes.
+- Permite uso de base mock para testes.
 
 ---
 
-### US02 - *[Ajustar clusterização]*
+### US02 - Ajustar clusterização
 
-Como cientista de dados, eu quero configurar o número de clusters utilizados na segmentação dos clientes, para testar diferentes cenários e melhorar a precisão da atribuição de limites.
+**Como** cientista de dados,  
+**eu quero** configurar o número de clusters utilizados na segmentação,  
+**para** testar diferentes cenários de agrupamento dos clientes.
+
+**Dores relacionadas:**
+
+- Segmentação ruim.
+- Pouca flexibilidade.
+- Ajustes manuais.
 
 **Critérios de aceitação:**
 
-- *[Permite definir o número de clusters, com valor mínimo de 100.]*
-
-- *[Executa a clusterização em ≤ 5 minutos para a base M1 (~1,8M registros).]*
-
-- *[Exibe mensagem de erro se o número de clusters for inferior ao mínimo permitido.]*
-
-- *[Executa clusterização com base mock de 1.000 registros, sem depender da execução da otimização de limites.]*
+- Permite definir número inteiro de clusters.
+- Aceita mínimo de 100 clusters.
+- Exibe erro para valores inválidos.
+- Executa clusterização com base mock e base real.
 
 ---
 
-### US03 - *[Ajustar metas de produção]* 
+### US03 - Configurar metas de produção
 
-Como analista de estratégia de crédito, eu quero configurar metas de produção (quantidade de clientes aprovados e volume total de limite), para alinhar a otimização dos limites aos objetivos do negócio.
+**Como** analista de estratégia de crédito,  
+**eu quero** configurar metas de clientes aprovados e volume total de limite,  
+**para** alinhar a otimização aos objetivos do negócio.
+
+**Dores relacionadas:**
+
+- Falta de controle.
+- Metas desalinhadas.
+- Dependência técnica.
 
 **Critérios de aceitação:**
 
-- *[Permite definir metas numéricas para quantidade de clientes aprovados e volume total de limite.]*
-
-- *[O modelo executa a otimização considerando as metas informadas.]*
-
-- *[A validação e o salvamento das metas funcionam sem necessidade de executar o solver de otimização.]*
-
-- *[Bloqueia valores fora das faixas válidas e exibe erro específico: a quantidade de clientes aprovados deve ficar entre zero e o total de clientes elegíveis, e o volume total de limite deve ficar entre zero e dois bilhões de reais.]*
+- Permite definir meta de clientes aprovados.
+- Permite definir meta de volume financeiro.
+- Bloqueia valores fora das faixas válidas.
+- Salva metas sem executar solver.
 
 ---
 
-### US04 - *[Consultar restrições ativas]* 
+### US04 - Gerar limite por cluster
 
-Como analista de estratégia de crédito, eu quero consultar quais restrições do modelo estavam ativas para cada cluster ou cliente, para justificar decisões e facilitar auditorias.
+**Como** analista de estratégia de crédito,  
+**eu quero** gerar limites sugeridos para cada cluster,  
+**para** aplicar políticas segmentadas de crédito.
+
+**Dores relacionadas:**
+
+- Processo manual.
+- Limites genéricos.
+- Decisão lenta.
 
 **Critérios de aceitação:**
 
-- *[Permite visualizar, para cada cluster ou cliente, quais restrições limitaram o valor final do limite (ex: teto de inadimplência, capacidade, mínimo, múltiplo).]*
-
-- *[Para cada cluster ou cliente, exibe no mínimo: identificador, limite sugerido, restrição ativa, valor-limite da restrição e timestamp de execução.]*
-
-- *[Permite buscar por identificador de cluster ou cliente e retorna as restrições ativas em até 3 segundos para consultas de até 10.000 registros.]*
+- Retorna um limite para cada cluster ativo.
+- Nenhum limite é inferior a R$200.
+- Todos os limites finais são múltiplos de R$50.
+- Exibe clusters sem solução viável.
 
 ---
 
-### US05 - *[Validar limites mínimos]* 
+### US05 - Consultar restrições ativas
 
-Como cientista de dados, eu quero validar que todos os limites gerados respeitam o valor mínimo de R$200 e são múltiplos de R$50, para garantir conformidade com as regras do negócio.
+**Como** analista de estratégia de crédito,  
+**eu quero** consultar quais restrições do modelo impactaram cada cluster,  
+**para** justificar decisões e facilitar auditorias.
+
+**Dores relacionadas:**
+
+- Falta de clareza.
+- Baixa confiança.
+- Dificuldade de justificar.
 
 **Critérios de aceitação:**
 
-- *[Nenhum limite gerado é inferior a R$200.]*
-
-- *[Todos os limites são múltiplos exatos de R$50.]*
-
-- *[O sistema exibe mensagem de erro caso alguma dessas regras seja violada.]*
-
-- *[Executa a validação de limites mínimos e múltiplos em até 2 minutos para bases com até 1,8 milhão de registros.]*
+- Exibe restrições aplicadas por cluster.
+- Mostra identificador do cluster e limite sugerido.
+- Permite busca por cluster.
+- Retorna até 10.000 registros em até 3 segundos.
 
 ---
 
-### US06 - *[Visualizar distribuição dos limites]* 
+### US06 - Visualizar distribuição dos limites
 
-Como analista de estratégia de crédito, eu quero visualizar a distribuição dos limites otimizados por cluster ou faixa de risco, para analisar o impacto das configurações e tomar decisões mais embasadas.
+**Como** analista de estratégia de crédito,  
+**eu quero** visualizar a distribuição dos limites por cluster,  
+**para** analisar os resultados e apoiar decisões.
+
+**Dores relacionadas:**
+
+- Outputs técnicos.
+- Pouca visão geral.
+- Insegurança na decisão.
 
 **Critérios de aceitação:**
 
-- *[Permite visualizar a distribuição dos limites por cluster ou faixa de risco em formato de tabela ou gráfico.]*
-
-- *[Exibe métricas agregadas: média, mediana, mínimo, máximo e desvio padrão dos limites por grupo.]*
-
-- *[Permite filtrar e ordenar os resultados por diferentes critérios (ex: cluster, faixa de risco).]*
-
-- *[A visualização funciona com dataset mock pré-carregado, sem depender da execução de clusterização no mesmo fluxo.]*
+- Exibe média, mediana, mínimo e máximo por cluster.
+- Permite visualização em tabela ou gráfico.
+- Permite ordenar resultados.
+- Funciona com dataset mock.
 
 ---
 
-### US07 - *[Exportar resultados]* 
+### US07 - Exportar resultados
 
-Como cientista de dados, eu quero exportar os resultados finais da otimização em formato Python ou CSV, para facilitar a integração com motores internos e o compartilhamento com outros times.
+**Como** cientista de dados,  
+**eu quero** exportar os resultados finais da otimização,  
+**para** integrar a saída com outros sistemas internos.
+
+**Dores relacionadas:**
+
+- Retrabalho manual.
+- Compartilhamento difícil.
+- Integração lenta.
 
 **Critérios de aceitação:**
 
-- *[Exporta CSV e objeto Python contendo obrigatoriamente: identificador_cluster_ou_cliente, limite_atribuido, restricoes_ativas, receita_esperada, inadimplencia_fisica_projetada e inadimplencia_financeira_projetada.]*
+- Exporta arquivo CSV ou objeto Python.
+- Contém identificador do cluster, limite atribuído e métricas principais.
+- Funciona a partir de arquivo de resultados existente.
+- Exibe mensagem de sucesso ou erro.
 
-- *[A exportação funciona a partir de arquivo de resultados já existente, sem depender da execução imediata do modelo.]*
-
-- *[Exibe mensagem de confirmação ao concluir a exportação e mensagem de erro clara em caso de falha.]*
+---
 
 ---
 
