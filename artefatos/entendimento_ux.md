@@ -18,96 +18,41 @@
 
 ## 1. Personas
 
-Personas são representações fictícias de usuários reais, criadas com base em dados, comportamentos e necessidades observadas. Elas ajudam equipes a entender melhor quem são os usuários de um produto, orientando decisões de design, tecnologia e negócio, alinhando todos os times. Também, elas auxiliam na criação de soluções centradas no usuário, o que priorizar funcionalidades de mais impacto e melhora a experiência e usabilidade do sistema.
+Para este projeto, as _personas_ foram definidas com base nas áreas que efetivamente **utilizarão e sustentarão a solução**, a partir das reuniões com o parceiro.
 
+ O usuário principal é o time de **Estratégia de Crédito**, responsável por **configurar parâmetros e restrições**, **avaliar cenários** e **decidir quais políticas de limites serão implementadas**. Como usuário secundário, considera-se o **time de Data Science**, que atua no **desenvolvimento e manutenção da solução**, além de **garantir a qualidade técnica dos resultados** e apoiar a **integração com os motores internos**.
 
-> **Quem são os usuários:**
->
-> | Área | Papel no projeto | Tipo de usuário |
-> |:---|:---|:---|
-> | **Time de Políticas de Crédito (Estratégia de Crédito)** | **Usuário final da solução.** Configura parâmetros, avalia cenários, decide qual política de limites implementar. É quem o TAPI chama de "usuário da solução". | **Persona primária** |
-> | **Time de Data Science (Crédito)** | Desenvolve e mantém a solução. Integra com motores internos. Valida resultados técnicos. Líderes deste time (Eduardo Schneider, Mateus Gonzalez) são os avaliadores do projeto. | **Persona secundária** |
+Assim, as duas _personas_ buscam **refletir a dinâmica real do trabalho**: o time de Data Science viabiliza e valida tecnicamente, enquanto o time de Estratégia de Crédito interpreta os resultados, ajusta restrições e define a política a ser aplicada.
+
+O detalhamento das _personas_ definidas pode ser encontrado a seguir: 
 
 ### Persona 1 — Rodinei Filho (Estratégia de Crédito)
 
 <div align = center>
-  <sub>FIGURA x - Persona do Time de  Políticas de Crédito </sub><br>
+  <sub>FIGURA 1 - Persona do Time de Estratégia de Crédito </sub><br>
+  <br>
   <img src= "../assets/Rodinei-Credito.png" 
   alt="Rodinei Filho"><br>
   <sup>Fonte: Material produzido pelos autores</sup>
   </div>
   <br>
 
-  Para aprofundar a compreensão do usuário final da solução, foram detalhados os principais objetivos, dores e necessidades do analista de política de crédito no contexto do projeto. Esse detalhamento permite entender como as decisões estratégicas são tomadas e quais desafios estão envolvidos no equilíbrio entre risco e rentabilidade. A partir dessa análise, é possível orientar o desenvolvimento de uma solução mais intuitiva, transparente e alinhada às demandas do negócio.
-
-**Objetivos**
-- Definir políticas de limite que maximizem retorno sem aumentar inadimplência da carteira
-- Garantir que as decisões estejam alinhadas com metas do banco (crescimento, risco, volume)
-- Conseguir justificar decisões para liderança com base em dados
-- Reduzir decisões manuais e subjetivas, tornando o processo mais consistente
-- Ajustar rapidamente estratégias conforme mudanças no mercado ou performance
-
-**Dores**
-- Recebe outputs do modelo sem clareza de “por que” aquele limite foi sugerido
-- Dificuldade de traduzir métricas técnicas (ex: probabilidade de inadimplência) em decisão prática
-- Sensação de perda de controle quando o modelo parece “decidir sozinho”
-- Processo atual pode ser manual ou pouco padronizado
-- Pressão constante para equilibrar risco vs crescimento (trade-off difícil)
-- Dificuldade em prever impacto de mudanças antes de aplicá-las (falta de simulação)
-- Dependência do time de Data Science para ajustes simples
-
-**Necessidades**
-- Interface visual clara que traduza o modelo em informação de negócio
-- Explicabilidade: entender quais variáveis impactaram o limite sugerido
-- Ferramenta de simulação (ex: “e se eu aumentar o limite médio?”)
-- Controle sobre restrições (ex: risco máximo, capacidade de pagamento)
-- Visão agregada da carteira (risco, retorno, volume)
-- Comparação entre cenário atual vs cenário sugerido
-- Agilidade para testar e implementar mudanças
-
 ### Persona 2 — Larissa Paiva (Data Science)
 
 <div align = center>
-  <sub>FIGURA x - Persona do Time de Data Science </sub><br>
+  <sub>FIGURA 2 - Persona do Time de Data Science </sub><br>
+  <br>
   <img src= "../assets/Larissa-Dados.png" 
   alt="Larissa Paiva"><br>
   <sup>Fonte: Material produzido pelos autores</sup>
   </div>
 <br>
 
-**Objetivos**
-- Construir um modelo de otimização que maximize retorno ajustado ao risco
-- Garantir que o modelo respeite todas as restrições de negócio
-- Fazer com que o modelo seja utilizado na prática (não só tecnicamente correto)
-- Reduzir necessidade de ajustes manuais após entrega
-- Monitorar performance e identificar quando o modelo precisa ser recalibrado
+## Conclusões
 
-**Dores**
-- Regras de negócio nem sempre são claras ou formalizadas
-- Mudanças frequentes de política geram retrabalho no modelo
-- Dificuldade de explicar decisões complexas para stakeholders não técnicos
-- Falta de feedback estruturado do time de política
-- Output do modelo pode não ser interpretado corretamente
-- Tempo gasto ajustando pequenas regras que poderiam ser parametrizadas
-- Dificuldade em validar impacto real do modelo após implementação
+As _personas_ defindias refletem os dois papéis essenciais para que a solução de otimização de limites seja construída, validada e adotada no processo de definição de políticas.
 
-**Necessidades**
-- Estrutura clara de restrições (formalizadas e parametrizáveis)
-- Ferramenta para testar diferentes configurações do modelo
-- Visibilidade de como o modelo está sendo usado pela política
-- Métricas claras de avaliação (retorno, risco, inadimplência)
-- Integração com sistemas internos (motor de crédito)
-- Padronização de inputs e outputs
--Redução de dependência de ajustes manuais
-
-## Considerações Finais
-
-As personas mostram claramente a relação entre os dois principais perfis do sistema:
-
-- **Larissa (Data Science)** → foca na construção e qualidade do modelo  
-- **Rodinei (Política de Crédito)** → foca na decisão e estratégia  
-
-A solução proposta deve garantir transparência, usabilidade e alinhamento entre técnica e negócio. Isso é essencial para que o modelo não apenas funcione bem, mas também seja confiável e utilizado na prática.
+Com o mapeamento das dores, necessidades, objetivos e benefícios esperados de cada _persona_, os principais aspectos da solução também foram evidenciados. O sucesso do projeto depende tanto da **confiabilidade e reprodutibilidade técnica** (garantidas por Data Science) quanto da **clareza para a tomada de decisão** (necessária para Estratégia de Crédito), assegurando que o modelo não só funcione, mas seja utilizado como suporte real à definição de políticas.
 
 ## 2. User Stories (5 pontos)
 
