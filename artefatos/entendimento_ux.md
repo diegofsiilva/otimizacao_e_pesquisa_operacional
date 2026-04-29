@@ -224,6 +224,9 @@ A solução proposta deve garantir transparência, usabilidade e alinhamento ent
 
 ## 3. Jornada do Usuário (Opcional — vale 2 pontos extras)
 
+&emsp; Esta seção apresenta a jornada dos principais usuários envolvidos no processo de definição de limites de crédito: o analista de Política de Crédito e a cientista de dados. 
+O objetivo é evidenciar como cada perfil interage com o modelo de otimização, destacando suas ações, percepções e principais desafios ao longo do processo. A partir dessa análise, são identificadas oportunidades de melhoria que orientam o desenvolvimento da solução proposta.
+
 
 ### Persona 1 — Rodinei Filho (Política de Crédito)
 
@@ -234,26 +237,6 @@ A solução proposta deve garantir transparência, usabilidade e alinhamento ent
 **Expectativa central:** Decisões seguras, simples, rastreáveis e orientadas por dados.
 
 <img src="/assets/jornadaRodinei.jpg">
-
-#### Mapa da Jornada
-
-| Etapa | Ação | Pensamento | Sentimento | Oportunidade |
-|:---|:---|:---|:---|:---|
-| **1. Receber análise** | Acessa o sistema e visualiza a distribuição dos limites sugeridos pelo modelo, junto às métricas de risco e retorno da carteira. Consulta o contexto da recomendação para entender o que o modelo está propondo. | *"O que o modelo está sugerindo? Faz sentido com o que eu já sei da carteira?"* | Curioso, levemente desconfiante — precisa entender a lógica por trás dos números antes de confiar. | Exibir junto ao output um resumo da função objetivo e das restrições ativas, para que a recomendação venha acompanhada de seu racional matemático desde o primeiro contato. **US relacionada: US06** |
-| **2. Interpretar outputs** | Avalia o impacto dos limites sugeridos sobre a inadimplência física e financeira. Analisa o retorno esperado da estratégia e compara os resultados com as metas de negócio vigentes. | *"Qual o impacto em risco e retorno? Estou dentro das restrições que o banco exige?"* | Analítico e pressionado — precisa traduzir números técnicos em decisão defensável para a gestão. | Disponibilizar uma visão comparativa direta entre o output do modelo e as metas, com destaque automático para restrições próximas do limite. **US relacionada: US06** |
-| **3. Simular cenários** | Ajusta metas de produção (volume de clientes aprovados e volume financeiro de limite ofertado) e testa o impacto das mudanças nos resultados. Compara cenários alternativos para identificar o melhor equilíbrio. | *"Posso melhorar esse equilíbrio? O que acontece se eu relaxar a meta de inadimplência em 0,5 ponto?"* | Engajado e investigativo — sente que tem controle sobre a política, mas anseia por um retorno de simulação mais rápido. | Oferecer um simulador de cenários baseado diretamente na função objetivo, sem dependência do time de Data Science para cada rodada. **US relacionada: US03** |
-| **4. Decidir estratégia** | Consulta as restrições ativas que impactam cada decisão (capacidade de pagamento, alavancagem, PDD), valida a aderência às políticas de crédito vigentes e define a estratégia final de concessão. | *"Qual decisão maximiza o resultado com segurança? Consigo justificar essa escolha em comitê?"* | Cauteloso e responsável — o peso da decisão é real, pois erros afetam a carteira e os correntistas. | Gerar templates de decisão com as restrições utilizadas explicitadas, facilitando a documentação e a defesa da estratégia em auditorias e comitês. **US relacionada: US04** |
-| **5. Comunicar e revisar** | Exporta os resultados e os compartilha com as áreas envolvidas (gestão, engenharia, produto). Acompanha o desempenho da carteira ao longo do tempo e ajusta a estratégia conforme os resultados observados. | *"Funcionou ou preciso ajustar? O modelo continua válido para o cenário atual?"* | Reflexivo e responsável pelo ciclo completo — busca evidências de que a política entregou o que prometia. | Criar um dashboard com impacto esperado versus realizado (retorno, inadimplência, volume concedido), com alertas automáticos quando o desempenho divergir das premissas do modelo. **US relacionada: US07** |
-
-#### Oportunidades Consolidadas
-
-A jornada de Rodinei expõe três tensões recorrentes que moldam as oportunidades de design da solução. A primeira é a tensão entre sofisticação do modelo e interpretabilidade operacional: cada fase exige que ele consiga traduzir outputs matemáticos em decisões justificáveis, sem mediação constante do time de Data Science. A segunda é a tensão entre agilidade e rigor: simular cenários hoje depende de ciclos longos de reprocessamento, o que limita a exploração de alternativas antes da decisão. A terceira é a tensão entre decisão pontual e governança contínua: Rodinei precisa não apenas decidir bem, mas documentar e monitorar a política ao longo do tempo.
-
-Essas tensões convergem para cinco oportunidades estruturais: (1) simulador de cenários autônomo baseado na função objetivo; (2) visualização clara do impacto em inadimplência física e financeira; (3) templates de decisão com restrições explícitas; (4) dashboard de acompanhamento de retorno, risco e volume; e (5) sandbox para testar políticas respeitando o motor de crédito e as restrições regulatórias do banco.
-
-#### Responsabilidades do Rodinei
-
-A jornada de Rodinei só se sustenta se cada área cumpre seu papel de forma coordenada. A Política de Crédito define e mantém as regras de negócio — risco, alavancagem e capacidade de pagamento. O próprio Rodinei documenta as decisões com base na função objetivo e nas restrições utilizadas em cada rodada. O time de Data Science entrega os outputs interpretáveis, especialmente as variáveis de risco e retorno esperado por cluster. O Produto constrói a interface de simulação e decisão. Engenharia e TI implementam o pipeline de integração e monitoramento em produção. A Gestão, por fim, define as metas de inadimplência, rentabilidade e volume que balizam a função objetivo.
 
 ---
 
@@ -267,25 +250,8 @@ A jornada de Rodinei só se sustenta se cada área cumpre seu papel de forma coo
 
 <img src="/assets/jornadaLarissa.jpg">
 
-#### Mapa da Jornada
-
-| Etapa | Ação | Pensamento | Sentimento | Oportunidade |
-|:---|:---|:---|:---|:---|
-| **1. Receber a demanda** | Carrega e valida a base de dados no formato adequado. Analisa as variáveis de risco, renda e capacidade de pagamento disponíveis. Entende os objetivos de negócio e as restrições iniciais fornecidas pela Política de Crédito. | *"Qual o problema e quais as restrições? O que o negócio quer maximizar e o que não pode ser violado?"* | Investigativa e meticulosa — qualquer ambiguidade na demanda se propaga como erro no modelo. | Criar um canal estruturado e versionado entre negócio e Data Science para formalização da função objetivo e das restrições, evitando retrabalho por interpretações divergentes. **US relacionada: US01** |
-| **2. Desenvolver o modelo** | Configura a segmentação de clientes (clusterização), define metas de produção e restrições formais do modelo, e estrutura a otimização com função objetivo e conjunto de restrições explícitas. | *"Como otimizar isso matematicamente? A formulação que escolhi é válida e resolve o problema real?"* | Concentrada e tecnicamente exigente consigo mesma — sente responsabilidade pela robustez da solução que vai orientar decisões de crédito reais. | Disponibilizar um ambiente de versionamento de regras e premissas para evitar inconsistências entre o modelo em desenvolvimento e a política em vigor. **US relacionadas: US02, US03** |
-| **3. Validar resultados** | Garante que os limites gerados respeitam o mínimo de R$ 200 e os múltiplos de R$ 50. Testa a consistência da solução com dados históricos e avalia o impacto projetado em risco e rentabilidade da carteira. | *"O resultado é melhor que o atual? Consigo provar que o modelo não viola nenhuma restrição operacional?"* | Rigorosa e crítica — a comparação com a baseline histórica é o momento de maior tensão técnica da jornada. | Fornecer uma ferramenta de simulação que permita testar o modelo contra cenários históricos antes de qualquer exposição em produção. **US relacionada: US05** |
-| **4. Comunicar ao negócio** | Apresenta a distribuição dos limites por cluster de risco, exibe métricas agregadas (média, mínimo, máximo por segmento) e explica os trade-offs entre risco e retorno de forma acessível para a área de Política de Crédito. | *"Como explicar isso para o negócio? Consigo traduzir PD e EL em linguagem que o Rodinei consiga usar em comitê?"* | Mediadora entre dois mundos — sente a responsabilidade de não deixar que a sofisticação técnica se torne um obstáculo para a adoção da solução. | Padronizar a tradução de métricas técnicas para métricas de negócio (por exemplo, PD expressa como impacto financeiro esperado), reduzindo o esforço de comunicação a cada ciclo. **US relacionada: US06** |
-| **5. Monitorar produção** | Exporta os resultados para integração com sistemas internos, acompanha a performance do modelo em produção e ajusta parâmetros conforme mudanças de cenário macroeconômico ou de comportamento da carteira. | *"O modelo continua performando bem? Houve deriva nos dados que exige recalibração?"* | Vigilante e comprometida com a longevidade da solução — sabe que um modelo bem construído pode degradar se não for monitorado continuamente. | Implementar monitoramento contínuo de inadimplência e retorno da carteira com alertas automáticos de deriva, integrando o ciclo de revisão ao calendário de gestão do banco. **US relacionada: US07** |
-
-#### Oportunidades Consolidadas
-
-A jornada de Larissa revela um desafio que começa antes do modelo: a ausência de um protocolo estruturado para receber e formalizar a demanda do negócio. Quando a função objetivo e as restrições chegam de forma ambígua ou verbal, o retrabalho técnico é inevitável. Ao longo do desenvolvimento, a maior fragilidade está na falta de versionamento das premissas — qualquer alteração na política de crédito pode invalidar silenciosamente um modelo já treinado. Na validação, a ausência de um ambiente de simulação pré-produção força Larissa a depender de análises manuais em dados históricos, o que consome tempo e aumenta o risco de erros não detectados.
-
-As oportunidades se organizam em torno de cinco eixos: (1) canal estruturado com o negócio para definição e versionamento da função objetivo e restrições; (2) ferramenta de simulação para testar cenários antes da produção; (3) monitoramento contínuo de inadimplência e retorno com alertas de deriva; (4) padronização da tradução de métricas técnicas para linguagem de negócio; e (5) alinhamento dos ciclos de revisão do modelo ao calendário de gestão da carteira.
-
-#### Responsabilidades da Larissa
-
-O sucesso da jornada de Larissa depende de uma divisão de responsabilidades clara entre quatro frentes. O time de Data Science, liderado por Larissa, desenvolve o modelo de otimização linear com função objetivo e restrições formalizadas. A Política de Crédito fornece as regras de negócio e valida as restrições que o modelo deve respeitar. O Produto disponibiliza a ferramenta de simulação e visualização dos resultados. Engenharia e TI implementam o pipeline de integração e o monitoramento em produção. A Gestão, por fim, alinha os ciclos de revisão do modelo com base na performance da carteira, fechando o ciclo entre decisão técnica e estratégia de negócio.
+&emsp; A análise das jornadas evidencia a necessidade de maior integração entre áreas técnicas e de negócio, além de maior transparência e autonomia no uso do modelo. 
+As oportunidades identificadas reforçam a importância de soluções que facilitem a interpretação dos resultados, a simulação de cenários e o monitoramento contínuo da estratégia, contribuindo para decisões mais seguras, ágeis e orientadas por dados.
 
 ---
 
