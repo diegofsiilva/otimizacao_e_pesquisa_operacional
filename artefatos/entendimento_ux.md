@@ -210,7 +210,7 @@ A solução proposta deve garantir transparência, usabilidade e alinhamento ent
 
 ## 3. Jornada do Usuário (Opcional — vale 2 pontos extras)
 
-&emsp; Esta seção apresenta a jornada dos principais usuários envolvidos no processo de definição de limites de crédito: o analista de Política de Crédito e a cientista de dados. 
+Esta seção apresenta a jornada dos principais usuários envolvidos no processo de definição de limites de crédito: o analista de Política de Crédito e a cientista de dados. 
 O objetivo é evidenciar como cada perfil interage com o modelo de otimização, destacando suas ações, percepções e principais desafios ao longo do processo. A partir dessa análise, são identificadas oportunidades de melhoria que orientam o desenvolvimento da solução proposta.
 
 
@@ -250,7 +250,8 @@ O objetivo é evidenciar como cada perfil interage com o modelo de otimização,
 ---
 
 ### Conclusão 
-&emsp; A análise das jornadas evidencia a necessidade de maior integração entre áreas técnicas e de negócio, além de maior transparência e autonomia no uso do modelo. 
+
+A análise das jornadas evidencia a necessidade de maior integração entre áreas técnicas e de negócio, além de maior transparência e autonomia no uso do modelo. 
 As oportunidades identificadas reforçam a importância de soluções que facilitem a interpretação dos resultados, a simulação de cenários e o monitoramento contínuo da estratégia, contribuindo para decisões mais seguras, ágeis e orientadas por dados.
 
 ---
