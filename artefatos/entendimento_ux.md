@@ -1,20 +1,6 @@
 # Entendimento da Experiência do Usuário
 
-> **Guia de uso deste template:**
-> - Trechos em *itálico entre colchetes* `[...]` são instruções — substituir pelo conteúdo do grupo
-> - Blocos `> TAPI`, `> PARA NOTA 10` e `> NÃO FAZER` são lembretes internos — **remover antes de entregar**
->
-> **Feedback do módulo passado (UX, nota 7,5 — nota mais baixa do grupo):**
-> - **Não** explicar "o que é persona" — o professor considera desnecessário. Ir direto.
-> - **Dores = consequências**, não atividades. "Faz cálculo manual" é atividade; "sente pressão por erro que pode custar milhões" é dor.
-> - **"Como a solução ajuda"** deve ser explícito e concreto — não confundir com "desejos" ou "cenários de interação"
-> - **Necessidades = outcomes**, não features. "Eliminar achismo" > "ter dashboard"
-> - **User Stories: SMALL é o mais cobrado.** Se tem "e" no meio, são duas US.
-> - **Critérios de aceite testáveis** — sem termos vagos ("parâmetros definidos", "funciona corretamente", "condições críticas")
-> - **Não incluir funcionalidades fora do escopo** — se o TAPI não prevê, a persona não pode precisar disso
-
 ---
-<br>
 
 ## 1. Personas
 
