@@ -236,7 +236,7 @@ O objetivo é evidenciar como cada perfil interage com o modelo de otimização,
 
 **Expectativa central:** Decisões seguras, simples, rastreáveis e orientadas por dados.
 
-<img src="/assets/jornadaRodinei.jpg">
+<img src="/assets/jornadaRODINEI.jpg">
 
 ---
 
@@ -248,7 +248,7 @@ O objetivo é evidenciar como cada perfil interage com o modelo de otimização,
 
 **Expectativa central:** Clareza técnica, robustez matemática e confiança na tomada de decisão.
 
-<img src="/assets/jornadaLarissa.jpg">
+<img src="/assets/jornadaLARISSA.jpg">
 
 &emsp; A análise das jornadas evidencia a necessidade de maior integração entre áreas técnicas e de negócio, além de maior transparência e autonomia no uso do modelo. 
 As oportunidades identificadas reforçam a importância de soluções que facilitem a interpretação dos resultados, a simulação de cenários e o monitoramento contínuo da estratégia, contribuindo para decisões mais seguras, ágeis e orientadas por dados.
