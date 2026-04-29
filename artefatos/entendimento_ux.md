@@ -111,114 +111,158 @@ A solução proposta deve garantir transparência, usabilidade e alinhamento ent
 
 ## 2. User Stories (5 pontos)
 
-*Mínimo **5 User Stories**. Formato: "como [quem], eu quero [o que], para [por que]". Cada US conectada a uma persona e dor.*
+Segundo Max Rehkopf, gerente de _Marketing_ de Produto na **_Atlassian_** (empresa multinacional de _software_), _User Stories_ se tratam de tarefas de desenvolvimento, composta por descrições concisas e focadas nos usuários. Para o projeto com o _Banco Pan_, as _User Stories_ são derivadas das duas _personas_ mapeadas: XXXX e YYYY. Cada história é desenvolvida levando em consideração as suas dores específicas e ganhos esperados, buscando uma maior robustez e alinhamento da solução. 
 
-> **INVEST — o professor cobra fortemente (feedback M5):**
->
-> | Critério | O que significa | Erro comum neste projeto |
-> |:---|:---|:---|
-> | **I**ndependent | Cada US testável isoladamente | ~~US de visualização que depende de importação estar pronta — usar dados mock~~ |
-> | **N**egotiable | O "como" é negociável, o "para que" não | ~~Especificar "usar React" ou "API REST" na US~~ |
-> | **V**aluable | Valor direto para o usuário | ~~"Como dev, eu quero refatorar"~~ |
-> | **E**stimable | Equipe consegue estimar esforço | ~~US gigante sem escopo claro~~ |
-> | **S**mall | **UMA responsabilidade.** Se tem "e", são duas. | ~~"importar dados **e** rodar o modelo **e** ver resultados"~~ |
-> | **T**estable | Critérios **sem ambiguidade** | ~~"funciona corretamente", "principais resultados", "parâmetros definidos"~~ |
-
-> **TAPI — funcionalidades que o MVP deve ter:**
-> - Seleção ótima e atribuição de limites de cartão por cliente ou cluster (≥100 clusters)
-> - Formulação teórica (função objetivo + restrições)
-> - Restrições configuráveis: inadimplência física e financeira, capacidade de pagamento com alavancagem diferenciada, limite mínimo R$200, múltiplos de R$50, metas de produção
-> - Comparação com política atual (`limite_ofertado`)
-> - Output em Python
-> - Descrição técnica dos algoritmos e métodos
->
-> **TAPI — o que NÃO está no escopo:**
-> - ~~Ajuste de modelos de score de crédito~~ — scores são fornecidos prontos
-> - ~~Programação não-linear ou estocástica~~
-> - ~~Dashboard web sofisticado~~ — o TAPI não pede interface gráfica, pede software Python
-> - ~~Monitoramento em tempo real~~
-> - ~~Integração direta com sistemas do banco~~ — o TAPI pede output Python para integração posterior
-
-> **Sugestões de User Stories alinhadas ao TAPI:**
->
-> *Agrupadas por persona — escolher, adaptar e detalhar critérios de aceite:*
->
-> **Para a persona de Estratégia de Crédito:**
-> - Configurar teto de inadimplência física (média simples de PD ≤ valor atual)
-> - Configurar teto de inadimplência financeira (média ponderada de PD por limite ≤ valor atual)
-> - Configurar multiplicadores de alavancagem por faixa de risco
-> - Configurar metas de produção (quantidade de clientes aprovados, volume de limite)
-> - Visualizar distribuição dos limites otimizados por cluster/faixa de risco
-> - Comparar limites otimizados vs. `limite_ofertado` (política atual) em termos de rentabilidade
-> - Consultar quais restrições foram ativas para um dado cluster (explicabilidade/auditoria)
-> - Executar cenários alternativos (ex: "e se o teto de inadimplência fosse 1pp menor?")
->
-> **Para a persona de Data Science:**
-> - Carregar base de dados do parceiro (parquet com as 17 variáveis do TAPI)
-> - Executar clusterização com número configurável de clusters (≥100)
-> - Executar o solver de otimização e obter limites ótimos por cluster
-> - Exportar resultados em formato Python/CSV para integração com motores internos
-> - Validar que os limites respeitam R$200 mínimo e são múltiplos de R$50
-> - Rodar backtesting contra safras históricas (M1, M2, M3)
->
-> **Atenção:** Cada item acima é uma US potencial. **Não** juntar vários em uma só.
+As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir que as histórias criadas são independentes umas das outras, negociáveis (podem ser ajustadas futuramente), geram valor para os usuários, estimáveis, concisas e testáveis.
 
 ---
 
-### US1 — *[Título curto]*
+### US01 - Carregar base de dados
 
-**Como** *[Persona]*, **eu quero** *[ação única e específica]*, **para** *[benefício conectado a uma dor]*.
+**Como** cientista de dados,  
+**eu quero** carregar a base de dados do banco no formato parquet,  
+**para** utilizar informações corretas e completas na segmentação e otimização de limites por cluster.
 
-**Critérios de Aceitação:**
-- *[Critério 1 — mensurável, sem ambiguidade. Ex: "aceita valores entre 0,0 e 15,0"]*
-- *[Critério 2 — com valores numéricos. Ex: "executa em ≤ 5 minutos para ≥ 100 clusters"]*
-- *[Critério 3 — verificável. Ex: "nenhum limite gerado é inferior a R$ 200"]*
+**Dores relacionadas:**
 
-> **Dicas para critérios testáveis neste projeto:**
-> - ~~"O modelo respeita as restrições"~~ → "Nenhum limite gerado viola: (a) teto de inadimplência física, (b) teto financeiro, (c) capacidade × multiplicador, (d) R$ 200 mínimo, (e) múltiplo de R$ 50"
-> - ~~"Exibe os resultados"~~ → "Exibe: receita esperada total (R$), inadimplência física projetada (%), inadimplência financeira projetada (%), quantidade de clientes aprovados, volume total de limite"
-> - ~~"Funciona para a base"~~ → "Processa a base M1 (~1,8M elegíveis) em ≤ X minutos com ≥ 100 clusters"
-> - ~~"Compara com o atual"~~ → "Para os ~117K clientes com `limite_ofertado` não nulo, exibe: diferença média de limite (R$), variação de rentabilidade esperada (%), variação de inadimplência projetada (pp)"
+- Bases inconsistentes.
+- Retrabalho técnico.
+- Falta de padronização.
 
----
+**Critérios de aceitação:**
 
-### US2 — *[Título]*
-
-**Como** *[Persona]*, **eu quero** *[ação]*, **para** *[benefício]*.
-
-**Critérios de Aceitação:**
-- *[...]*
+- Aceita arquivos parquet contendo as 17 variáveis do TAPI.
+- Carrega bases com até ~1,8 milhões de registros elegíveis.
+- Exibe erro claro para arquivo corrompido ou colunas ausentes.
+- Permite uso de base mock para testes.
 
 ---
 
-### US3 — *[Título]*
+### US02 - Ajustar clusterização
 
-**Como** *[Persona]*, **eu quero** *[ação]*, **para** *[benefício]*.
+**Como** cientista de dados,  
+**eu quero** configurar o número de clusters utilizados na segmentação,  
+**para** testar diferentes cenários de agrupamento dos clientes.
 
-**Critérios de Aceitação:**
-- *[...]*
+**Dores relacionadas:**
 
----
+- Segmentação ruim.
+- Pouca flexibilidade.
+- Ajustes manuais.
 
-### US4 — *[Título]*
+**Critérios de aceitação:**
 
-**Como** *[Persona]*, **eu quero** *[ação]*, **para** *[benefício]*.
-
-**Critérios de Aceitação:**
-- *[...]*
-
----
-
-### US5 — *[Título]*
-
-**Como** *[Persona]*, **eu quero** *[ação]*, **para** *[benefício]*.
-
-**Critérios de Aceitação:**
-- *[...]*
+- Permite definir número inteiro de clusters.
+- Aceita mínimo de 100 clusters.
+- Exibe erro para valores inválidos.
+- Executa clusterização com base mock e base real.
 
 ---
 
-*[Adicionar mais US — recomendação: 7-9 US pequenas e focadas. Melhor ter mais US pequenas do que poucas grandes.]*
+### US03 - Configurar metas de produção
+
+**Como** analista de estratégia de crédito,  
+**eu quero** configurar metas de clientes aprovados e volume total de limite,  
+**para** alinhar a otimização aos objetivos do negócio.
+
+**Dores relacionadas:**
+
+- Falta de controle.
+- Metas desalinhadas.
+- Dependência técnica.
+
+**Critérios de aceitação:**
+
+- Permite definir meta de clientes aprovados.
+- Permite definir meta de volume financeiro.
+- Bloqueia valores fora das faixas válidas.
+- Salva metas sem executar solver.
+
+---
+
+### US04 - Gerar limite por cluster
+
+**Como** analista de estratégia de crédito,  
+**eu quero** gerar limites sugeridos para cada cluster,  
+**para** aplicar políticas segmentadas de crédito.
+
+**Dores relacionadas:**
+
+- Processo manual.
+- Limites genéricos.
+- Decisão lenta.
+
+**Critérios de aceitação:**
+
+- Retorna um limite para cada cluster ativo.
+- Nenhum limite é inferior a R$200.
+- Todos os limites finais são múltiplos de R$50.
+- Exibe clusters sem solução viável.
+
+---
+
+### US05 - Consultar restrições ativas
+
+**Como** analista de estratégia de crédito,  
+**eu quero** consultar quais restrições do modelo impactaram cada cluster,  
+**para** justificar decisões e facilitar auditorias.
+
+**Dores relacionadas:**
+
+- Falta de clareza.
+- Baixa confiança.
+- Dificuldade de justificar.
+
+**Critérios de aceitação:**
+
+- Exibe restrições aplicadas por cluster.
+- Mostra identificador do cluster e limite sugerido.
+- Permite busca por cluster.
+- Retorna até 10.000 registros em até 3 segundos.
+
+---
+
+### US06 - Visualizar distribuição dos limites
+
+**Como** analista de estratégia de crédito,  
+**eu quero** visualizar a distribuição dos limites por cluster,  
+**para** analisar os resultados e apoiar decisões.
+
+**Dores relacionadas:**
+
+- Outputs técnicos.
+- Pouca visão geral.
+- Insegurança na decisão.
+
+**Critérios de aceitação:**
+
+- Exibe média, mediana, mínimo e máximo por cluster.
+- Permite visualização em tabela ou gráfico.
+- Permite ordenar resultados.
+- Funciona com dataset mock.
+
+---
+
+### US07 - Exportar resultados
+
+**Como** cientista de dados,  
+**eu quero** exportar os resultados finais da otimização,  
+**para** integrar a saída com outros sistemas internos.
+
+**Dores relacionadas:**
+
+- Retrabalho manual.
+- Compartilhamento difícil.
+- Integração lenta.
+
+**Critérios de aceitação:**
+
+- Exporta arquivo CSV ou objeto Python.
+- Contém identificador do cluster, limite atribuído e métricas principais.
+- Funciona a partir de arquivo de resultados existente.
+- Exibe mensagem de sucesso ou erro.
+
+---
 
 ---
 
@@ -288,9 +332,16 @@ A solução proposta deve garantir transparência, usabilidade e alinhamento ent
 
 ## Fontes
 
-1. [Princípio INVEST - Adapt Works](https://blog.adapt.works/como-escrever-as-melhores-user-stories-com-invest/)
+(ARRUMAR REFERENCIAS ANTES DA ENTREGA)
+
+
 2. [Template Jornada do Usuário (Miro)](https://miro.com/app/board/uXjVOi3EFh4=/?share_link_id=503534748467)
 3. *[Dados do parceiro — TAPI, bases M1/M2/M3]*
 4. *[Referências adicionais]*
+
+BONILHA, D. Como escrever as melhores User Stories com INVEST - Blog Adaptworks. Disponível em: <https://blog.adapt.works/como-escrever-as-melhores-user-stories-com-invest>. Acesso em: 27 abr. 2026. 
+
+REHKOPF, Max. Histórias de usuários | Exemplos e template. Disponível em: <https://www.atlassian.com/br/agile/project-management/user-stories>.  Acesso em: 27 abr. 2026.
+
 5. [What are Personas- IxDF](https://www.interaction-design.org/literature/topics/personas)
 6. [Personas Make Users Memorable - NN/Group](https://www.nngroup.com/articles/persona/)
