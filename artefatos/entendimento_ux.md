@@ -35,7 +35,7 @@ Personas são representações fictícias de usuários reais, criadas com base e
   <img src= "../assets/Rodinei-Credito.png" 
   alt="Rodinei Filho"><br>
   <sup>Fonte: Material produzido pelos autores</sup>
-  </div>
+</div>
   <br>
 
   Para aprofundar a compreensão do usuário final da solução, foram detalhados os principais objetivos, dores e necessidades do analista de política de crédito no contexto do projeto. Esse detalhamento permite entender como as decisões estratégicas são tomadas e quais desafios estão envolvidos no equilíbrio entre risco e rentabilidade. A partir dessa análise, é possível orientar o desenvolvimento de uma solução mais intuitiva, transparente e alinhada às demandas do negócio.
@@ -236,8 +236,13 @@ O objetivo é evidenciar como cada perfil interage com o modelo de otimização,
 
 **Expectativa central:** Decisões seguras, simples, rastreáveis e orientadas por dados.
 
-<img src="/assets/jornadaRODINEI.jpg">
 
+
+<div align = center>
+  <sub>FIGURA x - Jornada de Usuário do Time de Política de Crédito </sub><br>
+  <img src="/assets/jornadaRODINEI.jpg"><br>
+  <sup>Fonte: Material produzido pelos autores</sup>
+  </div>
 ---
 
 ### Persona 2 — Larissa Paiva (Data Science)
@@ -248,8 +253,16 @@ O objetivo é evidenciar como cada perfil interage com o modelo de otimização,
 
 **Expectativa central:** Clareza técnica, robustez matemática e confiança na tomada de decisão.
 
-<img src="/assets/jornadaLARISSA.jpg">
 
+<div align = center>
+  <sub>FIGURA x - Jornada de Usuário do Time de Data Science </sub><br>
+  <img src="/assets/jornadaLARISSA.jpg"><br>
+  <sup>Fonte: Material produzido pelos autores</sup>
+</div>
+
+---
+
+### Conclusão 
 &emsp; A análise das jornadas evidencia a necessidade de maior integração entre áreas técnicas e de negócio, além de maior transparência e autonomia no uso do modelo. 
 As oportunidades identificadas reforçam a importância de soluções que facilitem a interpretação dos resultados, a simulação de cenários e o monitoramento contínuo da estratégia, contribuindo para decisões mais seguras, ágeis e orientadas por dados.
 
