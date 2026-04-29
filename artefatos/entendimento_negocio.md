@@ -184,91 +184,103 @@ Em síntese, o sucesso da entrega depende menos da sofisticação algorítmica e
 
 ---
 
-## 3. Canvas da Proposta de Valor (Peso 2,5)
+## 3. Canvas da Proposta de Valor 
 
-### 3.1 Segmento de cliente
+O Value Proposition Canvas é um framework estratégico desenvolvido pelo Dr. Alexander Osterwalder, que permite posicionar produtos e serviços de acordo com as necessidades e valores reais do cliente. No contexto deste projeto, a ferramenta é utilizada para modelar a relação entre o perfil do usuário operacional da solução e a oferta tecnológica proposta, buscando o fit ideal entre a engenharia do modelo de otimização e o valor de negócio gerado para o Banco PAN. Esta análise atua como uma ponte entre a modelagem matemática dos limites pré-aprovados e a realidade operacional de quem decide política de crédito, garantindo que as funcionalidades não sejam apenas tecnicamente viáveis, mas essencialmente úteis para a rotina do time de crédito. Ao mapear essa conexão, asseguramos que o projeto foque na resolução de problemas prioritários e na entrega de benefícios tangíveis, validando cada recurso desenvolvido diante da realidade da organização.  
 
-*O roteiro diz que o "cliente" pode ser analisado em dois níveis e que o grupo deve **deixar claro qual nível está analisando** e, **idealmente, reconhecer os dois**.*
-
-Neste projeto, o "cliente" opera em dois níveis:
-
-- **Cliente direto da solução**: times internos do Banco Pan que utilizarão o modelo - áreas de **crédito, estratégia de crédito e Data Science**. São eles que configuram parâmetros, executam cenários e implementam os limites resultantes. `[APÓS UX: referenciar as personas criadas - ex: "Persona Renata (gestora de risco)"]`
-- **Cliente final impactado**: **correntistas do Banco Pan elegíveis à concessão de cartão de crédito pré-aprovado**. Não interagem diretamente com o modelo, mas são afetados pelo resultado (limites mais ou menos aderentes ao perfil). Os dados mostram ~14,5M de clientes na base, dos quais ~12,7M passam nos filtros de elegibilidade.
-
-A análise foca no **cliente direto** (times internos), pois são os usuários efetivos da solução.
-
-`[APÓS TAPI: confirmar quais áreas do banco utilizarão a solução]`
-
-### 3.2 Perfil do Cliente (lado direito do Canvas)
-
-**Tarefas do cliente:**
-- Definir e revisar políticas de limites pré-aprovados de crédito
-- Equilibrar receita da carteira com controle de inadimplência
-- Reportar e justificar indicadores de risco (NPL, provisão) à diretoria
-- Atender exigências de explicabilidade (LGPD Art. 20) e capital regulatório
-
-**Dores:**
-
-> **NÃO FAZER (feedback M5 da profa. de UX - mesma professora):**
-> - ~~Ganhos ligados à alta gestão e não ao usuário principal~~
-> - Isso vale também aqui no Canvas de negócios
-
-- Pressão constante por reduzir NPL crescente (8,3% e subindo) sem sacrificar receita - a sensação de estar "escolhendo qual problema criar"
-- Sobrecarga cognitiva ao revisar políticas que envolvem dezenas de variáveis simultâneas, sem ferramenta que integre todas
-- Risco reputacional pessoal quando decisões de limite resultam em inadimplência acima do esperado
-- Falta de base objetiva para defender decisões em reuniões com produto e comercial - "intuição" não convence stakeholders que querem mais receita
-
-`[APÓS UX: cruzar com as dores das personas - garantir coerência]`
-
-**Ganhos esperados:**
-
-> **ATENÇÃO (feedback M5):** Ganhos devem ser **do usuário direto**, não da alta gestão. Ganhos como "aumento de lucro do banco" ou "valor para o acionista" NÃO entram aqui.
-
-- Sentir segurança ao defender decisões de limite com argumentação matemática, não opinião
-- Poder simular cenários (conservador/moderado/agressivo) antes de implementar
-- Reduzir tempo gasto em análises manuais e debates subjetivos
-- Ter rastreabilidade das decisões para auditorias e compliance
-
-### 3.3 Mapa de Valor (lado esquerdo do Canvas)
-
-**Produtos e serviços:**
-
-*O roteiro pede: "o que exatamente o grupo está propondo?"*
-
-- Modelo de otimização matemática que define limites pré-aprovados por cliente ou cluster, respeitando restrições de risco e negócio `[APÓS MODELAGEM: especificar tipo - LP, MIP, etc.]`
-- Interface para configurar parâmetros (NPL máximo, budget, limite min/max) e executar cenários `[APÓS UX: alinhar com User Stories]`
-- Módulo de explicabilidade (quais variáveis mais influenciaram cada decisão de limite)
-
-**Aliviadores de dor:**
-
-*Como a solução reduz ou elimina os problemas identificados?*
-
-- Substitui intuição por base matemática - elimina o "operar no escuro"
-- NPL máximo como restrição do modelo - ataca diretamente a pressão pelo NPL, que simplesmente não é violado
-- Cenários pré-configurados permitem comparar resultados sem refazer análises manuais
-- Decisões rastreáveis e documentáveis - em caso de auditoria, a lógica é reproduzível
-
-**Criadores de ganho:**
-
-*Como a solução gera benefícios concretos e relevantes?*
-
-- Simulação what-if rápida: testar "o que acontece se eu reduzir o NPL máximo de 8% para 7%?" leva minutos
-- Argumentação objetiva: fornece dados concretos para reuniões entre áreas
-- Para o cliente final: limites mais aderentes à capacidade de pagamento - reduz tanto sub-concessão quanto sobre-concessão
-
-### 3.4 Figura do Canvas
-
-> **ATENÇÃO (roteiro):** *"Lembre-se de colocar a figura"*
+O desafio do Banco PAN envolve dois níveis de cliente claramente distintos: o usuário direto da solução, representado pelos times internos que operam o modelo no dia a dia, e o cliente final impactado, representado pelos correntistas elegíveis à concessão de cartão pré-aprovado. O canvas principal é construído com foco no usuário direto, uma vez que é ele quem adota, parametriza e defende a ferramenta internamente. O cliente final é tratado em seção complementar, reconhecendo que é nele que o valor do modelo se materializa no mundo real. Entre os candidatos a usuário direto, temos os times de Estratégia de Crédito e Data Science. O canvas foca no Analista/Gerente de Estratégia de Crédito, pois é quem efetivamente opera a ferramenta no ciclo semanal de calibragem da política, roda cenários, leva resultados ao comitê e arbitra trade-offs entre risco e atratividade comercial.  
 
 ![Canvas Proposta de Valor](assets/canvas_proposta_valor.png)
 
-`[PREENCHER: criar imagem do Canvas (template Strategyzer) em Figma, Miro ou Canva e inserir aqui]`
+### 3.1 Segmento de cliente
 
-> **NÃO FAZER (roteiro):**
-> - ~~Tratar o canvas como texto genérico de empreendedorismo~~
-> - ~~Não delimitar quem é o cliente~~
-> - ~~Listar dores e ganhos sem conectá-los ao projeto~~
-> - ~~Descrever apenas a ferramenta técnica, sem explicar o valor gerado~~
+O conceito de "cliente", no contexto deste projeto, deve ser analisado em dois níveis complementares, conforme orienta o roteiro metodológico. Essa distinção é fundamental para garantir que a proposta de valor contemple tanto o usuário operacional da solução quanto o público final impactado por suas decisões.
+
+Neste projeto, identificam-se dois segmentos principais:
+Cliente direto da solução: composto pelos times internos do Banco PAN que interagem com o modelo, mas com papéis distintos. O time de Estratégia de Crédito é o usuário operacional — é quem parametriza restrições, roda simulações de cenários, interpreta os outputs e incorpora os resultados na política de limites pré-aprovados. O time de Data Science é o usuário técnico — é quem desenvolve, calibra e monitora o modelo, garantindo que ele funcione corretamente e permaneça aderente às regras de negócio ao longo do tempo. Embora ambos interajam diretamente com a solução, fazem isso de formas fundamentalmente diferentes: Estratégia de Crédito decide com o modelo; Data Science constrói e sustenta o modelo.
+Cliente final impactado: formado pelos correntistas do Banco PAN elegíveis à concessão de cartão de crédito pré-aprovado. Embora não utilizem diretamente a ferramenta, são impactados pelos resultados do modelo, especialmente no que diz respeito à adequação dos limites concedidos ao seu perfil de risco e capacidade de pagamento. A base analisada conta com aproximadamente 14,5 milhões de clientes, dos quais cerca de 12,7 milhões atendem aos critérios de elegibilidade.
+
+Para fins deste canvas, a análise está centrada no time de Estratégia de Crédito como usuário primário, uma vez que é ele quem opera a solução no ciclo de calibragem da política, leva decisões ao comitê e arbitra trade-offs entre risco e retorno. O time de Data Science é reconhecido como usuário secundário com necessidades próprias — tratadas nas personas do projeto —, mas sua relação com a ferramenta é de construção e manutenção, não de decisão. Ainda assim, o reconhecimento explícito do cliente final garante que a proposta de valor permaneça alinhada ao impacto real gerado na ponta.
+
+
+### 3.2 Perfil do Cliente (lado direito do Canvas)
+
+**Tarefas do Cliente:**  
+O analista de estratégia de crédito é responsável por definir e revisar a política de limites pré-aprovados da base elegível, calibrando parâmetros como apetite de PDD, teto de comprometimento de renda e segmentação por risco. Sua rotina inclui rodar simulações de cenários para responder a demandas da diretoria, além de mediar a tensão entre a área comercial — orientada à conversão — e a área de risco — orientada à proteção da carteira. Também cabe ao analista levar decisões ao comitê de crédito com racional auditável e acompanhar a performance das safras, ajustando a política conforme mudanças nas premissas de risco.  
+
+**Dores:** 
+O Banco PAN já dispõe de um modelo preditivo de score, mas a conversão desse output em política de limites ainda depende de calibragem manual em planilhas, consumindo dias de trabalho para simulações simples. Qualquer ajuste que envolva alterações no modelo exige acionamento do time de Data Science, tornando o processo lento e dependente — o analista de estratégia não tem autonomia para rerodar cenários sem intermediação técnica. A ausência de uma ferramenta integrada força decisões baseadas em regras fixas por faixa de score, que ignoram a heterogeneidade real entre clientes dentro de uma mesma faixa. A subjetividade nas decisões compromete a explicabilidade no comitê, e a falta de um critério objetivo para arbitrar o trade-off entre risco e retorno intensifica conflitos entre áreas, frequentemente resolvidos por influência política em vez de dados.  
+
+**Ganhos:**  
+O analista busca autonomia para simular cenários, conservador, moderado e agressivo — antes de implementar qualquer mudança, sem depender de intermediação técnica. Espera sentir segurança ao defender decisões de limite com argumentação matemática rastreável, substituindo opiniões por evidências quantitativas nas reuniões com comercial e risco. Também valoriza a redução do tempo gasto em análises manuais e debates subjetivos, e a existência de rastreabilidade das decisões para auditorias e compliance. Por fim, deseja maior consistência metodológica entre ciclos de revisão, evitando retrabalho e reduzindo a carga cognitiva de justificar cada decisão do zero.  
+
+**Síntese:** 
+O perfil evidencia um ambiente de alta complexidade analítica em que a dependência de processos manuais, a falta de autonomia operacional e a subjetividade decisória criam fricção constante. A necessidade central é ter uma ferramenta que transforme o output do modelo preditivo existente em política de limites de forma estruturada, autônoma e defensável. 
+
+### 3.3 Mapa de Valor (lado esquerdo do Canvas)
+
+**Produtos e Serviços:**  
+O projeto entrega um modelo de otimização linear que define limites pré-aprovados por cliente ou cluster, atuando como núcleo analítico da política de crédito. A função objetivo maximiza o retorno esperado da carteira, calculado pela receita de interchange a taxa fixa menos a perda esperada (PD × exposição). O modelo está sujeito a restrições de: (i) apetite de risco, com tetos simultâneos de inadimplência física (média simples da PD) e financeira (média ponderada pelo limite), ambos não superiores ao nível atual da carteira; (ii) capacidade de pagamento, com multiplicadores de alavancagem diferenciados por perfil de risco; (iii) regras operacionais, como limite mínimo e discretização em múltiplos fixos; e (iv) metas configuráveis de produção e rentabilidade. A modelagem incorpora o arcabouço de perda esperada da Resolução CMN nº 4.966/2021, reforçando aderência regulatória. Como suporte, a solução inclui um simulador paramétrico de cenários e relatórios de sensibilidade, permitindo recalibragem rápida, digital e auditável sem necessidade de intervenção do time de Data Science.
+
+**Aliviadores de Dor (Pain Relievers):**  
+A solução elimina a calibragem manual em planilhas ao automatizar a execução da política em uma única rodada. O uso de variáveis por cluster (ou cliente) captura a heterogeneidade ignorada por regras fixas de score. Cada limite torna-se rastreável à função objetivo e às restrições ativas, reduzindo a subjetividade e facilitando a defesa no comitê. O modelo também introduz um critério objetivo para equilibrar risco e retorno, diminuindo conflitos entre áreas comercial e de risco. Por fim, a parametrização permite simulações rápidas, substituindo semanas de trabalho manual por execuções em minutos.  
+
+**Criadores de Ganho (Gain Creators):**  
+O valor gerado está na automação do ciclo de calibragem, liberando o analista para atividades mais estratégicas. A simulação ágil de cenários amplia a capacidade de resposta a demandas da diretoria. A rastreabilidade dos resultados eleva a qualidade e a defensabilidade das decisões no comitê. Além disso, o uso de um critério quantitativo comum melhora a comunicação entre áreas e reduz conflitos. A padronização metodológica entre ciclos de revisão elimina retrabalho e aumenta a consistência das decisões.  
+
+**Síntese:**  
+A proposta integra otimização matemática à rotina do analista de crédito, substituindo processos manuais e regras fixas por um fluxo automatizado, rastreável e orientado por função objetivo. Com isso, reduz retrabalho, melhora a governança e fortalece a defensabilidade das decisões. O modelo se posiciona como um núcleo analítico que eleva a qualidade da política de crédito, garantindo maior agilidade, consistência e alinhamento entre risco e retorno.  
+
+## 3.4 Cliente Final Impactado (Correntista Elegível)
+
+Embora o canvas foque no usuário direto, é no correntista elegível ao cartão pré-aprovado que o valor da solução se materializa. Suas tarefas incluem acessar crédito quando necessário, gerenciar o orçamento e realizar compras com previsibilidade. As principais dores estão em limites mal calibrados: quando baixos, reduzem a utilidade do produto; quando altos, aumentam o risco de sobre-endividamento, além da fricção para ajustes posteriores.  
+
+Os ganhos esperados são acesso a crédito no momento certo, com limite compatível à renda e ao perfil de consumo, sem burocracia. Nesse contexto, a otimização matemática atua ao incorporar explicitamente a restrição de capacidade de pagamento, com multiplicadores de alavancagem diferenciados por perfil de risco — clientes mais arriscados recebem limites proporcionalmente menores.  
+
+Essa diretriz, alinhada ao TAPI, garante que o limite respeite a capacidade financeira do cliente e sustente uma relação de crédito mais equilibrada e sustentável no longo prazo.
+
+## 3.5 Matriz de Validação da Proposta de Valor (Dor → Elemento do Modelo → KPI)
+
+Uma proposta de valor só se consolida quando pode ser medida em produção. Esta análise estende o canvas de Osterwalder ao conectar diretamente cada dor mapeada ao elemento matemático da solução e ao KPI que validará, após a implementação, se o alívio proposto se concretiza. Esse encadeamento cumpre três funções: (i) conecta o canvas à modelagem matemática, garantindo o fit técnico-conceitual; (ii) sustenta a análise financeira (seção 4), ao traduzir benefícios qualitativos em métricas que embasam o ROI; e (iii) antecipa a mitigação de riscos como baixa explicabilidade e dificuldade de implementação (seção 2). Ao definir previamente como o valor será medido, a proposta deixa de ser apenas qualitativa e se torna um compromisso auditável.
+
+---
+
+## Matriz de Validação
+
+| # | Dor mapeada no canvas | Elemento do modelo que ataca | KPI de validação | Baseline → Target esperado |
+|---|----------------------|------------------------------|------------------|---------------------------|
+| 1 | Calibragem manual em planilhas | Modelo paramétrico executável em solver de otimização | Tempo médio de recalibragem completa | Dias → Minutos |
+| 2 | Regras fixas ignoram heterogeneidade | Variáveis de decisão por cluster | Variância intra-cluster dos limites | Zero → Diferenciação significativa |
+| 3 | Subjetividade e baixa explicabilidade | Restrições ativas identificáveis | % de decisões com restrição documentada | Não rastreável → 100% |
+| 4 | Tensão entre áreas comercial e risco | Função objetivo com restrição explícita de apetite (PDD ≤ teto) | Aderência entre PDD realizada e tolerada | Desvio → Dentro do apetite |
+| 5 | Limites incompatíveis com capacidade de pagamento | Restrição de limite baseada em renda com multiplicador por risco | % de clientes acima do teto de comprometimento | Não monitorado → ~0% |
+| 6 | Simulações lentas | Parametrização do apetite como input do modelo | Nº de cenários testados por ciclo | 1–2 → 10+ |
+| 7 | Descasamento entre risco individual e carteira | Restrições de inadimplência física e financeira + tetos por PD | Inadimplência e concentração por risco | Não controlada → Dentro dos limites |
+
+---
+
+## KPIs mais relevantes
+
+Três KPIs concentram maior relevância analítica:
+
+- **KPI #5 (% de clientes acima do teto de comprometimento)**  
+  Mede diretamente o impacto no cliente final, evidenciando que a solução não apenas otimiza retorno, mas reduz risco de sobre-endividamento.
+
+- **KPI #3 (% de decisões com restrição documentada)**  
+  Materializa a rastreabilidade e a defensabilidade no comitê, sendo essencial para adoção institucional.
+
+- **KPI #4 (aderência entre PDD realizada e tolerada)**  
+  Sustenta a análise financeira, pois dele deriva a estimativa de redução de perdas que compõe o ROI.
+
+Essa estrutura garante continuidade lógica entre proposta de valor, modelagem e avaliação econômica, ao associar cada benefício a uma métrica observável.
+
+---
+
+## Conclusão
+
+Em síntese, a análise valida a viabilidade estratégica do projeto ao conectar diretamente as dores do analista de crédito à lógica de otimização que fundamenta a solução. A convergência entre rastreabilidade decisória, proteção do correntista e maximização do retorno da carteira reforça a relevância do sistema.
+
+Embora baseado em premissas simplificadas, o modelo se apresenta como um ativo mensurável
 
 ---
 
