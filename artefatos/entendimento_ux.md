@@ -17,7 +17,7 @@ O detalhamento das _personas_ definidas pode ser encontrado a seguir:
 <div align = center>
   <sub>FIGURA 1 - Persona do Time de Estratégia de Crédito </sub><br>
   <br>
-  <img src= "../assets/Rodinei-Credito.png" 
+  <img src="assets/Rodinei-Credito.png" 
   alt="Rodinei Filho"><br>
   <sup>Fonte: Material produzido pelos autores</sup>
 </div>
@@ -28,7 +28,7 @@ O detalhamento das _personas_ definidas pode ser encontrado a seguir:
 <div align = center>
   <sub>FIGURA 2 - Persona do Time de Data Science </sub><br>
   <br>
-  <img src= "../assets/Larissa-Dados.png" 
+  <img src="assets/Larissa-Dados.png" 
   alt="Larissa Paiva"><br>
   <sup>Fonte: Material produzido pelos autores</sup>
   </div>
@@ -215,7 +215,7 @@ O objetivo é evidenciar como cada perfil interage com o modelo de otimização,
 
 <div align = center>
   <sub>FIGURA 3 - Jornada de Usuário do Time de Política de Crédito </sub><br>
-  <img src="/assets/jornadaRODINEI.jpg"><br>
+  <img src="assets/jornadaRodinei.jpg"><br>
   <sup>Fonte: Material produzido pelos autores</sup>
   </div>
 
@@ -232,7 +232,7 @@ O objetivo é evidenciar como cada perfil interage com o modelo de otimização,
 
 <div align = center>
   <sub>FIGURA 4 - Jornada de Usuário do Time de Data Science </sub><br>
-  <img src="/assets/jornadaLARISSA.jpg"><br>
+  <img src="assets/jornadaLarissa.jpg"><br>
   <sup>Fonte: Material produzido pelos autores</sup>
 </div>
 
