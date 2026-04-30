@@ -145,7 +145,7 @@ onde $n_k$ é o número de clientes no cluster $k$ e $c_k$ é o **coeficiente de
 
 **Termo (A) - Receita:** $\pi_k \cdot \bar{u} \cdot t \cdot L_k$ é a receita de interchange esperada por cliente do cluster $k$. O cliente contrata com probabilidade $\pi_k$ (média do cluster, derivada de `score_propensao_contrato` normalizado via min-max). O contratante utiliza uma fração $\bar{u} = 0{,}75$ do limite, e o banco recebe taxa de interchange $t = 0{,}0175$ sobre o volume transacionado.
 
-**Termo (B) - Perda:** $\pi_k \cdot PD_k \cdot \text{LGD} \cdot L_k$ é a perda esperada por inadimplência por cliente do cluster $k$. A perda só se materializa para clientes que efetivamente contratam (com probabilidade $\pi_k$), e entre estes, uma fração $PD_k$ entra em default. $\text{LGD} = 0{,}60$ é a fração do saldo exposto que o banco perde em caso de default (os 40% restantes são recuperados via cobrança ou cessão), e $L_k$ é a exposição.
+**Termo (B) - Perda:** $\pi_k \cdot PD_k \cdot \text{LGD} \cdot L_k$ é a perda esperada por inadimplência por cliente do cluster $k$. A perda só se materializa para clientes que efetivamente contratam (com probabilidade $\pi_k$), e entre estes, uma fração $PD_k$ entra em default. $\text{LGD} = 0{,}60$ é a fração do saldo exposto que o banco perde em caso de default (os 40% restantes são recuperados via cobrança ou cessão), e $L_k$ é a exposição. Note que a perda utiliza $L_k$ integral (sem o fator $\bar{u}$), diferentemente da receita. Isso é intencional: a exposição no momento do default (EAD) considera o limite inteiro porque, na prática, clientes inadimplentes tendem a utilizar uma fração do limite significativamente superior à média antes de cessar pagamentos. Essa é uma premissa padrão em modelos de risco de crédito para cartão (Resolução CMN 4.966/2021). Em sprints futuros, essa premissa pode ser refinada com um fator de utilização pré-default ($\bar{u}_{default}$) calibrado a partir de dados da carteira.
 
 **Coeficiente $c_k$:** O retorno líquido unitário $c_k = \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})$ resume a rentabilidade marginal de cada real alocado ao cluster $k$. Como $\pi_k > 0$, o sinal de $c_k$ depende exclusivamente de $\bar{u} \cdot t$ vs. $PD_k \cdot \text{LGD}$: clusters com $PD_k < \frac{\bar{u} \cdot t}{\text{LGD}}$ são rentáveis. Clusters com $c_k > 0$ são rentáveis; clusters com $c_k \leq 0$ destroem valor a cada real adicional de limite; para estes, o solver naturalmente atribui $L_k = 0$. O coeficiente $n_k \cdot c_k$ é o coeficiente objetivo do LP: o solver tende a maximizar $L_k$ para clusters com maior $c_k$, limitado pelas restrições.
 
@@ -207,7 +207,7 @@ $$L_k^{\text{final}} = \begin{cases} 50 \cdot \left\lceil \dfrac{L_k}{50} \right
 
 **Limitação 1 - LGD uniforme:** O modelo adota $\text{LGD} = 0{,}60$ constante, mas a taxa de recuperação varia por perfil (clientes com renda alta tendem a ter LGD menor). Isso superestima a perda para perfis de baixo risco e subestima para alto risco, distorcendo $c_k$ e a alocação ótima.
 
-**Limitação 2 - `capacidade_pagamento` null em M2/M3:** A restrição R3 ($L_i \leq m_i \cdot CP_i$) depende diretamente de $CP_i$. Em M2 e M3, 42–43% dos clientes elegíveis não têm essa variável, tornando R3 inaplicável para quase metade da base. A proxy adotada ($CP_i = \text{renda\_estimada}_i \times 0{,}30$) subestima a capacidade real de clientes com múltiplas fontes de renda, reduzindo artificialmente o teto de $L_i$ para esse grupo. Tratamento: solicitar ao parceiro a imputação de $CP_i$ para M2/M3 ou calibrar o fator 0,30 com dados da carteira aprovada.
+**Limitação 2 - `capacidade_pagamento` null em M2/M3:** A restrição R2 ($L_k \leq m_k \cdot CP_k$) depende diretamente de $CP_k$. Em M2 e M3, 42–43% dos clientes elegíveis não têm essa variável, tornando R2 inaplicável para quase metade da base. A proxy adotada ($CP_k = \text{renda\_estimada} \times 0{,}30$) subestima a capacidade real de clientes com múltiplas fontes de renda, reduzindo artificialmente o teto de $L_k$ para esse grupo. Tratamento: solicitar ao parceiro a imputação de $CP$ para M2/M3 ou calibrar o fator 0,30 com dados da carteira aprovada.
 
 **Sensibilidade - $\bar{u}$:** A utilização entra linearmente em $c_k$. Variando $\bar{u}$ de 0,50 a 0,90, o sinal de $c_k$ muda para clusters de PD moderada, alterando quais clusters recebem oferta. Uma redução de 0,75 para 0,50 concentraria a solução em perfis de baixíssimo risco, reduzindo volume e retorno total.
 
@@ -251,7 +251,13 @@ As restrições delimitam a região factível no plano $(L_1, L_2)$:
 
 O gráfico abaixo apresenta a região factível (área sombreada), as retas das restrições e as curvas de nível da função objetivo. A solução ótima encontra-se no vértice da região factível que maximiza o retorno líquido, indicado pelo ponto destacado.
 
-*Gráfico a ser regenerado com os parâmetros corrigidos.*
+<div align="center">
+
+![Análise Gráfica do Problema de Otimização](assets/analise_grafica_otimizacao.png)
+
+</div>
+
+<div align="center">Fonte: Material produzido pelos autores</div>
 
 ### 3.4 Interpretação
 

@@ -22,8 +22,8 @@ LGD = 0.60
 PD_fin_atual = 0.0022
 
 # Coeficientes de retorno líquido unitário
-c1 = pi1 * u_bar * t - PD1 * LGD  # 0.0093
-c2 = pi2 * u_bar * t - PD2 * LGD  # 0.0068
+c1 = pi1 * (u_bar * t - PD1 * LGD)  # 0.00954
+c2 = pi2 * (u_bar * t - PD2 * LGD)  # 0.00751
 
 # Coeficientes da FO: max (n1*c1)*L1 + (n2*c2)*L2
 fo_coef1 = n1 * c1  # 1.8
@@ -125,9 +125,9 @@ ax.annotate(f'  Ótimo\n  $L_1^* = {L1_opt:,.0f}$\n  $L_2^* = {L2_opt:,.0f}$\n  
             bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='#D32F2F', alpha=0.9))
 
 # Eixos
-ax.set_xlabel('$L_1$ — Limite do Cluster 1 (baixo risco) [R\\$]', fontsize=11)
-ax.set_ylabel('$L_2$ — Limite do Cluster 2 (risco moderado) [R\\$]', fontsize=11)
-ax.set_title('Análise Gráfica — Região Factível e Solução Ótima\n(cenário reduzido com 2 clusters)',
+ax.set_xlabel('$L_1$ - Limite do Cluster 1 (baixo risco) [R\\$]', fontsize=11)
+ax.set_ylabel('$L_2$ - Limite do Cluster 2 (risco moderado) [R\\$]', fontsize=11)
+ax.set_title('Análise Gráfica - Região Factível e Solução Ótima\n(cenário reduzido com 2 clusters)',
              fontsize=13, fontweight='bold')
 
 ax.set_xlim(-200, L1_max_plot)
@@ -144,8 +144,6 @@ ax.text(250, 50, 'Piso R\\$ 200\n(pós-otimização)', fontsize=7, color='gray',
 plt.tight_layout()
 
 # Salvar
-output_path = Path(__file__).parent / 'assets' / 'analise_grafica_otimizacao.png'
-output_path.parent.mkdir(parents=True, exist_ok=True)
+output_path = Path(__file__).parent / 'analise_grafica_otimizacao.png'
 plt.savefig(output_path, dpi=200, bbox_inches='tight', facecolor='white')
 print(f"Gráfico salvo em: {output_path}")
-plt.show()
