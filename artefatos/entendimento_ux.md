@@ -247,16 +247,12 @@ As oportunidades identificadas reforçam a importância de soluções que facili
 
 ## Fontes
 
-(ARRUMAR REFERENCIAS ANTES DA ENTREGA)
+BONILHA, Dani. Como escrever as melhores User Stories com INVEST. *Blog Adaptworks*, [S. l.], [s. d.]. Disponível em: https://blog.adapt.works/como-escrever-as-melhores-user-stories-com-invest. Acesso em: 30 abr. 2026.
 
+INTERACTION DESIGN FOUNDATION (IxDF). What are Personas? [S. l.]: IxDF, [s. d.]. Disponível em: https://www.interaction-design.org/literature/topics/personas. Acesso em: 30 abr. 2026.
 
-2. [Template Jornada do Usuário (Miro)](https://miro.com/app/board/uXjVOi3EFh4=/?share_link_id=503534748467)
-3. *[Dados do parceiro — TAPI, bases M1/M2/M3]*
-4. *[Referências adicionais]*
+MIRO. Template Jornada do Usuário. [S. l.]: Miro, 2026. Disponível em: https://miro.com/app/board/uXjVOi3EFh4=/. Acesso em: 30 abr. 2026.
 
-BONILHA, D. Como escrever as melhores User Stories com INVEST - Blog Adaptworks. Disponível em: <https://blog.adapt.works/como-escrever-as-melhores-user-stories-com-invest>. Acesso em: 27 abr. 2026. 
+NIELSEN NORMAN GROUP (NN/G). Personas make users memorable for stakeholders. [S. l.]: NN/G, [s. d.]. Disponível em: https://www.nngroup.com/articles/persona/. Acesso em: 30 abr. 2026.
 
-REHKOPF, Max. Histórias de usuários | Exemplos e template. Disponível em: <https://www.atlassian.com/br/agile/project-management/user-stories>.  Acesso em: 27 abr. 2026.
-
-5. [What are Personas- IxDF](https://www.interaction-design.org/literature/topics/personas)
-6. [Personas Make Users Memorable - NN/Group](https://www.nngroup.com/articles/persona/)
+REHKOPF, Max. Histórias de usuários: exemplos e template. *Atlassian*, [S. l.], [s. d.]. Disponível em: https://www.atlassian.com/br/agile/project-management/user-stories. Acesso em: 30 abr. 2026.
