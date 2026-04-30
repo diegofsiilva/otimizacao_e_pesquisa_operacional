@@ -114,14 +114,14 @@ $L_k$ representa o valor do limite de crédito, em reais, atribuído a todos os 
 | $n_k$ | Número de clientes no cluster $k$ | inteiro positivo | Resultado da clusterização |
 | $PD_k$ | Probabilidade de default representativa do cluster $k$ | [0, 1] | Média de `pd_produto` dos clientes do cluster |
 | $\pi_k$ | Propensão à contratação do cluster $k$, normalizada | [0, 1] | Média de `score_propensao_contrato` normalizado min-max: $\pi_i = \frac{score_i - 3}{843}$ |
-| $CP_k$ | Capacidade de pagamento do cluster $k$ | R$ | Percentil 5 ($p5$) de `capacidade_pagamento` no cluster. Proxy: `renda_estimada × 0,30` quando null |
+| $CP_k$ | Capacidade de pagamento do cluster $k$ | R\$ | Percentil 5 ($p5$) de `capacidade_pagamento` no cluster. Proxy: `renda_estimada × 0,30` quando null |
 | $m_k$ | Multiplicador de alavancagem do cluster $k$ | [0,3; 1,8] | Interpolado pela média de `score_credito_cross` do cluster. Diretriz do parceiro |
 | $t$ | Taxa de interchange | adimensional | 0,0175 (fornecido pelo parceiro) |
 | $\text{LGD}$ | Loss Given Default | [0, 1] | 0,60 (constante para todos os clusters) |
 | $\bar{u}$ | Utilização esperada do limite | [0, 1] | 0,75 (constante para todos os clusters) |
 | $\overline{PD}_{fin}^{atual}$ | Teto de inadimplência financeira | [0, 1] | Média ponderada (por limite) de PD da carteira aprovada vigente |
-| $L^{max}$ | Teto máximo de limite | R$ | 25.000 (diretriz do parceiro) |
-| $c_k$ | Coeficiente de retorno líquido unitário do cluster $k$ | R$/R$ | $c_k = \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})$ |
+| $L^{max}$ | Teto máximo de limite | R\$ | 25.000 (diretriz do parceiro) |
+| $c_k$ | Coeficiente de retorno líquido unitário do cluster $k$ | R\$/R\$ | $c_k = \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})$ |
 
 ---
 
@@ -131,7 +131,7 @@ O banco precisa de uma regra que diga, de forma sistemática, qual limite atribu
 
 Maximizar o retorno líquido é a métrica correta porque o produto em análise é exclusivamente o cartão de crédito pré-aprovado, onde toda a receita relevante vem do uso do cartão e toda a perda relevante vem do default. Minimizar inadimplência pura levaria o modelo a oferecer limites mínimos (trivialmente seguro, mas sem valor comercial). Maximizar receita bruta ignoraria o risco. O retorno líquido captura esse equilíbrio diretamente, e é também a métrica pela qual o parceiro avaliará o modelo: comparando a rentabilidade esperada entre o `limite_ofertado` praticado atualmente e o limite sugerido pelo modelo.
 
-**Justificativa da formulação:** A FO adota a forma **receita − perda** (sem ponderador $\lambda$), delegando o controle de risco inteiramente às restrições. Essa separação é preferível por três razões: (i) o parceiro define explicitamente os tetos de inadimplência como restrições, não como penalidades na FO; (ii) um ponderador $\lambda$ entre receita e perda introduziria um hiperparâmetro difícil de calibrar e de interpretar pelo parceiro; (iii) manter a FO como retorno líquido (R$) garante que todos os termos estejam na mesma unidade e escala. A receita é restrita a interchange sobre o volume transacionado, à taxa fixa de 1,75% fornecida pelo parceiro.
+**Justificativa da formulação:** A FO adota a forma **receita − perda** (sem ponderador $\lambda$), delegando o controle de risco inteiramente às restrições. Essa separação é preferível por três razões: (i) o parceiro define explicitamente os tetos de inadimplência como restrições, não como penalidades na FO; (ii) um ponderador $\lambda$ entre receita e perda introduziria um hiperparâmetro difícil de calibrar e de interpretar pelo parceiro; (iii) manter a FO como retorno líquido (R\$) garante que todos os termos estejam na mesma unidade e escala. A receita é restrita a interchange sobre o volume transacionado, à taxa fixa de 1,75% fornecida pelo parceiro.
 
 $$\max \sum_{k=1}^{K} n_k \cdot \left[\underbrace{\pi_k \cdot \bar{u} \cdot t \cdot L_k}_{\text{(A) Receita esperada}} \; - \; \underbrace{\pi_k \cdot PD_k \cdot \text{LGD} \cdot L_k}_{\text{(B) Perda esperada}}\right]$$
 
