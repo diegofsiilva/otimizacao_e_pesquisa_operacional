@@ -60,69 +60,61 @@ L2_opt = r1_slope * R2_L1
 fo_opt = fo_coef1 * L1_opt + fo_coef2 * L2_opt
 
 # --- Plot ---
-fig, ax = plt.subplots(1, 1, figsize=(10, 7))
+CONSTRAINT_COLOR = '#1565C0'
+FO_COLOR = '#D32F2F'
+
+fig, ax = plt.subplots(1, 1, figsize=(10, 7), facecolor='white')
 
 L1_max_plot = 8000
-L2_max_plot = 2000
+L2_max_plot = 1600
 
 # Região factível (preenchida)
-feasible = plt.Polygon(vertices[:-1], alpha=0.15, color='#2196F3', label='Região factível')
+feasible = plt.Polygon(vertices[:-1], alpha=0.12, color=CONSTRAINT_COLOR, label='Região factível')
 ax.add_patch(feasible)
-
-# Contorno da região factível
-ax.plot([0, R2_L1], [0, 0], color='#2196F3', linewidth=1.5)
-ax.plot([R2_L1, R2_L1], [0, r1_slope * R2_L1], color='#2196F3', linewidth=1.5)
-ax.plot([0, R2_L1], [0, r1_slope * R2_L1], color='#2196F3', linewidth=1.5)
 
 # R1 - Inadimplência financeira: L2 = r1_slope * L1
 L1_r1 = np.linspace(0, L1_max_plot, 300)
 L2_r1 = r1_slope * L1_r1
-ax.plot(L1_r1, L2_r1, color='#E53935', linewidth=2, linestyle='-',
+ax.plot(L1_r1, L2_r1, color=CONSTRAINT_COLOR, linewidth=2, linestyle='-',
         label=f'R1: Inadimplência financeira ($L_2 \\leq {r1_slope:.3f} \\cdot L_1$)')
 
 # R2 - Capacidade de pagamento L1
-ax.axvline(x=R2_L1, color='#43A047', linewidth=2, linestyle='--',
+ax.axvline(x=R2_L1, color=CONSTRAINT_COLOR, linewidth=2, linestyle='--',
            label=f'R2: Cap. pagamento ($L_1 \\leq {R2_L1:,.0f}$)')
 
 # R2 - Capacidade de pagamento L2
-ax.axhline(y=R2_L2, color='#7CB342', linewidth=2, linestyle='--',
+ax.axhline(y=R2_L2, color=CONSTRAINT_COLOR, linewidth=2, linestyle='--',
            label=f'R2: Cap. pagamento ($L_2 \\leq {R2_L2:,.0f}$)')
 
-# Curvas de nível da FO (isoprofit lines)
-fo_values = [fo_opt * 0.3, fo_opt * 0.6, fo_opt * 0.9, fo_opt]
-for i, fo_val in enumerate(fo_values):
-    L1_iso = np.linspace(0, L1_max_plot, 300)
-    L2_iso = (fo_val - fo_coef1 * L1_iso) / fo_coef2
-    alpha = 0.3 + 0.15 * i
-    ax.plot(L1_iso, L2_iso, color='#FF9800', linewidth=1, linestyle=':', alpha=alpha)
+# Reta da FO passando pelo ótimo (isoprofit no ponto ótimo)
+L1_fo = np.linspace(0, L1_max_plot, 300)
+L2_fo = (fo_opt - fo_coef1 * L1_fo) / fo_coef2
+mask = (L2_fo >= 0) & (L2_fo <= L2_max_plot)
+ax.plot(L1_fo[mask], L2_fo[mask], color=FO_COLOR, linewidth=2, linestyle='-.',
+        label=f'FO = {fo_opt:,.1f} (reta ótima)')
 
-# Label da última curva de nível (ótima)
-L1_label_pos = L1_opt * 0.45
-L2_label_pos = (fo_opt - fo_coef1 * L1_label_pos) / fo_coef2
-ax.annotate('Curvas de nível da FO\n(isoprofit)', xy=(L1_label_pos, L2_label_pos),
-            fontsize=8, color='#E65100', fontstyle='italic',
-            ha='center', va='bottom')
-
-# Gradiente da FO (seta)
-grad_scale = 800
-grad_origin = (2500, 200)
+# Gradiente da FO (seta perpendicular à reta, partindo de um ponto sobre ela)
+# Escolher ponto na reta da FO que esteja visível no gráfico
+grad_L2_start = 400  # ponto baixo na reta onde há espaço horizontal
+grad_L1_start = (fo_opt - fo_coef2 * grad_L2_start) / fo_coef1  # x correspondente na reta
+grad_scale = 300
 grad_dir = np.array([fo_coef1, fo_coef2])
 grad_dir = grad_dir / np.linalg.norm(grad_dir) * grad_scale
-ax.annotate('', xy=(grad_origin[0] + grad_dir[0], grad_origin[1] + grad_dir[1]),
-            xytext=grad_origin,
-            arrowprops=dict(arrowstyle='->', color='#E65100', lw=2.5))
-ax.text(grad_origin[0] + grad_dir[0] * 0.5 - 100,
-        grad_origin[1] + grad_dir[1] * 0.5 + 80,
-        '∇FO', fontsize=10, color='#E65100', fontweight='bold')
+ax.annotate('', xy=(grad_L1_start + grad_dir[0], grad_L2_start + grad_dir[1]),
+            xytext=(grad_L1_start, grad_L2_start),
+            arrowprops=dict(arrowstyle='->', color=FO_COLOR, lw=2.5))
+ax.text(grad_L1_start + grad_dir[0] + 80,
+        grad_L2_start + grad_dir[1],
+        '$\\nabla$ FO', fontsize=10, color=FO_COLOR, fontweight='bold')
 
 # Ponto ótimo
-ax.plot(L1_opt, L2_opt, 'o', color='#D32F2F', markersize=12, zorder=5,
+ax.plot(L1_opt, L2_opt, 'o', color=FO_COLOR, markersize=12, zorder=5,
         markeredgecolor='white', markeredgewidth=2)
-ax.annotate(f'  Ótimo\n  $L_1^* = {L1_opt:,.0f}$\n  $L_2^* = {L2_opt:,.0f}$\n  FO = {fo_opt:,.1f}',
-            xy=(L1_opt, L2_opt), xytext=(L1_opt + 300, L2_opt + 250),
-            fontsize=9, fontweight='bold', color='#D32F2F',
-            arrowprops=dict(arrowstyle='->', color='#D32F2F', lw=1.5),
-            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor='#D32F2F', alpha=0.9))
+ax.annotate(f'Ótimo\n$L_1^* = {L1_opt:,.0f}$\n$L_2^* = {L2_opt:,.0f}$\nFO = {fo_opt:,.1f}',
+            xy=(L1_opt, L2_opt), xytext=(L1_opt + 400, L2_opt + 200),
+            fontsize=9, fontweight='bold', color=FO_COLOR,
+            arrowprops=dict(arrowstyle='->', color=FO_COLOR, lw=1.5),
+            bbox=dict(boxstyle='round,pad=0.3', facecolor='white', edgecolor=FO_COLOR, alpha=0.9))
 
 # Eixos
 ax.set_xlabel('$L_1$ - Limite do Cluster 1 (baixo risco) [R\\$]', fontsize=11)
@@ -130,16 +122,14 @@ ax.set_ylabel('$L_2$ - Limite do Cluster 2 (risco moderado) [R\\$]', fontsize=11
 ax.set_title('Análise Gráfica - Região Factível e Solução Ótima\n(cenário reduzido com 2 clusters)',
              fontsize=13, fontweight='bold')
 
-ax.set_xlim(-200, L1_max_plot)
-ax.set_ylim(-100, L2_max_plot)
+ax.set_xlim(0, L1_max_plot)
+ax.set_ylim(0, L2_max_plot)
 ax.set_aspect('auto')
-ax.grid(True, alpha=0.3)
 ax.legend(loc='upper left', fontsize=9, framealpha=0.95)
 
-# Linha de R$200 (piso pós-otimização)
-ax.axhline(y=200, color='gray', linewidth=1, linestyle='-.', alpha=0.5)
-ax.axvline(x=200, color='gray', linewidth=1, linestyle='-.', alpha=0.5)
-ax.text(250, 50, 'Piso R\\$ 200\n(pós-otimização)', fontsize=7, color='gray', fontstyle='italic')
+# Remover spines superiores e direitas para visual limpo
+ax.spines['top'].set_visible(False)
+ax.spines['right'].set_visible(False)
 
 plt.tight_layout()
 
