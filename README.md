@@ -30,6 +30,7 @@
 * <a href="https://www.linkedin.com/in/laizaribeiro/overlay/about-this-profile/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base%3BvDPKMYeiQv61%2BZOyJ0mqaQ%3D%3D">Laíza Ribeiro Silva</a> 
 * <a href="https://www.linkedin.com/in/cristinagramani/overlay/about-this-profile/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base%3BH6oM1SXFT4mXsJc3YACb3g%3D%3D">Maria Cristina Nogueira Gramani</a> 
 * <a href="https://www.linkedin.com/in/natalia-k-37a62052/?lipi=urn%3Ali%3Apage%3Ad_flagship3_search_srp_all%3BFG3MRuOsSGaRvlfwQ3xXbA%3D%3D">Natalia Varela da Rocha Kloeckner</a>
+* <a href="https://www.linkedin.com/in/rodolfo-goya-6ab187?utm_source=share_via&utm_content=profile&utm_medium=member_ios">Rodolfo Goya</a>
 
 ## 📜 Descrição
 
