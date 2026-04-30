@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-<a href= "https://www.inteli.edu.br/"><img src="./logo_pan.jpg" alt="Banco Pan" border="0" width=40% height=40%></a>
+<a href= "https://www.inteli.edu.br/"><img src="./banco_pan.png" alt="Banco Pan" border="0" width=40% height=40%></a>
 </p>
 
 <br>
