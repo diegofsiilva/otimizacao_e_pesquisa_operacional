@@ -114,14 +114,14 @@ $L_k$ representa o valor do limite de crédito, em reais, atribuído a todos os 
 | $n_k$ | Número de clientes no cluster $k$ | inteiro positivo | Resultado da clusterização |
 | $PD_k$ | Probabilidade de default representativa do cluster $k$ | [0, 1] | Média de `pd_produto` dos clientes do cluster |
 | $\pi_k$ | Propensão à contratação do cluster $k$, normalizada | [0, 1] | Média de `score_propensao_contrato` normalizado min-max: $\pi_i = \frac{score_i - 3}{843}$ |
-| $CP_k$ | Capacidade de pagamento do cluster $k$ | R$ | Percentil 5 ($p5$) de `capacidade_pagamento` no cluster. Proxy: `renda_estimada × 0,30` quando null |
+| $CP_k$ | Capacidade de pagamento do cluster $k$ | R\$ | Percentil 5 ($p5$) de `capacidade_pagamento` no cluster. Proxy: `renda_estimada × 0,30` quando null |
 | $m_k$ | Multiplicador de alavancagem do cluster $k$ | [0,3; 1,8] | Interpolado pela média de `score_credito_cross` do cluster. Diretriz do parceiro |
 | $t$ | Taxa de interchange | adimensional | 0,0175 (fornecido pelo parceiro) |
 | $\text{LGD}$ | Loss Given Default | [0, 1] | 0,60 (constante para todos os clusters) |
 | $\bar{u}$ | Utilização esperada do limite | [0, 1] | 0,75 (constante para todos os clusters) |
 | $\overline{PD}_{fin}^{atual}$ | Teto de inadimplência financeira | [0, 1] | Média ponderada (por limite) de PD da carteira aprovada vigente |
-| $L^{max}$ | Teto máximo de limite | R$ | 25.000 (diretriz do parceiro) |
-| $c_k$ | Coeficiente de retorno líquido unitário do cluster $k$ | R$/R$ | $c_k = \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})$ |
+| $L^{max}$ | Teto máximo de limite | R\$ | 25.000 (diretriz do parceiro) |
+| $c_k$ | Coeficiente de retorno líquido unitário do cluster $k$ | R\$/R\$ | $c_k = \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})$ |
 
 ---
 
@@ -131,7 +131,7 @@ O banco precisa de uma regra que diga, de forma sistemática, qual limite atribu
 
 Maximizar o retorno líquido é a métrica correta porque o produto em análise é exclusivamente o cartão de crédito pré-aprovado, onde toda a receita relevante vem do uso do cartão e toda a perda relevante vem do default. Minimizar inadimplência pura levaria o modelo a oferecer limites mínimos (trivialmente seguro, mas sem valor comercial). Maximizar receita bruta ignoraria o risco. O retorno líquido captura esse equilíbrio diretamente, e é também a métrica pela qual o parceiro avaliará o modelo: comparando a rentabilidade esperada entre o `limite_ofertado` praticado atualmente e o limite sugerido pelo modelo.
 
-**Justificativa da formulação:** A FO adota a forma **receita − perda** (sem ponderador $\lambda$), delegando o controle de risco inteiramente às restrições. Essa separação é preferível por três razões: (i) o parceiro define explicitamente os tetos de inadimplência como restrições, não como penalidades na FO; (ii) um ponderador $\lambda$ entre receita e perda introduziria um hiperparâmetro difícil de calibrar e de interpretar pelo parceiro; (iii) manter a FO como retorno líquido (R$) garante que todos os termos estejam na mesma unidade e escala. A receita é restrita a interchange sobre o volume transacionado, à taxa fixa de 1,75% fornecida pelo parceiro.
+**Justificativa da formulação:** A FO adota a forma **receita − perda** (sem ponderador $\lambda$), delegando o controle de risco inteiramente às restrições. Essa separação é preferível por três razões: (i) o parceiro define explicitamente os tetos de inadimplência como restrições, não como penalidades na FO; (ii) um ponderador $\lambda$ entre receita e perda introduziria um hiperparâmetro difícil de calibrar e de interpretar pelo parceiro; (iii) manter a FO como retorno líquido (R\$) garante que todos os termos estejam na mesma unidade e escala. A receita é restrita a interchange sobre o volume transacionado, à taxa fixa de 1,75% fornecida pelo parceiro.
 
 $$\max \sum_{k=1}^{K} n_k \cdot \left[\underbrace{\pi_k \cdot \bar{u} \cdot t \cdot L_k}_{\text{(A) Receita esperada}} \; - \; \underbrace{\pi_k \cdot PD_k \cdot \text{LGD} \cdot L_k}_{\text{(B) Perda esperada}}\right]$$
 
@@ -145,7 +145,7 @@ onde $n_k$ é o número de clientes no cluster $k$ e $c_k$ é o **coeficiente de
 
 **Termo (A) - Receita:** $\pi_k \cdot \bar{u} \cdot t \cdot L_k$ é a receita de interchange esperada por cliente do cluster $k$. O cliente contrata com probabilidade $\pi_k$ (média do cluster, derivada de `score_propensao_contrato` normalizado via min-max). O contratante utiliza uma fração $\bar{u} = 0{,}75$ do limite, e o banco recebe taxa de interchange $t = 0{,}0175$ sobre o volume transacionado.
 
-**Termo (B) - Perda:** $\pi_k \cdot PD_k \cdot \text{LGD} \cdot L_k$ é a perda esperada por inadimplência por cliente do cluster $k$. A perda só se materializa para clientes que efetivamente contratam (com probabilidade $\pi_k$), e entre estes, uma fração $PD_k$ entra em default. $\text{LGD} = 0{,}60$ é a fração do saldo exposto que o banco perde em caso de default (os 40% restantes são recuperados via cobrança ou cessão), e $L_k$ é a exposição.
+**Termo (B) - Perda:** $\pi_k \cdot PD_k \cdot \text{LGD} \cdot L_k$ é a perda esperada por inadimplência por cliente do cluster $k$. A perda só se materializa para clientes que efetivamente contratam (com probabilidade $\pi_k$), e entre estes, uma fração $PD_k$ entra em default. $\text{LGD} = 0{,}60$ é a fração do saldo exposto que o banco perde em caso de default (os 40% restantes são recuperados via cobrança ou cessão), e $L_k$ é a exposição. Note que a perda utiliza $L_k$ integral (sem o fator $\bar{u}$), diferentemente da receita. Isso é intencional: a exposição no momento do default (EAD) considera o limite inteiro porque, na prática, clientes inadimplentes tendem a utilizar uma fração do limite significativamente superior à média antes de cessar pagamentos. Essa é uma premissa padrão em modelos de risco de crédito para cartão (Resolução CMN 4.966/2021). Em sprints futuros, essa premissa pode ser refinada com um fator de utilização pré-default ($\bar{u}_{default}$) calibrado a partir de dados da carteira.
 
 **Coeficiente $c_k$:** O retorno líquido unitário $c_k = \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})$ resume a rentabilidade marginal de cada real alocado ao cluster $k$. Como $\pi_k > 0$, o sinal de $c_k$ depende exclusivamente de $\bar{u} \cdot t$ vs. $PD_k \cdot \text{LGD}$: clusters com $PD_k < \frac{\bar{u} \cdot t}{\text{LGD}}$ são rentáveis. Clusters com $c_k > 0$ são rentáveis; clusters com $c_k \leq 0$ destroem valor a cada real adicional de limite; para estes, o solver naturalmente atribui $L_k = 0$. O coeficiente $n_k \cdot c_k$ é o coeficiente objetivo do LP: o solver tende a maximizar $L_k$ para clusters com maior $c_k$, limitado pelas restrições.
 
@@ -207,7 +207,7 @@ $$L_k^{\text{final}} = \begin{cases} 50 \cdot \left\lceil \dfrac{L_k}{50} \right
 
 **Limitação 1 - LGD uniforme:** O modelo adota $\text{LGD} = 0{,}60$ constante, mas a taxa de recuperação varia por perfil (clientes com renda alta tendem a ter LGD menor). Isso superestima a perda para perfis de baixo risco e subestima para alto risco, distorcendo $c_k$ e a alocação ótima.
 
-**Limitação 2 - `capacidade_pagamento` null em M2/M3:** A restrição R3 ($L_i \leq m_i \cdot CP_i$) depende diretamente de $CP_i$. Em M2 e M3, 42–43% dos clientes elegíveis não têm essa variável, tornando R3 inaplicável para quase metade da base. A proxy adotada ($CP_i = \text{renda\_estimada}_i \times 0{,}30$) subestima a capacidade real de clientes com múltiplas fontes de renda, reduzindo artificialmente o teto de $L_i$ para esse grupo. Tratamento: solicitar ao parceiro a imputação de $CP_i$ para M2/M3 ou calibrar o fator 0,30 com dados da carteira aprovada.
+**Limitação 2 - `capacidade_pagamento` null em M2/M3:** A restrição R2 ($L_k \leq m_k \cdot CP_k$) depende diretamente de $CP_k$. Em M2 e M3, 42–43% dos clientes elegíveis não têm essa variável, tornando R2 inaplicável para quase metade da base. A proxy adotada ($CP_k = \text{renda\_estimada} \times 0{,}30$) subestima a capacidade real de clientes com múltiplas fontes de renda, reduzindo artificialmente o teto de $L_k$ para esse grupo. Tratamento: solicitar ao parceiro a imputação de $CP$ para M2/M3 ou calibrar o fator 0,30 com dados da carteira aprovada.
 
 **Sensibilidade - $\bar{u}$:** A utilização entra linearmente em $c_k$. Variando $\bar{u}$ de 0,50 a 0,90, o sinal de $c_k$ muda para clusters de PD moderada, alterando quais clusters recebem oferta. Uma redução de 0,75 para 0,50 concentraria a solução em perfis de baixíssimo risco, reduzindo volume e retorno total.
 
@@ -251,7 +251,13 @@ As restrições delimitam a região factível no plano $(L_1, L_2)$:
 
 O gráfico abaixo apresenta a região factível (área sombreada), as retas das restrições e as curvas de nível da função objetivo. A solução ótima encontra-se no vértice da região factível que maximiza o retorno líquido, indicado pelo ponto destacado.
 
-*Gráfico a ser regenerado com os parâmetros corrigidos.*
+<div align="center">
+
+![Análise Gráfica do Problema de Otimização](assets/analise_grafica_otimizacao.png)
+
+</div>
+
+<div align="center">Fonte: Material produzido pelos autores</div>
 
 ### 3.4 Interpretação
 
@@ -260,6 +266,8 @@ A análise gráfica evidencia visualmente aspectos importantes do modelo:
 - **Trade-off entre clusters:** O gradiente da FO aponta predominantemente na direção de $L_1$ (coeficiente 4,77 vs 2,25), confirmando que o solver prioriza alocação ao cluster mais rentável (menor PD, maior propensão). Com LGD = 0,60, ambos os clusters são significativamente mais rentáveis do que com LGD = 1, e a diferença relativa entre eles diminui.
 - **Restrição ativa:** A restrição R1 (inadimplência financeira) é a que mais limita a solução ótima: ela impõe que $L_2 \leq 0{,}185 \cdot L_1$, restringindo o limite do cluster de risco moderado. Relaxar o teto de inadimplência permitiria alocar mais limite a esse cluster, aumentando o retorno mas elevando o risco da carteira. A restrição R2 limita $L_1$ ao teto de capacidade de pagamento alavancada (R\$ 6.000).
 - **Solução ótima:** O ponto ótimo se encontra na interseção de R2 ($L_1 = 6\,000$) com R1 ($L_2 = 0{,}185 \times 6\,000 \approx 1\,111$), demonstrando que ambas as restrições estão ativas na solução.
+
+A região factível neste cenário reduzido assume formato triangular (cunha) porque a restrição R1 ($L_2 \leq 0{,}185 \cdot L_1$) é dominante: ela limita $L_2$ antes que a restrição R2 de capacidade de pagamento do cluster 2 ($L_2 \leq 1.200$) se torne ativa. Essa geometria reflete os parâmetros ilustrativos escolhidos e tende a se tornar mais equilibrada à medida que o modelo for refinado com dados reais e parâmetros calibrados nas próximas sprints.
 
 Esta visualização, embora simplificada para dois clusters, demonstra que a estrutura do problema (função objetivo linear, restrições lineares, região factível) se comporta conforme esperado para um LP, e que as restrições impostas são coerentes com os objetivos de negócio do parceiro.
 
