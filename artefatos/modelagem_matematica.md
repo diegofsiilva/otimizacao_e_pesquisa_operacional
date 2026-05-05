@@ -275,9 +275,25 @@ Esta visualização, embora simplificada para dois clusters, demonstra que a est
 
 ### 4. Análise de Sensibilidade
 
-### 4.1 Aplicação prática da análise de sensibilidade
+### 4.1 Aplicação prática
 
 A solução ótima produzida pelo LP ( um vetor de limites $L_k^*$ para cada cluster de clientes ) é calculada com base em parâmetros que representam estimativas do comportamento esperado da carteira: probabilidade de default, propensão à contratação, taxa de utilização do limite, capacidade de pagamento. No mundo real, nenhum desses parâmetros é fixo. Eles variam em função de ciclos econômicos, mudanças no perfil dos correntistas, pressões competitivas e decisões regulatórias. Nesse sentido, a análise de sensibilidade não é um exercício complementar ao modelo: ela é parte integrante do processo de decisão, pois determina **até onde os parâmetros podem se mover sem invalidar a política de limites vigente**.
+
+A decisão em questão é tomada pela área de crédito do Banco Pan, que precisa calibrar os limites pré-aprovados por perfil de cliente. Uma política mal calibrada tem custo duplo: se os limites forem generosos demais em relação ao risco real, a inadimplência sobe e corrói o retorno; se forem conservadores demais, a receita de interchange cai e o cliente migra para um concorrente que oferece condições melhores. Esse trade-off é estrutural ao problema e não desaparece com a otimização (ele apenas é gerido de forma mais explícita). A análise de sensibilidade permite à área de crédito monitorar continuamente quão próximos os parâmetros reais estão dos limites em que a política precisaria ser revista, transformando o LP de uma ferramenta de cálculo pontual em um instrumento de gestão dinâmica da carteira.
+
+#### Identificação de parâmetros
+
+No modelo formulado, o coeficiente de retorno líquido unitário de cada cluster é dado por:
+
+$$c_k = \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})$$
+
+O sinal de $c_k$ determina se o cluster cria ou destrói valor: quando $c_k > 0$, o solver aloca o máximo de limite permitido pelas restrições; quando $c_k \leq 0$, o limite ótimo é zero (sem oferta). O ponto de indiferença ,onde $c_k$ muda de sinal, ocorre quando:
+
+$$PD_k = \frac{\bar{u} \cdot t}{\text{LGD}} = \frac{0{,}75 \times 0{,}0175}{0{,}60} \approx 0{,}0219$$
+
+Isso significa que qualquer cluster com $PD_k > 2{,}19\%$ destrói valor e, racionalmente, não deveria receber oferta. Como a mediana de `pd_produto` na base é 0,71 (muito acima desse limiar), a **seleção de quais clusters recebem oferta é tão crítica quanto a calibração do limite em si**. Pequenas variações em $PD_k$ podem cruzar essa fronteira e alterar radicalmente a composição da carteira ótima, razão pela qual esse é o parâmetro de maior sensibilidade no modelo.
+
+Em contraste, a taxa de interchange $t = 0{,}0175$ é fixada contratualmente com as bandeiras e tem variação previsível e infrequente. Já a utilização esperada $\bar{u} = 0{,}75$ entra linearmente em $c_k$, mas afeta todos os clusters na mesma direção e proporção, não alterando a **ordem de rentabilidade relativa** entre eles, apenas a escala. Esses parâmetros são menos críticos do ponto de vista operacional.
 
 ---
 
