@@ -273,6 +273,14 @@ Esta visualização, embora simplificada para dois clusters, demonstra que a est
 
 ---
 
+### 4. Análise de Sensibilidade
+
+### 4.1 Aplicação prática da análise de sensibilidade
+
+A solução ótima produzida pelo LP ( um vetor de limites $L_k^*$ para cada cluster de clientes ) é calculada com base em parâmetros que representam estimativas do comportamento esperado da carteira: probabilidade de default, propensão à contratação, taxa de utilização do limite, capacidade de pagamento. No mundo real, nenhum desses parâmetros é fixo. Eles variam em função de ciclos econômicos, mudanças no perfil dos correntistas, pressões competitivas e decisões regulatórias. Nesse sentido, a análise de sensibilidade não é um exercício complementar ao modelo: ela é parte integrante do processo de decisão, pois determina **até onde os parâmetros podem se mover sem invalidar a política de limites vigente**.
+
+---
+
 ## Fontes
 
 1. FICO. [How Decision Optimization Improves Credit Line Management](https://www.fico.com/blogs/how-decision-optimization-improves-credit-line-management). FICO Blog.
