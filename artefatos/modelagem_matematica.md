@@ -295,6 +295,53 @@ Para o Banco Pan, isso se traduz em um protocolo de monitoramento por safra: a �
 
 A análise de sensibilidade, portanto, não apenas informa a decisão de hoje, ela estrutura o processo de decisão ao longo do tempo, tornando a política de crédito ao mesmo tempo mais rigorosa e mais ágil diante de um ambiente em permanente mudança.
 
+### 4.2 Variações na função objetivo
+
+Na programação linear, a análise de sensibilidade dos coeficientes da função objetivo determina o **intervalo de variação** dentro do qual cada coeficiente $n_k \cdot c_k$ pode se mover sem que a solução ótima (base ótima) se altere. Enquanto os coeficientes permanecem nesse intervalo, os mesmos vértices da região factível continuam ótimos: apenas o valor da FO muda, não a decisão de alocação. Quando um coeficiente ultrapassa o limite do intervalo, uma restrição diferente se torna ativa (ou deixa de ser), e a solução ótima migra para outro vértice do poliedro factível.
+
+No modelo de limites pré-aprovados, o coeficiente objetivo do cluster $k$ é $n_k \cdot c_k$, onde $c_k = \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})$. Uma variação em $c_k$ pode decorrer de: (i) revisão da $PD_k$ estimada por modelos de scoring atualizados; (ii) mudança na propensão $\pi_k$ por efeito de campanhas de marketing ou sazonalidade; ou (iii) alteração na utilização $\bar{u}$ observada por safra. Qualquer desses movimentos altera o coeficiente e, potencialmente, a decisão ótima.
+
+#### Exemplo numérico: cenário reduzido de dois clusters
+
+Retomando o cenário da Seção 3, com dois clusters e solução ótima em $(L_1^* = 6\,000,\; L_2^* = 1\,111)$:
+
+| Cluster | $n_k$ | $c_k$ | Coeficiente da FO ($n_k \cdot c_k$) |
+| :-----: | :----: | :----: | :----------------------------------: |
+| 1 | 500 | 0,00954 | 4,77 |
+| 2 | 300 | 0,00751 | 2,25 |
+
+A FO é $\max \; 4{,}77 \cdot L_1 + 2{,}25 \cdot L_2$, e a solução ótima se encontra na interseção de R1 ($L_2 = 0{,}185 \cdot L_1$) com R2 ($L_1 = 6\,000$). O valor ótimo da FO é:
+
+$$Z^* = 4{,}77 \times 6\,000 + 2{,}25 \times 1\,111 = 28\,620 + 2\,500 = 31\,120 \text{ (R\$/período)}$$
+
+**Variação no coeficiente do Cluster 1:** Suponha que a $PD_1$ estimada suba de 0,200% para 0,215% (aumento de 7,5%), refletindo uma deterioração marginal do perfil de risco. O novo $c_1$ seria:
+
+$$c_1' = 0{,}80 \times (0{,}01313 - 0{,}00215 \times 0{,}60) = 0{,}80 \times (0{,}01313 - 0{,}00129) = 0{,}80 \times 0{,}01184 = 0{,}00947$$
+
+O novo coeficiente objetivo passa de 4,77 para $500 \times 0{,}00947 = 4{,}74$. A solução ótima permanece no mesmo vértice $(6\,000;\; 1\,111)$, e apenas o valor da FO diminui para $4{,}74 \times 6\,000 + 2{,}25 \times 1\,111 = 30\,940$. A perda marginal é de R\$ 180/período, mas a política de limites **não precisa ser alterada**.
+
+**Variação no coeficiente do Cluster 2:** Agora suponha que a $PD_2$ suba de 0,400% para 2,19% (o ponto de indiferença $\bar{u} \cdot t / \text{LGD}$). Nesse caso:
+
+$$c_2' = 0{,}70 \times (0{,}01313 - 0{,}0219 \times 0{,}60) = 0{,}70 \times (0{,}01313 - 0{,}01314) = 0{,}70 \times (-0{,}00001) \approx 0$$
+
+O coeficiente objetivo do cluster 2 cai para zero: cada real adicional alocado a esse cluster não gera retorno. Se $PD_2$ ultrapassar 2,19%, $c_2$ se torna negativo e o solver reduz $L_2^*$ a zero, e o cluster deixa de receber oferta. Essa transição ilustra uma **mudança de base**: a restrição R1 deixa de ser ativa (pois não há mais trade-off entre clusters) e a solução migra para o vértice $(6\,000;\; 0)$, com retorno $Z^* = 4{,}77 \times 6\,000 = 28\,620$.
+
+#### Resumo do impacto
+
+| Perturbação | Efeito no coeficiente | Efeito na solução | Ação necessária |
+| :---------- | :-------------------- | :---------------- | :-------------- |
+| $PD_1$: 0,200% → 0,215% (+7,5%) | $n_1 c_1$: 4,77 → 4,74 (−0,6%) | Mesma base ótima, FO cai R\$ 180 | Nenhuma (dentro do intervalo de estabilidade) |
+| $PD_2$: 0,400% → 2,19% (+448%) | $n_2 c_2$: 2,25 → ≈ 0 | Cluster 2 perde oferta, mudança de base | Reotimizar; revisar política para o perfil |
+| $PD_2$: 0,400% → 0,350% (−12,5%) | $n_2 c_2$: 2,25 → 2,38 (+5,8%) | Mesma base ótima, FO sobe R\$ 144 | Nenhuma (melhoria dentro do intervalo) |
+
+A assimetria é reveladora: o coeficiente do cluster 1 suporta variações amplas sem alterar a decisão (porque está longe do ponto de indiferença), enquanto o cluster 2 está mais próximo da fronteira de rentabilidade zero. Isso confirma, no nível da FO, a hierarquia de sensibilidade identificada na Seção 4.1: clusters com $PD_k$ próximo ao limiar $\bar{u} \cdot t / \text{LGD}$ são os que exigem monitoramento mais frequente, pois pequenas oscilações nos seus parâmetros podem causar descontinuidades na política ótima.
+
+#### Limitações desta análise e necessidade de validação empírica
+
+É importante reconhecer que a análise de sensibilidade apresentada acima opera sobre a estrutura teórica do modelo, não sobre resultados observados. Ela indica *como* a solução reagiria a perturbações nos coeficientes, mas não é capaz de responder se a função objetivo, tal como formulada, captura adequadamente a dinâmica real de rentabilidade da carteira. Essa validação só será possível quando o modelo for executado com dados reais e os resultados forem confrontados com o desempenho observado da carteira vigente. Especificamente, apenas o backtesting por safra permitirá identificar se há termos relevantes ausentes na FO (como custo de funding, receita de rotativo ou efeitos de retenção) cuja omissão distorce sistematicamente a alocação ótima. Até lá, a formulação atual representa a melhor aproximação possível com os dados e parâmetros disponíveis, e sua estrutura linear permite incorporar novos termos sem alterar a arquitetura do modelo.
+
+Essa modularidade da FO é, inclusive, um dos pilares do produto entregue ao parceiro. O time de políticas de crédito do Banco Pan, que opera e calibra as regras de concessão no dia a dia, não necessariamente possui o perfil técnico para intervir diretamente no código do modelo de otimização. O sistema desenvolvido neste projeto expõe os parâmetros críticos identificados pela análise de sensibilidade (como $\overline{PD}_{fin}^{atual}$, $\bar{u}$, LGD e os multiplicadores $m_k$) em uma interface acessível, permitindo que a área de crédito ajuste o apetite de risco e reotimize a carteira sem depender da equipe de data science para cada iteração. A análise de sensibilidade, portanto, não apenas informa quais parâmetros monitorar, mas determina quais controles devem ser expostos ao usuário final da ferramenta, priorizando aqueles cuja variação mais impacta a política ótima.
+
 ---
 
 ## Fontes
