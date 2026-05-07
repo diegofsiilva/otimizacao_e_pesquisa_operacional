@@ -28,7 +28,7 @@ arquivo_csv = Path("../data/csv/" + sys.argv[1])
 arquivo_json = Path(sys.argv[2])
 
 if not arquivo_csv.exists():
-    print(f"Erro: arquivo CSV não encontrado em data/csv/reduced/")
+    print(f"Erro: arquivo CSV não encontrado em data/csv/")
     sys.exit(1)
 
 if not arquivo_json.exists():
