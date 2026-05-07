@@ -34,3 +34,7 @@ if not arquivo_csv.exists():
 if not arquivo_json.exists():
     print(f"Erro: arquivo JSON não encontrado: {arquivo_json}")
     sys.exit(1)
+
+df = pd.read_csv(arquivo_csv)
+print(f"Dados carregados: {len(df)} linhas, {len(df.columns)} colunas")
+
