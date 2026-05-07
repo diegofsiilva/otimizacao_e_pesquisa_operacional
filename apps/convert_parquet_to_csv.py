@@ -29,6 +29,7 @@ if not arquivo_entrada.exists():
     print("O arquivo de entrada não existe em data/")
     sys.exit(1)
 
+print(f"Lendo {arquivo_entrada}...")
 df = pd.read_parquet(arquivo_entrada)
 df.to_csv(arquivo_saida, index=False)
 print(f"Arquivo {arquivo_entrada} convertido com sucesso para {arquivo_saida}")
