@@ -342,6 +342,17 @@ A assimetria é reveladora: o coeficiente do cluster 1 suporta variações ampla
 
 Essa modularidade da FO é, inclusive, um dos pilares do produto entregue ao parceiro. O time de políticas de crédito do Banco Pan, que opera e calibra as regras de concessão no dia a dia, não necessariamente possui o perfil técnico para intervir diretamente no código do modelo de otimização. O sistema desenvolvido neste projeto expõe os parâmetros críticos identificados pela análise de sensibilidade (como $\overline{PD}_{fin}^{atual}$, $\bar{u}$, LGD e os multiplicadores $m_k$) em uma interface acessível, permitindo que a área de crédito ajuste o apetite de risco e reotimize a carteira sem depender da equipe de data science para cada iteração. A análise de sensibilidade, portanto, não apenas informa quais parâmetros monitorar, mas determina quais controles devem ser expostos ao usuário final da ferramenta, priorizando aqueles cuja variação mais impacta a política ótima.
 
+### 4.3 Restrições e preços-sombra
+
+#### O que os limites das restrições revelam
+
+No modelo de otimização de limites pré-aprovados, as restrições não são apenas barreiras técnicas: elas representam escolhas de política. A restrição R1 codifica o apetite de risco da instituição, ao impor que a inadimplência financeira ponderada da carteira não supere o nível atual ($\overline{PD}_{fin}^{atual}$). A restrição R2 traduz uma diretriz de proteção ao cliente, ao limitar cada limite ofertado a um múltiplo da capacidade de pagamento estimada ($L_k \leq m_k \cdot CP_k$). Alterar os parâmetros dessas restrições não é uma operação puramente técnica: é uma decisão de negócio com consequências diretas sobre o retorno e o risco da carteira.
+
+Quando uma restrição está **ativa** na solução ótima (ou seja, está satisfeita com igualdade), ela está de fato limitando o retorno: o solver chegou até aquele teto e não pode ir além. No cenário reduzido de dois clusters, tanto R1 quanto R2 estão ativas na solução $(L_1^* = 6\,000;\; L_2^* \approx 1\,111)$. Isso significa que relaxar qualquer uma delas permitiria ao modelo encontrar uma solução ainda melhor. Quando uma restrição está **inativa** (folga positiva), ela não limita a solução atual e relaxá-la não geraria ganho imediato.
+
+Esse diagnóstico, por si só, já orienta decisões: antes de investir em melhorias operacionais que ampliem a capacidade de pagamento estimada dos clientes (R2) ou que permitam aceitar maior inadimplência agregada (R1), o gestor precisa saber qual das duas é de fato o gargalo. A análise das restrições ativas responde a essa pergunta diretamente.
+
+
 ---
 
 ## Fontes
