@@ -69,7 +69,7 @@ A tabela a seguir detalha as 17 variáveis fornecidas, com estatísticas descrit
 
 **Variáveis não fornecidas que seriam relevantes:**
 
-- **LGD (Loss Given Default):** Adotamos $\text{LGD} = 0{,}60$, indicando que, em caso de default, o banco perde 60% do saldo exposto (recuperando 40% via cobrança ou cessão de carteira). Esse valor é uma simplificação uniforme para todos os clusters. Idealmente, a LGD seria diferenciada por perfil de risco, mas essa granularidade ainda não está disponível.
+- **LGD (Loss Given Default):** Adotamos $\text{LGD} = 0{,}80$, indicando que, em caso de default, o banco perde 80% do saldo exposto (recuperando 20% via cobrança ou cessão de carteira). Esse valor é uma simplificação uniforme para todos os clusters, conservador em relação à média de mercado para cartão de crédito sem garantia. Idealmente, a LGD seria diferenciada por perfil de risco, mas essa granularidade ainda não está disponível.
 - **Utilização esperada do limite:** Adotamos constante $\bar{u} = 0{,}75$ (75% do limite concedido). Esse valor reflete uma estimativa conservadora de uso efetivo do cartão. Idealmente, $\bar{u}_k$ seria estimada por perfil de cluster a partir de dados de ativação, mas esses dados ainda não estão disponíveis.
 
 ---
@@ -116,12 +116,13 @@ $L_k$ representa o valor do limite de crédito, em reais, atribuído a todos os 
 | $\pi_k$ | Propensão à contratação do cluster $k$, normalizada | [0, 1] | Média de `score_propensao_contrato` normalizado min-max: $\pi_i = \frac{score_i - 3}{843}$ |
 | $CP_k$ | Capacidade de pagamento do cluster $k$ | R\$ | Percentil 5 ($p5$) de `capacidade_pagamento` no cluster. Proxy: `renda_estimada × 0,30` quando null |
 | $m_k$ | Multiplicador de alavancagem do cluster $k$ | [0,3; 1,8] | Interpolado pela média de `score_credito_cross` do cluster. Diretriz do parceiro |
-| $t$ | Taxa de interchange | adimensional | 0,0175 (fornecido pelo parceiro) |
-| $\text{LGD}$ | Loss Given Default | [0, 1] | 0,60 (constante para todos os clusters) |
+| $t$ | Taxa de interchange (mensal) | adimensional | 0,0175 (fornecido pelo parceiro) |
+| $T$ | Horizonte de receita | meses | 12 (anualização da receita mensal) |
+| $\text{LGD}$ | Loss Given Default | [0, 1] | 0,80 (constante para todos os clusters) |
 | $\bar{u}$ | Utilização esperada do limite | [0, 1] | 0,75 (constante para todos os clusters) |
 | $\overline{PD}_{fin}^{atual}$ | Teto de inadimplência financeira | [0, 1] | Média ponderada (por limite) de PD da carteira aprovada vigente |
 | $L^{max}$ | Teto máximo de limite | R\$ | 25.000 (diretriz do parceiro) |
-| $c_k$ | Coeficiente de retorno líquido unitário do cluster $k$ | R\$/R\$ | $c_k = \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})$ |
+| $c_k$ | Coeficiente de retorno líquido unitário do cluster $k$ | R\$/R\$ | $c_k = \pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k \cdot \text{LGD})$ |
 
 ---
 
@@ -131,25 +132,31 @@ O banco precisa de uma regra que diga, de forma sistemática, qual limite atribu
 
 Maximizar o retorno líquido é a métrica correta porque o produto em análise é exclusivamente o cartão de crédito pré-aprovado, onde toda a receita relevante vem do uso do cartão e toda a perda relevante vem do default. Minimizar inadimplência pura levaria o modelo a oferecer limites mínimos (trivialmente seguro, mas sem valor comercial). Maximizar receita bruta ignoraria o risco. O retorno líquido captura esse equilíbrio diretamente, e é também a métrica pela qual o parceiro avaliará o modelo: comparando a rentabilidade esperada entre o `limite_ofertado` praticado atualmente e o limite sugerido pelo modelo.
 
-**Justificativa da formulação:** A FO adota a forma **receita − perda** (sem ponderador $\lambda$), delegando o controle de risco inteiramente às restrições. Essa separação é preferível por três razões: (i) o parceiro define explicitamente os tetos de inadimplência como restrições, não como penalidades na FO; (ii) um ponderador $\lambda$ entre receita e perda introduziria um hiperparâmetro difícil de calibrar e de interpretar pelo parceiro; (iii) manter a FO como retorno líquido (R\$) garante que todos os termos estejam na mesma unidade e escala. A receita é restrita a interchange sobre o volume transacionado, à taxa fixa de 1,75% fornecida pelo parceiro.
+**Justificativa da formulação:** A FO adota a forma **receita − perda** (sem ponderador $\lambda$), delegando o controle de risco inteiramente às restrições. Essa separação é preferível por três razões: (i) o parceiro define explicitamente os tetos de inadimplência como restrições, não como penalidades na FO; (ii) um ponderador $\lambda$ entre receita e perda introduziria um hiperparâmetro difícil de calibrar e de interpretar pelo parceiro; (iii) manter a FO como retorno líquido (R\$) garante que todos os termos estejam na mesma unidade e escala. A receita é restrita a interchange sobre o volume transacionado, à taxa fixa mensal de 1,75% fornecida pelo parceiro, acumulada ao longo de $T = 12$ meses para compatibilizar o horizonte temporal com a perda esperada.
 
-$$\max \sum_{k=1}^{K} n_k \cdot \left[\underbrace{\pi_k \cdot \bar{u} \cdot t \cdot L_k}_{\text{(A) Receita esperada}} \; - \; \underbrace{\pi_k \cdot PD_k \cdot \text{LGD} \cdot L_k}_{\text{(B) Perda esperada}}\right]$$
+**Correção temporal da FO:** A formulação incorpora o fator $T = 12$ na receita para garantir consistência temporal entre os termos. A taxa de interchange $t = 0{,}0175$ é uma taxa mensal (o cliente cicla utilização e pagamento aproximadamente uma vez por mês), enquanto a variável `pd_produto` opera em janela anual. Sem o fator $T$, a FO compararia uma receita de um único mês contra uma perda anual, gerando um limiar de rentabilidade individual de $PD_k < \bar{u} \cdot t / \text{LGD} \approx 1{,}64\%$ — valor abaixo do mínimo de `pd_produto` na base (2,8%), o que tornaria todos os clusters inviáveis e o modelo incapaz de alocar limite a qualquer cliente.
+
+A evidência de que `pd_produto` opera em janela anual vem da comparação com a inadimplência realizada na safra M3. Entre os 7.465 clientes com `over30mob3` observado (inadimplência >30 dias em janela de 3 meses), a taxa de default realizada foi de 7,45%, enquanto a PD média desse grupo foi de 32,83% — uma razão de aproximadamente 4,4×. Sob a hipótese de hazard aproximadamente constante, a razão teórica entre uma PD anual e uma PD trimestral é $\approx 3{,}6$, consistente com a observação. Hipóteses alternativas ($H_{3m}$: razão = 1; $H_{24m}$: razão $\geq 6{,}4$) são descartadas pela magnitude da razão observada. A diferença residual entre a razão observada (4,4) e a teórica (3,6) sugere over-prediction moderada do modelo de scoring interno, o que é esperado em modelos calibrados com margem de conservadorismo.
+
+Com $T = 12$, o limiar de rentabilidade sobe para $PD_k < T \cdot \bar{u} \cdot t / \text{LGD} = 19{,}69\%$, valor coerente com o perfil da carteira pré-aprovada e que permite ao solver alocar limites ao subconjunto de clusters que efetivamente geram valor.
+
+$$\max \sum_{k=1}^{K} n_k \cdot \left[\underbrace{\pi_k \cdot T \cdot \bar{u} \cdot t \cdot L_k}_{\text{(A) Receita anual esperada}} \; - \; \underbrace{\pi_k \cdot PD_k \cdot \text{LGD} \cdot L_k}_{\text{(B) Perda anual esperada}}\right]$$
 
 Fatorando $L_k$ e $\pi_k$:
 
-$$\max \sum_{k=1}^{K} n_k \cdot \underbrace{\pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})}_{c_k} \cdot L_k$$
+$$\max \sum_{k=1}^{K} n_k \cdot \underbrace{\pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k \cdot \text{LGD})}_{c_k} \cdot L_k$$
 
 onde $n_k$ é o número de clientes no cluster $k$ e $c_k$ é o **coeficiente de retorno líquido unitário** do cluster $k$. O fator $n_k$ garante que clusters maiores tenham peso proporcional ao número de clientes que representam.
 
 #### Interpretação da função objetivo
 
-**Termo (A) - Receita:** $\pi_k \cdot \bar{u} \cdot t \cdot L_k$ é a receita de interchange esperada por cliente do cluster $k$. O cliente contrata com probabilidade $\pi_k$ (média do cluster, derivada de `score_propensao_contrato` normalizado via min-max). O contratante utiliza uma fração $\bar{u} = 0{,}75$ do limite, e o banco recebe taxa de interchange $t = 0{,}0175$ sobre o volume transacionado.
+**Termo (A) - Receita:** $\pi_k \cdot T \cdot \bar{u} \cdot t \cdot L_k$ é a receita anual de interchange esperada por cliente do cluster $k$. O cliente contrata com probabilidade $\pi_k$ (média do cluster, derivada de `score_propensao_contrato` normalizado via min-max). O contratante utiliza uma fração $\bar{u} = 0{,}75$ do limite a cada mês, o banco recebe taxa de interchange $t = 0{,}0175$ sobre o volume transacionado mensal, e a receita é acumulada ao longo de $T = 12$ meses para compatibilizar com o horizonte anual da PD.
 
-**Termo (B) - Perda:** $\pi_k \cdot PD_k \cdot \text{LGD} \cdot L_k$ é a perda esperada por inadimplência por cliente do cluster $k$. A perda só se materializa para clientes que efetivamente contratam (com probabilidade $\pi_k$), e entre estes, uma fração $PD_k$ entra em default. $\text{LGD} = 0{,}60$ é a fração do saldo exposto que o banco perde em caso de default (os 40% restantes são recuperados via cobrança ou cessão), e $L_k$ é a exposição. Note que a perda utiliza $L_k$ integral (sem o fator $\bar{u}$), diferentemente da receita. Isso é intencional: a exposição no momento do default (EAD) considera o limite inteiro porque, na prática, clientes inadimplentes tendem a utilizar uma fração do limite significativamente superior à média antes de cessar pagamentos. Essa é uma premissa padrão em modelos de risco de crédito para cartão (Resolução CMN 4.966/2021). Em sprints futuros, essa premissa pode ser refinada com um fator de utilização pré-default ($\bar{u}_{default}$) calibrado a partir de dados da carteira.
+**Termo (B) - Perda:** $\pi_k \cdot PD_k \cdot \text{LGD} \cdot L_k$ é a perda anual esperada por inadimplência por cliente do cluster $k$. A perda só se materializa para clientes que efetivamente contratam (com probabilidade $\pi_k$), e entre estes, uma fração $PD_k$ entra em default ao longo do ano. $\text{LGD} = 0{,}80$ é a fração do saldo exposto que o banco perde em caso de default (os 20% restantes são recuperados via cobrança ou cessão), e $L_k$ é a exposição. Note que a perda utiliza $L_k$ integral (sem o fator $\bar{u}$), diferentemente da receita. Isso é intencional: a exposição no momento do default (EAD) considera o limite inteiro porque, na prática, clientes inadimplentes tendem a utilizar uma fração do limite significativamente superior à média antes de cessar pagamentos. Essa é uma premissa padrão em modelos de risco de crédito para cartão (Resolução CMN 4.966/2021). Em sprints futuros, essa premissa pode ser refinada com um fator de utilização pré-default ($\bar{u}_{default}$) calibrado a partir de dados da carteira.
 
-**Coeficiente $c_k$:** O retorno líquido unitário $c_k = \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})$ resume a rentabilidade marginal de cada real alocado ao cluster $k$. Como $\pi_k > 0$, o sinal de $c_k$ depende exclusivamente de $\bar{u} \cdot t$ vs. $PD_k \cdot \text{LGD}$: clusters com $PD_k < \frac{\bar{u} \cdot t}{\text{LGD}}$ são rentáveis. Clusters com $c_k > 0$ são rentáveis; clusters com $c_k \leq 0$ destroem valor a cada real adicional de limite; para estes, o solver naturalmente atribui $L_k = 0$. O coeficiente $n_k \cdot c_k$ é o coeficiente objetivo do LP: o solver tende a maximizar $L_k$ para clusters com maior $c_k$, limitado pelas restrições.
+**Coeficiente $c_k$:** O retorno líquido unitário $c_k = \pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k \cdot \text{LGD})$ resume a rentabilidade marginal de cada real alocado ao cluster $k$. Como $\pi_k > 0$, o sinal de $c_k$ depende exclusivamente de $T \cdot \bar{u} \cdot t$ vs. $PD_k \cdot \text{LGD}$: clusters com $PD_k < \frac{T \cdot \bar{u} \cdot t}{\text{LGD}} \approx 19{,}69\%$ são rentáveis. Clusters com $c_k > 0$ são rentáveis; clusters com $c_k \leq 0$ destroem valor a cada real adicional de limite; para estes, o solver naturalmente atribui $L_k = 0$. O coeficiente $n_k \cdot c_k$ é o coeficiente objetivo do LP: o solver tende a maximizar $L_k$ para clusters com maior $c_k$, limitado pelas restrições.
 
-A FO é linear em $L_k$: todos os demais termos ($n_k$, $\pi_k$, $\bar{u}$, $t$, $PD_k$, $\text{LGD}$) são parâmetros, não há produto de variáveis de decisão, e o problema é um LP puro.
+A FO é linear em $L_k$: todos os demais termos ($n_k$, $\pi_k$, $T$, $\bar{u}$, $t$, $PD_k$, $\text{LGD}$) são parâmetros, não há produto de variáveis de decisão, e o problema é um LP puro.
 
 ### 1.7 Restrições
 
@@ -205,11 +212,11 @@ $$L_k^{\text{final}} = \begin{cases} 50 \cdot \left\lceil \dfrac{L_k}{50} \right
 
 ## 2. Análise crítica
 
-**Limitação 1 - LGD uniforme:** O modelo adota $\text{LGD} = 0{,}60$ constante, mas a taxa de recuperação varia por perfil (clientes com renda alta tendem a ter LGD menor). Isso superestima a perda para perfis de baixo risco e subestima para alto risco, distorcendo $c_k$ e a alocação ótima.
+**Limitação 1 - LGD uniforme:** O modelo adota $\text{LGD} = 0{,}80$ constante, mas a taxa de recuperação varia por perfil (clientes com renda alta tendem a ter LGD menor). Isso superestima a perda para perfis de baixo risco e subestima para alto risco, distorcendo $c_k$ e a alocação ótima.
 
-**Limitação 2 - `capacidade_pagamento` null em M2/M3:** A restrição R2 ($L_k \leq m_k \cdot CP_k$) depende diretamente de $CP_k$. Em M2 e M3, 42–43% dos clientes elegíveis não têm essa variável, tornando R2 inaplicável para quase metade da base. A proxy adotada ($CP_k = \text{renda\_estimada} \times 0{,}30$) subestima a capacidade real de clientes com múltiplas fontes de renda, reduzindo artificialmente o teto de $L_k$ para esse grupo. Tratamento: solicitar ao parceiro a imputação de $CP$ para M2/M3 ou calibrar o fator 0,30 com dados da carteira aprovada.
+**Limitação 2 - `capacidade_pagamento` null em M2/M3:** A restrição R2 ($L_k \leq m_k \cdot CP_k$) depende diretamente de $CP_k$. Em M2 e M3, 42–43% dos clientes elegíveis não têm essa variável, tornando R2 inaplicável para quase metade da base. Como mitigação, adotamos `renda_estimada` como substituto: para cada cliente $i$ sem `capacidade_pagamento`, estimamos $CP_i = \text{renda\_estimada}_i \times 0{,}30$, assumindo que 30% da renda está disponível para novo endividamento. Essa variável está presente em 99,7% da base (apenas 0,3% de nulls em todas as safras), garantindo cobertura quase total. A limitação dessa proxy é que ela subestima a capacidade real de clientes com múltiplas fontes de renda e superestima a de clientes com alto comprometimento prévio, reduzindo ou inflando artificialmente o teto de $L_k$. Para mitigar esse viés, o fator 0,30 pode ser calibrado a partir da relação observada entre `capacidade_pagamento` e `renda_estimada` nos registros de M1 onde ambas as variáveis estão disponíveis. Alternativamente, pode-se solicitar ao parceiro a imputação direta de `capacidade_pagamento` para M2/M3.
 
-**Sensibilidade - $\bar{u}$:** A utilização entra linearmente em $c_k$. Variando $\bar{u}$ de 0,50 a 0,90, o sinal de $c_k$ muda para clusters de PD moderada, alterando quais clusters recebem oferta. Uma redução de 0,75 para 0,50 concentraria a solução em perfis de baixíssimo risco, reduzindo volume e retorno total.
+**Sensibilidade - $\bar{u}$:** A utilização entra linearmente em $c_k$ via o termo de receita $T \cdot \bar{u} \cdot t$. Variando $\bar{u}$ de 0,50 a 0,90, o limiar de rentabilidade ($T \cdot \bar{u} \cdot t / \text{LGD}$) varia de 13,13% a 23,63%, alterando quais clusters recebem oferta. Uma redução de 0,75 para 0,50 concentraria a solução em perfis de menor risco, reduzindo volume e retorno total.
 
 ---
 
@@ -229,14 +236,14 @@ Para a construção gráfica, consideram-se dois clusters com parâmetros ilustr
 | $m_k$ | 1,5 | 0,8 |
 | $n_k$ | 500 | 300 |
 
-Com $\bar{u} = 0{,}75$, $t = 0{,}0175$, $\text{LGD} = 0{,}60$ e $\overline{PD}_{fin}^{atual} = 0{,}0022$, os coeficientes de retorno líquido unitário são:
+Com $T = 12$, $\bar{u} = 0{,}75$, $t = 0{,}0175$, $\text{LGD} = 0{,}80$ e $\overline{PD}_{fin}^{atual} = 0{,}0022$, os coeficientes de retorno líquido unitário são:
 
-- $c_1 = 0{,}80 \times (0{,}75 \times 0{,}0175 - 0{,}002 \times 0{,}60) = 0{,}80 \times (0{,}01313 - 0{,}00120) = 0{,}80 \times 0{,}01193 = 0{,}00954$ (positivo, cluster rentável)
-- $c_2 = 0{,}70 \times (0{,}75 \times 0{,}0175 - 0{,}004 \times 0{,}60) = 0{,}70 \times (0{,}01313 - 0{,}00240) = 0{,}70 \times 0{,}01073 = 0{,}00751$ (positivo, menos rentável)
+- $c_1 = 0{,}80 \times (12 \times 0{,}75 \times 0{,}0175 - 0{,}002 \times 0{,}80) = 0{,}80 \times (0{,}1575 - 0{,}0016) = 0{,}80 \times 0{,}1559 = 0{,}12472$ (positivo, cluster rentável)
+- $c_2 = 0{,}70 \times (12 \times 0{,}75 \times 0{,}0175 - 0{,}004 \times 0{,}80) = 0{,}70 \times (0{,}1575 - 0{,}0032) = 0{,}70 \times 0{,}1543 = 0{,}10801$ (positivo, menos rentável)
 
 A função objetivo neste cenário reduzido é:
 
-$$\max \; 500 \cdot 0{,}00954 \cdot L_1 + 300 \cdot 0{,}00751 \cdot L_2 = \max \; 4{,}77 \cdot L_1 + 2{,}25 \cdot L_2$$
+$$\max \; 500 \cdot 0{,}12472 \cdot L_1 + 300 \cdot 0{,}10801 \cdot L_2 = \max \; 62{,}36 \cdot L_1 + 32{,}40 \cdot L_2$$
 
 ### 3.2 Região factível
 
@@ -263,7 +270,7 @@ O gráfico abaixo apresenta a região factível (área sombreada), as retas das 
 
 A análise gráfica evidencia visualmente aspectos importantes do modelo:
 
-- **Trade-off entre clusters:** O gradiente da FO aponta predominantemente na direção de $L_1$ (coeficiente 4,77 vs 2,25), confirmando que o solver prioriza alocação ao cluster mais rentável (menor PD, maior propensão). Com LGD = 0,60, ambos os clusters são significativamente mais rentáveis do que com LGD = 1, e a diferença relativa entre eles diminui.
+- **Trade-off entre clusters:** O gradiente da FO aponta predominantemente na direção de $L_1$ (coeficiente 62,36 vs 32,40), confirmando que o solver prioriza alocação ao cluster mais rentável (menor PD, maior propensão). Com a anualização da receita ($T = 12$), ambos os clusters são amplamente rentáveis (PDs de 0,2% e 0,4% estão muito abaixo do limiar de 19,69%), e a diferença relativa entre eles diminui.
 - **Restrição ativa:** A restrição R1 (inadimplência financeira) é a que mais limita a solução ótima: ela impõe que $L_2 \leq 0{,}185 \cdot L_1$, restringindo o limite do cluster de risco moderado. Relaxar o teto de inadimplência permitiria alocar mais limite a esse cluster, aumentando o retorno mas elevando o risco da carteira. A restrição R2 limita $L_1$ ao teto de capacidade de pagamento alavancada (R\$ 6.000).
 - **Solução ótima:** O ponto ótimo se encontra na interseção de R2 ($L_1 = 6\,000$) com R1 ($L_2 = 0{,}185 \times 6\,000 \approx 1\,111$), demonstrando que ambas as restrições estão ativas na solução.
 
@@ -283,7 +290,7 @@ A decisão em questão é tomada pela área de crédito do Banco Pan, que precis
 
 #### Identificação dos parâmetros críticos
 
-No modelo formulado, o coeficiente de retorno líquido unitário de cada cluster é $c_k = \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})$. O sinal de $c_k$ determina se o cluster cria ou destrói valor: quando $c_k > 0$, o solver aloca o máximo de limite permitido pelas restrições; quando $c_k \leq 0$, o limite ótimo é zero. O ponto de indiferença ocorre quando $PD_k = \bar{u} \cdot t \;/\; \text{LGD} \approx 2{,}19\%$, o que significa que variações na $PD_k$ estimada podem cruzar essa fronteira e alterar radicalmente quais clusters recebem oferta, tornando-a o **parâmetro de maior sensibilidade do modelo**.
+No modelo formulado, o coeficiente de retorno líquido unitário de cada cluster é $c_k = \pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k \cdot \text{LGD})$. O sinal de $c_k$ determina se o cluster cria ou destrói valor: quando $c_k > 0$, o solver aloca o máximo de limite permitido pelas restrições; quando $c_k \leq 0$, o limite ótimo é zero. O ponto de indiferença ocorre quando $PD_k = T \cdot \bar{u} \cdot t \;/\; \text{LGD} \approx 19{,}69\%$, o que significa que variações na $PD_k$ estimada podem cruzar essa fronteira e alterar radicalmente quais clusters recebem oferta, tornando-a o **parâmetro de maior sensibilidade do modelo**.
 
 Em contraste, a taxa de interchange $t$ é fixada contratualmente e tem variação infrequente. Já a utilização esperada $\bar{u}$ afeta todos os clusters na mesma direção e proporção, sem alterar a ordem de rentabilidade relativa entre eles. Esses parâmetros são menos críticos do ponto de vista operacional. Essa hierarquia de sensibilidade é informação direta para a área de risco: o esforço de monitoramento deve ser concentrado nos parâmetros cujas variações mais ameaçam a robustez da política, e não distribuído uniformemente entre todos os inputs do modelo.
 
@@ -299,7 +306,7 @@ A análise de sensibilidade, portanto, não apenas informa a decisão de hoje, e
 
 Na programação linear, a análise de sensibilidade dos coeficientes da função objetivo determina o **intervalo de variação** dentro do qual cada coeficiente $n_k \cdot c_k$ pode se mover sem que a solução ótima (base ótima) se altere. Enquanto os coeficientes permanecem nesse intervalo, os mesmos vértices da região factível continuam ótimos: apenas o valor da FO muda, não a decisão de alocação. Quando um coeficiente ultrapassa o limite do intervalo, uma restrição diferente se torna ativa (ou deixa de ser), e a solução ótima migra para outro vértice do poliedro factível.
 
-No modelo de limites pré-aprovados, o coeficiente objetivo do cluster $k$ é $n_k \cdot c_k$, onde $c_k = \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})$. Uma variação em $c_k$ pode decorrer de: (i) revisão da $PD_k$ estimada por modelos de scoring atualizados; (ii) mudança na propensão $\pi_k$ por efeito de campanhas de marketing ou sazonalidade; ou (iii) alteração na utilização $\bar{u}$ observada por safra. Qualquer desses movimentos altera o coeficiente e, potencialmente, a decisão ótima.
+No modelo de limites pré-aprovados, o coeficiente objetivo do cluster $k$ é $n_k \cdot c_k$, onde $c_k = \pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k \cdot \text{LGD})$. Uma variação em $c_k$ pode decorrer de: (i) revisão da $PD_k$ estimada por modelos de scoring atualizados; (ii) mudança na propensão $\pi_k$ por efeito de campanhas de marketing ou sazonalidade; ou (iii) alteração na utilização $\bar{u}$ observada por safra. Qualquer desses movimentos altera o coeficiente e, potencialmente, a decisão ótima.
 
 #### Exemplo numérico: cenário reduzido de dois clusters
 
@@ -307,34 +314,34 @@ Retomando o cenário da Seção 3, com dois clusters e solução ótima em $(L_1
 
 | Cluster | $n_k$ | $c_k$ | Coeficiente da FO ($n_k \cdot c_k$) |
 | :-----: | :----: | :----: | :----------------------------------: |
-| 1 | 500 | 0,00954 | 4,77 |
-| 2 | 300 | 0,00751 | 2,25 |
+| 1 | 500 | 0,12472 | 62,36 |
+| 2 | 300 | 0,10801 | 32,40 |
 
-A FO é $\max \; 4{,}77 \cdot L_1 + 2{,}25 \cdot L_2$, e a solução ótima se encontra na interseção de R1 ($L_2 = 0{,}185 \cdot L_1$) com R2 ($L_1 = 6\,000$). O valor ótimo da FO é:
+A FO é $\max \; 62{,}36 \cdot L_1 + 32{,}40 \cdot L_2$, e a solução ótima se encontra na interseção de R1 ($L_2 = 0{,}185 \cdot L_1$) com R2 ($L_1 = 6\,000$). O valor ótimo da FO é:
 
-$$Z^* = 4{,}77 \times 6\,000 + 2{,}25 \times 1\,111 = 28\,620 + 2\,500 = 31\,120 \text{ (R\$/período)}$$
+$$Z^* = 62{,}36 \times 6\,000 + 32{,}40 \times 1\,111 = 374\,160 + 36\,002 = 410\,162 \text{ (R\$/ano)}$$
 
 **Variação no coeficiente do Cluster 1:** Suponha que a $PD_1$ estimada suba de 0,200% para 0,215% (aumento de 7,5%), refletindo uma deterioração marginal do perfil de risco. O novo $c_1$ seria:
 
-$$c_1' = 0{,}80 \times (0{,}01313 - 0{,}00215 \times 0{,}60) = 0{,}80 \times (0{,}01313 - 0{,}00129) = 0{,}80 \times 0{,}01184 = 0{,}00947$$
+$$c_1' = 0{,}80 \times (0{,}1575 - 0{,}00215 \times 0{,}80) = 0{,}80 \times (0{,}1575 - 0{,}00172) = 0{,}80 \times 0{,}15578 = 0{,}12462$$
 
-O novo coeficiente objetivo passa de 4,77 para $500 \times 0{,}00947 = 4{,}74$. A solução ótima permanece no mesmo vértice $(6\,000;\; 1\,111)$, e apenas o valor da FO diminui para $4{,}74 \times 6\,000 + 2{,}25 \times 1\,111 = 30\,940$. A perda marginal é de R\$ 180/período, mas a política de limites **não precisa ser alterada**.
+O novo coeficiente objetivo passa de 62,36 para $500 \times 0{,}12462 = 62{,}31$. A solução ótima permanece no mesmo vértice $(6\,000;\; 1\,111)$, e apenas o valor da FO diminui para $62{,}31 \times 6\,000 + 32{,}40 \times 1\,111 = 409\,862$. A perda marginal é de R\$ 300/ano, mas a política de limites **não precisa ser alterada**.
 
-**Variação no coeficiente do Cluster 2:** Agora suponha que a $PD_2$ suba de 0,400% para 2,19% (o ponto de indiferença $\bar{u} \cdot t / \text{LGD}$). Nesse caso:
+**Variação no coeficiente do Cluster 2:** Agora suponha que a $PD_2$ suba de 0,400% para 19,69% (o ponto de indiferença $T \cdot \bar{u} \cdot t / \text{LGD}$). Nesse caso:
 
-$$c_2' = 0{,}70 \times (0{,}01313 - 0{,}0219 \times 0{,}60) = 0{,}70 \times (0{,}01313 - 0{,}01314) = 0{,}70 \times (-0{,}00001) \approx 0$$
+$$c_2' = 0{,}70 \times (0{,}1575 - 0{,}1969 \times 0{,}80) = 0{,}70 \times (0{,}1575 - 0{,}1575) = 0{,}70 \times 0 \approx 0$$
 
-O coeficiente objetivo do cluster 2 cai para zero: cada real adicional alocado a esse cluster não gera retorno. Se $PD_2$ ultrapassar 2,19%, $c_2$ se torna negativo e o solver reduz $L_2^*$ a zero, e o cluster deixa de receber oferta. Essa transição ilustra uma **mudança de base**: a restrição R1 deixa de ser ativa (pois não há mais trade-off entre clusters) e a solução migra para o vértice $(6\,000;\; 0)$, com retorno $Z^* = 4{,}77 \times 6\,000 = 28\,620$.
+O coeficiente objetivo do cluster 2 cai para zero: cada real adicional alocado a esse cluster não gera retorno. Se $PD_2$ ultrapassar 19,69%, $c_2$ se torna negativo e o solver reduz $L_2^*$ a zero, e o cluster deixa de receber oferta. Essa transição ilustra uma **mudança de base**: a restrição R1 deixa de ser ativa (pois não há mais trade-off entre clusters) e a solução migra para o vértice $(6\,000;\; 0)$, com retorno $Z^* = 62{,}36 \times 6\,000 = 374\,160$.
 
 #### Resumo do impacto
 
 | Perturbação | Efeito no coeficiente | Efeito na solução | Ação necessária |
 | :---------- | :-------------------- | :---------------- | :-------------- |
-| $PD_1$: 0,200% → 0,215% (+7,5%) | $n_1 c_1$: 4,77 → 4,74 (−0,6%) | Mesma base ótima, FO cai R\$ 180 | Nenhuma (dentro do intervalo de estabilidade) |
-| $PD_2$: 0,400% → 2,19% (+448%) | $n_2 c_2$: 2,25 → ≈ 0 | Cluster 2 perde oferta, mudança de base | Reotimizar; revisar política para o perfil |
-| $PD_2$: 0,400% → 0,350% (−12,5%) | $n_2 c_2$: 2,25 → 2,38 (+5,8%) | Mesma base ótima, FO sobe R\$ 144 | Nenhuma (melhoria dentro do intervalo) |
+| $PD_1$: 0,200% → 0,215% (+7,5%) | $n_1 c_1$: 62,36 → 62,31 (−0,08%) | Mesma base ótima, FO cai R\$ 300 | Nenhuma (dentro do intervalo de estabilidade) |
+| $PD_2$: 0,400% → 19,69% (+4.823%) | $n_2 c_2$: 32,40 → ≈ 0 | Cluster 2 perde oferta, mudança de base | Reotimizar; revisar política para o perfil |
+| $PD_2$: 0,400% → 0,350% (−12,5%) | $n_2 c_2$: 32,40 → 32,49 (+0,3%) | Mesma base ótima, FO sobe R\$ 94 | Nenhuma (melhoria dentro do intervalo) |
 
-A assimetria é reveladora: o coeficiente do cluster 1 suporta variações amplas sem alterar a decisão (porque está longe do ponto de indiferença), enquanto o cluster 2 está mais próximo da fronteira de rentabilidade zero. Isso confirma, no nível da FO, a hierarquia de sensibilidade identificada na Seção 4.1: clusters com $PD_k$ próximo ao limiar $\bar{u} \cdot t / \text{LGD}$ são os que exigem monitoramento mais frequente, pois pequenas oscilações nos seus parâmetros podem causar descontinuidades na política ótima.
+A assimetria é reveladora: ambos os clusters estão muito distantes do ponto de indiferença (19,69%), o que confere robustez significativa à solução. Mesmo perturbações grandes na $PD_k$ (como o cluster 2 passando de 0,4% para 19,69% — um aumento de quase 50×) são necessárias para provocar mudança de base. Isso confirma que, com a correção temporal da FO, a sensibilidade do modelo à $PD_k$ diminui substancialmente em relação à formulação anterior, e o gargalo da decisão passa a ser as restrições de capacidade e inadimplência financeira, não o limiar de rentabilidade individual. Ainda assim, clusters com $PD_k$ próximo ao limiar de 19,69% (tipicamente clusters de risco elevado na carteira real) são os que exigem monitoramento mais frequente.
 
 #### Limitações desta análise e necessidade de validação empírica
 
