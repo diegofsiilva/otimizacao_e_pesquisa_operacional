@@ -352,6 +352,16 @@ Quando uma restrição está **ativa** na solução ótima (ou seja, está satis
 
 Esse diagnóstico, por si só, já orienta decisões: antes de investir em melhorias operacionais que ampliem a capacidade de pagamento estimada dos clientes (R2) ou que permitam aceitar maior inadimplência agregada (R1), o gestor precisa saber qual das duas é de fato o gargalo. A análise das restrições ativas responde a essa pergunta diretamente.
 
+#### O que os preços-sombra revelam
+
+O preço-sombra de uma restrição é a variação no valor ótimo da função objetivo causada por uma unidade de relaxamento no limite daquela restrição, mantidas as demais condições constantes. Em termos práticos, ele responde à pergunta: **quanto a mais de retorno o banco obteria se pudesse afrouxar ligeiramente essa política?**
+
+Para R1, o preço-sombra quantifica o custo econômico de manter o teto de inadimplência no nível atual. Se esse valor for alto, significa que a restrição de risco está "apertada": pequenas concessões no apetite de inadimplência se traduziriam em ganhos expressivos de retorno. Se for baixo, a restrição não é o verdadeiro gargalo, e o foco deveria estar em outros parâmetros.
+
+Para R2, o preço-sombra indica o valor marginal de ampliar a capacidade de pagamento estimada dos clientes. Isso pode decorrer de melhorias no modelo de estimação de renda, de uma revisão do multiplicador $m_k$ ou de uma política de alavancagem mais flexível para determinados perfis. O preço-sombra transforma essa discussão qualitativa em um número: cada real adicional de capacidade de pagamento média no cluster $k$ vale exatamente esse montante em retorno incremental para a carteira.
+
+Uma implicação relevante é que os preços-sombra só são válidos dentro de um intervalo de variação (análogo ao intervalo de estabilidade dos coeficientes da FO). Fora desse intervalo, a base ótima muda e o preço-sombra deixa de ser constante. Por isso, a interpretação correta não é "podemos relaxar R1 indefinidamente ao custo de $\lambda_1$ por unidade", mas sim "dentro do intervalo de validade, cada unidade de relaxamento de R1 gera $\lambda_1$ de retorno adicional".
+
 
 ---
 
