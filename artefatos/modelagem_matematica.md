@@ -362,7 +362,38 @@ Para R2, o preço-sombra indica o valor marginal de ampliar a capacidade de paga
 
 Uma implicação relevante é que os preços-sombra só são válidos dentro de um intervalo de variação (análogo ao intervalo de estabilidade dos coeficientes da FO). Fora desse intervalo, a base ótima muda e o preço-sombra deixa de ser constante. Por isso, a interpretação correta não é "podemos relaxar R1 indefinidamente ao custo de $\lambda_1$ por unidade", mas sim "dentro do intervalo de validade, cada unidade de relaxamento de R1 gera $\lambda_1$ de retorno adicional".
 
+#### Exemplo numérico: preços-sombra no cenário reduzido
 
+Retomando o cenário da Seção 3, com solução ótima $(L_1^* = 6\,000;\; L_2^* \approx 1\,111)$ e $Z^* = \text{R\$}\;31\,120$/período, as restrições ativas são:
+
+- **R1:** $-0{,}1 \cdot L_1 + 0{,}54 \cdot L_2 \leq 0$ (teto de inadimplência financeira)
+- **R2:** $L_1 \leq 6\,000$ (capacidade de pagamento alavancada do Cluster 1)
+
+**Preço-sombra de R2:** Suponha que o limite de capacidade de pagamento alavancada do Cluster 1 seja relaxado de R\$ 6.000 para R\$ 6.100 (acréscimo de R\$ 100). Com R1 ainda ativa ($L_2 = 0{,}185 \cdot L_1$), a nova solução seria:
+
+$$L_1' = 6\,100, \quad L_2' = 0{,}185 \times 6\,100 = 1\,128{,}5$$
+
+$$Z' = 4{,}77 \times 6\,100 + 2{,}25 \times 1\,128{,}5 = 29\,097 + 2\,539 = 31\,636$$
+
+O ganho é $\Delta Z = 31\,636 - 31\,120 = \text{R\$}\;516$ para um relaxamento de R\$ 100 em R2, resultando em um preço-sombra de aproximadamente **R\$ 5,16 de retorno por real adicional de capacidade de pagamento no Cluster 1**. Na prática, isso significa que um investimento em melhorar a estimativa de capacidade de pagamento dos clientes desse perfil, ou uma revisão do multiplicador $m_1$ de 1,5 para 1,6, se traduziria diretamente em ganho mensurável de retorno para a carteira.
+
+**Preço-sombra de R1:** Agora suponha que o teto de inadimplência seja relaxado de forma a permitir que o coeficiente da restrição passe de $L_2 \leq 0{,}185 \cdot L_1$ para $L_2 \leq 0{,}200 \cdot L_1$ (elevação marginal do apetite de risco). Com R2 ainda ativa ($L_1 = 6\,000$), a nova solução seria:
+
+$$L_1' = 6\,000, \quad L_2' = 0{,}200 \times 6\,000 = 1\,200$$
+
+$$Z' = 4{,}77 \times 6\,000 + 2{,}25 \times 1\,200 = 28\,620 + 2\,700 = 31\,320$$
+
+O ganho é $\Delta Z = 31\,320 - 31\,120 = \text{R\$}\;200$ por período. Esse valor é o preço-sombra de R1: cada ponto de afrouxamento no teto de inadimplência agrega R\$ 200 de retorno à carteira. A informação é diretamente acionável pela área de risco: se o custo de absorver inadimplência adicional (provisão, capital regulatório) for inferior a R\$ 200 por período, relaxar o teto é financeiramente justificável. Se for superior, a restrição atual é a política correta.
+
+#### Resumo interpretativo
+
+| Restrição | Status na solução ótima | Preço-sombra (aprox.) | Interpretação gerencial |
+| :-------- | :---------------------- | :-------------------- | :---------------------- |
+| R1 (inadimplência) | Ativa | R\$ 200 / relaxamento unitário | Cada concessão no apetite de risco gera retorno mensurável; decisão deve comparar com custo de provisão |
+| R2 — Cluster 1 (capacidade) | Ativa | R\$ 5,16 / R\$ de capacidade | Melhorar estimativa de CP ou revisar $m_1$ tem valor econômico direto |
+| R2 — Cluster 2 (capacidade) | Inativa (folga ≈ 89) | 0 | Não é gargalo; relaxar não gera ganho imediato |
+
+A assimetria entre os dois componentes de R2 é reveladora: o Cluster 2 ainda está longe do teto de capacidade de pagamento (folga de R\$ 89), enquanto o Cluster 1 está exatamente no limite. Isso indica que a limitação real para o Cluster 2 não é a capacidade de pagamento de seus clientes, mas sim a restrição de inadimplência agregada R1, que impede alocação adicional a esse perfil de risco moderado. Qualquer ação que aumente o limite do Cluster 2 sem antes endereçar R1 seria ineficaz: a restrição de inadimplência continuaria vetando o ganho.
 ---
 
 ## Fontes
