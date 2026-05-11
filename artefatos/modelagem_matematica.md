@@ -47,7 +47,7 @@ A tabela a seguir detalha as 17 variáveis fornecidas, com estatísticas descrit
 | `fx_idade`                   | Faixa etária                                  | 9 faixas: 21-30 (35,5%), 31-40 (31,1%), 41-50 (18,8%)              | Perfil de consumo e risco; variável de segmentação para análise de resultados                                                                                                                                      |
 | `flag_filtros`               | Indicador de perfil restrito                  | **0 = elegível** (1,84M), **1 = restrito** (12,73M)                | Restrição hard: clientes com `flag_filtros = 1` são excluídos da otimização                                                                                                                                        |
 | `score_propensao_contrato`   | Score de propensão à conversão                | min=3, med=315, max=846                                            | Parâmetro $\pi_k$ na FO (termo A), via média do cluster. **Range [3, 846], não [0,1]**, requer normalização min-max                                                                                                                     |
-| `score_credito_cross`        | Score de crédito multiproduto                 | min=103, med=706, max=954                                          | Informa o multiplicador de alavancagem $m_k$ (interpolação por score médio do cluster)                                                                                                                                      |
+| `score_credito_cross`        | Score de crédito multiproduto                 | min=103, med=706, max=954                                          | Determina a faixa de alavancagem $m_k$ do cluster (ver tabela de faixas na Seção 1.5)                                                                                                                                      |
 | `limite_ofertado`            | Limite ofertado na política atual             | min=200, med=806, max=20.000. **99,2% null**                       | Baseline para backtesting (apenas 117K têm referência)                                                                                                                                                             |
 | `flag_contrato`              | Indicadora de contratação (1 = contratou)     | 6.506 (0,04%)                                                      | Backtesting. Taxa de conversão ~5,5% entre os que receberam oferta                                                                                                                                                 |
 | `flag_ativacao`              | Indicadora de ativação (1 = ativou)           | 5.704 (87,7% dos que contrataram)                                  | Backtesting                                                                                                                                                                                                        |
@@ -115,14 +115,29 @@ $L_k$ representa o valor do limite de crédito, em reais, atribuído a todos os 
 | $PD_k$ | Probabilidade de default representativa do cluster $k$ | [0, 1] | Média de `pd_produto` dos clientes do cluster |
 | $\pi_k$ | Propensão à contratação do cluster $k$, normalizada | [0, 1] | Média de `score_propensao_contrato` normalizado min-max: $\pi_i = \frac{score_i - 3}{843}$ |
 | $CP_k$ | Capacidade de pagamento do cluster $k$ | R\$ | Percentil 5 ($p5$) de `capacidade_pagamento` no cluster. Proxy: `renda_estimada × 0,30` quando null |
-| $m_k$ | Multiplicador de alavancagem do cluster $k$ | [0,3; 1,8] | Interpolado pela média de `score_credito_cross` do cluster. Diretriz do parceiro |
+| $m_k$ | Multiplicador de alavancagem do cluster $k$ | [0,20; 0,45] | Determinado pela faixa de `score_credito_cross` médio do cluster (ver tabela de faixas abaixo) |
 | $t$ | Taxa de interchange (mensal) | adimensional | 0,0175 (fornecido pelo parceiro) |
 | $T$ | Horizonte de receita | meses | 12 (anualização da receita mensal) |
 | $\text{LGD}$ | Loss Given Default | [0, 1] | 0,80 (constante para todos os clusters) |
 | $\bar{u}$ | Utilização esperada do limite | [0, 1] | 0,75 (constante para todos os clusters) |
 | $\overline{PD}_{fin}^{atual}$ | Teto de inadimplência financeira | [0, 1] | Média ponderada (por limite) de PD da carteira aprovada vigente |
 | $L^{max}$ | Teto máximo de limite | R\$ | 25.000 (diretriz do parceiro) |
+| $\overline{PD}_{fis}^{atual}$ | Teto de inadimplência física | [0, 1] | Média simples de PD da carteira aprovada vigente (headcount, sem ponderar por limite) |
+| $\alpha$ | Concentração máxima por cluster | [0, 1] | Fração máxima da exposição total que um único cluster pode concentrar. Valor sugerido: $\alpha = 0{,}05$ (5%) |
+| $V^{min}$ | Volume mínimo de produção | R\$ | Piso de volume total de limite ofertado, definido pelo parceiro com base em metas comerciais |
 | $c_k$ | Coeficiente de retorno líquido unitário do cluster $k$ | R\$/R\$ | $c_k = \pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k \cdot \text{LGD})$ |
+
+**Faixas de alavancagem $m_k$:** O multiplicador $m_k$ é atribuído ao cluster conforme a média de `score_credito_cross` dos seus membros. As faixas foram derivadas empiricamente a partir da alavancagem observada na política vigente do banco (`limite_ofertado / capacidade_pagamento`), usando o percentil 75 da distribuição como teto por faixa (análise detalhada em `scripts/analise_alavancagem.py`, sobre 480 mil registros elegíveis com oferta nas safras M1–M3). A relação é monotônica e consistente entre safras: scores mais altos recebem alavancagem maior, refletindo menor risco de crédito.
+
+| Faixa de `score_credito_cross` | $m_k$ | PD mediana (base elegível) | Alavancagem mediana observada | Alavancagem p75 observada |
+| :------------------------------ | :---- | :------------------------- | :---------------------------- | :------------------------ |
+| 100 – 700 | 0,20 | 0,72 | 0,14 | 0,22 |
+| 700 – 800 | 0,25 | 0,61 | 0,16 | 0,25 |
+| 800 – 850 | 0,30 | 0,50 | 0,18 | 0,28 |
+| 850 – 900 | 0,35 | 0,34 | 0,21 | 0,32 |
+| 900 – 960 | 0,45 | 0,24 | 0,28 | 0,42 |
+
+A lógica é direta: clientes com score de crédito mais alto demonstram historicamente menor risco, e o banco lhes concede limites proporcionalmente maiores em relação à capacidade de pagamento. O uso do p75 como referência para $m_k$ significa que aproximadamente 75% das ofertas vigentes já respeitam esse teto, enquanto os ~25% restantes representam casos em que a política atual é mais agressiva — exatamente a cauda que a restrição R2 visa controlar.
 
 ---
 
@@ -160,7 +175,7 @@ A FO é linear em $L_k$: todos os demais termos ($n_k$, $\pi_k$, $T$, $\bar{u}$,
 
 ### 1.7 Restrições
 
-As restrições traduzem as políticas de crédito do Banco Pan em limites matemáticos para o espaço de soluções factíveis. Dividem-se em duas categorias: (i) **controle de risco da carteira** (R1), e (ii) **proteção por cluster e bounds** (R2, R3). Reconhecemos que existem outras restrições relevantes, como tetos de inadimplência física (média simples da PD), metas de produção (número mínimo de clientes aprovados, volume total de limite) e rentabilidade mínima, que ainda não foram mapeadas com o parceiro e serão incorporadas nos próximos sprints à medida que o entendimento do negócio avançar.
+As restrições traduzem as políticas de crédito do Banco Pan em limites matemáticos para o espaço de soluções factíveis. Dividem-se em três categorias: (i) **controle de risco da carteira** (R1 — inadimplência financeira, R4 — inadimplência física), (ii) **proteção por cluster e bounds** (R2 — capacidade de pagamento, R3 — teto máximo), e (iii) **diversificação e viabilidade comercial** (R5 — concentração máxima, R6 — meta de produção). R1, R2, R3, R5 e R6 são incorporadas diretamente no LP; R4 é tratada em pós-otimização por envolver indicadoras de cluster ativo.
 
 #### R1 - Teto de inadimplência financeira (LP)
 
@@ -180,13 +195,47 @@ Cada cluster $k$ contribui com um excesso ou déficit de inadimplência: cluster
 
 $$L_k \leq m_k \cdot CP_k, \quad \forall k \in \{1, \dots, K\}$$
 
-O limite de cada cluster é limitado pelo percentil 5 de capacidade de pagamento dos seus membros ($CP_k = p5_{i \in C_k}(CP_i)$), multiplicado pelo fator de alavancagem $m_k \in [0{,}3;\; 1{,}8]$, interpolado pelo score de risco médio do cluster (`score_credito_cross`): clusters de menor risco recebem $m_k$ próximo de 1,8, e clusters de maior risco recebem $m_k$ próximo de 0,3. O uso do percentil 5 (em vez do mínimo) evita que um único outlier com $CP$ atipicamente baixo inviabilize o limite de todo o cluster, mantendo a proteção para 95% dos membros.
+O limite de cada cluster é limitado pelo percentil 5 de capacidade de pagamento dos seus membros ($CP_k = p5_{i \in C_k}(CP_i)$), multiplicado pelo fator de alavancagem $m_k \in [0{,}20;\; 0{,}45]$, determinado pela faixa de `score_credito_cross` médio do cluster (ver tabela de faixas na Seção 1.5). As faixas foram calibradas a partir da alavancagem observada na política vigente (p75 por faixa de score, sobre 480 mil registros elegíveis com oferta em M1–M3): clusters com score mais alto recebem $m_k$ maior (até 0,45), e clusters com score mais baixo recebem $m_k$ menor (0,20). O uso do percentil 5 (em vez do mínimo) evita que um único outlier com $CP$ atipicamente baixo inviabilize o limite de todo o cluster, mantendo a proteção para 95% dos membros.
 
 #### R3 - Teto máximo de limite (LP)
 
 $$L_k \leq L^{max}, \quad \forall k \in \{1, \dots, K\}$$
 
 Teto absoluto definido pelo parceiro ($L^{max} = 25\,000$). Na prática, R2 é a restrição ativa para a maioria dos clusters (pois $m_k \cdot CP_k < L^{max}$ para quase todos), e R3 atua apenas como salvaguarda.
+
+#### R4 - Teto de inadimplência física (LP)
+
+A inadimplência física mede o risco da carteira por **headcount**: qual fração dos clientes que receberam oferta se torna inadimplente, independentemente do limite concedido. Enquanto R1 pondera a PD pelo limite (capturando o risco financeiro), R4 controla a quantidade de clientes em default, que impacta custo operacional de cobrança, reputação e compliance regulatório.
+
+$$\frac{\sum_{k=1}^{K} n_k \cdot PD_k \cdot \mathbb{1}[L_k > 0]}{\sum_{k=1}^{K} n_k \cdot \mathbb{1}[L_k > 0]} \leq \overline{PD}_{fis}^{atual}$$
+
+Essa formulação com indicadoras $\mathbb{1}[L_k > 0]$ não é linear. Na prática, como o LP atribui $L_k > 0$ a todo cluster com $c_k > 0$ (e $L_k = 0$ aos demais), a inadimplência física é verificada em **pós-otimização** sobre o conjunto de clusters ativos ($\mathcal{A} = \{k : L_k^* \geq 200\}$):
+
+$$\frac{\sum_{k \in \mathcal{A}} n_k \cdot PD_k}{\sum_{k \in \mathcal{A}} n_k} \leq \overline{PD}_{fis}^{atual}$$
+
+Se violada, clusters com maior $PD_k$ e menor $c_k$ são removidos iterativamente de $\mathcal{A}$ (definindo $L_k = 0$) até que a restrição seja satisfeita. Essa abordagem mantém o LP puro e trata R4 como um filtro de viabilidade aplicado ao resultado.
+
+#### R5 - Concentração máxima por cluster (LP)
+
+$$n_k \cdot L_k \leq \alpha \cdot \sum_{j=1}^{K} n_j \cdot L_j, \quad \forall k \in \{1, \dots, K\}$$
+
+Nenhum cluster pode concentrar mais do que uma fração $\alpha$ da exposição total da carteira. Essa restrição impede que o solver despeje limite em um único cluster "ideal", forçando diversificação. Sem ela, um cluster com $c_k$ alto e $CP_k$ generoso absorveria a maior parte da folga de R1, gerando uma carteira rentável mas concentrada — vulnerável a choques setoriais ou regionais que afetem justamente esse perfil.
+
+**Versão linearizada:** Reorganizando:
+
+$$n_k \cdot L_k - \alpha \cdot \sum_{j=1}^{K} n_j \cdot L_j \leq 0, \quad \forall k$$
+
+$$\sum_{j=1}^{K} n_j \cdot (\mathbb{1}[j = k] - \alpha) \cdot L_j \leq 0, \quad \forall k$$
+
+Isso equivale a $K$ restrições lineares adicionais, uma por cluster. Para cada restrição $k$, o coeficiente de $L_j$ é $n_j \cdot (1 - \alpha)$ quando $j = k$ (positivo, penaliza concentração) e $-n_j \cdot \alpha$ quando $j \neq k$ (negativo, incentiva dispersão). O valor sugerido é $\alpha = 0{,}05$ (5%), ajustável pelo parceiro conforme o apetite por diversificação.
+
+#### R6 - Meta de produção mínima (LP)
+
+$$\sum_{k=1}^{K} n_k \cdot L_k \geq V^{min}$$
+
+O volume total de limite ofertado deve atingir um piso $V^{min}$ definido pelo parceiro. Essa restrição garante que o modelo não produza uma solução excessivamente conservadora que, embora ótima no sentido de maximizar retorno por real, oferece volume insuficiente para justificar a operação comercial do produto. Sem essa restrição, o solver pode convergir para um cenário onde apenas poucos clusters de baixíssimo risco recebem ofertas modestas — financeiramente seguro, mas comercialmente inviável.
+
+A restrição é linear em $L_k$. Se o LP for infactível com $V^{min}$, isso sinaliza que as demais restrições (especialmente R1 e R4) estão demasiadamente restritivas para o volume desejado, informando diretamente uma negociação entre área comercial e área de risco.
 
 #### Domínio e não-negatividade
 
@@ -205,8 +254,11 @@ $$L_k^{\text{final}} = \begin{cases} 50 \cdot \left\lceil \dfrac{L_k}{50} \right
 | R1 | Teto de inadimplência financeira ($\overline{PD}$ ponderada por $n_k \cdot L_k$ $\leq$ teto) | Linear (após linearização) |
 | R2 | Capacidade de pagamento ($L_k \leq m_k \cdot CP_k$) | Linear |
 | R3 | Teto máximo ($L_k \leq L^{max}$) | Bound |
+| R4 | Teto de inadimplência física (média simples de $PD_k$ dos clusters ativos $\leq$ teto) | Pós-otimização |
+| R5 | Concentração máxima por cluster ($n_k \cdot L_k \leq \alpha \cdot \sum n_j L_j$) | Linear |
+| R6 | Meta de produção mínima ($\sum n_k \cdot L_k \geq V^{min}$) | Linear |
 
-**Restrições futuras identificadas (não formalizadas nesta sprint):** Ao longo do projeto, espera-se incorporar restrições adicionais como teto de inadimplência física (média simples da PD $\leq$ nível atual), metas de produção (número mínimo de clientes aprovados, volume total de limite ofertado), rentabilidade mínima, e eventuais tetos de exposição por faixa de risco. Essas restrições dependem de parâmetros que ainda serão definidos com o parceiro.
+**Restrições futuras identificadas (não formalizadas nesta sprint):** Ao longo do projeto, espera-se incorporar restrições adicionais como rentabilidade mínima por cluster, tetos de exposição por faixa de risco, e número mínimo de clusters ativos. Essas restrições dependem de parâmetros que ainda serão definidos com o parceiro.
 
 ---
 
@@ -226,7 +278,7 @@ Para complementar a formulação algébrica, esta seção apresenta uma resoluç
 
 ### 3.1 Cenário reduzido
 
-Para a construção gráfica, consideram-se dois clusters com parâmetros ilustrativos representando perfis que seriam efetivamente pré-aprovados (PD baixa, propensão razoável):
+Para a construção gráfica, consideram-se dois clusters com parâmetros ilustrativos representando perfis que seriam efetivamente pré-aprovados (PD baixa, propensão razoável). **Nota:** os valores de $m_k$ neste cenário (1,5 e 0,8) são deliberadamente maiores que as faixas calibradas na Seção 1.5 (0,20–0,45) para produzir uma região factível ampla o suficiente para visualização gráfica. Na implementação real, os valores de $m_k$ seguem a tabela de faixas por `score_credito_cross`.
 
 | Parâmetro | Cluster 1 (baixo risco) | Cluster 2 (risco moderado) |
 | :-------- | :---------------------: | :------------------------: |
