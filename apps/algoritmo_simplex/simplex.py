@@ -84,6 +84,35 @@ def simplex(problema: Problema) -> tuple[list[float], float]:
     n = len(problema.c)  # número de variáveis de decisão
     m = len(problema.b)  # número de restrições
 
+    tableau = construir_tableau_inicial(problema)
+
+    while True:
+        cj_zj_x = []
+        for j in range(n):
+            cj_zj_x.append(calcular_cj_zj(tableau.x[j], problema.c[j], tableau.contributions))
+
+        cj_zj_s = []
+        for j in range(m):
+            cj_zj_s.append(calcular_cj_zj(tableau.s[j], 0.0, tableau.contributions))
+
+        todos_cj_zj = cj_zj_x + cj_zj_s
+
+        todos_negativos = True
+        for valor in todos_cj_zj:
+            if valor > 0:
+                todos_negativos = False
+                break
+
+        # se todos os valores forem negativos, não há mais ponto de melhoria
+        if todos_negativos:
+            break
+
+        # encontra o índice da variável com maior cj_zj (ela entra na base)
+        indice_entra = 0
+        for j in range(1, len(todos_cj_zj)):
+            if todos_cj_zj[j] > todos_cj_zj[indice_entra]:
+                indice_entra = j
+
     pass
 
 
