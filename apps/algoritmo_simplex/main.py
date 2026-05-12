@@ -55,3 +55,21 @@ print(f"t={t}, LGD={LGD}, u_bar={u_bar}, L_max={L_max}")
 # calcula a inadimplência financeira atual da carteira como média de pd_produto dos elegíveis
 pd_fin_atual = df[df["flag_filtros"] == 0]["pd_produto"].mean()
 print(f"PD_fin_atual: {pd_fin_atual:.4f}")
+
+# determina o caminho do arquivo clusterizado correspondente ao CSV de entrada
+stem = Path(sys.argv[1]).stem
+arquivo_clusters = Path("../data/csv/") / f"{stem}_clusters.csv"
+
+# se o arquivo clusterizado não existir, roda o clustering antes de continuar
+if not arquivo_clusters.exists():
+    print(f"Arquivo {arquivo_clusters.name} não encontrado. Rodando clustering...")
+    from clustering import main as clustering_main
+
+    clustering_main(sys.argv[1])
+    print("Clustering concluído.")
+else:
+    print(f"Arquivo {arquivo_clusters.name} encontrado. Pulando clustering.")
+
+# lê os parâmetros agregados por cluster gerados pelo clustering
+clusters = pd.read_csv(arquivo_clusters)
+print(f"Clusters carregados: {len(clusters)} clusters")
