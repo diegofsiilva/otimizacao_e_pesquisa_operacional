@@ -73,3 +73,37 @@ else:
 # lê os parâmetros agregados por cluster gerados pelo clustering
 clusters = pd.read_csv(arquivo_clusters)
 print(f"Clusters carregados: {len(clusters)} clusters")
+
+# monta o vetor de coeficientes da função objetivo (um por cluster)
+c = []
+for _, row in clusters.iterrows():
+    ck = row["n_k"] * row["pi_k"] * (u_bar * t - row["PD_k"] * LGD)
+    c.append(ck)
+
+# monta a matriz de restrições A e o vetor b
+# R1: teto de inadimplência financeira (uma restrição para a carteira inteira)
+# R2: capacidade de pagamento com alavancagem (uma restrição por cluster)
+# R3: teto máximo de limite (uma restrição por cluster)
+A = []
+b = []
+
+# R1
+r1 = []
+for _, row in clusters.iterrows():
+    r1.append(row["n_k"] * (row["PD_k"] - pd_fin_atual))
+A.append(r1)
+b.append(0.0)
+
+# R2
+for _, row in clusters.iterrows():
+    linha = [0.0] * len(clusters)
+    linha[int(row["cluster_id"])] = 1.0
+    A.append(linha)
+    b.append(row["m_k"] * row["CP_k"])
+
+# R3
+for _, row in clusters.iterrows():
+    linha = [0.0] * len(clusters)
+    linha[int(row["cluster_id"])] = 1.0
+    A.append(linha)
+    b.append(L_max)
