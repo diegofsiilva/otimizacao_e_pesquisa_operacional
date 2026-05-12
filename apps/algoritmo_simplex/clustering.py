@@ -1,21 +1,26 @@
 """
 apps/algoritmo_simplex/clustering.py
-Realiza a clusterização da base de clientes usando K-Means para gerar os parâmetros
-necessários para o LP/Simplex (por cluster).
 
-Entrada:
-    - CSV com dados dos clientes (ex: base_ref_M1_v2.csv)
+Agrupa clientes em clusters usando K-Means e calcula os parâmetros agregados
+necessários para o modelo de otimização de limites de crédito via Simplex.
 
-Saída:
-    - clientes_com_cluster.csv: base no nível do cliente com a coluna cluster_id
-    - parametros_cluster.csv: tabela no nível do cluster com parâmetros para o LP
+A clusterização é feita sobre clientes elegíveis (flag_filtros == 0), usando as
+features pd_produto, capacidade_pagamento, score_credito_cross, score_propensao_contrato
+e fx_idade. Para cada cluster, são calculados os parâmetros que o LP precisa:
+n_k, PD_k, pi_k, CP_k e m_k.
 
 Uso:
-    python clustering.py
+    python clustering.py <arquivo_clientes.csv>
+
+Entrada:
+    - <nome>.csv: base de clientes no nível individual
+
+Saída:
+    - <nome>_com_cluster.csv : base original com a coluna cluster_id adicionada
+    - <nome>_clusters.csv    : tabela agregada no nível do cluster com parâmetros para o LP
 
 Arquivos CSV devem estar em apps/data/csv/
 Arquivos de saída serão gerados em apps/data/csv/
-
 """
 
 from pathlib import Path
@@ -30,13 +35,13 @@ from sklearn.impute import SimpleImputer
 
 
 def normalize_propensao(score: pd.Series) -> pd.Series:
-    """Normaliza a propensão para o intervao [0, 1]"""
+    """Normaliza a propensão para o intervalo [0, 1]"""
     pi = (score.astype(float) - 3.0) / 843.0
     return pi.clip(0.0, 1.0)
 
 
 def build_cp_proxy(df: pd.DataFrame) -> pd.Series:
-    """Caso não haja a coluna "capacidade_pagamento", proxy feito com a renda estimada é utilizada"""
+    """Caso não haja a coluna capacidade_pagamento, usa proxy baseado na renda estimada"""
     cp = df["capacidade_pagamento"]
     renda = df["renda_estimada"]
     return cp.where(cp.notna(), renda * 0.30)
@@ -52,7 +57,7 @@ def score_to_m(
 
 
 def main(
-    input_csv_name: str = "base_ref_M1_v2.csv",
+    input_csv_name: str,
     n_clusters: int = 7,
     random_state: int = 42,
 ):
@@ -106,14 +111,24 @@ def main(
     )
     clusters["m_k"] = clusters["score_cross_mean"].apply(score_to_m)
 
-    # (5) salva saídas
+    # (5) salva saídas com nomes derivados do arquivo de entrada
     out_dir = Path(__file__).resolve().parent.parent / "data" / "csv"
-    df.to_csv(out_dir / "clientes_com_cluster.csv", index=False)
-    clusters.to_csv(out_dir / "parametros_cluster.csv", index=False)
+    stem = Path(input_csv_name).stem
 
-    print("OK")
-    print("clientes_com_cluster.csv e parametros_cluster.csv gerados em apps/data/csv/")
+    df.to_csv(out_dir / f"{stem}_com_cluster.csv", index=False)
+    clusters.to_csv(out_dir / f"{stem}_clusters.csv", index=False)
+
+    print(f"Arquivos salvos em: {out_dir}")
+    print(f"  {stem}_com_cluster.csv")
+    print(f"  {stem}_clusters.csv")
 
 
 if __name__ == "__main__":
-    main()
+    import sys
+
+    if len(sys.argv) < 2:
+        print("Uso:")
+        print("    python clustering.py <arquivo_clientes.csv>")
+        sys.exit(1)
+
+    main(sys.argv[1])
