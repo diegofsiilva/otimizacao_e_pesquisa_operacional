@@ -52,6 +52,24 @@ def construir_tableau_inicial(problema: Problema) -> Tableau:
     )
 
 
+def calcular_cj_zj(coluna: list[float], cj: float, contributions: list[float]) -> float:
+    """
+    Calcula o ganho líquido de trazer uma variável para a base.
+
+    Parâmetros:
+        coluna       : coeficientes da variável em cada restrição
+        cj           : coeficiente da variável na função objetivo
+        contributions: contributions das variáveis atualmente na base
+
+    Retorna:
+        cj - zj : ganho líquido da variável
+    """
+    zj = 0.0
+    for i in range(len(coluna)):
+        zj += coluna[i] * contributions[i]
+    return cj - zj
+
+
 def simplex(problema: Problema) -> tuple[list[float], float]:
     """
     Resolve um problema de programação linear pelo método Simplex.
@@ -65,7 +83,9 @@ def simplex(problema: Problema) -> tuple[list[float], float]:
     """
     n = len(problema.c)  # número de variáveis de decisão
     m = len(problema.b)  # número de restrições
+
     pass
+
 
 if __name__ == "__main__":
     problema = Problema(
