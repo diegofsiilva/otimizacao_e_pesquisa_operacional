@@ -26,14 +26,14 @@ O coeficiente de cada cluster, $c_k = n_k \cdot \pi_k \cdot (\bar{u} \cdot t - P
 
 Os parâmetros utilizados são:
 
-| Parâmetro | Descrição | Valor padrão |
-|---|---|---|
-| $n_k$ | Número de clientes no cluster $k$ | calculado da base |
-| $\pi_k$ | Propensão média de contratação do cluster $k$ | calculado da base |
-| $\bar{u}$ | Fração esperada de utilização do limite pelo cliente | 0,75 |
-| $t$ | Taxa de interchange recebida pelo banco sobre o volume transacionado | 1,75% |
-| $PD_k$ | Probabilidade de inadimplência média do cluster $k$ | calculado da base |
-| $\text{LGD}$ | Fração do saldo exposto perdida em caso de default (Loss Given Default) | 0,60 |
+| Parâmetro    | Descrição                                                               | Valor padrão      |
+| ------------ | ----------------------------------------------------------------------- | ----------------- |
+| $n_k$        | Número de clientes no cluster $k$                                       | calculado da base |
+| $\pi_k$      | Propensão média de contratação do cluster $k$                           | calculado da base |
+| $\bar{u}$    | Fração esperada de utilização do limite pelo cliente                    | 0,75              |
+| $t$          | Taxa de interchange recebida pelo banco sobre o volume transacionado    | 1,75%             |
+| $PD_k$       | Probabilidade de inadimplência média do cluster $k$                     | calculado da base |
+| $\text{LGD}$ | Fração do saldo exposto perdida em caso de default (Loss Given Default) | 0,60              |
 
 ### Restrições
 
@@ -82,12 +82,13 @@ onde $s_k$ representa a folga remanescente - a diferença entre o limite máximo
 
 O estado atual do algoritmo é mantido em uma tabela com a seguinte estrutura:
 
-| Contribution | Base | Value | $L_1$ | $L_2$ | ... | $s_1$ | $s_2$ | ... |
-|---|---|---|---|---|---|---|---|---|
-| $c_{B_1}$ | $s_1$ | $b_1$ | $a_{11}$ | $a_{12}$ | ... | 1 | 0 | ... |
-| $c_{B_2}$ | $s_2$ | $b_2$ | $a_{21}$ | $a_{22}$ | ... | 0 | 1 | ... |
+| Contribution | Base  | Value | $L_1$    | $L_2$    | ... | $s_1$ | $s_2$ | ... |
+| ------------ | ----- | ----- | -------- | -------- | --- | ----- | ----- | --- |
+| $c_{B_1}$    | $s_1$ | $b_1$ | $a_{11}$ | $a_{12}$ | ... | 1     | 0     | ... |
+| $c_{B_2}$    | $s_2$ | $b_2$ | $a_{21}$ | $a_{22}$ | ... | 0     | 1     | ... |
 
 Onde:
+
 - **Contribution:** o coeficiente da variável da base dessa linha na função objetivo
 - **Base:** a variável que está ativa nessa linha
 - **Value:** o valor atual dessa variável
@@ -152,15 +153,15 @@ A solução recebe dois arquivos como entrada:
 
 Arquivo com os dados individuais dos clientes elegíveis, localizado em `apps/data/csv/`. As colunas utilizadas pelo modelo são:
 
-| Coluna | Descrição |
-|---|---|
-| `pd_produto` | Probabilidade de inadimplência no produto |
-| `capacidade_pagamento` | Estimativa de capacidade de pagamento do cliente |
-| `score_credito_cross` | Score de crédito multiproduto, usado para calcular $m_k$ |
-| `score_propensao_contrato` | Score de propensão à contratação, normalizado para obter $\pi_k$ |
-| `fx_idade` | Faixa etária do cliente |
-| `flag_filtros` | Indicador de perfil restrito: apenas clientes com `flag_filtros == 0` são elegíveis |
-| `renda_estimada` | Usada como proxy de capacidade de pagamento quando `capacidade_pagamento` está ausente |
+| Coluna                     | Descrição                                                                              |
+| -------------------------- | -------------------------------------------------------------------------------------- |
+| `pd_produto`               | Probabilidade de inadimplência no produto                                              |
+| `capacidade_pagamento`     | Estimativa de capacidade de pagamento do cliente                                       |
+| `score_credito_cross`      | Score de crédito multiproduto, usado para calcular $m_k$                               |
+| `score_propensao_contrato` | Score de propensão à contratação, normalizado para obter $\pi_k$                       |
+| `fx_idade`                 | Faixa etária do cliente                                                                |
+| `flag_filtros`             | Indicador de perfil restrito: apenas clientes com `flag_filtros == 0` são elegíveis    |
+| `renda_estimada`           | Usada como proxy de capacidade de pagamento quando `capacidade_pagamento` está ausente |
 
 ### JSON de parâmetros
 
@@ -168,14 +169,15 @@ Arquivo de configuração localizado em `apps/algoritmo_simplex/input/`, que per
 
 ```json
 {
-    "t": 0.0175,
-    "LGD": 0.60,
-    "u_bar": 0.75,
-    "L_max": 25000.0
+  "t": 0.0175,
+  "LGD": 0.6,
+  "u_bar": 0.75,
+  "L_max": 25000.0
 }
 ```
 
 Onde:
+
 - `t`: taxa de interchange (1,75%), fornecida pelo parceiro
 - `LGD`: fração da exposição perdida em caso de default (60%), padrão de modelos de risco de crédito
 - `u_bar`: fração esperada de utilização do limite (75%)
@@ -190,6 +192,24 @@ De acordo com os requisitos do parceiro, a solução final deve operar com pelo 
 **Tamanho da base:** nos casos de teste, a base foi reduzida para aproximadamente 10% dos clientes originais, mantendo a proporcionalidade das características da base completa.
 
 As restrições do modelo e o algoritmo Simplex implementado são independentes dessas simplificações e funcionarão sem alterações quando o número de clusters for expandido.
+
+## Dependências
+
+As dependências do projeto estão listadas em `apps/algoritmo_simplex/requirements.txt`. Para instalá-las:
+
+```bash
+pip install -r requirements.txt
+```
+
+As bibliotecas utilizadas são:
+
+| Biblioteca     | Uso                                               |
+| -------------- | ------------------------------------------------- |
+| `pandas`       | Leitura e manipulação dos arquivos CSV            |
+| `scikit-learn` | Algoritmo K-Means para clusterização dos clientes |
+| `numpy`        | Cálculo de percentis na agregação dos clusters    |
+
+O algoritmo Simplex em si não utiliza nenhuma biblioteca externa, foi implementado do zero com Python puro.
 
 ## Execução
 
@@ -226,6 +246,7 @@ Limites ótimos por cluster:
 ```
 
 Os limites exibidos já passaram pela pós-otimização definida pelo parceiro:
+
 - Limites abaixo de R$200 são convertidos para R$0, indicando que o cluster não deve receber oferta
 - Limites acima de R$200 são arredondados para o múltiplo de R$50 mais próximo
 
