@@ -66,3 +66,17 @@ def simplex(problema: Problema) -> tuple[list[float], float]:
     n = len(problema.c)  # número de variáveis de decisão
     m = len(problema.b)  # número de restrições
     pass
+
+if __name__ == "__main__":
+    problema = Problema(
+        c=[40.0, 35.0],
+        A=[[2.0, 3.0], [4.0, 3.0]],
+        b=[60.0, 96.0],
+    )
+
+    tableau = construir_tableau_inicial(problema)
+    print("contributions:", tableau.contributions)
+    print("base:", tableau.base)
+    print("values:", tableau.values)
+    print("x:", tableau.x)
+    print("s:", tableau.s)
