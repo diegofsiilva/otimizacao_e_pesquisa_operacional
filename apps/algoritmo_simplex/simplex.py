@@ -24,6 +24,7 @@ def construir_tableau_inicial(problema: Problema) -> Tableau:
     indices_variaveis_folga = list(range(n, n + m))
     contribuicao_variaveis_folga = [0.0] * m
 
+    # constrói as colunas x1, x2, ... transpondo A (que é organizado por linhas)
     x = []
 
     for i in range(n):
@@ -34,6 +35,7 @@ def construir_tableau_inicial(problema: Problema) -> Tableau:
 
         x.append(coluna)
 
+    # constrói as colunas s1, s2, ... como matriz identidade (cada folga aparece em apenas uma restrição)
     s = []
 
     for i in range(m):
