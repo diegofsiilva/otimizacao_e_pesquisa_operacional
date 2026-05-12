@@ -20,12 +20,14 @@ import sys
 from pathlib import Path
 import pandas as pd
 
+ROOT = Path(__file__).resolve().parent.parent
+
 if len(sys.argv) < 2 or len(sys.argv) > 3:
     print("Uso:")
     print("    python reduce_csv.py <arquivo_entrada.csv> [porcentagem]")
     sys.exit(1)
 
-arquivo_entrada = Path("apps/data/csv") / sys.argv[1]
+arquivo_entrada = ROOT / "apps" / "data" / "csv" / sys.argv[1]
 
 if not arquivo_entrada.exists():
     print(f"Erro: arquivo {sys.argv[1]} não encontrado em apps/data/csv/")
@@ -42,7 +44,7 @@ if len(sys.argv) == 3:
 else:
     porcentagem = 10
 
-total_linhas = sum(1 for _ in open(arquivo_entrada)) - 1  # -1 para ignorar o cabeçalho
+total_linhas = sum(1 for _ in open(arquivo_entrada)) - 1
 n_linhas = max(1, int(total_linhas * porcentagem / 100))
 
 arquivo_saida = arquivo_entrada.parent / (arquivo_entrada.stem + "_reduzido.csv")

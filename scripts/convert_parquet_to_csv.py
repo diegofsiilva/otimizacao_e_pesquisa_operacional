@@ -23,6 +23,8 @@ import subprocess
 from pathlib import Path
 import pandas as pd
 
+ROOT = Path(__file__).resolve().parent.parent
+
 args = sys.argv[1:]
 
 if not args:
@@ -32,21 +34,21 @@ if not args:
     )
     sys.exit(1)
 
-arquivo_entrada = Path("apps/data/parquet") / args[0]
+nome_parquet = args[0]
 args = args[1:]
 
+arquivo_entrada = ROOT / "apps" / "data" / "parquet" / nome_parquet
+
 if not arquivo_entrada.exists():
-    print(f"Erro: arquivo {args[0]} não encontrado em apps/data/parquet/")
+    print(f"Erro: arquivo {nome_parquet} não encontrado em apps/data/parquet/")
     sys.exit(1)
 
-# verifica se o segundo argumento é um nome de arquivo de saída
 if args and not args[0].startswith("--"):
-    arquivo_saida = Path("apps/data/csv") / args[0]
+    arquivo_saida = ROOT / "apps" / "data" / "csv" / args[0]
     args = args[1:]
 else:
-    arquivo_saida = Path("apps/data/csv") / (arquivo_entrada.stem + ".csv")
+    arquivo_saida = ROOT / "apps" / "data" / "csv" / (arquivo_entrada.stem + ".csv")
 
-# verifica flag --reduced
 reduced = False
 porcentagem = 10
 
@@ -72,7 +74,7 @@ if reduced:
     subprocess.run(
         [
             sys.executable,
-            "scripts/reduce_csv.py",
+            str(Path(__file__).resolve().parent / "reduce_csv.py"),
             arquivo_saida.name,
             str(porcentagem),
         ]
