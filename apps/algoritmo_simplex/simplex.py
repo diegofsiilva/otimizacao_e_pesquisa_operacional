@@ -176,7 +176,7 @@ def simplex(problema: Problema) -> tuple[list[float], float]:
         for j in range(n):
             z += problema.c[j] * x[j]
 
-        return x, z
+    return x, z
 
 if __name__ == "__main__":
     problema = Problema(
