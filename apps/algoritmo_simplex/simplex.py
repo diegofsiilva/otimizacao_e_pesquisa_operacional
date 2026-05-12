@@ -3,38 +3,30 @@ algoritmo_simplex/simplex.py
 Implementação do algoritmo Simplex para problemas de programação linear.
 """
 
+from models import Problema, Tableau
 
-def simplex(
-    c: list[float], A: list[list[float]], b: list[float]
-) -> tuple[list[float], float]:
+def construir_tableau_inicial(problema: Problema) -> Tableau:
     """
-    Resolve um problema de programação linear na forma:
-        max  c[0]*x[0] + c[1]*x[1] + ... + c[n]*x[n]
-        s.t. A[i][0]*x[0] + A[i][1]*x[1] + ... <= b[i]  para cada restrição i
-             x[j] >= 0  para cada variável j
+    Constrói o tableau inicial a partir de um problema de programação linear.
+    No tableau inicial, a base é formada pelas variáveis de folga.
 
     Parâmetros:
-        c  : lista de coeficientes da função objetivo        (tamanho n)
-        A  : matriz de coeficientes das restrições           (tamanho m x n)
-        b  : lista dos lados direitos das restrições         (tamanho m)
+        problema: instância de Problema contendo c, A e b
 
     Retorna:
-        x  : lista com o valor ótimo de cada variável        (tamanho n)
-        z  : valor ótimo da função objetivo
+        Tableau inicial pronto para o algoritmo Simplex
     """
+    pass
 
-    n_variaveis_decisao = len(c)
-    n_restricoes = len(A)
+def simplex(problema: Problema) -> tuple[list[float], float]:
+    """
+    Resolve um problema de programação linear pelo método Simplex.
 
-    for i in range(n_restricoes):
-        variaveis_folga = [0] * n_restricoes
-        variaveis_folga[i] = 1
-        A[i].extend(variaveis_folga)
+    Parâmetros:
+        problema: instância de Problema contendo c, A e b
 
-    c.extend([0] * n_restricoes)
-
-    indices_base = list(range(n_variaveis_decisao, n_variaveis_decisao + n_restricoes))
-
-    contributions_base = []
-    for i in indices_base:
-        contributions_base.append(c[i])
+    Retorna:
+        x: instância de Problema contendo c, A e b (tamanho N)
+        z: valor ótimo da função objetivo
+    """
+    pass
