@@ -193,6 +193,36 @@ De acordo com os requisitos do parceiro, a solução final deve operar com pelo 
 
 As restrições do modelo e o algoritmo Simplex implementado são independentes dessas simplificações e funcionarão sem alterações quando o número de clusters for expandido.
 
+## Clusterização
+
+A clusterização é feita de forma **não supervisionada**, utilizando **K-means**, visando juntar clientes elegíveis e com perfis semelhantes de **risco, capacidade de pagamento e propensão**, buscando viabilizar a otimização no nível de cluster.
+
+### População considerada
+
+Inicialmente, a base de dados é filtrada para incluir apenas clientes elegíveis (flag_filtros = 0). Além disso, apenas as 10% primeiras linhas da base de dados foram consideradas.
+
+### Variáveis usadas na clusterização
+
+O K-Means é treinado usando:
+
+* pd_produto: (proxy de risco / probabilidade padrão do produto)
+
+* cp_proxy: (proxy de capacidade de pagamento)
+
+* score_credito_cross: (score multiproduto, também usado para derivar alavancagem)
+
+* pi: (propensão nnormalizada)
+
+* fx_idade (variável categórica, transformada com _one-hot encoding_)
+
+### Pré-processamento
+
+Antes do K-Means atuar em si, a variável pi é criada, na qual o score_propensao_contrato é normallizado para o intervalo [0, 1]. O cp_proxy também é definido, utiliznado a capacidade_pagamento quando existente. No caso de estar nula, o valor é substituido por renda_estimada * 0,3.
+
+### Tratamento das variáveis
+
+Para as variáveis numéricas, é aplicado a imputação de valores faltanates pela mediana, e os valores são padronizados pelo StandardScaler (média 0, desvio padrão 1). Já para a variável categórica, o OneHotEncoder transforma os valores de forma binária, permitindo que os mesmos funcionem com o K-means.
+
 ## Dependências
 
 As dependências do projeto estão listadas em `apps/algoritmo_simplex/requirements.txt`. Para instalá-las:
