@@ -17,6 +17,7 @@ import sys
 import json
 from pathlib import Path
 import pandas as pd
+from models import Problema
 from simplex import simplex
 
 if len(sys.argv) < 3:
@@ -107,3 +108,23 @@ for _, row in clusters.iterrows():
     linha[int(row["cluster_id"])] = 1.0
     A.append(linha)
     b.append(L_max)
+
+# resolve o problema de otimização
+
+problema = Problema(c=c, A=A, b=b)
+x, z, status = simplex(problema)
+
+# exibe o resultado
+print(f"\nStatus: {status}")
+print(f"Valor ótimo (z): {z:.2f}")
+print(f"\nLimites ótimos por cluster:")
+for i, row in clusters.iterrows():
+    limite = x[i]
+    # arredonda para múltiplo de 50, ou 0 se menor que 200
+    if limite >= 200:
+        limite_final = 50 * round(limite / 50)
+    else:
+        limite_final = 0
+    print(
+        f"  Cluster {int(row['cluster_id'])}: R$ {limite_final:.0f} (n={int(row['n_k'])})"
+    )
