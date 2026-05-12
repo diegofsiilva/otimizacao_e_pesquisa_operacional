@@ -454,6 +454,76 @@ O ganho é $\Delta Z = 31\,320 - 31\,120 = \text{R\$}\;200$ por período. Esse v
 
 A assimetria entre os dois componentes de R2 é reveladora: o Cluster 2 ainda está longe do teto de capacidade de pagamento (folga de R\$ 89), enquanto o Cluster 1 está exatamente no limite. Isso indica que a limitação real para o Cluster 2 não é a capacidade de pagamento de seus clientes, mas sim a restrição de inadimplência agregada R1, que impede alocação adicional a esse perfil de risco moderado. Qualquer ação que aumente o limite do Cluster 2 sem antes endereçar R1 seria ineficaz: a restrição de inadimplência continuaria vetando o ganho.
 
+### 4.4 Tomada de decisão em ambiente real
+
+No ambiente real de gestão de crédito, as variações nos parâmetros do modelo não ocorrem de forma isolada. Ciclos macroeconômicos, mudanças regulatórias e alterações no perfil da base movem múltiplos parâmetros simultaneamente e em direções correlacionadas. A análise de sensibilidade permite integrar essas informações a um processo de decisão que convive permanentemente com incerteza.
+
+#### Cenários macroeconômicos e correlação entre parâmetros
+
+Em um cenário de elevação da taxa Selic, dois efeitos se materializam de forma correlacionada: (i) o comprometimento de renda das famílias aumenta, reduzindo $CP_k$ e apertando R2; e (ii) a inadimplência sobe, elevando as $PD_k$ e pressionando tanto a FO (via redução de $c_k$) quanto R1. A análise de sensibilidade informa, para cada movimento isolado, o quanto a solução ótima é robusta. O gestor pode então compor esses efeitos para avaliar se a política vigente resiste ao cenário combinado ou se precisa ser reotimizada.
+
+Por exemplo, suponha que um choque econômico eleve simultaneamente a $PD_1$ em 10% e reduza a $CP_1$ em 5%. Pela Seção 4.2, a variação de 10% na $PD_1$ (de 0,200% para 0,220%) mantém a solução na mesma base ótima. Pela Seção 4.3, o preço-sombra de R2 indica que cada real de redução em $CP_1$ custa R\$ 5,16 de retorno. Com essas duas informações, o gestor sabe, antes de o choque se materializar em inadimplência realizada, que a alocação permanece ótima mas o retorno cairá em magnitude estimável, e pode decidir proativamente se essa perda justifica revisão antecipada.
+
+A análise empírica sobre a base real confirma essa premissa: a correlação entre `capacidade_pagamento` e `pd_produto` é **Spearman = −0,725** (Pearson = −0,550), consistente entre safras (−0,719 a −0,728) e entre faixas de score. A tabela abaixo mostra como PD e CP se movem em direções opostas:
+
+| Quartil de CP | N | PD média | CP média |
+| :------------ | --------: | :------- | -------: |
+| Q1 (menor CP) | 1.404.651 | 0,691 | R\$ 178 |
+| Q2 | 1.301.877 | 0,601 | R\$ 701 |
+| Q3 | 1.356.697 | 0,419 | R\$ 2.320 |
+| Q4 (maior CP) | 1.340.220 | 0,278 | R\$ 8.185 |
+
+Isso valida que cenários de estresse afetam CP e PD simultaneamente. A resolução do LP via solver sob cenários combinados quantifica o impacto:
+
+| Cenário | $L_1^*$ | $L_2^*$ | FO (R\$) | $\Delta$ FO | Mudou base? |
+| :------ | ------: | ------: | -------: | ----------: | :---------- |
+| Base | 6.000 | 1.110 | 410.127 | 0 | — |
+| PD+10%, CP−5% | 5.700 | 1.055 | 389.185 | −20.942 | SIM |
+| PD+20%, CP−10% | 5.400 | 999 | 368.289 | −41.838 | SIM |
+| PD+50%, CP−20% | 4.800 | 888 | 326.268 | −83.860 | SIM |
+| PD×5 | 6.000 | 1.110 | 391.784 | −18.344 | NÃO |
+| Melhoria: PD−20%, CP+10% | 6.600 | 1.221 | 452.149 | +42.022 | SIM |
+
+O cenário "PD×5" não muda a base porque a PD base já é muito baixa (0,2% e 0,4%): mesmo quintuplicada, permanece abaixo do limiar de 19,69%. Cenários com redução de CP, entretanto, sempre alteram a base porque R2 é a restrição ativa dominante.
+
+![Correlação CP vs PD](figuras/correlacao_cp_pd.png)
+
+#### Variação de demanda e propensão à contratação
+
+A propensão $\pi_k$ varia com sazonalidade (datas comerciais como Black Friday e Natal), campanhas de marketing e movimentos competitivos. Como $\pi_k$ entra linearmente na FO via $c_k$, variações proporcionais em todos os $\pi_k$ alteram o valor da FO mas não a ordem de rentabilidade relativa entre clusters. Se, entretanto, uma campanha segmentada alterar $\pi_k$ de forma assimétrica entre clusters, a análise de sensibilidade indica se essa assimetria é suficiente para provocar mudança de base e realocar limites entre perfis.
+
+A análise da propensão normalizada nas três safras mostra estabilidade moderada no agregado (variação < 3% entre safras), mas variação de até **23,9% na faixa 100–700**:
+
+| Safra | $\pi$ média | $\pi$ mediana |
+| :---- | :---------- | :------------ |
+| M1 | 0,352 | 0,333 |
+| M2 | 0,350 | 0,332 |
+| M3 | 0,343 | 0,317 |
+
+Clusters de risco alto são mais sensíveis a mudanças de propensão entre safras, mas como esses mesmos clusters têm $c_k$ negativo (PD muito acima do limiar), a variação de $\pi_k$ não altera a decisão de alocação para eles. Para clusters próximos ao limiar (faixa 900–960), a propensão é mais estável entre safras (variação de 12,6%), o que reforça a robustez da solução ótima nesses perfis.
+
+![Propensão por safra](figuras/propensao_por_safra.png)
+
+Isso permite coordenação entre as áreas de crédito e marketing: antes de lançar uma campanha direcionada a um cluster específico, é possível simular o efeito do aumento esperado de $\pi_k$ sobre a FO e verificar se a política de limites vigente permanece ótima ou se deveria ser ajustada em conjunto com a campanha.
+
+#### Incerteza nos custos e parâmetros estruturais
+
+A taxa de interchange $t$ e a LGD variam com menor frequência, mas suas alterações têm impacto estrutural. Uma renegociação de $t$ com as bandeiras (por pressão regulatória ou competitiva) altera o limiar de rentabilidade $T \cdot \bar{u} \cdot t / \text{LGD}$ uniformemente para todos os clusters: se $t$ cair, o limiar desce e clusters antes rentáveis podem se tornar inviáveis. A análise de sensibilidade permite calcular antecipadamente qual redução em $t$ tornaria cada cluster marginal, fornecendo à área de produtos uma tabela de impacto que informa negociações contratuais com dados concretos.
+
+De forma análoga, uma revisão da LGD (por melhorias no processo de cobrança que aumentem a taxa de recuperação) tem efeito simétrico: reduzir a LGD de 0,80 para 0,70 elevaria o limiar de rentabilidade de 19,69% para 22,50%, incorporando clusters de risco moderado que antes estavam na fronteira de viabilidade.
+
+#### Protocolo de decisão integrado
+
+O protocolo operacional derivado das análises anteriores pode ser sintetizado em três regras de gestão:
+
+1. **Monitoramento contínuo dos parâmetros críticos:** A hierarquia de sensibilidade identificada (PD > CP > π > ū > t) determina a frequência de revisão. As $PD_k$ por cluster devem ser acompanhadas por safra e comparadas com os intervalos de estabilidade. Quando um parâmetro se aproxima do limite do intervalo, a reotimização é acionada antes que a política se torne subótima.
+
+2. **Uso dos preços-sombra como critério de investimento:** Os preços-sombra traduzem decisões qualitativas em análises de custo-benefício quantitativas. Investir em modelos de estimação de renda mais precisos (ampliando $CP_k$) só se justifica se o ganho marginal por real de capacidade adicional (R\$ 5,16 no cenário reduzido) superar o custo do investimento. Aceitar maior inadimplência agregada só é racional se o retorno incremental (R\$ 200 por unidade de relaxamento de R1) compensar o custo de provisão e capital regulatório.
+
+3. **Reotimização sob cenários combinados:** Em períodos de estresse, a área de crédito deve executar o LP sob cenários perturbados (e.g., $PD_k + 20\%$, $CP_k - 10\%$) e comparar a solução resultante com a política vigente. Se a nova solução diferir significativamente, o ambiente mudou além do intervalo de estabilidade e a política precisa ser atualizada. Se permanecer igual, a política vigente é robusta ao cenário testado.
+
+Esse protocolo transforma o modelo de otimização de uma ferramenta de cálculo pontual em um instrumento de gestão contínua da carteira, no qual a análise de sensibilidade conecta a solução matemática ao processo decisório da instituição.
+
 ---
 
 ## Fontes
