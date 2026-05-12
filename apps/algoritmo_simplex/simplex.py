@@ -70,7 +70,7 @@ def calcular_cj_zj(coluna: list[float], cj: float, contributions: list[float]) -
     return cj - zj
 
 
-def simplex(problema: Problema) -> tuple[list[float], float]:
+def simplex(problema: Problema) -> tuple[list[float], float, str]:
     """
     Resolve um problema de programação linear pelo método Simplex.
 
@@ -78,8 +78,12 @@ def simplex(problema: Problema) -> tuple[list[float], float]:
         problema: instância de Problema contendo c, A e b
 
     Retorna:
-        x: instância de Problema contendo c, A e b (tamanho N)
-        z: valor ótimo da função objetivo
+        x      : lista com o valor ótimo de cada variável de decisão (tamanho n)
+        z      : valor ótimo da função objetivo
+        status : "otimo", "multiplas_solucoes" ou "ilimitado"
+
+    Raises:
+        ValueError: se o problema for ilimitado
     """
     n = len(problema.c)  # número de variáveis de decisão
     m = len(problema.b)  # número de restrições
@@ -89,7 +93,9 @@ def simplex(problema: Problema) -> tuple[list[float], float]:
     while True:
         cj_zj_x = []
         for j in range(n):
-            cj_zj_x.append(calcular_cj_zj(tableau.x[j], problema.c[j], tableau.contributions))
+            cj_zj_x.append(
+                calcular_cj_zj(tableau.x[j], problema.c[j], tableau.contributions)
+            )
 
         cj_zj_s = []
         for j in range(m):
@@ -97,21 +103,28 @@ def simplex(problema: Problema) -> tuple[list[float], float]:
 
         todos_cj_zj = cj_zj_x + cj_zj_s
 
-        todos_negativos = True
+        # se todos os valores forem não-positivos, não há mais ponto de melhoria
+        todos_nao_positivos = True
         for valor in todos_cj_zj:
             if valor > 0:
-                todos_negativos = False
+                todos_nao_positivos = False
                 break
 
-        # se todos os valores forem negativos, não há mais ponto de melhoria
-        if todos_negativos:
+        if todos_nao_positivos:
+            # verifica se há múltiplas soluções: alguma variável fora da base tem cj_zj == 0
+            status = "otimo"
+            for j in range(len(todos_cj_zj)):
+                if j not in tableau.base and todos_cj_zj[j] == 0.0:
+                    status = "multiplas_solucoes"
+                    break
             break
 
-        # encontra o índice da variável com maior cj_zj (ela entra na base)
-        indice_entra = 0
-        for j in range(1, len(todos_cj_zj)):
-            if todos_cj_zj[j] > todos_cj_zj[indice_entra]:
+        # regra de Bland: escolhe o menor índice com cj_zj positivo (evita ciclagem por degeneração)
+        indice_entra = -1
+        for j in range(len(todos_cj_zj)):
+            if todos_cj_zj[j] > 0:
                 indice_entra = j
+                break
 
         # pega a coluna da variável que entra
         if indice_entra < n:
@@ -132,6 +145,10 @@ def simplex(problema: Problema) -> tuple[list[float], float]:
                 if indice_sai == -1 or razao < menor_razao:
                     menor_razao = razao
                     indice_sai = i
+
+        # se nenhuma linha foi escolhida, o problema é ilimitado
+        if indice_sai == -1:
+            raise ValueError("O problema é ilimitado.")
 
         # elemento pivô (coeficiente da variável que entra na linha que sai)
         elemento_pivo = coluna_entra[indice_sai]
@@ -162,21 +179,24 @@ def simplex(problema: Problema) -> tuple[list[float], float]:
 
         # atualiza a base e a contribution da linha que mudou
         tableau.base[indice_sai] = indice_entra
-        tableau.contributions[indice_sai] = problema.c[indice_entra] if indice_entra < n else 0.0
+        tableau.contributions[indice_sai] = (
+            problema.c[indice_entra] if indice_entra < n else 0.0
+        )
 
-        # monta o vetor de solução
-        # variáveis que não estão na base valem 0
-        x = [0.0] * n
-        for i in range(m):
-            if tableau.base[i] < n:  # se a variável da base é uma variável de decisão
-                x[tableau.base[i]] = tableau.values[i]
+    # monta o vetor de solução
+    # variáveis que não estão na base valem 0
+    x = [0.0] * n
+    for i in range(m):
+        if tableau.base[i] < n:  # se a variável da base é uma variável de decisão
+            x[tableau.base[i]] = tableau.values[i]
 
-        # calcula o valor ótimo da função objetivo
-        z = 0.0
-        for j in range(n):
-            z += problema.c[j] * x[j]
+    # calcula o valor ótimo da função objetivo
+    z = 0.0
+    for j in range(n):
+        z += problema.c[j] * x[j]
 
-    return x, z
+    return x, z, status
+
 
 if __name__ == "__main__":
     problema = Problema(
@@ -185,9 +205,7 @@ if __name__ == "__main__":
         b=[60.0, 96.0],
     )
 
-    tableau = construir_tableau_inicial(problema)
-    print("contributions:", tableau.contributions)
-    print("base:", tableau.base)
-    print("values:", tableau.values)
-    print("x:", tableau.x)
-    print("s:", tableau.s)
+    x, z, status = simplex(problema)
+    print("x:", x)
+    print("z:", z)
+    print("status:", status)
