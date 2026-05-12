@@ -34,7 +34,9 @@ if not arquivo_csv.exists():
     sys.exit(1)
 
 if not arquivo_json.exists():
-    print(f"Erro: arquivo JSON {sys.argv[2]} não encontrado em algoritmo_simplex/input/")
+    print(
+        f"Erro: arquivo JSON {sys.argv[2]} não encontrado em algoritmo_simplex/input/"
+    )
     sys.exit(1)
 
 df = pd.read_csv(arquivo_csv)
@@ -49,3 +51,7 @@ u_bar = params["u_bar"]
 L_max = params["L_max"]
 
 print(f"t={t}, LGD={LGD}, u_bar={u_bar}, L_max={L_max}")
+
+# calcula a inadimplência financeira atual da carteira como média de pd_produto dos elegíveis
+pd_fin_atual = df[df["flag_filtros"] == 0]["pd_produto"].mean()
+print(f"PD_fin_atual: {pd_fin_atual:.4f}")
