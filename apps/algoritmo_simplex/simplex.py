@@ -113,8 +113,70 @@ def simplex(problema: Problema) -> tuple[list[float], float]:
             if todos_cj_zj[j] > todos_cj_zj[indice_entra]:
                 indice_entra = j
 
-    pass
+        # pega a coluna da variável que entra
+        if indice_entra < n:
+            # Se indice_entra < n, é um x
+            coluna_entra = tableau.x[indice_entra]
+        else:
+            # Se indice_entra >= n, é um s
+            coluna_entra = tableau.s[indice_entra - n]
 
+        # teste da razão mínima
+        # encontra a linha da variável que sai
+        indice_sai = -1
+        menor_razao = -1.0
+
+        for i in range(m):
+            if coluna_entra[i] > 0:
+                razao = tableau.values[i] / coluna_entra[i]
+                if indice_sai == -1 or razao < menor_razao:
+                    menor_razao = razao
+                    indice_sai = i
+
+        # elemento pivô (coeficiente da variável que entra na linha que sai)
+        elemento_pivo = coluna_entra[indice_sai]
+
+        # normaliza a linha pivô dividindo tudo pelo elemento pivô
+        tableau.values[indice_sai] /= elemento_pivo
+
+        for j in range(n):
+            tableau.x[j][indice_sai] /= elemento_pivo
+
+        for j in range(m):
+            tableau.s[j][indice_sai] /= elemento_pivo
+
+        # zera a coluna pivô em todas as outras linhas
+        for i in range(m):
+            if i == indice_sai:
+                continue
+
+            fator = coluna_entra[i]
+
+            tableau.values[i] -= fator * tableau.values[indice_sai]
+
+            for j in range(n):
+                tableau.x[j][i] -= fator * tableau.x[j][indice_sai]
+
+            for j in range(m):
+                tableau.s[j][i] -= fator * tableau.s[j][indice_sai]
+
+        # atualiza a base e a contribution da linha que mudou
+        tableau.base[indice_sai] = indice_entra
+        tableau.contributions[indice_sai] = problema.c[indice_entra] if indice_entra < n else 0.0
+
+        # monta o vetor de solução
+        # variáveis que não estão na base valem 0
+        x = [0.0] * n
+        for i in range(m):
+            if tableau.base[i] < n:  # se a variável da base é uma variável de decisão
+                x[tableau.base[i]] = tableau.values[i]
+
+        # calcula o valor ótimo da função objetivo
+        z = 0.0
+        for j in range(n):
+            z += problema.c[j] * x[j]
+
+        return x, z
 
 if __name__ == "__main__":
     problema = Problema(
