@@ -199,6 +199,7 @@ def simplex(problema: Problema) -> tuple[list[float], float, str]:
 
 
 if __name__ == "__main__":
+    # problema do professor (solução única)
     problema = Problema(
         c=[40.0, 35.0],
         A=[[2.0, 3.0], [4.0, 3.0]],
@@ -206,6 +207,33 @@ if __name__ == "__main__":
     )
 
     x, z, status = simplex(problema)
+    print("Problema do professor")
+    print("x:", x)
+    print("z:", z)
+    print("status:", status)
+
+    # problema ilimitado
+    problema_ilimitado = Problema(
+        c=[40.0, 35.0],
+        A=[[-1.0, 0.0], [0.0, -1.0]],
+        b=[60.0, 96.0],
+    )
+
+    print("\nProblema ilimitado")
+    try:
+        x, z, status = simplex(problema_ilimitado)
+    except ValueError as e:
+        print("Erro:", e)
+
+    # problema com múltiplas soluções
+    problema_multiplas = Problema(
+        c=[2.0, 4.0],
+        A=[[1.0, 2.0], [1.0, 0.0]],
+        b=[4.0, 2.0],
+    )
+
+    print("\nProblema com múltiplas soluções")
+    x, z, status = simplex(problema_multiplas)
     print("x:", x)
     print("z:", z)
     print("status:", status)
