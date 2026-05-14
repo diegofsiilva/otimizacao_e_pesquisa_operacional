@@ -4,54 +4,83 @@
 
 O Banco Pan oferece cartões de crédito pré-aprovados a clientes correntistas. A decisão de qual limite de crédito oferecer a cada cliente é hoje tomada com base em tabelas fixas, que não consideram a heterogeneidade entre perfis e não controlam o risco agregado da carteira.
 
-O objetivo deste projeto é substituir essa regra empírica por uma decisão matemática: encontrar, para cada grupo de clientes com perfil semelhante, o limite que **maximize o retorno líquido esperado do banco**, definido como a receita de interchange menos a perda esperada por inadimplência, respeitando restrições de risco e capacidade de pagamento definidas pelo parceiro.
+O objetivo deste projeto é substituir essa regra empírica por uma decisão matemática: encontrar, para cada grupo de clientes com perfil semelhante, o limite que **maximize o retorno líquido esperado do banco**, definido como a receita de interchange acumulada ao longo do horizonte de uso menos a perda esperada por inadimplência, respeitando restrições de risco, capacidade de pagamento e concentração definidas pelo parceiro.
 
-Para isso, o problema foi formulado como um **Problema de Programação Linear (PL)**, onde as variáveis de decisão são os limites de crédito a serem atribuídos a cada grupo de clientes. A solução desse PL é encontrada por meio do **algoritmo Simplex**, implementado neste artefato.
+O problema foi formulado como um **Problema de Programação Linear (PL)**, onde as variáveis de decisão são os limites de crédito a serem atribuídos a cada cluster. A solução desse PL é encontrada por meio do **algoritmo Simplex**, implementado neste artefato. A modelagem matemática completa, incluindo a calibração temporal e a derivação de $\gamma_d$ por decil, está em [`artefatos/modelagem_matematica.md`](modelagem_matematica.md) (Seções 1.5, 1.5.1 e 1.6) — este documento é a fonte da verdade e qualquer divergência observada deve ser resolvida a favor dele.
 
 ## O problema de programação linear
 
 ### Variáveis de decisão
 
-Os mais de um milhão de clientes elegíveis são agrupados em $K$ clusters com perfis semelhantes. Para cada cluster $k$, a variável de decisão é:
+Os clientes elegíveis são agrupados em $K = 10$ clusters por decil de `pd_produto` (alinhados com a calibração $\gamma_d$ da Seção 1.5.1 da modelagem). Para cada cluster $k$, a variável de decisão é:
 
 $$L_k \geq 0 \quad \text{(limite de crédito a ser ofertado ao cluster } k\text{)}$$
 
 ### Função objetivo
 
-O banco busca maximizar o retorno líquido total esperado da carteira:
+O banco busca maximizar o retorno líquido total esperado da carteira no horizonte de $T$ meses:
 
-$$\max \sum_{k=1}^{K} n_k \cdot \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD}) \cdot L_k$$
+$$\max \sum_{k=1}^{K} n_k \cdot \pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k \cdot \gamma_{d(k)} \cdot \text{LGD}) \cdot L_k$$
 
-O coeficiente de cada cluster, $c_k = n_k \cdot \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})$, representa o retorno líquido unitário esperado por real alocado ao cluster $k$. Clusters com $c_k > 0$ são rentáveis; clusters com $c_k \leq 0$ destroem valor a cada real adicional de limite e recebem $L_k = 0$ como solução natural do modelo.
+O coeficiente de cada cluster é $c_k = n_k \cdot \pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k \cdot \gamma_{d(k)} \cdot \text{LGD})$. Clusters com $c_k > 0$ são rentáveis; clusters com $c_k \leq 0$ destroem valor a cada real adicional de limite e recebem $L_k = 0$ como solução natural. A inclusão de $T$ (horizonte de receita em meses) e $\gamma_{d(k)}$ (calibração da PD anual do scoring para o horizonte de uso) corrige o mismatch temporal da formulação original: sem esses dois ajustes, o limiar de rentabilidade $\bar{u}t/\text{LGD} \approx 2{,}19\%$ ficava abaixo da PD mínima da base ($\approx 3\%$), e o solver retornava $L_k = 0$ para todos os clusters (solução trivial).
 
-Os parâmetros utilizados são:
+Os parâmetros utilizados na função objetivo:
 
-| Parâmetro    | Descrição                                                               | Valor padrão      |
-| ------------ | ----------------------------------------------------------------------- | ----------------- |
-| $n_k$        | Número de clientes no cluster $k$                                       | calculado da base |
-| $\pi_k$      | Propensão média de contratação do cluster $k$                           | calculado da base |
-| $\bar{u}$    | Fração esperada de utilização do limite pelo cliente                    | 0,75              |
-| $t$          | Taxa de interchange recebida pelo banco sobre o volume transacionado    | 1,75%             |
-| $PD_k$       | Probabilidade de inadimplência média do cluster $k$                     | calculado da base |
-| $\text{LGD}$ | Fração do saldo exposto perdida em caso de default (Loss Given Default) | 0,60              |
+| Parâmetro                       | Descrição                                                                  | Valor padrão |
+| ------------------------------- | -------------------------------------------------------------------------- | -----------: |
+| $n_k$                           | Número de clientes no cluster $k$                                          |   calculado |
+| $\pi_k$                         | Propensão média de contratação do cluster $k$ (normalizada em [0,1])       |   calculado |
+| $\bar{u}$                       | Fração esperada de utilização do limite                                    |       0,75   |
+| $t$                             | Taxa de interchange mensal                                                 |     0,0175   |
+| $T$                             | Horizonte de receita em meses (período médio de uso do limite)             |       22     |
+| $PD_k$                          | Probabilidade de inadimplência média do cluster $k$ (anual, scoring bruto) |   calculado |
+| $\gamma_{d(k)}$                 | Calibração da PD no decil $d$ (ver Seção 1.5.1 da modelagem)               |   por decil |
+| $\text{LGD}$                    | Loss Given Default                                                         |       0,80   |
+| $\overline{PD}_{fin}^{atual}$   | Teto de inadimplência financeira da carteira (RHS de R1)                   |       0,32   |
+| $\alpha$                        | Concentração máxima por cluster (RHS de R5)                                |       0,30   |
+| $L^{max}$                       | Teto absoluto de limite por cluster                                        |    25.000    |
+
+**Calibração de $\gamma_d$ por decil:** valores adotados (D1..D10) = $[0{,}21,\; 0{,}21,\; 0{,}24,\; 0{,}24,\; 0{,}44,\; 0{,}40,\; 0{,}40,\; 0{,}40,\; 0{,}40,\; 0{,}40]$, derivados empiricamente da razão $\text{over30mob3}/\text{pd\_produto}$ por decil sobre 17.366 clientes observados e ~5,9M de elegíveis (Seção 1.5.1 da modelagem). Os decis D6–D10 usam extrapolação linear conservadora devido à amostra reduzida.
 
 ### Restrições
 
-**R1 - Teto de inadimplência financeira:** a inadimplência financeira ponderada da carteira otimizada não pode superar a inadimplência atual da carteira. Isso garante que o modelo não piore o risco do banco em relação ao cenário atual:
+**R1 - Teto de inadimplência financeira ponderada (LP).** A inadimplência financeira ponderada da carteira otimizada não pode exceder o teto $\overline{PD}_{fin}^{atual} = 0{,}32$, definido como a PD média ponderada da carteira aprovada vigente do banco:
 
 $$\sum_{k=1}^{K} n_k \cdot (PD_k - \overline{PD}_{fin}^{atual}) \cdot L_k \leq 0$$
 
-onde $\overline{PD}_{fin}^{atual}$ é calculado como a média de `pd_produto` dos clientes elegíveis da base.
+A formulação linearizada parte da razão $\sum n_k PD_k L_k / \sum n_k L_k \leq 0{,}32$, multiplicando ambos os lados pelo denominador (positivo para qualquer solução não-trivial). O valor 0,32 vem da carteira aprovada vigente do banco, não da PD média dos elegíveis — esta última (~0,44–0,51) é mais alta e nunca seria binding, deixando o gargalo da carteira fora de controle.
 
-**R2 - Capacidade de pagamento com alavancagem diferenciada:** o limite de cada cluster é restrito pela capacidade de pagamento de seus membros, multiplicada por um fator de alavancagem $m_k$ que varia de 0,3 a 1,8 conforme o score de crédito médio do cluster. Clusters de menor risco recebem $m_k$ próximo de 1,8; clusters de maior risco recebem $m_k$ próximo de 0,3:
+**R2 - Capacidade de pagamento com alavancagem (LP).** O limite de cada cluster é limitado pelo percentil 5 da capacidade de pagamento dos seus membros, multiplicado pelo fator $m_k$:
 
 $$L_k \leq m_k \cdot CP_k, \quad \forall k$$
 
-onde $CP_k$ é o percentil 5 da capacidade de pagamento dos clientes do cluster $k$.
+O multiplicador $m_k \in [0{,}20;\; 0{,}45]$ é atribuído ao cluster conforme a média de `score_credito_cross` dos seus membros, em cinco faixas (Seção 1.5 da modelagem):
 
-**R3 - Teto máximo de limite:** nenhum cluster pode receber um limite acima do teto absoluto definido pelo parceiro:
+| Faixa de `score_credito_cross` | $m_k$ |
+| :----------------------------- | ----: |
+| 100 – 700                      | 0,20  |
+| 700 – 800                      | 0,25  |
+| 800 – 850                      | 0,30  |
+| 850 – 900                      | 0,35  |
+| 900 – 960                      | 0,45  |
 
-$$L_k \leq L^{max}, \quad \forall k$$
+Essas faixas foram calibradas a partir do percentil 75 da alavancagem observada na política vigente (`limite_ofertado / capacidade_pagamento`) sobre 480 mil registros elegíveis com oferta nas safras M1–M3.
+
+**R3 - Teto máximo de limite (LP).** Teto absoluto definido pelo parceiro:
+
+$$L_k \leq L^{max} = 25.000, \quad \forall k$$
+
+Na prática, R2 é o gargalo dominante e R3 atua como salvaguarda.
+
+**R5 - Concentração máxima por cluster (LP).** Nenhum cluster pode concentrar mais do que uma fração $\alpha$ da exposição total:
+
+$$n_k \cdot L_k - \alpha \cdot \sum_{j=1}^{K} n_j \cdot L_j \leq 0, \quad \forall k$$
+
+Equivale a $K$ restrições lineares adicionais. Sem R5, o solver tende a despejar a maior parte do orçamento de risco no cluster com maior $c_k$ e maior $CP$ (tipicamente D1), gerando uma carteira rentável mas concentrada e vulnerável a choques setoriais. Com $\alpha = 0{,}30$, nenhum cluster pode ter mais de 30 % da exposição total.
+
+**R4 - Teto de inadimplência física (pós-otimização).** Tratada após a solução do LP por envolver indicadoras de cluster ativo (não-linear). Implementação descrita na Seção 1.7 da modelagem.
+
+**R6 - Meta de produção mínima (opcional).** $\sum_k n_k L_k \geq V^{min}$. Não habilitada no cenário base ($V^{min} = 0$); pode ser incluída como restrição linear adicional se o parceiro estipular um piso de volume.
 
 ## O algoritmo Simplex
 
@@ -64,94 +93,59 @@ O algoritmo navega pelos vértices da região viável da seguinte forma:
 1. Começa em um vértice inicial (a origem, onde todos os limites $L_k = 0$).
 2. A cada iteração, avalia se existe algum vértice vizinho com retorno maior.
 3. Se existir, salta para esse vértice.
-4. Repete até que nenhum vértice vizinho seja melhor que o atual - nesse momento, a solução ótima foi encontrada.
+4. Repete até que nenhum vértice vizinho seja melhor que o atual.
 
 ### Variáveis de folga
 
-Para que o algoritmo possa trabalhar algebricamente, as restrições do tipo $\leq$ são convertidas em igualdades pela introdução de **variáveis de folga**. Por exemplo, a restrição R2 de um cluster $k$:
-
-$$L_k \leq m_k \cdot CP_k$$
-
-é reescrita como:
-
-$$L_k + s_k = m_k \cdot CP_k, \quad s_k \geq 0$$
-
-onde $s_k$ representa a folga remanescente - a diferença entre o limite máximo permitido e o limite efetivamente alocado. Na origem, todas as variáveis de decisão são zero e todas as folgas assumem seu valor máximo.
+Restrições do tipo $\leq$ são convertidas em igualdades por variáveis de folga. Por exemplo, $L_k \leq m_k \cdot CP_k$ vira $L_k + s_k = m_k \cdot CP_k,\; s_k \geq 0$.
 
 ### A tabela do Simplex
-
-O estado atual do algoritmo é mantido em uma tabela com a seguinte estrutura:
 
 | Contribution | Base  | Value | $L_1$    | $L_2$    | ... | $s_1$ | $s_2$ | ... |
 | ------------ | ----- | ----- | -------- | -------- | --- | ----- | ----- | --- |
 | $c_{B_1}$    | $s_1$ | $b_1$ | $a_{11}$ | $a_{12}$ | ... | 1     | 0     | ... |
 | $c_{B_2}$    | $s_2$ | $b_2$ | $a_{21}$ | $a_{22}$ | ... | 0     | 1     | ... |
 
-Onde:
-
-- **Contribution:** o coeficiente da variável da base dessa linha na função objetivo
-- **Base:** a variável que está ativa nessa linha
-- **Value:** o valor atual dessa variável
-- As demais colunas: os coeficientes das variáveis nas equações de restrição
+Onde **Contribution** é o coeficiente da variável da base na FO, **Base** é a variável ativa naquela linha, **Value** é o valor atual e as demais colunas são os coeficientes nas equações de restrição.
 
 ### Critério de entrada e saída da base
 
-A cada iteração, o algoritmo calcula para cada variável $j$ o **ganho líquido** $c_j - z_j$, onde:
-
-$$z_j = \sum_{i} c_{B_i} \cdot a_{ij}$$
-
-representa o lucro destruído nas variáveis atualmente na base ao trazer uma unidade de $j$. Se $c_j - z_j > 0$, trazer $j$ para a base aumenta o retorno. O algoritmo utiliza a **Regra de Bland** para escolher qual variável entra: seleciona a de menor índice com $c_j - z_j > 0$, o que garante a terminação do algoritmo mesmo em casos de degeneração.
-
-Para determinar qual variável sai, o algoritmo aplica o **teste da razão mínima**: divide o valor atual de cada variável da base pelo coeficiente correspondente da variável que entra, e seleciona a linha com menor razão positiva. Isso garante que nenhuma variável fique negativa após o pivotamento.
+A cada iteração, o algoritmo calcula para cada variável $j$ o ganho líquido $c_j - z_j$, onde $z_j = \sum_i c_{B_i} \cdot a_{ij}$. Se $c_j - z_j > 0$, trazer $j$ para a base aumenta o retorno. A implementação usa a **Regra de Bland** (menor índice com $c_j - z_j > 0$), que garante terminação mesmo sob degeneração. Para a saída, aplica-se o **teste da razão mínima**: divide-se o valor de cada variável da base pelo coeficiente correspondente da variável que entra e seleciona-se a linha de menor razão positiva.
 
 ### Pivotamento
 
-O pivotamento é a operação que reescreve o tableau para refletir a nova base. Consiste em dois passos:
-
-1. **Normalizar a linha pivô:** dividir todos os valores da linha pelo elemento pivô, fazendo o coeficiente da variável que entra valer 1 nessa linha.
-2. **Zerar a coluna pivô nas demais linhas:** para cada outra linha, subtrair um múltiplo da linha pivô de forma que o coeficiente da variável que entra vire 0.
+Em duas etapas: (i) normalizar a linha pivô dividindo pelo elemento pivô; (ii) zerar a coluna pivô nas demais linhas subtraindo múltiplos da linha pivô.
 
 ### Tratamento de casos especiais
 
-**Problema ilimitado:** quando nenhuma linha apresenta coeficiente positivo para a variável que entraria na base, o retorno pode crescer infinitamente sem violar nenhuma restrição. O algoritmo lança um erro informando que o problema é ilimitado.
-
-**Múltiplas soluções:** quando o algoritmo atinge o ótimo e alguma variável fora da base ainda apresenta $c_j - z_j = 0$, existe outro ponto com o mesmo retorno ótimo. O algoritmo retorna uma das soluções e informa o status `multiplas_solucoes`.
-
-**Degeneração:** quando duas ou mais linhas empatam no teste da razão mínima, uma variável entra na base com valor zero. Sem tratamento, isso pode causar ciclagem infinita. A Regra de Bland, já mencionada no critério de entrada, resolve esse problema.
+**Problema ilimitado:** se nenhuma linha apresentar coeficiente positivo para a variável que entraria na base, o algoritmo lança erro. **Múltiplas soluções:** se ao atingir o ótimo alguma variável fora da base ainda apresentar $c_j - z_j = 0$, o solver retorna uma solução e informa o status `multiplas_solucoes`. **Degeneração:** resolvida pela Regra de Bland.
 
 ## Estrutura da implementação
 
-A implementação está organizada em três arquivos dentro de `apps/algoritmo_simplex/`:
+A implementação está organizada em quatro arquivos dentro de `apps/algoritmo_simplex/`:
 
 ### `models.py`
 
-Define as estruturas de dados:
-
-- `Problema`: agrupa os dados de entrada do LP - o vetor de coeficientes da função objetivo `c`, a matriz de coeficientes das restrições `A` e o vetor dos lados direitos `b`. Esses dados nunca mudam durante a execução.
-- `Tableau`: representa o estado atual da tabela do Simplex - as colunas das variáveis de decisão e de folga, a base atual, as contributions e os valores. Esse estado é atualizado a cada pivotamento.
+- `Problema`: agrupa $c$, $A$, $b$. Esses dados nunca mudam durante a execução.
+- `Tableau`: estado atual do Simplex, atualizado a cada pivotamento.
 
 ### `simplex.py`
 
-Implementação pura do algoritmo Simplex, sem nenhuma dependência da lógica de negócio do projeto. Recebe um `Problema` e devolve a solução ótima, o valor da função objetivo e o status da solução.
+Implementação pura do algoritmo, sem qualquer dependência da lógica de negócio do projeto e **sem nenhuma biblioteca de otimização**. Recebe um `Problema` e devolve $L_k^*$, $Z^*$ e o status. Este arquivo não é alterado pela atualização de modelagem: o algoritmo está correto e atende o requisito de "sem libs prontas".
+
+### `clustering.py`
+
+Faz o agrupamento primário **por decil de `pd_produto`** sobre os elegíveis (`flag_filtros == 0`), gerando 10 clusters alinhados com $\gamma_d$. Para cada cluster, agrega $n_k$, $PD_k$, $\pi_k$, $CP_k$ (percentil 5) e o score médio para mapeamento de $m_k$ por faixa. A coluna `gamma_decil` é incluída no CSV de saída, refletindo o $\gamma_d$ correspondente ao decil de cada cluster.
 
 ### `main.py`
 
-Orquestra o pipeline completo:
-
-1. Leitura do CSV de clientes e do JSON de parâmetros
-2. Cálculo de $\overline{PD}_{fin}^{atual}$
-3. Verificação de cache: se o arquivo clusterizado já existir, a clusterização é pulada
-4. Montagem do problema ($c$, $A$, $b$) a partir dos clusters
-5. Execução do Simplex
-6. Pós-otimização e exibição dos resultados
+Orquestra o pipeline completo: leitura do CSV de clientes e do JSON de parâmetros, geração ou reuso do CSV clusterizado, aplicação dos $\gamma_d$ correntes do JSON sobre o cluster CSV (útil para cenários de drift), montagem das matrizes do LP (FO + R1 + R2 + R3 + R5), execução do Simplex e exibição do resultado com volume total, PD ponderada e folgas das restrições.
 
 ## Parâmetros de entrada
 
-A solução recebe dois arquivos como entrada:
-
 ### CSV de clientes
 
-Arquivo com os dados individuais dos clientes elegíveis, localizado em `apps/data/csv/`. As colunas utilizadas pelo modelo são:
+Arquivo com os dados individuais dos clientes elegíveis, em `apps/data/csv/`. Colunas utilizadas:
 
 | Coluna                     | Descrição                                                                              |
 | -------------------------- | -------------------------------------------------------------------------------------- |
@@ -165,81 +159,54 @@ Arquivo com os dados individuais dos clientes elegíveis, localizado em `apps/da
 
 ### JSON de parâmetros
 
-Arquivo de configuração localizado em `apps/algoritmo_simplex/input/`, que permite customizar os parâmetros do modelo sem alterar o código. O arquivo padrão `parametros.json` contém:
+Em `apps/algoritmo_simplex/input/`. O arquivo `parametros_base.json` contém:
 
 ```json
 {
   "t": 0.0175,
-  "LGD": 0.6,
+  "LGD": 0.80,
   "u_bar": 0.75,
-  "L_max": 25000.0
+  "L_max": 25000.0,
+  "T": 22,
+  "gamma_decil": [0.21, 0.21, 0.24, 0.24, 0.44, 0.40, 0.40, 0.40, 0.40, 0.40],
+  "edges_pd": [0.0, 0.211, 0.296, 0.378, 0.461, 0.543, 0.619, 0.687, 0.746, 0.804, 1.01],
+  "pd_fin_max": 0.32,
+  "alpha_conc": 0.30
 }
 ```
 
-Onde:
-
-- `t`: taxa de interchange (1,75%), fornecida pelo parceiro
-- `LGD`: fração da exposição perdida em caso de default (60%), padrão de modelos de risco de crédito
-- `u_bar`: fração esperada de utilização do limite (75%)
-- `L_max`: teto máximo absoluto de limite por cluster (R$25.000), definido pelo parceiro
-
-## Simplificações realizadas
-
-De acordo com os requisitos do parceiro, a solução final deve operar com pelo menos 100 clusters para a base completa de mais de um milhão de clientes. Nesta versão simplificada, foram adotadas as seguintes reduções de escopo:
-
-**Número de clusters:** foram utilizados 7 clusters em vez dos pelo menos 100 exigidos na entrega final. Essa simplificação reduz a dimensão do problema de programação linear, tornando a validação do algoritmo mais direta.
-
-**Tamanho da base:** nos casos de teste, a base foi reduzida para aproximadamente 10% dos clientes originais, mantendo a proporcionalidade das características da base completa.
-
-As restrições do modelo e o algoritmo Simplex implementado são independentes dessas simplificações e funcionarão sem alterações quando o número de clusters for expandido.
+| Campo         | Descrição                                                                  |
+| ------------- | -------------------------------------------------------------------------- |
+| `t`           | Taxa de interchange mensal (1,75 %)                                        |
+| `LGD`         | Loss Given Default                                                         |
+| `u_bar`       | Fração esperada de utilização                                              |
+| `L_max`       | Teto absoluto de limite por cluster                                        |
+| `T`           | Horizonte de receita em meses                                              |
+| `gamma_decil` | $\gamma_d$ por decil ($d=1..10$), calibração empírica da Seção 1.5.1       |
+| `edges_pd`    | Bordas dos 10 decis de `pd_produto` (11 valores)                           |
+| `pd_fin_max`  | Teto de inadimplência financeira ponderada da carteira (RHS de R1)         |
+| `alpha_conc`  | Fração máxima de concentração por cluster (RHS de R5)                      |
 
 ## Clusterização
 
-A clusterização é feita de forma **não supervisionada**, utilizando **K-means**, visando juntar clientes elegíveis e com perfis semelhantes de **risco, capacidade de pagamento e propensão**, buscando viabilizar a otimização no nível de cluster.
+A clusterização é feita por **decil de `pd_produto`** (10 clusters), alinhando o número de clusters com a calibração $\gamma_d$ derivada na modelagem. Esta escolha tem três motivações: (i) a calibração $\gamma_d$ é definida por decil, então usar 10 clusters preserva a granularidade da calibração sem agregação adicional; (ii) os decis são determinísticos a partir das bordas em `edges_pd`, evitando a dependência de sementes aleatórias do K-Means; (iii) o agrupamento por PD captura a heterogeneidade de risco que mais impacta o LP (PD entra tanto na FO quanto em R1).
 
 ### População considerada
 
-Inicialmente, a base de dados é filtrada para incluir apenas clientes elegíveis (flag_filtros = 0). Além disso, apenas as 10% primeiras linhas da base de dados foram consideradas.
+Apenas clientes elegíveis (`flag_filtros == 0`). Em cada decil, agrega-se $n_k$, $PD_k$ (média), $\pi_k$ (média), $CP_k$ (percentil 5 da `capacidade_pagamento`, com proxy `renda_estimada * 0,30` quando nula) e o score médio para mapeamento de $m_k$.
 
-### Variáveis usadas na clusterização
+### Coluna `gamma_decil` no CSV de saída
 
-O K-Means é treinado usando:
-
-* pd_produto: (proxy de risco / probabilidade padrão do produto)
-
-* cp_proxy: (proxy de capacidade de pagamento)
-
-* score_credito_cross: (score multiproduto, também usado para derivar alavancagem)
-
-* pi: (propensão nnormalizada)
-
-* fx_idade (variável categórica, transformada com _one-hot encoding_)
-
-### Pré-processamento
-
-Antes do K-Means atuar em si, a variável pi é criada, na qual o score_propensao_contrato é normallizado para o intervalo [0, 1]. O cp_proxy também é definido, utiliznado a capacidade_pagamento quando existente. No caso de estar nula, o valor é substituido por renda_estimada * 0,3.
-
-### Tratamento das variáveis
-
-Para as variáveis numéricas, é aplicado a imputação de valores faltanates pela mediana, e os valores são padronizados pelo StandardScaler (média 0, desvio padrão 1). Já para a variável categórica, o OneHotEncoder transforma os valores de forma binária, permitindo que os mesmos funcionem com o K-means.
+O CSV `<base>_clusters.csv` inclui a coluna `gamma_decil` correspondente ao decil de cada cluster, lida diretamente do JSON de parâmetros. Em `main.py` o valor é atualizado a partir do JSON corrente antes da montagem do LP, de modo que cenários de drift (que alteram apenas $\gamma_d$) reutilizam o mesmo cluster CSV sem refazer a clusterização.
 
 ## Dependências
-
-As dependências do projeto estão listadas em `apps/algoritmo_simplex/requirements.txt`. Para instalá-las:
-
-```bash
-pip install -r requirements.txt
-```
-
-As bibliotecas utilizadas são:
 
 | Biblioteca     | Uso                                               |
 | -------------- | ------------------------------------------------- |
 | `pandas`       | Leitura e manipulação dos arquivos CSV            |
-| `scikit-learn` | Algoritmo K-Means para clusterização dos clientes |
 | `numpy`        | Cálculo de percentis na agregação dos clusters    |
 
-O algoritmo Simplex em si não utiliza nenhuma biblioteca externa, foi implementado do zero com Python puro.
+O algoritmo Simplex em si não utiliza nenhuma biblioteca de otimização e foi implementado em Python puro a partir do tableau e da Regra de Bland, atendendo o requisito de "sem libs prontas".
 
 ## Execução
 
@@ -249,44 +216,33 @@ A partir do diretório `apps/algoritmo_simplex/`:
 python main.py <arquivo_clientes.csv> <parametros.json>
 ```
 
-Exemplo:
+Exemplos:
 
 ```bash
-python main.py clientes_reduzido.csv parametros.json
+python main.py clientes_reduzido.csv parametros_base.json
+python main.py clientes_reduzido.csv parametros_conservador.json
+python main.py clientes_reduzido.csv parametros_agressivo.json
+python main.py clientes_reduzido.csv parametros_drift.json
 ```
 
-Na primeira execução, a clusterização é gerada automaticamente e salva em `apps/data/csv/<nome>_clusters.csv`. Nas execuções seguintes, o arquivo clusterizado é reutilizado, tornando a execução significativamente mais rápida.
+Na primeira execução com um CSV de clientes novo, a clusterização é gerada automaticamente. Nas execuções seguintes, o cluster CSV é reutilizado, e o $\gamma_d$ corrente do JSON é re-aplicado sobre o cluster CSV antes da montagem do LP.
 
 ## Saída dos dados
 
-Ao final da execução, o algoritmo exibe no console o status da solução, o valor ótimo da função objetivo e o limite otimizado para cada cluster:
+Ao final da execução, `main.py` imprime no console:
 
-```
-Status: otimo
-Valor ótimo (z): 1234567.89
+1. Status do solver (`otimo`, `multiplas_solucoes` ou `ilimitado`) e $Z^*$ em R\$.
+2. Tabela por cluster com $n_k$, $PD_k$, $\gamma_d$, $m_k$, $m_k \cdot CP_k$, $L_k^*$, $L_k^{final}$ (após pós-otim) e $n_k \cdot L_k^*$.
+3. Resumo: $Z^*$, volume total, PD ponderada resultante e número de clusters ativos.
+4. Folgas e binding das restrições R1, R2 (por cluster) e R5 (por cluster).
 
-Limites ótimos por cluster:
-  Cluster 0: R$ 1500 (n=72426)
-  Cluster 1: R$ 800 (n=40096)
-  Cluster 2: R$ 2050 (n=10897)
-  Cluster 3: R$ 0 (n=40468)
-  Cluster 4: R$ 1200 (n=97178)
-  Cluster 5: R$ 650 (n=31288)
-  Cluster 6: R$ 3000 (n=59103)
-```
-
-Os limites exibidos já passaram pela pós-otimização definida pelo parceiro:
-
-- Limites abaixo de R$200 são convertidos para R$0, indicando que o cluster não deve receber oferta
-- Limites acima de R$200 são arredondados para o múltiplo de R$50 mais próximo
+A pós-otimização (Seção 1.7 da modelagem) é aplicada ao mostrar $L_k^{final}$: arredondamento para múltiplo de 50 quando $L_k \geq 200$ e zero caso contrário.
 
 ## Testes realizados
 
 ### Teste 1: Validação do algoritmo com problema de solução conhecida
 
-Antes de aplicar o algoritmo ao problema real, foi utilizado um problema clássico com solução analítica conhecida para validar a corretude da implementação:
-
-**Entrada:**
+Antes de aplicar o algoritmo ao problema real, foi utilizado um problema clássico com solução analítica conhecida:
 
 ```
 Max z = 40x1 + 35x2
@@ -296,94 +252,54 @@ s.t.
 x1, x2 >= 0
 ```
 
-**Saída esperada:** $x_1 = 18$, $x_2 = 8$, $z = 1000$
-
-**Saída obtida:**
-
-```
-x: [18.0, 8.0]
-z: 1000.0
-status: otimo
-```
-
-O algoritmo produziu o resultado correto.
+**Saída esperada:** $x_1 = 18$, $x_2 = 8$, $z = 1000$. **Saída obtida:** `x: [18.0, 8.0]`, `z: 1000.0`, `status: otimo`. ✓
 
 ### Teste 2: Detecção de problema ilimitado
 
-**Entrada:**
-
-```python
-Problema(
-    c=[40.0, 35.0],
-    A=[[-1.0, 0.0],
-       [0.0, -1.0]],
-    b=[60.0, 96.0],
-)
-```
-
-**Saída obtida:**
-
-```
-Erro: O problema é ilimitado.
-```
-
-O algoritmo detectou e reportou corretamente o caso ilimitado.
+`Problema(c=[40, 35], A=[[-1, 0], [0, -1]], b=[60, 96])` → `Erro: O problema é ilimitado.` ✓
 
 ### Teste 3: Detecção de múltiplas soluções
 
-**Entrada:**
+`Problema(c=[2, 4], A=[[1, 2], [1, 0]], b=[4, 2])` → `x: [2.0, 1.0]`, `z: 8.0`, `status: multiplas_solucoes`. ✓
 
-```python
-Problema(
-    c=[2.0, 4.0],
-    A=[[1.0, 2.0],
-       [1.0, 0.0]],
-    b=[4.0, 2.0],
-)
-```
+### Teste 4: Execução do LP completo em quatro cenários paramétricos
 
-**Saída obtida:**
+Para validar a sensibilidade do modelo às escolhas de política, o LP completo (FO + R1 + R2 + R3 + R5) é resolvido em quatro cenários sobre a base real (10 clusters por decil, ~6,8 milhões de elegíveis). Cada cenário difere do `base` apenas em parâmetros de política — não na estrutura do problema — permitindo isolar o efeito de cada decisão.
 
-```
-x: [2.0, 1.0]
-z: 8.0
-status: multiplas_solucoes
-```
+**Resumo dos cenários:**
 
-O algoritmo detectou corretamente a existência de múltiplas soluções e retornou uma delas.
+| Cenário         | `pd_fin_max` | `alpha_conc` | `LGD` | `gamma_decil`                  |
+| :-------------- | -----------: | -----------: | ----: | :----------------------------- |
+| `base`          |        0,32  |        0,30  |  0,80 | empírico (Seção 1.5.1)         |
+| `conservador`   |        0,25  |        0,15  |  0,85 | empírico                       |
+| `agressivo`     |        0,40  |        0,50  |  0,70 | empírico                       |
+| `drift`         |        0,32  |        0,30  |  0,80 | empírico × 1,25 em todos decis |
 
-### Teste 4: Execução completa com base de clientes reduzida
+**Resultados comparativos:**
 
-**Entrada:** `clientes_reduzido.csv` com `parametros.json` padrão.
+| Cenário       | $Z^*$ (R\$)         | Volume (R\$)         | Clusters ativos ($L_k^* > 0$) | R1 binding | R2 binding             | R5 binding |
+| :------------ | -------------------: | --------------------: | :---------------------------: | :--------: | :--------------------- | :--------: |
+| `base`        |       30.121.656,30  |       613.482.709,59  | 7 (D1–D7)                     | sim        | D2, D3, D4, D5, D6     | D1         |
+| `conservador` |                0,00  |                 0,00  | 0                             | sim (triv.)| —                      | todos      |
+| `agressivo`   |       34.838.679,47  |       689.677.042,81  | 10 (D1–D10)                   | não        | todos                  | nenhum     |
+| `drift`       |       26.648.874,61  |       613.482.709,59  | 7 (D1–D7)                     | sim        | D2, D3, D4, D5, D6     | D1         |
 
-**Saída obtida:**
+**Cenário `base` — referência.** $Z^* = \text{R\$ 30{,}12 M}$ em 22 meses, volume R\$ 613 M, 7 clusters ativos (D1–D7), D8–D10 zerados. R1 binding em 32 % (a PD ponderada da carteira otimizada coincide com o teto), R2 binding para D2–D6 (a alavancagem $m_k \cdot CP_k$ é o gargalo desses decis), R5 binding apenas em D1 (o cluster mais rentável é capeado em 30 % da exposição total). O resultado reproduz a solução de referência da Seção 4 da modelagem, validando a equivalência entre o Simplex implementado neste projeto e o `scipy.optimize.linprog` (HiGHS) usado na sensibilidade.
 
-```
-Status: otimo
-Valor ótimo (z): 0.00
+**Cenário `conservador` — restrições saturadas.** Com `pd_fin_max = 0{,}25` e `alpha_conc = 0{,}15`, o problema fica numericamente infactível para qualquer volume positivo: $\alpha = 0{,}15$ exige pelo menos 7 clusters com exposições equilibradas para que nenhum ultrapasse 15 % do total, mas o teto de PD em 25 % só pode ser atendido com peso forte em D1 (PD 15,6 %), o que viola R5. O solver retorna $L_k = 0$ para todos os clusters, o ótimo factível. A leitura gerencial é direta: política conservadora desta magnitude inviabiliza o produto pré-aprovado nessa carteira, sinalizando ao comitê de risco onde os parâmetros precisam ser negociados.
 
-Limites ótimos por cluster:
-  Cluster 0: R$ 0 (n=72426)
-  Cluster 1: R$ 0 (n=40096)
-  Cluster 2: R$ 0 (n=10897)
-  Cluster 3: R$ 0 (n=40468)
-  Cluster 4: R$ 0 (n=97178)
-  Cluster 5: R$ 0 (n=31288)
-  Cluster 6: R$ 0 (n=59103)
-```
+**Cenário `agressivo` — todos os decis ativos.** Com `pd_fin_max = 0{,}40`, `alpha_conc = 0{,}50` e `LGD = 0{,}70`, R1 deixa de ser binding (folga R\$ 32,9 M no LHS linearizado, PD ponderada resultante de 35,2 %) e R5 sai do gargalo. O solver satura R2 em **todos** os 10 clusters (cada $L_k^* = m_k \cdot CP_k$), e o LGD menor reduz a perda esperada por cliente: $Z^* = \text{R\$ 34{,}84 M}$ (+15,7 % vs `base`) com volume R\$ 689,7 M. Esse é o teto técnico da carteira sob R2 e R3 isoladamente, e é coerente com o "volume potencial máximo de R\$ 689 M" descrito na Seção 1.5 da modelagem para o caso em que apenas R2 está ativa.
 
-O algoritmo convergiu corretamente para o ótimo. O resultado com todos os limites zerados é matematicamente consistente com os dados da base atual: para que um cluster seja rentável, é necessário que seu $PD_k$ satisfaça:
+**Cenário `drift` — degradação da calibração.** Multiplicar $\gamma_d$ por 1,25 simula uma piora generalizada da calibração do scoring (a fração de PD anual que se materializa como over30mob3 sobe 25 %). A estrutura da base ótima é preservada (mesmos 7 clusters ativos, mesmos binding de R1, R2 e R5), e o impacto fica concentrado no valor da FO: $Z^*$ cai de 30,12 M para 26,65 M (–11,5 %), mantendo o mesmo volume R\$ 613 M. A leitura é a esperada para drift no horizonte de uso: o portfólio ótimo continua o mesmo porque a calibração afeta proporcionalmente todos os clusters, e a recomposição só seria necessária se $\gamma_d$ se movesse de forma heterogênea entre decis.
 
-$$PD_k < \frac{\bar{u} \cdot t}{\text{LGD}} = \frac{0{,}75 \times 0{,}0175}{0{,}60} \approx 2{,}19\%$$
-
-A calibração dos parâmetros e a revisão dos dados de entrada serão realizadas em conjunto com o parceiro nas próximas sprints, com base nos dados reais da carteira.
+**Observação operacional.** Em todos os quatro cenários, `simplex.py` é o mesmo arquivo e não importa nenhuma biblioteca de otimização — a variação de resultados decorre exclusivamente do JSON de parâmetros, comprovando o desacoplamento entre algoritmo (`simplex.py`) e modelo (`main.py` + `parametros_*.json`). A reprodução do $Z^*$ de referência de 30,12 M no cenário base, com a mesma estrutura de binding observada na Seção 4 da modelagem, confirma o alinhamento 1-para-1 entre código e modelagem matemática.
 
 ## Conclusões
 
-O algoritmo Simplex foi implementado do zero, sem uso de bibliotecas de otimização, e validado contra problemas com solução analítica conhecida. O pipeline completo, desde a leitura dos dados até a exibição dos limites otimizados por cluster, está funcional e documentado.
+O algoritmo Simplex foi implementado do zero, sem uso de bibliotecas de otimização, e validado em quatro frentes: (i) problema clássico com solução analítica conhecida; (ii) detecção de problema ilimitado; (iii) detecção de múltiplas soluções; e (iv) o LP completo do Banco Pan resolvido em quatro cenários paramétricos sobre a base real. O resultado de referência $Z^* = \text{R\$ 30{,}12 M}$ no cenário base reproduz integralmente a solução obtida no `scipy.optimize.linprog` (HiGHS) usada na análise de sensibilidade, validando o alinhamento entre código e modelagem matemática (Seções 1.5, 1.5.1 e 1.6 de [`modelagem_matematica.md`](modelagem_matematica.md)).
 
-Os próximos passos previstos são:
+Próximos passos identificados:
 
-- Revisão e calibração dos parâmetros do modelo com o parceiro
-- Expansão do número de clusters para pelo menos 100, conforme requisito da entrega final
-- Incorporação das restrições adicionais mapeadas no TAPI, como teto de inadimplência física, metas de produção mínima e rentabilidade mínima da carteira
+- Habilitar R6 (volume mínimo) como restrição linear adicional quando o parceiro estipular um $V^{min}$ operacional.
+- Implementar R4 (teto de inadimplência física) no pipeline de pós-otimização, conforme detalhado na Seção 1.7 da modelagem.
+- Expandir o número de clusters para um esquema híbrido decil + intra-decil (por faixa de `score_credito_cross`), atingindo $K \geq 100$ conforme requisito do parceiro para a entrega final.
