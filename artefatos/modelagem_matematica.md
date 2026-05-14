@@ -63,14 +63,11 @@ A tabela a seguir detalha as 17 variáveis fornecidas, com estatísticas descrit
 
 **Clusterização dos clientes:** A base elegível contém aproximadamente 1,8 milhão de clientes na safra M1. Otimizar um limite individual $L_i$ para cada cliente resultaria em um LP com ~1,8M variáveis de decisão e número equivalente de restrições individuais (capacidade de pagamento), o que tornaria o tempo de resolução proibitivo para solvers open-source como CBC. Por essa razão, o modelo agrupa os clientes elegíveis em $K$ clusters (mínimo 100, conforme orientação do TAPI) com base em variáveis de perfil de risco e capacidade de pagamento, como `pd_produto`, `capacidade_pagamento`, `score_credito_cross` e `fx_idade`. A técnica de clusterização (e.g., K-Means ou segmentação por faixas) será definida na etapa de implementação. Para cada cluster $k$, os parâmetros representativos ($PD_k$, $\pi_k$, $CP_k$, $m_k$) são calculados como médias dos clientes do grupo, exceto $CP_k$ que usa o percentil 5 ($p5$) do cluster para garantir robustez sem que outliers com capacidade atipicamente baixa inviabilizem a alocação de todo o grupo. Todos os $n_k$ clientes de um mesmo cluster recebem o mesmo limite $L_k$. Idealmente, cada cliente receberia um limite individual, mas a abordagem por clusters é o que viabiliza a resolução com os recursos computacionais disponíveis.
 
-**Parâmetro fornecido pelo parceiro:**
+**Parâmetros fornecidos pelo parceiro:**
 
 - **Taxa de interchange:** $t = 0{,}0175$ (1,75% sobre volume transacionado).
-
-**Variáveis não fornecidas que seriam relevantes:**
-
-- **LGD (Loss Given Default):** Adotamos $\text{LGD} = 0{,}80$, indicando que, em caso de default, o banco perde 80% do saldo exposto (recuperando 20% via cobrança ou cessão de carteira). Esse valor é uma simplificação uniforme para todos os clusters, conservador em relação à média de mercado para cartão de crédito sem garantia. Idealmente, a LGD seria diferenciada por perfil de risco, mas essa granularidade ainda não está disponível.
-- **Utilização esperada do limite:** Adotamos constante $\bar{u} = 0{,}75$ (75% do limite concedido). Esse valor reflete uma estimativa conservadora de uso efetivo do cartão. Idealmente, $\bar{u}_k$ seria estimada por perfil de cluster a partir de dados de ativação, mas esses dados ainda não estão disponíveis.
+- **LGD (Loss Given Default):** $\text{LGD} = 0{,}80$, indicando que, em caso de default, o banco perde 80% do saldo exposto (recuperando 20% via cobrança ou cessão de carteira). Esse valor é uma simplificação uniforme para todos os clusters, conservador em relação à média de mercado para cartão de crédito sem garantia. Idealmente, a LGD seria diferenciada por perfil de risco, mas essa granularidade ainda não está disponível.
+- **Utilização esperada do limite:** Constante $\bar{u} = 0{,}75$ (75% do limite concedido). Esse valor reflete uma estimativa conservadora de uso efetivo do cartão. Idealmente, $\bar{u}_k$ seria estimada por perfil de cluster a partir de dados de ativação, mas esses dados ainda não estão disponíveis.
 
 ---
 
@@ -78,7 +75,8 @@ A tabela a seguir detalha as 17 variáveis fornecidas, com estatísticas descrit
 
 O modelo opera sobre **clusters de clientes**: os clientes elegíveis são agrupados em $K$ clusters (mínimo 100), e cada cluster $k$ recebe um limite único $L_k$ atribuído a todos os seus $n_k$ membros.
 
-**Etapa 1 - Pré-processamento e clusterização**
+**Etapa 1 - Pré-processamento e clusterização** FALAR MAIS SOBRE A CLSUTERIZACAo AGORA QUE JA FIZEMOS
+
 
 Antes da clusterização, são removidos da base todos os clientes com `flag_filtros = 1`, que representam perfis restritos e não podem receber crédito (aproximadamente 12,7M dos 14,5M na safra M1). Apenas os clientes elegíveis (`flag_filtros = 0`, ~1,8M em M1) seguem para a etapa seguinte. Esses clientes elegíveis são então agrupados em $K$ clusters com base em variáveis de perfil de risco e capacidade de pagamento. Para cada cluster $k$, calculam-se os parâmetros representativos: $PD_k$ e $\pi_k$ como médias dos clientes do grupo, e $CP_k$ como o percentil 5 de capacidade de pagamento do cluster.
 
@@ -117,15 +115,17 @@ $L_k$ representa o valor do limite de crédito, em reais, atribuído a todos os 
 | $CP_k$ | Capacidade de pagamento do cluster $k$ | R\$ | Percentil 5 ($p5$) de `capacidade_pagamento` no cluster. Proxy: `renda_estimada × 0,30` quando null |
 | $m_k$ | Multiplicador de alavancagem do cluster $k$ | [0,20; 0,45] | Determinado pela faixa de `score_credito_cross` médio do cluster (ver tabela de faixas abaixo) |
 | $t$ | Taxa de interchange (mensal) | adimensional | 0,0175 (fornecido pelo parceiro) |
-| $T$ | Horizonte de receita | meses | 12 (anualização da receita mensal) |
+| $T$ | Horizonte de receita | meses | 22 (período médio de uso do limite no produto, fornecido pelo parceiro) |
 | $\text{LGD}$ | Loss Given Default | [0, 1] | 0,80 (constante para todos os clusters) |
 | $\bar{u}$ | Utilização esperada do limite | [0, 1] | 0,75 (constante para todos os clusters) |
+| $\gamma_d$ | Fator de calibração da PD no decil $d$ | [0,20; 0,45] | Razão empírica $\frac{\text{over30mob3}}{\text{pd\_produto}}$ por decil de PD bruta (ver tabela na Seção 1.5.1) |
+| $PD_k^{cal}$ | Probabilidade de default calibrada do cluster $k$ | [0, 1] | $PD_k^{cal} = PD_k \cdot \gamma_{d(k)}$, onde $d(k)$ é o decil de $PD_k$ |
 | $\overline{PD}_{fin}^{atual}$ | Teto de inadimplência financeira | [0, 1] | Média ponderada (por limite) de PD da carteira aprovada vigente |
 | $L^{max}$ | Teto máximo de limite | R\$ | 25.000 (diretriz do parceiro) |
 | $\overline{PD}_{fis}^{atual}$ | Teto de inadimplência física | [0, 1] | Média simples de PD da carteira aprovada vigente (headcount, sem ponderar por limite) |
 | $\alpha$ | Concentração máxima por cluster | [0, 1] | Fração máxima da exposição total que um único cluster pode concentrar. Valor sugerido: $\alpha = 0{,}05$ (5%) |
 | $V^{min}$ | Volume mínimo de produção | R\$ | Piso de volume total de limite ofertado, definido pelo parceiro com base em metas comerciais |
-| $c_k$ | Coeficiente de retorno líquido unitário do cluster $k$ | R\$/R\$ | $c_k = \pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k \cdot \text{LGD})$ |
+| $c_k$ | Coeficiente de retorno líquido unitário do cluster $k$ | R\$/R\$ | $c_k = \pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k^{cal} \cdot \text{LGD})$ |
 
 **Faixas de alavancagem $m_k$:** O multiplicador $m_k$ é atribuído ao cluster conforme a média de `score_credito_cross` dos seus membros. As faixas foram derivadas empiricamente a partir da alavancagem observada na política vigente do banco (`limite_ofertado / capacidade_pagamento`), usando o percentil 75 da distribuição como teto por faixa (análise detalhada em `scripts/analise_alavancagem.py`, sobre 480 mil registros elegíveis com oferta nas safras M1–M3). A relação é monotônica e consistente entre safras: scores mais altos recebem alavancagem maior, refletindo menor risco de crédito.
 
@@ -139,6 +139,37 @@ $L_k$ representa o valor do limite de crédito, em reais, atribuído a todos os 
 
 A lógica é direta: clientes com score de crédito mais alto demonstram historicamente menor risco, e o banco lhes concede limites proporcionalmente maiores em relação à capacidade de pagamento. O uso do p75 como referência para $m_k$ significa que aproximadamente 75% das ofertas vigentes já respeitam esse teto, enquanto os ~25% restantes representam casos em que a política atual é mais agressiva — exatamente a cauda que a restrição R2 visa controlar.
 
+#### 1.5.1 Calibração da PD por decil ($\gamma_d$)
+
+A variável `pd_produto` é uma probabilidade de default em janela anual estimada pelo modelo de scoring interno do banco. Para utilizá-la como insumo de perda esperada no horizonte $T = 22$ meses adotado pelo modelo, é necessário traduzi-la para uma estimativa de perda efetiva observável. A calibração baseia-se na razão empírica entre o evento `over30mob3` (atraso superior a 30 dias nas três primeiras parcelas, único indicador de inadimplência realizada disponível na base) e `pd_produto`. Essa razão, denotada $\gamma$, representa a fração da PD anual prevista que se materializa como evento de default observável no início do contrato, e funciona como **estimador empírico da perda efetiva por real de PD prevista** dentro do horizonte de uso do produto. A premissa de fundo é que default em cartão de crédito subprime é fortemente front-loaded — clientes que não atrasam nos primeiros meses tendem a honrar o restante do contrato — de modo que o `over30mob3` captura a maior parte da perda life-of-loan no horizonte de uso.
+
+A análise (detalhada em `scripts/analise_09_calibracao_final.py`, sobre 17.366 clientes com `over30mob3` observado e 5,9M de elegíveis amostrados nas safras M1, M2 e M3) revela três fatos:
+
+1. **A razão $\gamma$ não é constante.** Globalmente $\gamma \approx 0{,}24$ (orientação inicial do parceiro), mas analisada por decil de `pd_produto` na base elegível, $\gamma$ cresce monotonicamente: 0,21 em D1 (PD < 21%) até 0,24 em D4 (PD ~38–46%), com correlação de Pearson 0,78 entre $\gamma$ e a PD média do decil. O multiplicador uniforme 0,24 mascara essa variação, superestimando levemente a perda em decis de PD baixa e subestimando em decis de PD alta.
+
+2. **Para decis com PD acima de ~46% (D5 em diante) a amostra observada é muito reduzida**, pois a política vigente do banco não aprova praticamente ninguém desse perfil — o que confirma o viés de seleção da carteira. Onde há amostra (D5: 60 obs), a razão observada salta para ~0,44, sugerindo que o modelo de scoring subestima sistematicamente o risco em PDs altas. Para D6–D10 adotamos $\gamma = 0{,}40$ como extrapolação conservadora, ancorada na regressão linear ajustada sobre os decis com amostra suficiente ($\gamma = 0{,}05 + 0{,}69 \cdot \overline{PD}_d$), com piso de 0,20 e teto de 0,45.
+
+3. **Calibração alternativa por faixa de `score_credito_cross` não é discriminante.** As faixas 100–700, 700–800, 800–850 e 850–900 apresentam $\gamma$ observado próximo de 0,22–0,24 (variação inferior a 2 pontos), apenas a faixa 900–960 destoa marginalmente. Logo, `score_credito_cross` não captura a variação observada por decil de `pd_produto`, e por isso adotamos os decis de `pd_produto` como base da calibração.
+
+A tabela abaixo apresenta a calibração final. Para o cluster $k$, o decil $d(k)$ é determinado pelo $PD_k$ representativo, e a PD calibrada é $PD_k^{cal} = PD_k \cdot \gamma_{d(k)}$.
+
+| Decil $d$ | Faixa de `pd_produto` | $\overline{PD}_d$ | $N_{obs}$ | $\gamma_d$ empírico (IC95%) | $\gamma_d$ adotado | Fonte |
+| :-------: | :-------------------- | :---------------: | --------: | :--------------------------: | :----------------: | :---- |
+| D1  | 0,000 – 0,211 | 0,155 | 2.357 | 0,209 [0,164; 0,258] | 0,21 | empírico |
+| D2  | 0,211 – 0,296 | 0,253 | 3.744 | 0,213 [0,187; 0,242] | 0,21 | empírico |
+| D3  | 0,296 – 0,378 | 0,336 | 5.567 | 0,242 [0,220; 0,266] | 0,24 | empírico |
+| D4  | 0,378 – 0,461 | 0,419 | 5.624 | 0,235 [0,218; 0,255] | 0,24 | empírico |
+| D5  | 0,461 – 0,543 | 0,502 | 60   | 0,442 [0,239; 0,679] | 0,44 | empírico (amostra reduzida) |
+| D6  | 0,543 – 0,619 | 0,581 | 8    | —                    | 0,40 | extrapolação linear |
+| D7  | 0,619 – 0,687 | 0,653 | 5    | —                    | 0,40 | extrapolação linear |
+| D8  | 0,687 – 0,746 | 0,717 | 0    | —                    | 0,40 | extrapolação linear |
+| D9  | 0,746 – 0,804 | 0,774 | 0    | —                    | 0,40 | extrapolação linear |
+| D10 | 0,804 – 1,000 | 0,841 | 1    | —                    | 0,40 | extrapolação linear |
+
+**Por que decis e não um valor único:** o multiplicador uniforme $\gamma = 0{,}24$ produzido pela média global é estatisticamente consistente apenas para o decil 4 (cuja $\gamma$ empírica de fato é 0,24); para decis de PD baixa essa calibração superestima a perda em ~15%, e para decis de PD alta a subestima por um fator de até 2× (D5 empírico 0,44 vs 0,24 uniforme). A discretização em decis reflete a heterogeneidade real do modelo de scoring sem introduzir um hiperparâmetro contínuo difícil de validar empiricamente. Internamente, o pipeline pode aplicar essa calibração em duas formas operacionalmente equivalentes: (i) por cliente, classificando $PD_i$ em seu decil e multiplicando pelo $\gamma_{d(i)}$ correspondente antes de agregar por cluster; (ii) por cluster, classificando $PD_k$ médio em seu decil e aplicando $\gamma_{d(k)}$. Adotamos a forma (ii) por consistência com o restante do modelo, que opera por cluster.
+
+**Periodicidade de revisão:** os valores de $\gamma_d$ devem ser recalculados a cada nova safra, idealmente trimestralmente. Mudanças na razão observada $\gamma$ sinalizam drift do modelo de scoring ou alteração no comportamento da carteira — em ambos os casos, são gatilho para reotimização do LP.
+
 ---
 
 ### 1.6 Objetivo do modelo e função objetivo
@@ -147,31 +178,35 @@ O banco precisa de uma regra que diga, de forma sistemática, qual limite atribu
 
 Maximizar o retorno líquido é a métrica correta porque o produto em análise é exclusivamente o cartão de crédito pré-aprovado, onde toda a receita relevante vem do uso do cartão e toda a perda relevante vem do default. Minimizar inadimplência pura levaria o modelo a oferecer limites mínimos (trivialmente seguro, mas sem valor comercial). Maximizar receita bruta ignoraria o risco. O retorno líquido captura esse equilíbrio diretamente, e é também a métrica pela qual o parceiro avaliará o modelo: comparando a rentabilidade esperada entre o `limite_ofertado` praticado atualmente e o limite sugerido pelo modelo.
 
-**Justificativa da formulação:** A FO adota a forma **receita − perda** (sem ponderador $\lambda$), delegando o controle de risco inteiramente às restrições. Essa separação é preferível por três razões: (i) o parceiro define explicitamente os tetos de inadimplência como restrições, não como penalidades na FO; (ii) um ponderador $\lambda$ entre receita e perda introduziria um hiperparâmetro difícil de calibrar e de interpretar pelo parceiro; (iii) manter a FO como retorno líquido (R\$) garante que todos os termos estejam na mesma unidade e escala. A receita é restrita a interchange sobre o volume transacionado, à taxa fixa mensal de 1,75% fornecida pelo parceiro, acumulada ao longo de $T = 12$ meses para compatibilizar o horizonte temporal com a perda esperada.
+**Justificativa da formulação:** A FO adota a forma **receita − perda** (sem ponderador $\lambda$), delegando o controle de risco inteiramente às restrições. Essa separação é preferível por três razões: (i) o parceiro define explicitamente os tetos de inadimplência como restrições, não como penalidades na FO; (ii) um ponderador $\lambda$ entre receita e perda introduziria um hiperparâmetro difícil de calibrar e de interpretar pelo parceiro; (iii) manter a FO como retorno líquido (R\$) garante que todos os termos estejam na mesma unidade e escala. A receita é restrita a interchange sobre o volume transacionado, à taxa fixa mensal de 1,75% fornecida pelo parceiro, acumulada ao longo de $T = 22$ meses (período médio de uso do limite no produto, conforme orientação do parceiro), enquanto a perda é estimada via PD calibrada $PD_k^{cal} = PD_k \cdot \gamma_{d(k)}$ — onde $\gamma_{d(k)}$ é o fator empírico do decil de PD do cluster (ver Seção 1.5.1).
 
-**Correção temporal da FO:** A formulação incorpora o fator $T = 12$ na receita para garantir consistência temporal entre os termos. A taxa de interchange $t = 0{,}0175$ é uma taxa mensal (o cliente cicla utilização e pagamento aproximadamente uma vez por mês), enquanto a variável `pd_produto` opera em janela anual. Sem o fator $T$, a FO compararia uma receita de um único mês contra uma perda anual, gerando um limiar de rentabilidade individual de $PD_k < \bar{u} \cdot t / \text{LGD} \approx 1{,}64\%$ — valor abaixo do mínimo de `pd_produto` na base (2,8%), o que tornaria todos os clusters inviáveis e o modelo incapaz de alocar limite a qualquer cliente.
+**Coerência temporal e calibração da PD:** A taxa de interchange $t = 0{,}0175$ é mensal (uma rotação de utilização e pagamento por mês), de modo que $T \cdot \bar{u} \cdot t$ representa a receita acumulada de interchange ao longo do horizonte de uso. A variável `pd_produto`, por sua vez, é uma estimativa do modelo de scoring interno em janela anual. Comparar diretamente uma receita acumulada em $T$ meses contra uma PD anual produz mismatch temporal: em $T = 1$ (sem horizonte) a FO compara receita de um mês contra perda anual, e o limiar de rentabilidade resulta em $\bar{u} \cdot t / \text{LGD} \approx 1{,}64\%$, valor abaixo do mínimo de `pd_produto` (2,8%) — o modelo se torna incapaz de oferecer limite a qualquer cluster. Esse problema motivou a versão anterior do modelo a adotar $T = 12$ (anualização), o que elevava o limiar para 19,69% mas mantinha PD anual sem calibrar e, na carteira aprovada, deixava o retorno esperado próximo a zero (R\$ 580k em uma carteira de R\$ 17,4M).
 
-A evidência de que `pd_produto` opera em janela anual vem da comparação com a inadimplência realizada na safra M3. Entre os 7.465 clientes com `over30mob3` observado (inadimplência >30 dias em janela de 3 meses), a taxa de default realizada foi de 7,45%, enquanto a PD média desse grupo foi de 32,83% — uma razão de aproximadamente 4,4×. Sob a hipótese de hazard aproximadamente constante, a razão teórica entre uma PD anual e uma PD trimestral é $\approx 3{,}6$, consistente com a observação. Hipóteses alternativas ($H_{3m}$: razão = 1; $H_{24m}$: razão $\geq 6{,}4$) são descartadas pela magnitude da razão observada. A diferença residual entre a razão observada (4,4) e a teórica (3,6) sugere over-prediction moderada do modelo de scoring interno, o que é esperado em modelos calibrados com margem de conservadorismo.
+A solução adotada combina **dois ajustes complementares**, validados empiricamente sobre as três safras: (i) $T = 22$ meses, alinhado ao período de uso do limite informado pelo parceiro; (ii) $PD_k^{cal} = PD_k \cdot \gamma_{d(k)}$, com $\gamma_{d(k)}$ calibrado por decil a partir da razão observada $\text{over30mob3} / \text{pd\_produto}$ (Seção 1.5.1). O fator $\gamma_d$ traduz a PD anual prevista pelo scoring em uma estimativa empírica da perda efetiva no horizonte de uso, ancorada no único indicador de inadimplência realizada disponível (`over30mob3`, em janela de 3 meses) e na premissa de default front-loaded típica de cartão de crédito subprime — quem não atrasa nos primeiros meses tende a honrar o resto do contrato. A combinação ($T = 22$, $\gamma_d$) faz com que a carteira aprovada vigente (PD média 31,7%) gere retorno esperado positivo de aproximadamente R\$ 1,33M (≈ 7,6% sobre R\$ 17,4M expostos), valor coerente com a rentabilidade real do produto e com a hipótese de que o banco lucra com a carteira atual. Essa validação econômica não era atendida na formulação anterior ($T = 12$, PD raw), na qual a perda esperada superava a receita esperada para a maioria dos perfis aprovados.
 
-Com $T = 12$, o limiar de rentabilidade sobe para $PD_k < T \cdot \bar{u} \cdot t / \text{LGD} = 19{,}69\%$, valor coerente com o perfil da carteira pré-aprovada e que permite ao solver alocar limites ao subconjunto de clusters que efetivamente geram valor.
+O limiar de rentabilidade individual (PD bruta abaixo da qual $c_k > 0$) depende agora do decil:
 
-$$\max \sum_{k=1}^{K} n_k \cdot \left[\underbrace{\pi_k \cdot T \cdot \bar{u} \cdot t \cdot L_k}_{\text{(A) Receita anual esperada}} \; - \; \underbrace{\pi_k \cdot PD_k \cdot \text{LGD} \cdot L_k}_{\text{(B) Perda anual esperada}}\right]$$
+$$PD_k < \frac{T \cdot \bar{u} \cdot t}{\gamma_{d(k)} \cdot \text{LGD}}$$
 
-Fatorando $L_k$ e $\pi_k$:
+Para os parâmetros adotados ($T = 22$, $\bar{u} = 0{,}75$, $t = 0{,}0175$, $\text{LGD} = 0{,}80$), o limiar varia de **172%** em decis com $\gamma = 0{,}21$ (clientes de PD baixa, onde a calibração é mais leve) a **90%** em decis com $\gamma = 0{,}40$ (clientes de PD alta, onde a calibração é conservadora). Em qualquer caso, o limiar excede a PD média da base elegível (51%), de modo que a seleção entre clusters não depende apenas do filtro individual $c_k > 0$, mas é majoritariamente determinada pelas restrições R1 (teto de inadimplência financeira), R5 (concentração) e R6 (meta de volume). Esta é a separação de responsabilidades pretendida: a FO calibrada quantifica corretamente a rentabilidade marginal de cada cluster, e as restrições traduzem o apetite de risco e as metas comerciais em filtros explícitos sobre o portfólio agregado.
 
-$$\max \sum_{k=1}^{K} n_k \cdot \underbrace{\pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k \cdot \text{LGD})}_{c_k} \cdot L_k$$
+$$\max \sum_{k=1}^{K} n_k \cdot \left[\underbrace{\pi_k \cdot T \cdot \bar{u} \cdot t \cdot L_k}_{\text{(A) Receita esperada em $T$ meses}} \; - \; \underbrace{\pi_k \cdot PD_k^{cal} \cdot \text{LGD} \cdot L_k}_{\text{(B) Perda esperada no horizonte}}\right]$$
+
+Fatorando $L_k$ e $\pi_k$, e usando $PD_k^{cal} = PD_k \cdot \gamma_{d(k)}$:
+
+$$\max \sum_{k=1}^{K} n_k \cdot \underbrace{\pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k \cdot \gamma_{d(k)} \cdot \text{LGD})}_{c_k} \cdot L_k$$
 
 onde $n_k$ é o número de clientes no cluster $k$ e $c_k$ é o **coeficiente de retorno líquido unitário** do cluster $k$. O fator $n_k$ garante que clusters maiores tenham peso proporcional ao número de clientes que representam.
 
 #### Interpretação da função objetivo
 
-**Termo (A) - Receita:** $\pi_k \cdot T \cdot \bar{u} \cdot t \cdot L_k$ é a receita anual de interchange esperada por cliente do cluster $k$. O cliente contrata com probabilidade $\pi_k$ (média do cluster, derivada de `score_propensao_contrato` normalizado via min-max). O contratante utiliza uma fração $\bar{u} = 0{,}75$ do limite a cada mês, o banco recebe taxa de interchange $t = 0{,}0175$ sobre o volume transacionado mensal, e a receita é acumulada ao longo de $T = 12$ meses para compatibilizar com o horizonte anual da PD.
+**Termo (A) - Receita:** $\pi_k \cdot T \cdot \bar{u} \cdot t \cdot L_k$ é a receita de interchange esperada por cliente do cluster $k$ ao longo do horizonte de uso de $T = 22$ meses. O cliente contrata com probabilidade $\pi_k$ (média do cluster, derivada de `score_propensao_contrato` normalizado via min-max). O contratante utiliza uma fração $\bar{u} = 0{,}75$ do limite a cada mês, o banco recebe taxa de interchange $t = 0{,}0175$ sobre o volume transacionado mensal, e a receita é acumulada ao longo do período de uso do limite.
 
-**Termo (B) - Perda:** $\pi_k \cdot PD_k \cdot \text{LGD} \cdot L_k$ é a perda anual esperada por inadimplência por cliente do cluster $k$. A perda só se materializa para clientes que efetivamente contratam (com probabilidade $\pi_k$), e entre estes, uma fração $PD_k$ entra em default ao longo do ano. $\text{LGD} = 0{,}80$ é a fração do saldo exposto que o banco perde em caso de default (os 20% restantes são recuperados via cobrança ou cessão), e $L_k$ é a exposição. Note que a perda utiliza $L_k$ integral (sem o fator $\bar{u}$), diferentemente da receita. Isso é intencional: a exposição no momento do default (EAD) considera o limite inteiro porque, na prática, clientes inadimplentes tendem a utilizar uma fração do limite significativamente superior à média antes de cessar pagamentos. Essa é uma premissa padrão em modelos de risco de crédito para cartão (Resolução CMN 4.966/2021). Em sprints futuros, essa premissa pode ser refinada com um fator de utilização pré-default ($\bar{u}_{default}$) calibrado a partir de dados da carteira.
+**Termo (B) - Perda:** $\pi_k \cdot PD_k^{cal} \cdot \text{LGD} \cdot L_k$ é a perda esperada por inadimplência por cliente do cluster $k$ no horizonte considerado. A perda só se materializa para clientes que efetivamente contratam (com probabilidade $\pi_k$), e entre estes, uma fração $PD_k^{cal} = PD_k \cdot \gamma_{d(k)}$ é a estimativa calibrada da probabilidade de default efetivo, ajustada do viés de horizonte do scoring interno. $\text{LGD} = 0{,}80$ é a fração do saldo exposto que o banco perde em caso de default (os 20% restantes são recuperados via cobrança ou cessão), e $L_k$ é a exposição. Note que a perda utiliza $L_k$ integral (sem o fator $\bar{u}$), diferentemente da receita. Isso é intencional: a exposição no momento do default (EAD) considera o limite inteiro porque, na prática, clientes inadimplentes tendem a utilizar uma fração do limite significativamente superior à média antes de cessar pagamentos. Essa é uma premissa padrão em modelos de risco de crédito para cartão (Resolução CMN 4.966/2021). Em sprints futuros, essa premissa pode ser refinada com um fator de utilização pré-default ($\bar{u}_{default}$) calibrado a partir de dados da carteira.
 
-**Coeficiente $c_k$:** O retorno líquido unitário $c_k = \pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k \cdot \text{LGD})$ resume a rentabilidade marginal de cada real alocado ao cluster $k$. Como $\pi_k > 0$, o sinal de $c_k$ depende exclusivamente de $T \cdot \bar{u} \cdot t$ vs. $PD_k \cdot \text{LGD}$: clusters com $PD_k < \frac{T \cdot \bar{u} \cdot t}{\text{LGD}} \approx 19{,}69\%$ são rentáveis. Clusters com $c_k > 0$ são rentáveis; clusters com $c_k \leq 0$ destroem valor a cada real adicional de limite; para estes, o solver naturalmente atribui $L_k = 0$. O coeficiente $n_k \cdot c_k$ é o coeficiente objetivo do LP: o solver tende a maximizar $L_k$ para clusters com maior $c_k$, limitado pelas restrições.
+**Coeficiente $c_k$:** O retorno líquido unitário $c_k = \pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k \cdot \gamma_{d(k)} \cdot \text{LGD})$ resume a rentabilidade marginal de cada real alocado ao cluster $k$. Como $\pi_k > 0$, o sinal de $c_k$ depende do balanço entre $T \cdot \bar{u} \cdot t$ (receita unitária no horizonte) e $PD_k \cdot \gamma_{d(k)} \cdot \text{LGD}$ (perda unitária calibrada): clusters com $PD_k < \frac{T \cdot \bar{u} \cdot t}{\gamma_{d(k)} \cdot \text{LGD}}$ são rentáveis. Clusters com $c_k > 0$ são rentáveis; clusters com $c_k \leq 0$ destroem valor a cada real adicional de limite; para estes, o solver naturalmente atribui $L_k = 0$. O coeficiente $n_k \cdot c_k$ é o coeficiente objetivo do LP: o solver tende a maximizar $L_k$ para clusters com maior $c_k$, limitado pelas restrições.
 
-A FO é linear em $L_k$: todos os demais termos ($n_k$, $\pi_k$, $T$, $\bar{u}$, $t$, $PD_k$, $\text{LGD}$) são parâmetros, não há produto de variáveis de decisão, e o problema é um LP puro.
+A FO é linear em $L_k$: todos os demais termos ($n_k$, $\pi_k$, $T$, $\bar{u}$, $t$, $PD_k$, $\gamma_{d(k)}$, $\text{LGD}$) são parâmetros, não há produto de variáveis de decisão, e o problema é um LP puro.
 
 ### 1.7 Restrições
 
@@ -334,195 +369,139 @@ Esta visualização, embora simplificada para dois clusters, demonstra que a est
 
 ### 4. Análise de Sensibilidade
 
-### 4.1 Aplicação prática
+A análise desta seção é aplicada **diretamente sobre a base real do Banco Pan**, agregada em 10 clusters por decil de `pd_produto` (≈ 6,7 milhões de elegíveis das safras M1, M2 e M3). O LP completo com as restrições R1 (teto de inadimplência financeira ponderada), R2 (capacidade de pagamento alavancada), R3 (teto absoluto), R5 (concentração máxima por cluster) e R6 (volume mínimo) foi resolvido no **Solver do Excel / OpenSolver com GLPK no Google Sheets** a partir da planilha `apps/algoritmo_simples/sensibilidade_banco_pan.xlsx`. O mesmo modelo foi validado em paralelo via `scipy.optimize.linprog` (HiGHS), com diferença numérica nula. As instruções passo-a-passo para reproduzir a análise no Google Sheets estão na aba **"Como_rodar_OpenSolver"** da própria planilha.
 
-A solução ótima produzida pelo LP (um vetor de limites $L_k^*$ para cada cluster de clientes) é calculada com base em parâmetros que representam estimativas do comportamento esperado da carteira: probabilidade de default, propensão à contratação, taxa de utilização do limite e capacidade de pagamento. No mundo real, nenhum desses parâmetros é fixo. Eles variam em função de ciclos econômicos, mudanças no perfil dos correntistas, pressões competitivas e decisões regulatórias. Nesse sentido, a análise de sensibilidade não é um exercício complementar ao modelo: ela é parte integrante do processo de decisão, pois determina **até onde os parâmetros podem se mover sem invalidar a política de limites vigente**.
+**Solução ótima de referência:**
 
-A decisão em questão é tomada pela área de crédito do Banco Pan, que precisa calibrar os limites pré-aprovados por perfil de cliente. Uma política mal calibrada tem custo duplo: se os limites forem generosos demais em relação ao risco real, a inadimplência sobe e corrói o retorno; se forem conservadores demais, a receita de interchange cai e o cliente migra para concorrentes. Esse trade-off é estrutural ao problema e não desaparece com a otimização, apenas passa a ser gerido de forma mais explícita. A análise de sensibilidade permite à área de crédito monitorar continuamente quão próximos os parâmetros reais estão dos limites em que a política precisaria ser revista, transformando o LP de uma ferramenta de cálculo pontual em um instrumento de gestão dinâmica da carteira.
+| Indicador | Valor |
+| :-------- | ----: |
+| Função objetivo $Z^*$ | R$ 30.121.656 |
+| Volume total ofertado $\sum n_k L_k^*$ | R$ 613.482.710 |
+| PD financeira ponderada da carteira | 32,00 % |
+| Clusters com oferta efetiva ($L_k^* > 0$) | 7 de 10 (D1–D7) |
+| Clusters sem oferta ($L_k^* = 0$) | 3 de 10 (D8, D9, D10) |
 
-#### Identificação dos parâmetros críticos
+A solução base abaixo serve de referência para todas as análises seguintes. Os custos reduzidos e preços-sombra correspondem ao **Relatório de Sensibilidade** gerado pelo OpenSolver/Solver, e estão pré-conferidos na aba **"Relatorio_Sensibilidade"** da planilha.
 
-No modelo formulado, o coeficiente de retorno líquido unitário de cada cluster é $c_k = \pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k \cdot \text{LGD})$. O sinal de $c_k$ determina se o cluster cria ou destrói valor: quando $c_k > 0$, o solver aloca o máximo de limite permitido pelas restrições; quando $c_k \leq 0$, o limite ótimo é zero. O ponto de indiferença ocorre quando $PD_k = T \cdot \bar{u} \cdot t \;/\; \text{LGD} \approx 19{,}69\%$, o que significa que variações na $PD_k$ estimada podem cruzar essa fronteira e alterar radicalmente quais clusters recebem oferta, tornando-a o **parâmetro de maior sensibilidade do modelo**.
+| $k$ | Decil | $PD_k$ | $\pi_k$ | $CP_{p5}$ | $m_k$ | $\gamma_d$ | $c_k$ | $L_k^*$ (R$) | $n_k \cdot L_k^*$ (R$) | Custo Reduzido |
+| :-: | :---: | -----: | -----: | --------: | ----: | --------: | -----: | -----------: | ---------------------: | -------------: |
+| 1 | D1 | 0,156 | 0,158 | 800 | 0,35 | 0,21 | 0,04147 | 258,47 | 184.044.813 | 0 |
+| 2 | D2 | 0,254 | 0,213 | 465 | 0,35 | 0,21 | 0,05246 | 162,75 | 113.571.995 | 0 |
+| 3 | D3 | 0,336 | 0,260 | 450 | 0,30 | 0,24 | 0,05837 | 135,00 |  98.192.250 | 0 |
+| 4 | D4 | 0,419 | 0,304 | 442 | 0,30 | 0,24 | 0,06323 | 132,75 |  95.815.366 | 0 |
+| 5 | D5 | 0,503 | 0,346 | 427 | 0,25 | 0,44 | 0,03873 | 106,84 |  73.899.131 | 0 |
+| 6 | D6 | 0,581 | 0,389 | 250 | 0,25 | 0,40 | 0,03996 |  62,50 |  41.847.438 | 0 |
+| 7 | D7 | 0,653 | 0,425 | 150 | 0,25 | 0,40 | 0,03387 |   9,17 |   6.111.718 | 0 |
+| 8 | D8 | 0,716 | 0,455 | 125 | 0,25 | 0,40 | 0,02707 |   **0,00** | 0 | **−12.310,50** |
+| 9 | D9 | 0,774 | 0,479 | 100 | 0,20 | 0,40 | 0,01966 |   **0,00** | 0 | **−24.264,67** |
+| 10 | D10 | 0,840 | 0,498 |  75 | 0,20 | 0,40 | 0,00987 |   **0,00** | 0 | **−37.201,42** |
 
-Em contraste, a taxa de interchange $t$ é fixada contratualmente e tem variação infrequente. Já a utilização esperada $\bar{u}$ afeta todos os clusters na mesma direção e proporção, sem alterar a ordem de rentabilidade relativa entre eles. Esses parâmetros são menos críticos do ponto de vista operacional. Essa hierarquia de sensibilidade é informação direta para a área de risco: o esforço de monitoramento deve ser concentrado nos parâmetros cujas variações mais ameaçam a robustez da política, e não distribuído uniformemente entre todos os inputs do modelo.
+#### 4.1 Aplicação prática
 
-#### Robustez da solução e protocolo de revisão
+A solução ótima do LP é calculada com base em parâmetros que representam estimativas do comportamento esperado da carteira: probabilidade de default, propensão à contratação, taxa de utilização do limite e capacidade de pagamento. No mundo real, nenhum desses parâmetros é fixo — eles variam em função de ciclos econômicos, drift do modelo de scoring, pressões competitivas e decisões regulatórias. A análise de sensibilidade é parte integrante do processo de decisão, pois determina até onde os parâmetros podem se mover sem invalidar a política de limites vigente.
 
-A análise de sensibilidade delimita o **intervalo de estabilidade** de cada parâmetro (a faixa dentro da qual a base da solução ótima, quais restrições estão ativas e quais clusters recebem oferta, permanece inalterada). Enquanto os valores observados permanecerem dentro desses intervalos, a política vigente continua ótima e nenhuma ação é necessária. Quando um parâmetro cruza o limite do intervalo, é sinal objetivo de que a política precisa ser reotimizada.
+No caso específico do Banco Pan, a análise apoia a área de crédito em quatro decisões recorrentes: (i) **quais perfis (clusters) oferecer cartão pré-aprovado** — leitura imediata dos $L_k^*$ resultantes; (ii) **quais restrições políticas estão de fato limitando a rentabilidade** — leitura das restrições ativas e dos preços-sombra; (iii) **quanto custaria, em R\$ de retorno, incluir um cluster atualmente descartado** — leitura do custo reduzido; (iv) **em que momento a política precisa ser revista** — leitura dos intervalos de permissibilidade (acréscimo/decréscimo permitido em cada parâmetro sem mudança de base ótima).
 
-Para o Banco Pan, isso se traduz em um protocolo de monitoramento por safra: a área de crédito acompanha a evolução das $PD_k$ estimadas por cluster e compara com os intervalos de estabilidade calculados. Em períodos de estresse econômico (como elevação da taxa Selic pressionando o comprometimento de renda das famílias), as $PD_k$ observadas tendem a subir de forma correlacionada entre clusters. A análise de sensibilidade antecipa o impacto dessa movimentação antes que ela se materialize em inadimplência realizada, permitindo à gestão de risco calibrar proativamente o apetite da carteira, e não apenas reagir a eventos já ocorridos.
+A leitura desses indicadores transforma o LP de uma ferramenta de cálculo pontual em um instrumento de gestão dinâmica: enquanto os parâmetros observados permanecerem dentro dos intervalos de estabilidade, a política vigente continua ótima; quando cruzarem essas fronteiras, a reotimização é acionada de forma objetiva, antes que a degradação se materialize na inadimplência observada.
 
-A análise de sensibilidade, portanto, não apenas informa a decisão de hoje, ela estrutura o processo de decisão ao longo do tempo, tornando a política de crédito ao mesmo tempo mais rigorosa e mais ágil diante de um ambiente em permanente mudança.
+**Hierarquia de parâmetros críticos.** No regime calibrado ($T = 22$ + $\gamma_d$ por decil), o coeficiente $c_k = \pi_k \cdot (T \bar{u} t - PD_k \gamma_{d(k)} \text{LGD})$ é positivo em todos os clusters da base elegível, de modo que **a viabilidade individual deixa de ser o gargalo**. O monitoramento prioritário recai sobre: (a) o conjunto $\{\gamma_d\}_{d=1}^{10}$, recalculado a cada safra a partir da razão observada $\text{over30mob3}/\text{pd\_produto}$; (b) o teto $\overline{PD}_{fin}^{atual}$ que parametriza R1; e (c) a capacidade de pagamento $CP_k$ por cluster, especialmente em M2/M3 onde 42–43 % dos registros têm `capacidade_pagamento` nula e a restrição R2 opera sobre o proxy `renda_estimada × 0,30`.
 
-### 4.2 Variações na função objetivo
+#### 4.2 Variações na função objetivo
 
-Na programação linear, a análise de sensibilidade dos coeficientes da função objetivo determina o **intervalo de variação** dentro do qual cada coeficiente $n_k \cdot c_k$ pode se mover sem que a solução ótima (base ótima) se altere. Enquanto os coeficientes permanecem nesse intervalo, os mesmos vértices da região factível continuam ótimos: apenas o valor da FO muda, não a decisão de alocação. Quando um coeficiente ultrapassa o limite do intervalo, uma restrição diferente se torna ativa (ou deixa de ser), e a solução ótima migra para outro vértice do poliedro factível.
+A análise dos coeficientes da FO determina o **intervalo de variação** dentro do qual cada $c_k$ pode se mover sem que a base ótima se altere. Enquanto $c_k$ permanece nesse intervalo, os mesmos clusters continuam recebendo oferta nos mesmos valores; apenas o valor numérico de $Z^*$ muda. Quando $c_k$ ultrapassa o limite, a base muda — algum cluster entra ou sai da solução.
 
-No modelo de limites pré-aprovados, o coeficiente objetivo do cluster $k$ é $n_k \cdot c_k$, onde $c_k = \pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k \cdot \text{LGD})$. Uma variação em $c_k$ pode decorrer de: (i) revisão da $PD_k$ estimada por modelos de scoring atualizados; (ii) mudança na propensão $\pi_k$ por efeito de campanhas de marketing ou sazonalidade; ou (iii) alteração na utilização $\bar{u}$ observada por safra. Qualquer desses movimentos altera o coeficiente e, potencialmente, a decisão ótima.
+No LP do Banco Pan, uma variação em $c_k$ pode decorrer de: (i) revisão da $PD_k$ por modelos de scoring atualizados; (ii) recalibração de $\gamma_d$ pela observação de novas safras; (iii) mudança na propensão $\pi_k$ por campanha de marketing; ou (iv) revisão da utilização $\bar{u}$ por análise de comportamento da carteira ativada. A tabela abaixo apresenta os intervalos de permissibilidade calculados via solver, lendo diretamente do Relatório de Sensibilidade gerado pelo OpenSolver/Solver:
 
-#### Exemplo numérico: cenário reduzido de dois clusters
+| Cluster | $c_k$ atual | Permissível Acréscimo | Permissível Decréscimo | Faixa de estabilidade de $c_k$ |
+| :-----: | ----------: | --------------------: | ---------------------: | :----------------------------- |
+| D1 (básica) | 0,04147 | +0,4147 | −0,0581 | [−0,017 ; +0,456] |
+| D2 (básica) | 0,05246 | +0,5246 | −0,0969 | [−0,044 ; +0,577] |
+| D3 (básica) | 0,05837 | +0,5837 | −0,0867 | [−0,028 ; +0,642] |
+| D4 (básica) | 0,06323 | +0,6323 | −0,0753 | [−0,012 ; +0,695] |
+| D5 (básica) | 0,03873 | +0,3873 | −0,0344 | [+0,004 ; +0,426] |
+| D6 (básica) | 0,03996 | +0,3996 | −0,0202 | [+0,020 ; +0,440] |
+| D7 (básica) | 0,03387 | +0,0277 | −0,0155 | [+0,018 ; +0,062] |
+| D8 (não-básica) | 0,02707 | +0,0192 | infinito | até $c_8 \leq 0{,}0463$ permanece fora |
+| D9 (não-básica) | 0,01966 | +0,0379 | infinito | até $c_9 \leq 0{,}0576$ permanece fora |
+| D10 (não-básica) | 0,00987 | +0,0608 | infinito | até $c_{10} \leq 0{,}0707$ permanece fora |
 
-Retomando o cenário da Seção 3, com dois clusters e solução ótima em $(L_1^* = 6\,000,\; L_2^* = 1\,111)$:
+**Exemplo numérico aplicado — cluster D4 (variável básica).** Suponha que uma recalibração de $\gamma_4$ no próximo trimestre eleve $PD_4 \cdot \gamma_d$ de 0,1006 para 0,1106 (acréscimo de 1 ponto percentual, equivalente a +10 % no produto), o que reduz $c_4$ de 0,06323 para:
 
-| Cluster | $n_k$ | $c_k$ | Coeficiente da FO ($n_k \cdot c_k$) |
-| :-----: | :----: | :----: | :----------------------------------: |
-| 1 | 500 | 0,12472 | 62,36 |
-| 2 | 300 | 0,10801 | 32,40 |
+$$c_4' = \pi_4 \cdot (T \bar{u} t - 0{,}1106 \cdot \text{LGD}) = 0{,}304 \cdot (0{,}28875 - 0{,}1106 \cdot 0{,}80) = 0{,}304 \cdot 0{,}20027 = 0{,}06088$$
 
-A FO é $\max \; 62{,}36 \cdot L_1 + 32{,}40 \cdot L_2$, e a solução ótima se encontra na interseção de R1 ($L_2 = 0{,}185 \cdot L_1$) com R2 ($L_1 = 6\,000$). O valor ótimo da FO é:
+A variação $\Delta c_4 = -0{,}00235$ está confortavelmente dentro do intervalo de permissibilidade $[-0{,}075;\; +0{,}632]$, de modo que a base ótima permanece inalterada. O efeito é apenas sobre o valor de $Z$: $\Delta Z = n_4 \cdot \Delta c_4 \cdot L_4^* = 721{.}773 \cdot (-0{,}00235) \cdot 132{,}75 \approx -\text{R\$}\;225.000$ no retorno anualizado. A política não precisa ser revista; apenas o retorno esperado é ajustado para baixo. Esse é o uso típico do intervalo de permissibilidade: filtrar pequenas variações que não justificam reotimização.
 
-$$Z^* = 62{,}36 \times 6\,000 + 32{,}40 \times 1\,111 = 374\,160 + 36\,002 = 410\,162 \text{ (R\$/ano)}$$
+**Exemplo numérico aplicado — cluster D8 (variável não-básica) e custo reduzido.** O cluster D8 (PD média 71,6 %) recebe $L_8^* = 0$ na solução ótima e tem **custo reduzido de −R\$ 12.310,50**. A leitura desse número segue exatamente a definição do slide da aula: **"o custo reduzido de uma variável não-básica é a quantidade pela qual o valor de Z vai diminuir (em um problema de máx) se insistirmos em incluir uma unidade da variável na base"**. Portanto, se forçássemos $L_8 = \text{R\$}\;1$ (uma unidade monetária de exposição por cliente de D8), o valor da FO cairia em R\$ 12.310,50 por causa do deslocamento de orçamento de risco de outros clusters mais rentáveis.
 
-**Variação no coeficiente do Cluster 1:** Suponha que a $PD_1$ estimada suba de 0,200% para 0,215% (aumento de 7,5%), refletindo uma deterioração marginal do perfil de risco. O novo $c_1$ seria:
+A leitura simétrica — também ensinada no slide — é o **valor que $c_k$ precisaria atingir para tornar a variável atrativa**. Como cada cluster tem $n_k$ clientes, o custo reduzido por cliente é $-12.310{,}50 / 640.559 = -0{,}01922$ por real de exposição. Portanto, para D8 entrar na base, $c_8$ teria que subir de 0,02707 para no mínimo $0{,}02707 + 0{,}01922 = 0{,}04629$ — um aumento de 71 %. Equivalentemente, $\gamma_8$ teria que cair de 0,40 para aproximadamente 0,22 (uma melhora de calibração que dependeria de evidência empírica de over-prediction da PD nesse decil), ou $\pi_8$ teria que crescer 71 %. Enquanto nenhum desses movimentos ocorrer, é racional manter D8 fora da oferta.
 
-$$c_1' = 0{,}80 \times (0{,}1575 - 0{,}00215 \times 0{,}80) = 0{,}80 \times (0{,}1575 - 0{,}00172) = 0{,}80 \times 0{,}15578 = 0{,}12462$$
+O mesmo raciocínio aplica-se a D9 (custo reduzido $−$R\$ 24.264, $c_9$ precisaria subir para 0,058) e D10 ($−$R\$ 37.201, $c_{10}$ precisaria subir para 0,071) — ambos requereriam mudanças muito mais agressivas, consistente com o fato de que esses clusters têm PD acima de 77 % e estão claramente fora da fronteira de rentabilidade da política atual.
 
-O novo coeficiente objetivo passa de 62,36 para $500 \times 0{,}12462 = 62{,}31$. A solução ótima permanece no mesmo vértice $(6\,000;\; 1\,111)$, e apenas o valor da FO diminui para $62{,}31 \times 6\,000 + 32{,}40 \times 1\,111 = 409\,862$. A perda marginal é de R\$ 300/ano, mas a política de limites **não precisa ser alterada**.
+**Validação cruzada via solver.** Resolvendo o LP com $L_8 = 1$ forçado, o solver retorna $Z = 30.121.656 - 12.310{,}50 = 30.109.346$, confirmando exatamente o custo reduzido reportado.
 
-**Variação no coeficiente do Cluster 2:** Agora suponha que a $PD_2$ suba de 0,400% para 19,69% (o ponto de indiferença $T \cdot \bar{u} \cdot t / \text{LGD}$). Nesse caso:
+#### 4.3 Restrições e preços-sombra
 
-$$c_2' = 0{,}70 \times (0{,}1575 - 0{,}1969 \times 0{,}80) = 0{,}70 \times (0{,}1575 - 0{,}1575) = 0{,}70 \times 0 \approx 0$$
+Cada restrição do LP representa uma escolha de política: R1 codifica o apetite de risco da instituição, R2 traduz a diretriz de proteção ao cliente (limite atrelado à capacidade de pagamento), R3 é o teto absoluto regulatório/operacional, R5 é o limite de concentração da carteira por perfil e R6 (não ativa neste cenário) é o piso comercial de produção.
 
-O coeficiente objetivo do cluster 2 cai para zero: cada real adicional alocado a esse cluster não gera retorno. Se $PD_2$ ultrapassar 19,69%, $c_2$ se torna negativo e o solver reduz $L_2^*$ a zero, e o cluster deixa de receber oferta. Essa transição ilustra uma **mudança de base**: a restrição R1 deixa de ser ativa (pois não há mais trade-off entre clusters) e a solução migra para o vértice $(6\,000;\; 0)$, com retorno $Z^* = 62{,}36 \times 6\,000 = 374\,160$.
+**Informação obtida do RHS das restrições.** O lado direito de cada restrição expressa o "orçamento" daquele recurso, e o relatório de sensibilidade informa: (i) o **valor final do LHS**, que comparado ao RHS identifica restrições ativas (LHS = RHS) e folgadas (LHS < RHS); (ii) o **preço-sombra**, que quantifica em R\$ o valor marginal de relaxar a restrição em uma unidade; e (iii) o **intervalo de permissibilidade**, que delimita até onde o RHS pode ser alterado sem que o preço-sombra deixe de ser constante (ou seja, sem que a base ótima mude).
 
-#### Resumo do impacto
+**Informação obtida dos preços-sombra.** O preço-sombra responde diretamente à pergunta gerencial *"quanto a mais de retorno o banco obteria se pudesse afrouxar ligeiramente essa política?"*. Na linguagem do slide da aula: *"até quanto estamos dispostos a pagar por uma unidade adicional de recurso?"*. Restrições com preço-sombra alto sinalizam gargalos onde o investimento em flexibilidade tem maior retorno; restrições com preço-sombra zero têm folga e não justificam ação imediata.
 
-| Perturbação | Efeito no coeficiente | Efeito na solução | Ação necessária |
-| :---------- | :-------------------- | :---------------- | :-------------- |
-| $PD_1$: 0,200% → 0,215% (+7,5%) | $n_1 c_1$: 62,36 → 62,31 (−0,08%) | Mesma base ótima, FO cai R\$ 300 | Nenhuma (dentro do intervalo de estabilidade) |
-| $PD_2$: 0,400% → 19,69% (+4.823%) | $n_2 c_2$: 32,40 → ≈ 0 | Cluster 2 perde oferta, mudança de base | Reotimizar; revisar política para o perfil |
-| $PD_2$: 0,400% → 0,350% (−12,5%) | $n_2 c_2$: 32,40 → 32,49 (+0,3%) | Mesma base ótima, FO sobe R\$ 94 | Nenhuma (melhoria dentro do intervalo) |
+Os preços-sombra do LP resolvido são:
 
-A assimetria é reveladora: ambos os clusters estão muito distantes do ponto de indiferença (19,69%), o que confere robustez significativa à solução. Mesmo perturbações grandes na $PD_k$ (como o cluster 2 passando de 0,4% para 19,69% — um aumento de quase 50×) são necessárias para provocar mudança de base. Isso confirma que, com a correção temporal da FO, a sensibilidade do modelo à $PD_k$ diminui substancialmente em relação à formulação anterior, e o gargalo da decisão passa a ser as restrições de capacidade e inadimplência financeira, não o limiar de rentabilidade individual. Ainda assim, clusters com $PD_k$ próximo ao limiar de 19,69% (tipicamente clusters de risco elevado na carteira real) são os que exigem monitoramento mais frequente.
+| Restrição | Status | LHS (Final) | RHS | Preço-Sombra | Interpretação |
+| :-------- | :----: | :---------: | :-: | -----------: | :------------ |
+| **R1 — PD financeira** ($\leq 0{,}32$) | **ATIVA** | 0,3200 | 0,3200 | **R\$ 0,1964** por unidade de $\sum n_k L_k$ excedente | Apertar/afrouxar o teto altera $Z$ proporcionalmente ao volume |
+| R2 — D1 ($L_1 \leq 280$) | folgada | 258,47 | 280,00 | 0 | Não é gargalo (R5 limita antes) |
+| **R2 — D2** ($L_2 \leq 162{,}75$) | **ATIVA** | 162,75 | 162,75 | **R\$ 67.633** por R\$ 1 de $m_k CP_k$ | Maior gargalo da carteira |
+| **R2 — D3** ($L_3 \leq 135{,}00$) | **ATIVA** | 135,00 | 135,00 | **R\$ 63.064** por R\$ 1 de $m_k CP_k$ | Segundo maior gargalo |
+| **R2 — D4** ($L_4 \leq 132{,}75$) | **ATIVA** | 132,75 | 132,75 | **R\$ 54.333** | Gargalo relevante |
+| **R2 — D5** ($L_5 \leq 106{,}84$) | **ATIVA** | 106,84 | 106,84 | **R\$ 23.807** | Gargalo moderado |
+| **R2 — D6** ($L_6 \leq 62{,}50$) | **ATIVA** | 62,50 | 62,50 | **R\$ 13.507** | Gargalo menor |
+| R2 — D7, D8, D9, D10 | folgadas | < RHS | varia | 0 | Não são gargalos individuais |
+| R3 — todos os clusters ($\leq 25.000$) | folgadas | $\leq 280$ | 25.000 | 0 | R3 nunca é binding nesta carteira |
+| **R5 — D1** (concentração $\leq 30\%$) | **ATIVA** | 0,00 | 0,00 | **R\$ 0,1052** por R\$ adicional de concentração | D1 está no teto de 30 % do volume |
+| R5 — demais clusters | folgadas | < 0 | 0 | 0 | Nenhum outro cluster atinge 30 % |
 
-#### Limitações desta análise e necessidade de validação empírica
+**Exemplo numérico aplicado — R1 (teto de inadimplência financeira).** A restrição R1 ($\sum n_k \cdot PD_k \cdot L_k / \sum n_k \cdot L_k \leq 0{,}32$) está ativa exatamente em 0,32. O preço-sombra de 0,1964 informa que cada **unidade do termo de excesso** ($\sum n_k (PD_k - 0{,}32) L_k$) que pudermos tolerar gera +R\$ 0,1964 de $Z$. Traduzindo para a linguagem gerencial: relaxar $\overline{PD}_{fin}^{atual}$ de 0,32 para 0,33 (1 ponto percentual de tolerância adicional) equivale a aumentar o RHS em $0{,}01 \cdot \sum n_k L_k^* = 0{,}01 \cdot 613.482.710 = \text{R\$ 6.134.827$}$. O ganho esperado em $Z$ é portanto $0{,}1964 \cdot 6.134.827 \approx \text{R\$ 1.205.000}$ de retorno adicional. Em outras palavras, **cada ponto percentual adicional de apetite de risco vale R\$ 1,2 milhões anuais para a carteira**. A decisão de ampliar esse apetite passa a ser uma comparação direta: o custo de provisão regulatória sobre a inadimplência incremental supera ou não esses R\$ 1,2 M?
 
-É importante reconhecer que a análise de sensibilidade apresentada acima opera sobre a estrutura teórica do modelo, não sobre resultados observados. Ela indica *como* a solução reagiria a perturbações nos coeficientes, mas não é capaz de responder se a função objetivo, tal como formulada, captura adequadamente a dinâmica real de rentabilidade da carteira. Essa validação só será possível quando o modelo for executado com dados reais e os resultados forem confrontados com o desempenho observado da carteira vigente. Especificamente, apenas o backtesting por safra permitirá identificar se há termos relevantes ausentes na FO (como custo de funding, receita de rotativo ou efeitos de retenção) cuja omissão distorce sistematicamente a alocação ótima. Até lá, a formulação atual representa a melhor aproximação possível com os dados e parâmetros disponíveis, e sua estrutura linear permite incorporar novos termos sem alterar a arquitetura do modelo.
+**Exemplo numérico aplicado — R2 do cluster D2 (capacidade de pagamento).** A R2 de D2 está ativa em $L_2^* = m_2 \cdot CP_{p5,2} = 0{,}35 \cdot 465 = 162{,}75$. O preço-sombra de R\$ 67.633 informa que cada **R\$ 1 adicional no produto $m_k \cdot CP_{p5}$** gera +R\$ 67.633 de $Z$. Há duas alavancas operacionais distintas para mover esse RHS:
 
-Essa modularidade da FO é, inclusive, um dos pilares do produto entregue ao parceiro. O time de políticas de crédito do Banco Pan, que opera e calibra as regras de concessão no dia a dia, não necessariamente possui o perfil técnico para intervir diretamente no código do modelo de otimização. O sistema desenvolvido neste projeto expõe os parâmetros críticos identificados pela análise de sensibilidade (como $\overline{PD}_{fin}^{atual}$, $\bar{u}$, LGD e os multiplicadores $m_k$) em uma interface acessível, permitindo que a área de crédito ajuste o apetite de risco e reotimize a carteira sem depender da equipe de data science para cada iteração. A análise de sensibilidade, portanto, não apenas informa quais parâmetros monitorar, mas determina quais controles devem ser expostos ao usuário final da ferramenta, priorizando aqueles cuja variação mais impacta a política ótima.
+- **Melhorar a estimativa de $CP_{p5}$** (por exemplo, integrando dados de open banking ou refinando o modelo interno de capacidade): cada R\$ 1 a mais no $CP_{p5}$ de D2 vale $0{,}35 \cdot \text{R\$ 67.633} = \text{R\$ 23.672}$ de retorno anual. Como o cluster tem 697.831 clientes, esse R\$ 1 a mais distribuído na carteira gera R\$ 23.672 — ou seja, R\$ 0,034 de retorno por cliente, por real adicional de capacidade. Um projeto de melhoria do modelo de CP que custe menos de R\$ 23.672 e produza pelo menos +R\$ 1 médio em $CP_{p5}$ de D2 é claramente lucrativo.
 
-### 4.3 Restrições e preços-sombra
+- **Aumentar $m_2$** (revisar a faixa de alavancagem do cluster): hoje $m_2 = 0{,}35$, derivado do p75 da política vigente. Subir para $m_2 = 0{,}36$ aumenta o RHS em $0{,}01 \cdot 465 = 4{,}65$, gerando +$\text{R\$ 4{,}65} \cdot \text{R\$ 67.633} = \text{R\$ 314.494}$ de retorno. Essa decisão, no entanto, eleva também o risco do cluster — e por isso deve ser combinada com a leitura do preço-sombra de R1.
 
-#### O que os limites das restrições revelam
+**Exemplo numérico aplicado — R5 do cluster D1 (concentração).** A R5 de D1 está ativa: o cluster está no teto de 30 % da exposição total. O preço-sombra de 0,1052 indica que cada R\$ 1 adicional permitido de concentração em D1 vale +R\$ 0,1052 de $Z$. Se a área de risco aceitar elevar o teto para 31 % (1 ponto percentual), o RHS efetivo cresce em $0{,}01 \cdot \sum n_k L_k = \text{R\$ 6{,}13 M}$, e o ganho esperado é $0{,}1052 \cdot 6{,}13\text{M} = \text{R\$ 645 mil}$. Essa é uma das alavancas mais baratas de relaxar, mas vem com custo de diversificação reduzida.
 
-No modelo de otimização de limites pré-aprovados, as restrições não são apenas barreiras técnicas: elas representam escolhas de política. A restrição R1 codifica o apetite de risco da instituição, ao impor que a inadimplência financeira ponderada da carteira não supere o nível atual ($\overline{PD}_{fin}^{atual}$). A restrição R2 traduz uma diretriz de proteção ao cliente, ao limitar cada limite ofertado a um múltiplo da capacidade de pagamento estimada ($L_k \leq m_k \cdot CP_k$). Alterar os parâmetros dessas restrições não é uma operação puramente técnica: é uma decisão de negócio com consequências diretas sobre o retorno e o risco da carteira.
+**Síntese gerencial.** A restrição R2 do cluster D2 (R\$ 67.633/R\$) tem o maior preço-sombra do modelo — é onde investimentos em melhoria de capacidade de pagamento têm o maior retorno marginal. R1 (R\$ 1,2 M por ponto percentual de teto) é a alavanca de **apetite de risco**, naturalmente acoplada à decisão de provisão. R5 (R\$ 645 k por ponto percentual de concentração) é a alavanca de **diversificação**, cuja escolha depende de critérios prudenciais. R3 (teto absoluto de R\$ 25.000) está completamente folgada — não é restrição efetiva neste cenário, porque R2 já limita os $L_k$ a valores muito abaixo de R\$ 25.000.
 
-Quando uma restrição está **ativa** na solução ótima (ou seja, está satisfeita com igualdade), ela está de fato limitando o retorno: o solver chegou até aquele teto e não pode ir além. No cenário reduzido de dois clusters, tanto R1 quanto R2 estão ativas na solução $(L_1^* = 6\,000;\; L_2^* \approx 1\,111)$. Isso significa que relaxar qualquer uma delas permitiria ao modelo encontrar uma solução ainda melhor. Quando uma restrição está **inativa** (folga positiva), ela não limita a solução atual e relaxá-la não geraria ganho imediato.
+#### 4.4 Tomada de decisão em ambiente real
 
-Esse diagnóstico, por si só, já orienta decisões: antes de investir em melhorias operacionais que ampliem a capacidade de pagamento estimada dos clientes (R2) ou que permitam aceitar maior inadimplência agregada (R1), o gestor precisa saber qual das duas é de fato o gargalo. A análise das restrições ativas responde a essa pergunta diretamente.
+No ambiente real de gestão de crédito, as variações nos parâmetros não ocorrem de forma isolada. Ciclos macroeconômicos, mudanças regulatórias e alterações no perfil da base movem múltiplos parâmetros simultaneamente e de forma correlacionada. A análise de sensibilidade permite integrar essas informações a um processo de decisão que convive permanentemente com incerteza.
 
-#### O que os preços-sombra revelam
+**Cenário de variação de demanda.** A propensão $\pi_k$ varia com sazonalidade (Black Friday, Natal), campanhas de marketing e movimentos competitivos. Como $\pi_k$ entra linearmente em $c_k$, uma variação uniforme em todos os $\pi_k$ altera o valor de $Z$ mas **não a ordem de rentabilidade relativa** entre clusters — a base ótima permanece. Já uma campanha segmentada que aumente $\pi_5$ em 50 %, por exemplo, eleva $c_5$ de 0,0387 para 0,0581. Olhando a tabela da Seção 4.2, isso ainda está dentro do intervalo de permissibilidade (cap em +0,387), de modo que o cluster D5 continua na base — apenas com maior contribuição para $Z$. A pré-simulação do efeito da campanha sobre a FO permite à área de marketing e à área de crédito decidirem em conjunto se a política de limites vigente deve ser ajustada antes da campanha.
 
-O preço-sombra de uma restrição é a variação no valor ótimo da função objetivo causada por uma unidade de relaxamento no limite daquela restrição, mantidas as demais condições constantes. Em termos práticos, ele responde à pergunta: **quanto a mais de retorno o banco obteria se pudesse afrouxar ligeiramente essa política?**
+**Cenário de estresse macroeconômico (custos/capacidade).** Em um cenário de elevação da Selic, dois efeitos se materializam de forma correlacionada: (i) o comprometimento de renda das famílias aumenta, reduzindo $CP_k$ e apertando R2; e (ii) a inadimplência sobe, elevando as $PD_k$ e pressionando tanto a FO (via redução de $c_k$) quanto R1. A análise empírica sobre a base real confirma essa correlação: a correlação entre `capacidade_pagamento` e `pd_produto` é **Spearman = −0,725** (Pearson = −0,550), consistente entre safras (−0,719 a −0,728). PD e CP se movem em direções opostas, e os efeitos sobre R1 e R2 são, portanto, simultâneos e amplificadores.
 
-Para R1, o preço-sombra quantifica o custo econômico de manter o teto de inadimplência no nível atual. Se esse valor for alto, significa que a restrição de risco está "apertada": pequenas concessões no apetite de inadimplência se traduziriam em ganhos expressivos de retorno. Se for baixo, a restrição não é o verdadeiro gargalo, e o foco deveria estar em outros parâmetros.
+Suponha um choque que reduz $CP_{p5}$ em 10 % em todos os clusters e eleva $PD_k$ em 5 %. Os efeitos isolados, lidos do relatório de sensibilidade:
 
-Para R2, o preço-sombra indica o valor marginal de ampliar a capacidade de pagamento estimada dos clientes. Isso pode decorrer de melhorias no modelo de estimação de renda, de uma revisão do multiplicador $m_k$ ou de uma política de alavancagem mais flexível para determinados perfis. O preço-sombra transforma essa discussão qualitativa em um número: cada real adicional de capacidade de pagamento média no cluster $k$ vale exatamente esse montante em retorno incremental para a carteira.
+- **Em R2 (D2):** $CP_{p5,2}$ cai de R\$ 465 para R\$ 418, reduzindo $m_2 CP_{p5,2}$ em R\$ 16,28. Pelo preço-sombra de R\$ 67.633/R\$, isso custa $\text{R\$ 67.633} \cdot 16{,}28 \approx \text{R\$ 1,1 M}$. Aplicando o mesmo raciocínio para D3 a D6 e somando, o impacto agregado é de aproximadamente **R\$ 4,3 M** de redução em $Z$.
+- **Em R1:** $PD_k$ +5 % significa que cada cluster contribui mais para a inadimplência ponderada. Para manter R1 em 0,32, o solver precisa realocar volume — provavelmente reduzindo $L_k$ dos clusters de PD mais alta dentro da base (D5–D7). O impacto não é diretamente lido do preço-sombra (porque a mudança não é só no RHS, é estrutural), e exige reotimização do LP.
 
-Uma implicação relevante é que os preços-sombra só são válidos dentro de um intervalo de variação (análogo ao intervalo de estabilidade dos coeficientes da FO). Fora desse intervalo, a base ótima muda e o preço-sombra deixa de ser constante. Por isso, a interpretação correta não é "podemos relaxar R1 indefinidamente ao custo de $\lambda_1$ por unidade", mas sim "dentro do intervalo de validade, cada unidade de relaxamento de R1 gera $\lambda_1$ de retorno adicional".
+A área de crédito pode pré-rodar esse cenário combinado na própria planilha (alterando os valores das colunas $CP_{p5}$ e $PD$ e re-executando o Solver) e comparar o novo $Z^*$ e a nova alocação $L_k^*$ com a base. Se a mudança for significativa, o ambiente saiu do intervalo de estabilidade da política vigente e a reotimização deve ser oficializada. Se permanecer próxima, a política base é robusta ao cenário testado.
 
-#### Exemplo numérico: preços-sombra no cenário reduzido
+**Cenário de variação estrutural — calibração $\gamma_d$.** Diferentemente das variações conjunturais acima, uma recalibração de $\gamma_d$ por nova safra é um movimento previsível e regular. O protocolo recomendado é: (i) a cada trimestre, recalcular $\gamma_d$ empiricamente sobre o `over30mob3` da safra mais recente; (ii) comparar com os $\gamma_d$ vigentes no modelo; (iii) se algum $\gamma_d$ saiu do intervalo $\pm$ IC95% bootstrap (Seção 1.5.1), atualizar o parâmetro; (iv) re-rodar o LP e comparar a nova solução com a vigente. Esse ciclo trimestral integra a análise de sensibilidade ao processo de governança de risco do banco.
 
-Retomando o cenário da Seção 3, com solução ótima $(L_1^* = 6\,000;\; L_2^* \approx 1\,111)$ e $Z^* = \text{R\$}\;31\,120$/período, as restrições ativas são:
+**Protocolo de decisão integrado.** O protocolo operacional derivado das análises anteriores pode ser sintetizado em três regras de gestão:
 
-- **R1:** $-0{,}1 \cdot L_1 + 0{,}54 \cdot L_2 \leq 0$ (teto de inadimplência financeira)
-- **R2:** $L_1 \leq 6\,000$ (capacidade de pagamento alavancada do Cluster 1)
+1. **Monitoramento contínuo dos parâmetros críticos.** A hierarquia de sensibilidade identificada ($\gamma_d > PD_k > CP_k > \pi_k > \bar{u} > t$) determina a frequência de revisão. Os $\gamma_d$ e $PD_k$ são acompanhados por safra e comparados aos intervalos de permissibilidade. Quando um parâmetro se aproxima do limite, a reotimização é acionada **antes** que a política se torne subótima.
 
-**Preço-sombra de R2:** Suponha que o limite de capacidade de pagamento alavancada do Cluster 1 seja relaxado de R\$ 6.000 para R\$ 6.100 (acréscimo de R\$ 100). Com R1 ainda ativa ($L_2 = 0{,}185 \cdot L_1$), a nova solução seria:
+2. **Uso dos preços-sombra como critério de investimento.** Os preços-sombra traduzem decisões qualitativas em análises de custo-benefício quantitativas. Investir em melhoria do modelo de $CP_k$ só se justifica se o ganho marginal (R\$ 67.633 por R\$ de $m_2 CP$ em D2, na carteira atual) superar o custo do investimento. Aceitar maior inadimplência agregada só é racional se o retorno incremental (R\$ 1,2 M por ponto percentual de R1) compensar o custo de provisão regulatória e capital alocado.
 
-$$L_1' = 6\,100, \quad L_2' = 0{,}185 \times 6\,100 = 1\,128{,}5$$
+3. **Reotimização sob cenários combinados.** Em períodos de estresse, a área de crédito executa o LP sob cenários perturbados (e.g., $PD_k + 20\%$, $CP_k - 10\%$) **na própria planilha**, comparando a solução resultante com a política vigente. Se a nova solução diferir significativamente, o ambiente mudou além do intervalo de estabilidade e a política precisa ser atualizada. Se permanecer próxima, a política base é robusta ao cenário testado.
 
-$$Z' = 4{,}77 \times 6\,100 + 2{,}25 \times 1\,128{,}5 = 29\,097 + 2\,539 = 31\,636$$
+Esse protocolo transforma o modelo de otimização de uma ferramenta de cálculo pontual em um instrumento de gestão contínua. A análise de sensibilidade conecta a solução matemática ao processo decisório da instituição, e a planilha `sensibilidade_banco_pan.xlsx` no Google Sheets é a interface concreta para que a área de políticas de crédito execute essas decisões sem dependência da equipe de data science a cada iteração.
 
-O ganho é $\Delta Z = 31\,636 - 31\,120 = \text{R\$}\;516$ para um relaxamento de R\$ 100 em R2, resultando em um preço-sombra de aproximadamente **R\$ 5,16 de retorno por real adicional de capacidade de pagamento no Cluster 1**. Na prática, isso significa que um investimento em melhorar a estimativa de capacidade de pagamento dos clientes desse perfil, ou uma revisão do multiplicador $m_1$ de 1,5 para 1,6, se traduziria diretamente em ganho mensurável de retorno para a carteira.
-
-**Preço-sombra de R1:** Agora suponha que o teto de inadimplência seja relaxado de forma a permitir que o coeficiente da restrição passe de $L_2 \leq 0{,}185 \cdot L_1$ para $L_2 \leq 0{,}200 \cdot L_1$ (elevação marginal do apetite de risco). Com R2 ainda ativa ($L_1 = 6\,000$), a nova solução seria:
-
-$$L_1' = 6\,000, \quad L_2' = 0{,}200 \times 6\,000 = 1\,200$$
-
-$$Z' = 4{,}77 \times 6\,000 + 2{,}25 \times 1\,200 = 28\,620 + 2\,700 = 31\,320$$
-
-O ganho é $\Delta Z = 31\,320 - 31\,120 = \text{R\$}\;200$ por período. Esse valor é o preço-sombra de R1: cada ponto de afrouxamento no teto de inadimplência agrega R\$ 200 de retorno à carteira. A informação é diretamente acionável pela área de risco: se o custo de absorver inadimplência adicional (provisão, capital regulatório) for inferior a R\$ 200 por período, relaxar o teto é financeiramente justificável. Se for superior, a restrição atual é a política correta.
-
-#### Resumo interpretativo
-
-| Restrição | Status na solução ótima | Preço-sombra (aprox.) | Interpretação gerencial |
-| :-------- | :---------------------- | :-------------------- | :---------------------- |
-| R1 (inadimplência) | Ativa | R\$ 200 / relaxamento unitário | Cada concessão no apetite de risco gera retorno mensurável; decisão deve comparar com custo de provisão |
-| R2 — Cluster 1 (capacidade) | Ativa | R\$ 5,16 / R\$ de capacidade | Melhorar estimativa de CP ou revisar $m_1$ tem valor econômico direto |
-| R2 — Cluster 2 (capacidade) | Inativa (folga ≈ 89) | 0 | Não é gargalo; relaxar não gera ganho imediato |
-
-A assimetria entre os dois componentes de R2 é reveladora: o Cluster 2 ainda está longe do teto de capacidade de pagamento (folga de R\$ 89), enquanto o Cluster 1 está exatamente no limite. Isso indica que a limitação real para o Cluster 2 não é a capacidade de pagamento de seus clientes, mas sim a restrição de inadimplência agregada R1, que impede alocação adicional a esse perfil de risco moderado. Qualquer ação que aumente o limite do Cluster 2 sem antes endereçar R1 seria ineficaz: a restrição de inadimplência continuaria vetando o ganho.
-
-### 4.4 Tomada de decisão em ambiente real
-
-No ambiente real de gestão de crédito, as variações nos parâmetros do modelo não ocorrem de forma isolada. Ciclos macroeconômicos, mudanças regulatórias e alterações no perfil da base movem múltiplos parâmetros simultaneamente e em direções correlacionadas. A análise de sensibilidade permite integrar essas informações a um processo de decisão que convive permanentemente com incerteza.
-
-#### Cenários macroeconômicos e correlação entre parâmetros
-
-Em um cenário de elevação da taxa Selic, dois efeitos se materializam de forma correlacionada: (i) o comprometimento de renda das famílias aumenta, reduzindo $CP_k$ e apertando R2; e (ii) a inadimplência sobe, elevando as $PD_k$ e pressionando tanto a FO (via redução de $c_k$) quanto R1. A análise de sensibilidade informa, para cada movimento isolado, o quanto a solução ótima é robusta. O gestor pode então compor esses efeitos para avaliar se a política vigente resiste ao cenário combinado ou se precisa ser reotimizada.
-
-Por exemplo, suponha que um choque econômico eleve simultaneamente a $PD_1$ em 10% e reduza a $CP_1$ em 5%. Pela Seção 4.2, a variação de 10% na $PD_1$ (de 0,200% para 0,220%) mantém a solução na mesma base ótima. Pela Seção 4.3, o preço-sombra de R2 indica que cada real de redução em $CP_1$ custa R\$ 5,16 de retorno. Com essas duas informações, o gestor sabe, antes de o choque se materializar em inadimplência realizada, que a alocação permanece ótima mas o retorno cairá em magnitude estimável, e pode decidir proativamente se essa perda justifica revisão antecipada.
-
-A análise empírica sobre a base real confirma essa premissa: a correlação entre `capacidade_pagamento` e `pd_produto` é **Spearman = −0,725** (Pearson = −0,550), consistente entre safras (−0,719 a −0,728) e entre faixas de score. A tabela abaixo mostra como PD e CP se movem em direções opostas:
-
-| Quartil de CP | N | PD média | CP média |
-| :------------ | --------: | :------- | -------: |
-| Q1 (menor CP) | 1.404.651 | 0,691 | R\$ 178 |
-| Q2 | 1.301.877 | 0,601 | R\$ 701 |
-| Q3 | 1.356.697 | 0,419 | R\$ 2.320 |
-| Q4 (maior CP) | 1.340.220 | 0,278 | R\$ 8.185 |
-
-Isso valida que cenários de estresse afetam CP e PD simultaneamente. A resolução do LP via solver sob cenários combinados quantifica o impacto:
-
-| Cenário | $L_1^*$ | $L_2^*$ | FO (R\$) | $\Delta$ FO | Mudou base? |
-| :------ | ------: | ------: | -------: | ----------: | :---------- |
-| Base | 6.000 | 1.110 | 410.127 | 0 | — |
-| PD+10%, CP−5% | 5.700 | 1.055 | 389.185 | −20.942 | SIM |
-| PD+20%, CP−10% | 5.400 | 999 | 368.289 | −41.838 | SIM |
-| PD+50%, CP−20% | 4.800 | 888 | 326.268 | −83.860 | SIM |
-| PD×5 | 6.000 | 1.110 | 391.784 | −18.344 | NÃO |
-| Melhoria: PD−20%, CP+10% | 6.600 | 1.221 | 452.149 | +42.022 | SIM |
-
-O cenário "PD×5" não muda a base porque a PD base já é muito baixa (0,2% e 0,4%): mesmo quintuplicada, permanece abaixo do limiar de 19,69%. Cenários com redução de CP, entretanto, sempre alteram a base porque R2 é a restrição ativa dominante.
-
-![Correlação CP vs PD](figuras/correlacao_cp_pd.png)
-
-#### Variação de demanda e propensão à contratação
-
-A propensão $\pi_k$ varia com sazonalidade (datas comerciais como Black Friday e Natal), campanhas de marketing e movimentos competitivos. Como $\pi_k$ entra linearmente na FO via $c_k$, variações proporcionais em todos os $\pi_k$ alteram o valor da FO mas não a ordem de rentabilidade relativa entre clusters. Se, entretanto, uma campanha segmentada alterar $\pi_k$ de forma assimétrica entre clusters, a análise de sensibilidade indica se essa assimetria é suficiente para provocar mudança de base e realocar limites entre perfis.
-
-A análise da propensão normalizada nas três safras mostra estabilidade moderada no agregado (variação < 3% entre safras), mas variação de até **23,9% na faixa 100–700**:
-
-| Safra | $\pi$ média | $\pi$ mediana |
-| :---- | :---------- | :------------ |
-| M1 | 0,352 | 0,333 |
-| M2 | 0,350 | 0,332 |
-| M3 | 0,343 | 0,317 |
-
-Clusters de risco alto são mais sensíveis a mudanças de propensão entre safras, mas como esses mesmos clusters têm $c_k$ negativo (PD muito acima do limiar), a variação de $\pi_k$ não altera a decisão de alocação para eles. Para clusters próximos ao limiar (faixa 900–960), a propensão é mais estável entre safras (variação de 12,6%), o que reforça a robustez da solução ótima nesses perfis.
-
-![Propensão por safra](figuras/propensao_por_safra.png)
-
-Isso permite coordenação entre as áreas de crédito e marketing: antes de lançar uma campanha direcionada a um cluster específico, é possível simular o efeito do aumento esperado de $\pi_k$ sobre a FO e verificar se a política de limites vigente permanece ótima ou se deveria ser ajustada em conjunto com a campanha.
-
-#### Incerteza nos custos e parâmetros estruturais
-
-A taxa de interchange $t$ e a LGD variam com menor frequência, mas suas alterações têm impacto estrutural. Uma renegociação de $t$ com as bandeiras (por pressão regulatória ou competitiva) altera o limiar de rentabilidade $T \cdot \bar{u} \cdot t / \text{LGD}$ uniformemente para todos os clusters: se $t$ cair, o limiar desce e clusters antes rentáveis podem se tornar inviáveis. A análise de sensibilidade permite calcular antecipadamente qual redução em $t$ tornaria cada cluster marginal, fornecendo à área de produtos uma tabela de impacto que informa negociações contratuais com dados concretos.
-
-De forma análoga, uma revisão da LGD (por melhorias no processo de cobrança que aumentem a taxa de recuperação) tem efeito simétrico: reduzir a LGD de 0,80 para 0,70 elevaria o limiar de rentabilidade de 19,69% para 22,50%, incorporando clusters de risco moderado que antes estavam na fronteira de viabilidade.
-
-#### Protocolo de decisão integrado
-
-O protocolo operacional derivado das análises anteriores pode ser sintetizado em três regras de gestão:
-
-1. **Monitoramento contínuo dos parâmetros críticos:** A hierarquia de sensibilidade identificada (PD > CP > π > ū > t) determina a frequência de revisão. As $PD_k$ por cluster devem ser acompanhadas por safra e comparadas com os intervalos de estabilidade. Quando um parâmetro se aproxima do limite do intervalo, a reotimização é acionada antes que a política se torne subótima.
-
-2. **Uso dos preços-sombra como critério de investimento:** Os preços-sombra traduzem decisões qualitativas em análises de custo-benefício quantitativas. Investir em modelos de estimação de renda mais precisos (ampliando $CP_k$) só se justifica se o ganho marginal por real de capacidade adicional (R\$ 5,16 no cenário reduzido) superar o custo do investimento. Aceitar maior inadimplência agregada só é racional se o retorno incremental (R\$ 200 por unidade de relaxamento de R1) compensar o custo de provisão e capital regulatório.
-
-3. **Reotimização sob cenários combinados:** Em períodos de estresse, a área de crédito deve executar o LP sob cenários perturbados (e.g., $PD_k + 20\%$, $CP_k - 10\%$) e comparar a solução resultante com a política vigente. Se a nova solução diferir significativamente, o ambiente mudou além do intervalo de estabilidade e a política precisa ser atualizada. Se permanecer igual, a política vigente é robusta ao cenário testado.
-
-Esse protocolo transforma o modelo de otimização de uma ferramenta de cálculo pontual em um instrumento de gestão contínua da carteira, no qual a análise de sensibilidade conecta a solução matemática ao processo decisório da instituição.
 
 ---
 
