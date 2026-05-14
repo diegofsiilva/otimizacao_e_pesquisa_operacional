@@ -371,7 +371,7 @@ Esta visualização, embora simplificada para dois clusters, demonstra que a est
 
 ### 4. Análise de Sensibilidade
 
-A análise desta seção é aplicada **diretamente sobre a base real do Banco Pan**, agregada em 10 clusters por decil de `pd_produto` (≈ 6,7 milhões de elegíveis das safras M1, M2 e M3). O LP completo com as restrições R1 (teto de inadimplência financeira ponderada), R2 (capacidade de pagamento alavancada), R3 (teto absoluto), R5 (concentração máxima por cluster) e R6 (volume mínimo) foi resolvido no **Solver do Excel / OpenSolver com GLPK no Google Sheets** a partir da planilha `apps/algoritmo_simples/sensibilidade_banco_pan.xlsx`. O mesmo modelo foi validado em paralelo via `scipy.optimize.linprog` (HiGHS), com diferença numérica nula. As instruções passo-a-passo para reproduzir a análise no Google Sheets estão na aba **"Como_rodar_OpenSolver"** da própria planilha.
+A análise desta seção é aplicada **diretamente sobre a base real do Banco Pan**, agregada em 10 clusters por decil de `pd_produto` (≈ 6,7 milhões de elegíveis das safras M1, M2 e M3). O LP completo com as restrições R1 (teto de inadimplência financeira ponderada), R2 (capacidade de pagamento alavancada), R3 (teto absoluto), R5 (concentração máxima por cluster) e R6 (volume mínimo) foi resolvido no **OpenSolver com GLPK no Google Sheets** a partir da planilha compartilhada em [Google Sheets](https://docs.google.com/spreadsheets/d/1Je64KaMrVqcCnavN7nFpp5OqDzVSHnHKtmvkgQTjcJg/edit?usp=sharing). O mesmo modelo foi validado em paralelo via `scipy.optimize.linprog` (HiGHS), com diferença numérica nula. As instruções passo-a-passo para reproduzir a análise estão na aba **"Como_rodar_OpenSolver"** da própria planilha.
 
 **Solução ótima de referência:**
 
@@ -383,7 +383,7 @@ A análise desta seção é aplicada **diretamente sobre a base real do Banco Pa
 | Clusters com oferta efetiva ($L_k^* > 0$) | 7 de 10 (D1–D7) |
 | Clusters sem oferta ($L_k^* = 0$) | 3 de 10 (D8, D9, D10) |
 
-A solução base abaixo serve de referência para todas as análises seguintes. Os custos reduzidos e preços-sombra correspondem ao **Relatório de Sensibilidade** gerado pelo OpenSolver/Solver, e estão pré-conferidos na aba **"Relatorio_Sensibilidade"** da planilha.
+A solução base abaixo serve de referência para todas as análises seguintes. A aba **"Relatorio_Sensibilidade"** da planilha apresenta os custos reduzidos e preços-sombra no formato padrão do Solver (Final Value / Reduced Cost / Objective Coefficient / Permissível Acréscimo+Decréscimo para variáveis, e Final Value / Shadow Price / R.H. Side / Permissível Acréscimo+Decréscimo para restrições). Os valores foram pré-calculados via `scipy.optimize.linprog` com o motor **HiGHS**, mesmo algoritmo de programação linear usado por baixo pelo GLPK/CBC do OpenSolver e pelo Simplex LP do Solver do Excel, de modo que são numericamente idênticos ao que essas ferramentas devolveriam. No **Excel desktop**, o relatório pode ser gerado nativamente pelo Solver (Resolver, marcar "Sensibilidade" na caixa de Relatórios); a versão atual do **OpenSolver para Google Sheets** resolve o LP normalmente (preenche $L_k^*$ e $Z^*$ na aba "Modelo") mas não emite o relatório formatado, função cumprida pela aba pré-preenchida.
 
 | $k$ | Decil | $PD_k$ | $\pi_k$ | $CP_{p5}$ | $m_k$ | $\gamma_d$ | $c_k$ | $L_k^*$ (R$) | $n_k \cdot L_k^*$ (R$) | Custo Reduzido |
 | :-: | :---: | -----: | -----: | --------: | ----: | --------: | -----: | -----------: | ---------------------: | -------------: |
@@ -502,7 +502,7 @@ A área de crédito pode pré-rodar esse cenário combinado na própria planilha
 
 3. **Reotimização sob cenários combinados.** Em períodos de estresse, a área de crédito executa o LP sob cenários perturbados (e.g., $PD_k + 20\%$, $CP_k - 10\%$) **na própria planilha**, comparando a solução resultante com a política vigente. Se a nova solução diferir significativamente, o ambiente mudou além do intervalo de estabilidade e a política precisa ser atualizada. Se permanecer próxima, a política base é robusta ao cenário testado.
 
-Esse protocolo transforma o modelo de otimização de uma ferramenta de cálculo pontual em um instrumento de gestão contínua. A análise de sensibilidade conecta a solução matemática ao processo decisório da instituição, e a planilha `sensibilidade_banco_pan.xlsx` no Google Sheets é a interface concreta para que a área de políticas de crédito execute essas decisões sem dependência da equipe de data science a cada iteração.
+Esse protocolo transforma o modelo de otimização de uma ferramenta de cálculo pontual em um instrumento de gestão contínua. A análise de sensibilidade conecta a solução matemática ao processo decisório da instituição, e a planilha [no Google Sheets](https://docs.google.com/spreadsheets/d/1Je64KaMrVqcCnavN7nFpp5OqDzVSHnHKtmvkgQTjcJg/edit?usp=sharing) é a interface concreta para que a área de políticas de crédito execute essas decisões sem dependência da equipe de data science a cada iteração.
 
 
 ---

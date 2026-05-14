@@ -139,5 +139,3 @@ temp/
 # ==============================
 .dvc/cache
 .dvc/tmp
-# Excecao: planilha de sensibilidade eh deliverable, nao dado bruto
-!apps/algoritmo_simples/sensibilidade_banco_pan.xlsx
