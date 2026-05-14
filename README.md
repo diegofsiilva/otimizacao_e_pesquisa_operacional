@@ -1,18 +1,34 @@
-# Inteli - Instituto de Tecnologia e Liderança 
+# Inteli - Instituto de Tecnologia e Liderança
 
 <p align="center">
-<a href= "https://www.inteli.edu.br/"><img src="https://res.cloudinary.com/dwewomj84/image/upload/v1761355911/inteli_lfuayp.png" alt="Inteli - Instituto de Tecnologia e Liderança" border="0" width=40% height=40%></a>
+  <a href="https://www.inteli.edu.br/">
+    <img src="https://res.cloudinary.com/dwewomj84/image/upload/v1761355911/inteli_lfuayp.png" alt="Inteli" width=35%>
+  </a>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <a href="https://www.bancopan.com.br/">
+    <img src="./banco_pan.png" alt="Banco Pan" width=35%>
+  </a>
 </p>
 
+<br>
+
 <p align="center">
-<a href= "https://www.inteli.edu.br/"><img src="./banco_pan.png" alt="Banco Pan" border="0" width=40% height=40%></a>
+  <a href="https://www.inteli.edu.br/ciencia-da-computacao/">
+    <img src="https://img.shields.io/badge/Inteli-Ciência_da_Computação-6B2FBF?style=flat-square" alt="Curso">
+  </a>
+  <img src="https://img.shields.io/badge/Módulo-6-6B2FBF?style=flat-square" alt="Módulo">
+  <img src="https://img.shields.io/badge/Sprint-2_de_5-blue?style=flat-square" alt="Sprint">
+  <img src="https://img.shields.io/badge/Status-Em_desenvolvimento-yellow?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Linguagem-Python-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
+  <img src="https://img.shields.io/badge/Parceiro-Banco_Pan-E8440A?style=flat-square" alt="Parceiro">
 </p>
 
 <br>
 
 # G04
 
-## 👨‍🎓 Integrantes:
+## 👨‍🎓 Integrantes
+
 - Diego Figueiredo Silva
 - Lucas Garcia Rodrigues Lopes
 - Luiz Gustavo Borges Oliveira
@@ -21,32 +37,101 @@
 - Richard Dias Alves
 - Teodoro Borges de Carvalho Neira
 
-## 👩‍🏫 Professores:
-### Orientador 
-* <a href="https://www.linkedin.com/in/tmsasaki/overlay/about-this-profile/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base%3BacYQF7oUSGu2lnHje5W21g%3D%3D">Tomaz Mikio Sasaki</a>
+## 👩‍🏫 Professores
+
+### Orientador
+* [Tomaz Mikio Sasaki](https://www.linkedin.com/in/tmsasaki/)
+
 ### Instrutores
-* <a href="https://www.linkedin.com/in/bruna-mayer/?lipi=urn%3Ali%3Apage%3Ad_flagship3_search_srp_all%3BFG3MRuOsSGaRvlfwQ3xXbA%3D%3D">Bruna Mayer Costa</a>
-* <a href="https://www.linkedin.com/in/fillipe-resina-b2211a22/?lipi=urn%3Ali%3Apage%3Ad_flagship3_search_srp_all%3BFG3MRuOsSGaRvlfwQ3xXbA%3D%3D">Fillipe Manoel Xavier Resina</a>
-* <a href="https://www.linkedin.com/in/laizaribeiro/overlay/about-this-profile/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base%3BvDPKMYeiQv61%2BZOyJ0mqaQ%3D%3D">Laíza Ribeiro Silva</a> 
-* <a href="https://www.linkedin.com/in/cristinagramani/overlay/about-this-profile/?lipi=urn%3Ali%3Apage%3Ad_flagship3_profile_view_base%3BH6oM1SXFT4mXsJc3YACb3g%3D%3D">Maria Cristina Nogueira Gramani</a> 
-* <a href="https://www.linkedin.com/in/natalia-k-37a62052/?lipi=urn%3Ali%3Apage%3Ad_flagship3_search_srp_all%3BFG3MRuOsSGaRvlfwQ3xXbA%3D%3D">Natalia Varela da Rocha Kloeckner</a>
-* <a href="https://www.linkedin.com/in/rodolfo-goya-6ab187?utm_source=share_via&utm_content=profile&utm_medium=member_ios">Rodolfo Goya</a>
+* [Bruna Mayer Costa](https://www.linkedin.com/in/bruna-mayer/)
+* [Fillipe Manoel Xavier Resina](https://www.linkedin.com/in/fillipe-resina-b2211a22/)
+* [Laíza Ribeiro Silva](https://www.linkedin.com/in/laizaribeiro/)
+* [Maria Cristina Nogueira Gramani](https://www.linkedin.com/in/cristinagramani/)
+* [Natalia Varela da Rocha Kloeckner](https://www.linkedin.com/in/natalia-k-37a62052/)
+* [Rodolfo Goya](https://www.linkedin.com/in/rodolfo-goya-6ab187/)
 
 ## 📜 Descrição
 
-<div align="justify">
-&emsp; Este projeto desenvolve um modelo de otimização linear para a definição de limites pré-aprovados de cartão de crédito no Banco Pan / BTG Pactual, visando superar a limitação das abordagens empíricas tradicionais. A solução implementa um algoritmo de pesquisa operacional que atua como motor de decisão automatizado, equilibrando retorno esperado e risco de inadimplência. O sistema processa variáveis simultâneas como perfil do cliente, probabilidade de inadimplência e capacidade de pagamento, para calcular o limite ideal a ser ofertado a cada correntista. Os resultados são disponibilizados em linguagem Python, permitindo integração direta aos motores internos de crédito do banco. <br><br>
-</div>
+O Banco Pan oferece cartões de crédito pré-aprovados a clientes correntistas. A decisão de qual limite oferecer a cada cliente é hoje tomada com base em tabelas fixas, que não consideram a heterogeneidade entre perfis e não controlam o risco agregado da carteira.
+
+Este projeto substitui essa regra empírica por um modelo de otimização linear: dado um conjunto de restrições de risco e capacidade de pagamento definidas pelo parceiro, o modelo encontra os limites de crédito que maximizam o retorno líquido esperado do banco, entendido como a receita de interchange menos a perda esperada por inadimplência.
+
+A solução agrupa os clientes elegíveis em clusters com perfis semelhantes e resolve um Problema de Programação Linear (PL) para cada conjunto de clusters, atribuindo a cada grupo o limite ótimo a ser ofertado. O algoritmo Simplex, implementado do zero em Python, é o motor de decisão do modelo.
 
 ## 📁 Estrutura do Projeto
 
 ```
+g04/
+├── apps/
+│   └── algoritmo_simplex/      # implementação do algoritmo Simplex e pipeline de execução
+│       ├── clustering.py       # clusterização dos clientes via K-Means
+│       ├── main.py             # orquestração do pipeline completo
+│       ├── models.py           # estruturas de dados (Problema, Tableau)
+│       ├── simplex.py          # implementação do algoritmo Simplex
+│       ├── requirements.txt    # dependências Python
+│       └── input/              # arquivos de configuração JSON
+├── artefatos/                  # documentação técnica de cada sprint
+│   ├── entendimento_negocio.md
+│   ├── entendimento_ux.md
+│   ├── modelagem_matematica.md
+│   └── algoritmo_simplex.md
+├── apresentacoes/              # apresentações de cada sprint
+├── scripts/                    # utilitários de preparação de dados
+│   ├── convert_parquet_to_csv.py
+│   └── reduce_csv.py
+└── README.md
 ```
 
-* 0.1.0 - 30/04/2026
-    * Sprint 1 – Definição do contexto de negócio
+## 🚀 Como executar
 
-* 0.2.0 - xx/xx/xxxx
+### Pré-requisitos
+
+Instale as dependências a partir do diretório `apps/algoritmo_simplex/`:
+
+```bash
+pip install -r requirements.txt
+```
+
+### Preparação dos dados
+
+Converta o arquivo de dados do formato Parquet para CSV:
+
+```bash
+cd scripts
+python convert_parquet_to_csv.py <arquivo.parquet>
+```
+
+Para gerar uma versão reduzida (útil para testes):
+
+```bash
+python convert_parquet_to_csv.py <arquivo.parquet> --reduced 10
+```
+
+### Execução
+
+A partir do diretório `apps/algoritmo_simplex/`:
+
+```bash
+python main.py <arquivo_clientes.csv> <parametros.json>
+```
+
+Exemplo:
+
+```bash
+python main.py clientes.csv parametros.json
+```
+
+Na primeira execução, a clusterização é gerada automaticamente. Nas execuções seguintes, o arquivo clusterizado é reutilizado.
+
+Os arquivos CSV devem estar em `apps/data/csv/` e os arquivos JSON em `apps/algoritmo_simplex/input/`.
+
+## 📅 Histórico de versões
+
+* 0.1.0 - 30/04/2026
+    * Sprint 1 - Definição do contexto de negócio e modelagem matemática inicial
+
+* 0.2.0 - 15/05/2026
+    * Sprint 2 - Refinamento do modelo matemático, implementação do algoritmo Simplex e protótipo do front-end
 
 * 0.3.0 - xx/xx/xxxx
 
@@ -56,4 +141,4 @@
 
 ## 📋 Licença/License
 
-<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/cc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/by.svg?ref=chooser-v1"><p xmlns:cc="http://creativecommons.org/ns#" xmlns:dct="http://purl.org/dc/terms/"><a property="dct:title" rel="cc:attributionURL" href="https://git.inteli.edu.br/graduacao/2026-1a/t15/g04">G04</a> by <a href="https://www.inteli.edu.br/">Inteli</a>, Diego Figueiredo Silva, Lucas Garcia Rodrigues Lopes, Luiz Gustavo Borges Oliveira, Maria Clara Oliveira Santos, Rebeca Namura Sbroglio, Richard Dias Alves, Teodoro Borges de Carvalho Neira is licensed under <a href="http://creativecommons.org/licenses/by/4.0/?ref=chooser-v1" target="_blank" rel="license noopener noreferrer" style="display:inline-block;">Attribution 4.0 International</a>.</p>
+<img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/cc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/by.svg?ref=chooser-v1"><p xmlns:cc="http://creativecommons.org/ns#" xmlns:dct="http://purl.org/dc/terms/"><a property="dct:title" rel="cc:attributionURL" href="https://git.inteli.edu.br/graduacao/2026-1b/t15/g04">G04</a> by <a href="https://www.inteli.edu.br/">Inteli</a>, Diego Figueiredo Silva, Lucas Garcia Rodrigues Lopes, Luiz Gustavo Borges Oliveira, Maria Clara Oliveira Santos, Rebeca Namura Sbroglio, Richard Dias Alves, Teodoro Borges de Carvalho Neira is licensed under <a href="http://creativecommons.org/licenses/by/4.0/?ref=chooser-v1" target="_blank" rel="license noopener noreferrer" style="display:inline-block;">Attribution 4.0 International</a>.</p>

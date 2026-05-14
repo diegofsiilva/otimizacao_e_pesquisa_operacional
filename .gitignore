@@ -7,6 +7,7 @@ data/
 *.xls
 *.parquet
 *.json
+!apps/algoritmo_simplex/input/*.json
 *.db
 *.sqlite
 
