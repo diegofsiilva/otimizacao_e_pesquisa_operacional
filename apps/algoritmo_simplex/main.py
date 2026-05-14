@@ -27,7 +27,7 @@ def carregar_dados(arquivo_csv: Path, arquivo_json: Path) -> tuple[pd.DataFrame,
 
     Retorna:
         df     : DataFrame com os dados dos clientes
-        params : dicionário com os parâmetros do modelo (t, LGD, u_bar, L_max)
+        params : dicionário com os parâmetros do modelo (t, LGD, u_bar, L_max, T)
     """
     df = pd.read_csv(arquivo_csv)
     print(f"Dados carregados: {len(df)} linhas, {len(df.columns)} colunas")
@@ -39,8 +39,9 @@ def carregar_dados(arquivo_csv: Path, arquivo_json: Path) -> tuple[pd.DataFrame,
     LGD = params["LGD"]
     u_bar = params["u_bar"]
     L_max = params["L_max"]
+    T = params.get("T", 22)
 
-    print(f"t={t}, LGD={LGD}, u_bar={u_bar}, L_max={L_max}")
+    print(f"t={t}, LGD={LGD}, u_bar={u_bar}, L_max={L_max}, T={T}")
 
     return df, params
 
@@ -62,11 +63,9 @@ def garantir_clusters(arquivo_csv_nome: str) -> pd.DataFrame:
     Retorna:
         clusters : DataFrame com os parâmetros agregados por cluster
     """
-    # determina o caminho do arquivo clusterizado correspondente ao CSV de entrada
     stem = Path(arquivo_csv_nome).stem
     arquivo_clusters = Path("../data/csv/") / f"{stem}_clusters.csv"
 
-    # se o arquivo clusterizado não existir, roda o clustering antes de continuar
     if not arquivo_clusters.exists():
         print(f"Gerando clusters para {arquivo_clusters.name}...")
         from clustering import main as clustering_main
@@ -76,7 +75,6 @@ def garantir_clusters(arquivo_csv_nome: str) -> pd.DataFrame:
     else:
         print(f"Arquivo {arquivo_clusters.name} encontrado. Pulando clustering.")
 
-    # lê os parâmetros agregados por cluster gerados pelo clustering
     clusters = pd.read_csv(arquivo_clusters)
     print(f"Clusters carregados: {len(clusters)} clusters")
     return clusters
@@ -97,11 +95,15 @@ def montar_problema(
     LGD = params["LGD"]
     u_bar = params["u_bar"]
     L_max = params["L_max"]
+    T = params.get("T", 22)
 
     # monta o vetor de coeficientes da função objetivo (um por cluster)
+    # c_k = n_k * pi_k * (T * u_bar * t - PD_k * gamma_d * LGD)
+    # (ver Seção 1.6 da modelagem_matematica.md: horizonte T meses e PD calibrada por decil)
     c = []
     for _, row in clusters.iterrows():
-        ck = row["n_k"] * row["pi_k"] * (u_bar * t - row["PD_k"] * LGD)
+        gamma_d = row["gamma_decil"]
+        ck = row["n_k"] * row["pi_k"] * (T * u_bar * t - row["PD_k"] * gamma_d * LGD)
         c.append(ck)
 
     # monta a matriz de restrições A e o vetor b
@@ -145,7 +147,6 @@ def exibir_resultado(
 
     for i, row in clusters.iterrows():
         limite = x[i]
-        # arredonda para múltiplo de 50, ou 0 se menor que 200
         if limite >= 200:
             limite_final = 50 * round(limite / 50)
         else:
