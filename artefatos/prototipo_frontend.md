@@ -39,6 +39,7 @@ A identidade visual minimalista foi adotada para priorizar legibilidade e interp
 
 # 3. Wireframe — Carregar Base de Dados
 
+
 ## 3.1 Objetivo da Tela
 
 A tela de carregamento de base de dados representa o primeiro passo operacional da solução. Seu principal objetivo é permitir que o usuário importe a base de clientes elegíveis utilizada no processo de clusterização e otimização dos limites de crédito.
@@ -47,7 +48,11 @@ Essa funcionalidade está diretamente relacionada à User Story US01 — “Carr
 
 O principal usuário dessa funcionalidade é o time de Data Science, responsável pela preparação e validação técnica das informações utilizadas no modelo.
 
----
+<div align="center">Figura 1: Tela Carregar Base de Dados</div>
+<div align="center">
+  <img src="assets/tela_Carregar_bade_de_dados.png">
+</div>
+<div align="center">Fonte: Material produzido pelos autores</div>
 
 ## 3.2 Estrutura da Tela
 
@@ -132,7 +137,13 @@ Essa funcionalidade se relaciona principalmente às User Stories:
 US02 — Ajustar clusterização;
 US03 — Configurar metas de produção.
 
-##4.2 Organização da Tela
+<div align="center">Figura 1: Tela de Configuração</div>
+<div align="center">
+  <img src="assets/tela_config.png">
+</div>
+<div align="center">Fonte: Material produzido pelos autores</div>
+
+## 4.2 Organização da Tela
 
 A interface foi dividida em dois grandes grupos:
 
@@ -225,7 +236,14 @@ Essa funcionalidade se relaciona diretamente às User Stories:
 
 US04 — Gerar limite por cluster;
 US06 — Visualizar distribuição dos limites.
-5.2 Estrutura da Tela
+
+<div align="center">Figura 1: Tela Carregar Base de Dados</div>
+<div align="center">
+  <img src="assets/tela_resultados.png">
+</div>
+<div align="center">Fonte: Material produzido pelos autores</div>
+
+## 5.2 Estrutura da Tela
 
 A tela foi organizada em:
 
@@ -238,7 +256,7 @@ Essa organização busca orientar o usuário de maneira natural:
 entender o funcionamento;
 executar a otimização;
 interpretar os resultados.
-5.3 Área Informativa
+## 5.3 Área Informativa
 
 O cartão superior possui papel explicativo e contextual.
 
@@ -253,7 +271,7 @@ Essa abordagem contribui para:
 redução de ambiguidades;
 maior confiança na solução;
 melhor experiência de uso.
-5.4 Geração dos Limites
+## 5.4 Geração dos Limites
 
 O botão “Gerar Limite” representa a principal ação da tela.
 
@@ -266,7 +284,7 @@ cálculo dos limites finais.
 
 O fluxo foi pensado para transmitir simplicidade operacional mesmo tratando de um processo matematicamente complexo.
 
-5.5 Tabela de Resultados
+## 5.5 Tabela de Resultados
 
 A tabela apresenta:
 
@@ -291,7 +309,7 @@ Indica que o conjunto de restrições impossibilitou geração válida para aque
 
 Essa distinção é importante para análise operacional e revisão das políticas aplicadas.
 
-5.7 Fluxo de Usabilidade — Geração de Limites
+## 5.7 Fluxo de Usabilidade — Geração de Limites
 User Stories Relacionadas
 US04;
 US06.
@@ -309,12 +327,12 @@ Resultado esperado
 
 O usuário consegue analisar os limites sugeridos e tomar decisões estratégicas com apoio do modelo.
 
-6. Relação entre Wireframes e User Stories
+## 6. Relação entre Wireframes e User Stories
 Wireframe	User Stories Relacionadas
 Carregar Base de Dados	US01
 Configurações	US02, US03
 Visualizar Resultados	US04, US06
-7. Considerações de UX
+## 7. Considerações de UX
 
 O desenvolvimento das telas buscou seguir princípios básicos de usabilidade e boas práticas de experiência do usuário.
 
