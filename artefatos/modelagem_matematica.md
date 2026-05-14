@@ -1,6 +1,28 @@
 # Modelagem Matemática
 
-Este documento apresenta a modelagem matemática do problema de otimização de limites de crédito pré-aprovado para o Banco Pan. A **Seção 1** corresponde ao item (a) do roteiro: a formulação completa do modelo, incluindo contexto, dados, variáveis, função objetivo e restrições. A **Seção 2** corresponde ao item (b): a análise crítica das limitações e sensibilidade do modelo. A **Seção 3** complementa com uma análise gráfica do problema.
+## Sumário
+
+- [1. Modelagem matemática do problema](#1-modelagem-matematica-do-problema)
+  - [1.1 Contexto do problema](#11-contexto-do-problema)
+  - [1.2 Dados disponíveis relevantes](#12-dados-disponiveis-relevantes)
+  - [1.3 Estrutura do modelo](#13-estrutura-do-modelo)
+  - [1.4 Variáveis de decisão](#14-variaveis-decisao)
+  - [1.5 Parâmetros (dados de entrada)](#15-parametros-dados-de-entrada)
+  - [1.5.1 Calibração da PD por decil ($\gamma_d$)](#151-calibracao-da-pd-por-decil-gamma_d)
+  - [1.6 Objetivo do modelo e função objetivo](#16-objetivo-do-modelo-e-funcao-objetivo)
+  - [1.7 Restrições](#17-restricoes)
+- [2. Análise crítica](#2-analise-critica)
+- [3. Análise gráfica do problema](#3-analise-grafica-do-problema)
+  - [3.1 Cenário reduzido](#31-cenario-reduzido)
+  - [3.2 Região factível](#32-regiao-factivel)
+  - [3.3 Visualização](#33-visualizacao)
+  - [3.4 Interpretação](#34-interpretacao)
+- [4. Análise de Sensibilidade](#4-analise-de-sensibilidade)
+  - [4.1 Aplicação prática](#41-aplicacao-pratica)
+  - [4.2 Variações na função objetivo](#42-variacoes-na-funcao-objetivo)
+  - [4.3 Restrições e preços-sombra](#43-restricoes-e-precos-sombra)
+  - [4.4 Tomada de decisão em ambiente real](#44-tomada-de-decisao-em-ambiente-real)
+- [Fontes](#fontes)
 
 ## 1. Modelagem matemática do problema
 
