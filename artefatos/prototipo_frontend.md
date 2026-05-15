@@ -214,5 +214,32 @@ Ao clicar no ícone de edição de um parâmetro, um modal ou área de edição 
 
 *   **Controle de Edição:** Permite ajustar o valor do parâmetro (neste exemplo, um slider com valor numérico) e oferece botões para "Salvar" ou "Cancelar" as alterações.
 
+## 7. Decisões de UX
+
+
+As decisões de User Experience (UX) foram guiadas pelos princípios de clareza, eficiência e consistência, buscando atender aos critérios de avaliação e superar as expectativas.
+
+
+*   **Cores:** A paleta de cores utiliza tons de cinza e branco para o fundo e elementos de estrutura, com azul para elementos interativos (botões, links ativos) e verde para indicadores de sucesso ou status positivo ("Ativo", "Solução Viável"). O vermelho é usado para indicar status negativos ("Inativo", "Sem Solução"), e o amarelo para estados de atenção ("Em Análise"). Essa diferenciação visual facilita a leitura e a interpretação rápida das informações.
+
+
+*   **Severidade e Status:** A representação de severidade e status é feita através de cores e ícones. Por exemplo, na lista de clientes do Dashboard, o status "Ativo" é verde, "Em Análise" é amarelo e "Inativo" é vermelho. Na tela de "Visualizar a Geração de Limites", o status "Solução Viável" é verde com um ícone de check, enquanto "Sem Solução" é vermelho com um ícone de 'X'. Essa padronização visual atende à necessidade de facilitar a leitura e a tomada de decisão, um ponto de atenção levantado no feedback da professora.
+
+
+*   **Heurísticas de Nielsen:** A aplicação das heurísticas de Nielsen foi considerada em todo o design:
+    *   **Visibilidade do status da solução:** A interface fornece feedback constante ao usuário, como o nome do arquivo carregado na tela de "Gerar Limites" ou os KPIs atualizados no Dashboard e Resultados.
+    *   **Correspondência entre a solução e o mundo real:** A terminologia utilizada é familiar aos cientistas de dados e analistas de estratégia de crédito do Banco Pan / BTG Pactual, como "Cluster ID", "Score" e "Limite Sugerido".
+    *   **Controle e liberdade do usuário:** A possibilidade de cancelar ações (ex: na edição de configurações) e a navegação clara oferecem controle ao usuário.
+    *   **Consistência e padrões:** A interface mantém um padrão visual e de interação consistente em todas as telas, evitando inconsistências na iconografia e na apresentação de dados, um ponto de melhoria destacado no feedback.
+    *   **Prevenção de erros:** Mensagens claras de erro (ex: para arquivos corrompidos ou valores inválidos em configurações) são previstas para guiar o usuário.
+    *   **Reconhecimento em vez de recordação:** Elementos visuais e ícones são usados de forma consistente para que o usuário reconheça as funcionalidades sem precisar memorizá-las.
+    *   **Flexibilidade e eficiência de uso:** A funcionalidade de busca e filtragem no Dashboard, e a apresentação de gráficos nos Resultados, oferecem flexibilidade para diferentes perfis de usuário.
+    *   **Estética e design minimalista:** A interface é limpa e focada nas informações essenciais, evitando elementos desnecessários que possam distrair o usuário.
+    *   **Ajuda e documentação:** Embora não explícita na interface, a documentação visa complementar o entendimento do sistema.
+
+
+*   **Acessibilidade:** Embora não detalhado no protótipo visual, o design considera a legibilidade da tipografia, o contraste adequado de cores e a organização lógica dos elementos para garantir que a interface seja acessível a um público amplo. Melhorias futuras podem incluir a implementação de navegação por teclado e suporte a leitores de tela.
+
+
 
 
