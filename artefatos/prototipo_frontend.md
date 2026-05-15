@@ -44,3 +44,14 @@ Detalha a organização dos parâmetros editáveis e não editáveis, com campos
 O protótipo interativo do Modelo de Otimização Linear visa demonstrar a funcionalidade e a experiência de usuário das principais interações.
 
 * [Protótipo interativo do Figma](https://www.figma.com/design/OC2gQQXzaZVLYfvDv4ixnr/Devedores?node-id=62-2&t=ft6Y4FQXwoefHD2f-1)
+
+
+#### Objetivos do Protótipo
+
+
+O protótipo foi desenvolvido para:
+
+
+*   Validar os fluxos de usabilidade para carregamento de dados, configuração de parâmetros e visualização de resultados.
+*   Apresentar a interface de usuário em alta fidelidade, permitindo a avaliação da estética e da organização visual.
+*   Simular as interações chave do modelo, como upload de arquivos, edição de configurações e navegação entre dashboards e relatórios.
