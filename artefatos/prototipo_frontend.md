@@ -38,6 +38,12 @@ Representa a estrutura para a funcionalidade de upload de arquivos, com uma áre
 
 Detalha a organização dos parâmetros editáveis e não editáveis, com campos claros para a inserção e visualização de configurações do modelo.
 
+### Rascunho de Resultados
+
+![Rascunho de Resultados](/artefatos/assets/ux/rascunho_resultados.jpg)
+
+Detalha os resultados gerados pelo modelo, utilizando visualizações gráficas e indicadores de performance para facilitar a interpretação estratégica dos dados processados.
+
 ## 4. Protótipo Interativo
 
 
