@@ -133,4 +133,86 @@ O usuário consegue ajustar os parâmetros do modelo de clusterização e defini
 **Resultado Esperado:**
 O usuário consegue analisar a distribuição e evolução dos limites de crédito através de visualizações gráficas e exportar os dados otimizados para uso em outros sistemas.
 
+## 6. Descrição das Telas
+
+
+Esta seção detalha cada uma das telas do protótipo, descrevendo seus elementos e funcionalidades principais.
+
+
+### Dashboard (Home)
+
+
+![Tela Dashboard](/artefatos/assets/ux/home.png)
+
+
+A tela de Dashboard serve como a página inicial do sistema, oferecendo uma visão consolidada dos principais indicadores de desempenho relacionados aos clusters e limites de crédito. Inclui:
+
+
+*   **Lista de Clientes:** Uma tabela detalhada que exibe informações como ID do Cliente, Cluster, Score, Status (Ativo, Em Análise, Inativo), Limite e Data de Cadastro. Esta tabela permite a busca e filtragem de clientes, além de ações individuais para cada registro.
+*   **Funcionalidades de Gestão:** Botões para "Importar", "Exportar" e "Adicionar" clientes, facilitando a manutenção da base de dados. O botão "Exportar" é diretamente relacionado à **US07 - Exportar resultados**.
+
+
+### Gerar Limites
+
+
+![Tela Gerar Limites](/artefatos/assets/ux/Gerar%20limite.png)
+
+
+Esta tela é o ponto de entrada para a funcionalidade de carregamento de dados e geração de limites, conforme a **US01 - Carregar base de dados**.
+
+
+*   **Área de Upload:** Uma interface intuitiva para arrastar e soltar arquivos (CSV, XLSX) ou selecionar manualmente. Esta área é crucial para a ingestão da base de dados que será utilizada na otimização dos limites.
+
+
+![Tela Visualizar Geração de Limites](/artefatos/assets/ux/Visualizar%20a%20geração%20de%20limites.png)
+
+
+
+
+Após o carregamento da base, esta tela apresenta os resultados da geração de limites, abordando a **US04 - Gerar limite por cluster** e parte da **US05 - Consultar restrições ativas**.
+
+
+*   **Resumo de Clusters:** Cards informativos que mostram o "Total de Clusters", "Com Solução Viável" e "Sem Solução", oferecendo um sumário rápido do processo de otimização.
+*   **Tabela de Limites Gerados:** Uma tabela detalhada com "Cluster ID", "Limite Sugerido" e "Status" (Solução Viável ou Sem Solução). O status indica se o algoritmo conseguiu atribuir um limite que atende a todas as restrições, sendo fundamental para a **US05**.
+
+
+### Resultados
+
+
+![Tela Resultados](/artefatos/assets/ux/resultados.png)
+
+
+A tela de Resultados é dedicada à visualização analítica dos limites gerados, diretamente ligada à **US06 - Visualizar distribuição dos limites**.
+
+
+*   **KPIs de Resultados:** Apresenta métricas como "Total de Clusters", "Limite Total Aprovado", "Clientes Ativos" e "Taxa de Aprovação", mas com foco nos resultados pós-geração de limites.
+*   **Gráficos Analíticos:** Inclui diversos gráficos para análise da distribuição dos limites:
+    *   **Limites por Cluster:** Gráfico de barras mostrando os limites atribuídos a cada cluster.
+    *   **Distribuição por Status:** Gráfico de rosca que segmenta os clientes por status (Ativo, Em Análise, Inativo).
+    *   **Evolução Temporal de Limites:** Gráfico de linha que mostra a tendência dos limites ao longo do tempo.
+    *   **Distribuição por Faixa de Score:** Gráfico de área que ilustra a concentração de clientes em diferentes faixas de score.
+
+
+### Configurações
+
+
+![Tela Configurações](/artefatos/assets/ux/tela-config.png)
+
+
+Esta tela permite o gerenciamento dos parâmetros do sistema, atendendo às **US02 - Ajustar clusterização** e **US03 - Configurar metas de produção**.
+
+
+*   **Parâmetros Editáveis:** Lista de configurações que podem ser ajustadas pelo usuário, como "Taxa de Interchange", "Loss Given Default", "Utilização esperada do Limite" e "Teto máximo de Limite". Cada parâmetro possui um ícone de edição.
+*   **Parâmetros Não Editáveis:** Seção para parâmetros fixos do sistema.
+
+
+![Tela Edição de Configuração](/artefatos/assets/ux/config-edicao.png)
+
+
+Ao clicar no ícone de edição de um parâmetro, um modal ou área de edição é exibida, como esta para a "Taxa de Interchange".
+
+
+*   **Controle de Edição:** Permite ajustar o valor do parâmetro (neste exemplo, um slider com valor numérico) e oferece botões para "Salvar" ou "Cancelar" as alterações.
+
+
 
