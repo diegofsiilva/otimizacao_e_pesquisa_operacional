@@ -22,5 +22,13 @@ Os Rascunhos iniciais representam a fase de baixa fidelidade do projeto, onde as
 
 Este rascunho ilustra a disposição inicial dos elementos na tela principal, focando na apresentação de um resumo de dados e uma tabela de clientes.
 
+### Rascunho de Carregamento de Base
+
+
+![Rascunho de Carregamento de Base](/artefatos/assets/ux/rascunho_carregar.png)
+
+
+Representa a estrutura para a funcionalidade de upload de arquivos, com uma área dedicada para o carregamento da base de dados e uma pré-visualização em formato de tabela.
+
 
 
