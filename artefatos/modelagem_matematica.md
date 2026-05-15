@@ -35,25 +35,25 @@ O parceiro forneceu três bases de dados em formato Parquet, correspondentes a t
 
 A tabela a seguir detalha as 17 variáveis fornecidas, com estatísticas descritivas reais da safra M1 e o papel de cada uma no modelo.
 
-| Variável                     | Descrição                                     | Estatísticas (M1)                                                  | Papel no modelo                                                                                                                                                                                                    |
-| :--------------------------- | :-------------------------------------------- | :----------------------------------------------------------------- | :----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `token`                      | Identificador anônimo por safra               | 0 a 14.569.141                                                     | Chave de identificação                                                                                                                                                                                             |
-| `safra_ref_uso`              | Safra de referência                           | M1, M2, M3                                                         | Permite backtesting entre safras                                                                                                                                                                                   |
-| `score_interno`              | Score de crédito interno                      | min=54, med=292, max=975                                           | Não utilizado diretamente no modelo; serve apenas como input interno do banco para gerar `pd_produto`                                                                                                             |
+| Variável                     | Descrição                                     | Estatísticas (M1)                                                  | Papel no modelo                                                                                                                                                                                                                                                     |
+| :--------------------------- | :-------------------------------------------- | :----------------------------------------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `token`                      | Identificador anônimo por safra               | 0 a 14.569.141                                                     | Chave de identificação                                                                                                                                                                                                                                              |
+| `safra_ref_uso`              | Safra de referência                           | M1, M2, M3                                                         | Permite backtesting entre safras                                                                                                                                                                                                                                    |
+| `score_interno`              | Score de crédito interno                      | min=54, med=292, max=975                                           | Não utilizado diretamente no modelo; serve apenas como input interno do banco para gerar `pd_produto`                                                                                                                                                               |
 | `pd_produto`                 | Probabilidade de default no produto           | min=0,025, med=0,71, max=0,946                                     | **Parâmetro central da FO (termo B) e da restrição R1**, via média por cluster ($PD_k$). Mediana de 0,71 indica que a maioria da base elegível tem PD alta, indicando que a seleção de quais clusters recebem oferta é tão importante quanto a calibração do limite |
-| `score_generico_1`           | Score de bureau (bureau 1)                    | min=49, med=409, max=995. Nulls: 0,1%                              | Pode compor o perfil de risco para cálculo de $m_k$; variável de segmentação para clusterização                                                                                                            |
-| `score_generico_2`           | Score de bureau (bureau 2)                    | min=1, med=713, max=942. Nulls: <0,01%                             | Pode compor o perfil de risco para cálculo de $m_k$; variável de segmentação para clusterização                                                                                                            |
-| `capacidade_pagamento`       | Estimativa interna de capacidade de pagamento | min=0, med=548, max=25.000. **Nulls: 0,3% M1; 42,2% M2; 43,5% M3** | **Restrição R2 (alavancagem).** Nulls em M2/M3 são limitação severa (ver Análise Crítica)                                                                                                                                |
-| `delta_capacidade_pagamento` | Capacidade deduzida dos saldos a vencer       | min=−25.000, med=55, max=25.000. Nulls: idem                       | Versão conservadora da capacidade; valores negativos indicam comprometimento além da capacidade                                                                                                                   |
-| `renda_estimada`             | Estimativa interna de renda                   | min=1.275, med=1.908, max=17.950. Nulls: 0,3%                      | Proxy alternativa para R2 quando `capacidade_pagamento` é null ($CP_i = \text{renda\_estimada}_i \times 0{,}30$); usado no cálculo de $CP_k$                                                                                                   |
-| `fx_idade`                   | Faixa etária                                  | 9 faixas: 21-30 (35,5%), 31-40 (31,1%), 41-50 (18,8%)              | Perfil de consumo e risco; variável de segmentação para análise de resultados                                                                                                                                      |
-| `flag_filtros`               | Indicador de perfil restrito                  | **0 = elegível** (1,84M), **1 = restrito** (12,73M)                | Restrição hard: clientes com `flag_filtros = 1` são excluídos da otimização                                                                                                                                        |
-| `score_propensao_contrato`   | Score de propensão à conversão                | min=3, med=315, max=846                                            | Parâmetro $\pi_k$ na FO (termo A), via média do cluster. **Range [3, 846], não [0,1]**, requer normalização min-max                                                                                                                     |
-| `score_credito_cross`        | Score de crédito multiproduto                 | min=103, med=706, max=954                                          | Determina a faixa de alavancagem $m_k$ do cluster (ver tabela de faixas na Seção 1.5)                                                                                                                                      |
-| `limite_ofertado`            | Limite ofertado na política atual             | min=200, med=806, max=20.000. **99,2% null**                       | Baseline para backtesting (apenas 117K têm referência)                                                                                                                                                             |
-| `flag_contrato`              | Indicadora de contratação (1 = contratou)     | 6.506 (0,04%)                                                      | Backtesting. Taxa de conversão ~5,5% entre os que receberam oferta                                                                                                                                                 |
-| `flag_ativacao`              | Indicadora de ativação (1 = ativou)           | 5.704 (87,7% dos que contrataram)                                  | Backtesting                                                                                                                                                                                                        |
-| `over30mob3`                 | Atraso >30 dias nas 3 primeiras parcelas      | 4.966 válidos, **377 eventos** (7,6%). 99,97% null                 | Inadimplência realizada. Viés de seleção severo (só observável para quem ativou)                                                                                                                                   |
+| `score_generico_1`           | Score de bureau (bureau 1)                    | min=49, med=409, max=995. Nulls: 0,1%                              | Pode compor o perfil de risco para cálculo de $m_k$; variável de segmentação para clusterização                                                                                                                                                                     |
+| `score_generico_2`           | Score de bureau (bureau 2)                    | min=1, med=713, max=942. Nulls: <0,01%                             | Pode compor o perfil de risco para cálculo de $m_k$; variável de segmentação para clusterização                                                                                                                                                                     |
+| `capacidade_pagamento`       | Estimativa interna de capacidade de pagamento | min=0, med=548, max=25.000. **Nulls: 0,3% M1; 42,2% M2; 43,5% M3** | **Restrição R2 (alavancagem).** Nulls em M2/M3 são limitação severa (ver Análise Crítica)                                                                                                                                                                           |
+| `delta_capacidade_pagamento` | Capacidade deduzida dos saldos a vencer       | min=−25.000, med=55, max=25.000. Nulls: idem                       | Versão conservadora da capacidade; valores negativos indicam comprometimento além da capacidade                                                                                                                                                                     |
+| `renda_estimada`             | Estimativa interna de renda                   | min=1.275, med=1.908, max=17.950. Nulls: 0,3%                      | Proxy alternativa para R2 quando `capacidade_pagamento` é null ($CP_i = \text{renda\_estimada}_i \times 0{,}30$); usado no cálculo de $CP_k$                                                                                                                        |
+| `fx_idade`                   | Faixa etária                                  | 9 faixas: 21-30 (35,5%), 31-40 (31,1%), 41-50 (18,8%)              | Perfil de consumo e risco; variável de segmentação para análise de resultados                                                                                                                                                                                       |
+| `flag_filtros`               | Indicador de perfil restrito                  | **0 = elegível** (1,84M), **1 = restrito** (12,73M)                | Restrição hard: clientes com `flag_filtros = 1` são excluídos da otimização                                                                                                                                                                                         |
+| `score_propensao_contrato`   | Score de propensão à conversão                | min=3, med=315, max=846                                            | Parâmetro $\pi_k$ na FO (termo A), via média do cluster. **Range [3, 846], não [0,1]**, requer normalização min-max                                                                                                                                                 |
+| `score_credito_cross`        | Score de crédito multiproduto                 | min=103, med=706, max=954                                          | Determina a faixa de alavancagem $m_k$ do cluster (ver tabela de faixas na Seção 1.5)                                                                                                                                                                               |
+| `limite_ofertado`            | Limite ofertado na política atual             | min=200, med=806, max=20.000. **99,2% null**                       | Baseline para backtesting (apenas 117K têm referência)                                                                                                                                                                                                              |
+| `flag_contrato`              | Indicadora de contratação (1 = contratou)     | 6.506 (0,04%)                                                      | Backtesting. Taxa de conversão ~5,5% entre os que receberam oferta                                                                                                                                                                                                  |
+| `flag_ativacao`              | Indicadora de ativação (1 = ativou)           | 5.704 (87,7% dos que contrataram)                                  | Backtesting                                                                                                                                                                                                                                                         |
+| `over30mob3`                 | Atraso >30 dias nas 3 primeiras parcelas      | 4.966 válidos, **377 eventos** (7,6%). 99,97% null                 | Inadimplência realizada. Viés de seleção severo (só observável para quem ativou)                                                                                                                                                                                    |
 
 **Observações críticas sobre os dados:**
 
@@ -79,7 +79,6 @@ O modelo opera sobre **clusters de clientes**: os clientes elegíveis são agrup
 
 **Etapa 1 - Pré-processamento e clusterização** FALAR MAIS SOBRE A CLSUTERIZACAo AGORA QUE JA FIZEMOS
 
-
 Antes da clusterização, são removidos da base todos os clientes com `flag_filtros = 1`, que representam perfis restritos e não podem receber crédito (aproximadamente 12,7M dos 14,5M na safra M1). Apenas os clientes elegíveis (`flag_filtros = 0`, ~1,8M em M1) seguem para a etapa seguinte. Esses clientes elegíveis são então agrupados em $K$ clusters com base em variáveis de perfil de risco e capacidade de pagamento. Para cada cluster $k$, calculam-se os parâmetros representativos: $PD_k$ e $\pi_k$ como médias dos clientes do grupo, e $CP_k$ como o percentil 5 de capacidade de pagamento do cluster.
 
 **Etapa 2 - Otimização de limites (LP)**
@@ -98,46 +97,46 @@ O modelo possui uma única variável de decisão no LP:
 
 $L_k$ representa o valor do limite de crédito, em reais, atribuído a todos os clientes do cluster $k$. A variável é contínua, coerente com a formulação LP. Idealmente, $L_k$ seria definida como inteira ($L_k \in \mathbb{Z}^+$, múltiplos de R\$ 50) em uma formulação MIP, eliminando a necessidade de arredondamento, mas a formulação contínua é o que é viável no momento. O LP determina o valor de $L_k$ para cada cluster que maximiza o retorno líquido total, respeitando todas as restrições. Os limites finais sugeridos ao banco são obtidos em pós-otimização: clusters com $L_k \geq 200$ têm o limite arredondado para o múltiplo de R\$ 50 mais próximo acima; clusters com $L_k < 200$ não recebem oferta (ver seção Domínio e não-negatividade).
 
-| Símbolo | Tipo | Descrição | Domínio |
-| :------ | :--- | :-------- | :------ |
-| $L_k$ | Variável de decisão | Limite de crédito atribuído ao cluster $k$ | $\mathbb{R}^+$ (contínuo, otimizado pelo LP) |
-| $k \in \{1, \dots, K\}$ | Índice | Cluster de clientes elegíveis ($K \geq 100$) | - |
-| $n_k$ | Parâmetro | Número de clientes no cluster $k$ | inteiro positivo |
+| Símbolo                 | Tipo                | Descrição                                    | Domínio                                      |
+| :---------------------- | :------------------ | :------------------------------------------- | :------------------------------------------- |
+| $L_k$                   | Variável de decisão | Limite de crédito atribuído ao cluster $k$   | $\mathbb{R}^+$ (contínuo, otimizado pelo LP) |
+| $k \in \{1, \dots, K\}$ | Índice              | Cluster de clientes elegíveis ($K \geq 100$) | -                                            |
+| $n_k$                   | Parâmetro           | Número de clientes no cluster $k$            | inteiro positivo                             |
 
 ---
 
 ### 1.5 Parâmetros (dados de entrada)
 
-| Símbolo | Descrição | Unidade / Domínio | Fonte |
-| :------ | :-------- | :---------------- | :---- |
-| $K$ | Número total de clusters | inteiro ($\geq 100$) | Definido na clusterização (Etapa 1) |
-| $n_k$ | Número de clientes no cluster $k$ | inteiro positivo | Resultado da clusterização |
-| $PD_k$ | Probabilidade de default representativa do cluster $k$ | [0, 1] | Média de `pd_produto` dos clientes do cluster |
-| $\pi_k$ | Propensão à contratação do cluster $k$, normalizada | [0, 1] | Média de `score_propensao_contrato` normalizado min-max: $\pi_i = \frac{score_i - 3}{843}$ |
-| $CP_k$ | Capacidade de pagamento do cluster $k$ | R\$ | Percentil 5 ($p5$) de `capacidade_pagamento` no cluster. Proxy: `renda_estimada × 0,30` quando null |
-| $m_k$ | Multiplicador de alavancagem do cluster $k$ | [0,20; 0,45] | Determinado pela faixa de `score_credito_cross` médio do cluster (ver tabela de faixas abaixo) |
-| $t$ | Taxa de interchange (mensal) | adimensional | 0,0175 (fornecido pelo parceiro) |
-| $T$ | Horizonte de receita | meses | 22 (período médio de uso do limite no produto, fornecido pelo parceiro) |
-| $\text{LGD}$ | Loss Given Default | [0, 1] | 0,80 (constante para todos os clusters) |
-| $\bar{u}$ | Utilização esperada do limite | [0, 1] | 0,75 (constante para todos os clusters) |
-| $\gamma_d$ | Fator de calibração da PD no decil $d$ | [0,20; 0,45] | Razão empírica $\frac{\text{over30mob3}}{\text{pd\_produto}}$ por decil de PD bruta (ver tabela na Seção 1.5.1) |
-| $PD_k^{cal}$ | Probabilidade de default calibrada do cluster $k$ | [0, 1] | $PD_k^{cal} = PD_k \cdot \gamma_{d(k)}$, onde $d(k)$ é o decil de $PD_k$ |
-| $\overline{PD}_{fin}^{atual}$ | Teto de inadimplência financeira | [0, 1] | Média ponderada (por limite) de PD da carteira aprovada vigente |
-| $L^{max}$ | Teto máximo de limite | R\$ | 25.000 (diretriz do parceiro) |
-| $\overline{PD}_{fis}^{atual}$ | Teto de inadimplência física | [0, 1] | Média simples de PD da carteira aprovada vigente (headcount, sem ponderar por limite) |
-| $\alpha$ | Concentração máxima por cluster | [0, 1] | Fração máxima da exposição total que um único cluster pode concentrar. Valor sugerido: $\alpha = 0{,}05$ (5%) |
-| $V^{min}$ | Volume mínimo de produção | R\$ | Piso de volume total de limite ofertado, definido pelo parceiro com base em metas comerciais. Ordem de grandeza típica: centenas de milhões de reais (o cenário de referência da Seção 4 adota $V^{min} = 0$ por simplicidade, mas o valor operacional plausível seria $V^{min} \in [\text{R\$ 100 M};\; \text{R\$ 500 M}]$ considerando o volume potencial máximo de R\$ 689 M observado quando apenas R2 é ativa) |
-| $c_k$ | Coeficiente de retorno líquido unitário do cluster $k$ | R\$/R\$ | $c_k = \pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k^{cal} \cdot \text{LGD})$ |
+| Símbolo                       | Descrição                                              | Unidade / Domínio    | Fonte                                                                                                                                                                                                                                                                                                                                                                                                               |
+| :---------------------------- | :----------------------------------------------------- | :------------------- | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| $K$                           | Número total de clusters                               | inteiro ($\geq 100$) | Definido na clusterização (Etapa 1)                                                                                                                                                                                                                                                                                                                                                                                 |
+| $n_k$                         | Número de clientes no cluster $k$                      | inteiro positivo     | Resultado da clusterização                                                                                                                                                                                                                                                                                                                                                                                          |
+| $PD_k$                        | Probabilidade de default representativa do cluster $k$ | [0, 1]               | Média de `pd_produto` dos clientes do cluster                                                                                                                                                                                                                                                                                                                                                                       |
+| $\pi_k$                       | Propensão à contratação do cluster $k$, normalizada    | [0, 1]               | Média de `score_propensao_contrato` normalizado min-max: $\pi_i = \frac{score_i - 3}{843}$                                                                                                                                                                                                                                                                                                                          |
+| $CP_k$                        | Capacidade de pagamento do cluster $k$                 | R\$                  | Percentil 5 ($p5$) de `capacidade_pagamento` no cluster. Proxy: `renda_estimada × 0,30` quando null                                                                                                                                                                                                                                                                                                                 |
+| $m_k$                         | Multiplicador de alavancagem do cluster $k$            | [0,20; 0,45]         | Determinado pela faixa de `score_credito_cross` médio do cluster (ver tabela de faixas abaixo)                                                                                                                                                                                                                                                                                                                      |
+| $t$                           | Taxa de interchange (mensal)                           | adimensional         | 0,0175 (fornecido pelo parceiro)                                                                                                                                                                                                                                                                                                                                                                                    |
+| $T$                           | Horizonte de receita                                   | meses                | 22 (período médio de uso do limite no produto, fornecido pelo parceiro)                                                                                                                                                                                                                                                                                                                                             |
+| $\text{LGD}$                  | Loss Given Default                                     | [0, 1]               | 0,80 (constante para todos os clusters)                                                                                                                                                                                                                                                                                                                                                                             |
+| $\bar{u}$                     | Utilização esperada do limite                          | [0, 1]               | 0,75 (constante para todos os clusters)                                                                                                                                                                                                                                                                                                                                                                             |
+| $\gamma_d$                    | Fator de calibração da PD no decil $d$                 | [0,20; 0,45]         | Razão empírica $\frac{\text{over30mob3}}{\text{pd\_produto}}$ por decil de PD bruta (ver tabela na Seção 1.5.1)                                                                                                                                                                                                                                                                                                     |
+| $PD_k^{cal}$                  | Probabilidade de default calibrada do cluster $k$      | [0, 1]               | $PD_k^{cal} = PD_k \cdot \gamma_{d(k)}$, onde $d(k)$ é o decil de $PD_k$                                                                                                                                                                                                                                                                                                                                            |
+| $\overline{PD}_{fin}^{atual}$ | Teto de inadimplência financeira                       | [0, 1]               | Média ponderada (por limite) de PD da carteira aprovada vigente                                                                                                                                                                                                                                                                                                                                                     |
+| $L^{max}$                     | Teto máximo de limite                                  | R\$                  | 25.000 (diretriz do parceiro)                                                                                                                                                                                                                                                                                                                                                                                       |
+| $\overline{PD}_{fis}^{atual}$ | Teto de inadimplência física                           | [0, 1]               | Média simples de PD da carteira aprovada vigente (headcount, sem ponderar por limite)                                                                                                                                                                                                                                                                                                                               |
+| $\alpha$                      | Concentração máxima por cluster                        | [0, 1]               | Fração máxima da exposição total que um único cluster pode concentrar. Valor sugerido: $\alpha = 0{,}05$ (5%)                                                                                                                                                                                                                                                                                                       |
+| $V^{min}$                     | Volume mínimo de produção                              | R\$                  | Piso de volume total de limite ofertado, definido pelo parceiro com base em metas comerciais. Ordem de grandeza típica: centenas de milhões de reais (o cenário de referência da Seção 4 adota $V^{min} = 0$ por simplicidade, mas o valor operacional plausível seria $V^{min} \in [\text{R\$ 100 M};\; \text{R\$ 500 M}]$ considerando o volume potencial máximo de R\$ 689 M observado quando apenas R2 é ativa) |
+| $c_k$                         | Coeficiente de retorno líquido unitário do cluster $k$ | R\$/R\$              | $c_k = \pi_k \cdot (T \cdot \bar{u} \cdot t - PD_k^{cal} \cdot \text{LGD})$                                                                                                                                                                                                                                                                                                                                         |
 
 **Faixas de alavancagem $m_k$:** O multiplicador $m_k$ segue a média de `score_credito_cross` do cluster e foi calibrado pela alavancagem observada na política vigente, usando o percentil 75 como teto por faixa. A relação é monotônica: scores mais altos recebem $m_k$ maior, refletindo menor risco.
 
 | Faixa de `score_credito_cross` | $m_k$ | PD mediana (base elegível) | Alavancagem mediana observada | Alavancagem p75 observada |
-| :------------------------------ | :---- | :------------------------- | :---------------------------- | :------------------------ |
-| 100 – 700 | 0,20 | 0,72 | 0,14 | 0,22 |
-| 700 – 800 | 0,25 | 0,61 | 0,16 | 0,25 |
-| 800 – 850 | 0,30 | 0,50 | 0,18 | 0,28 |
-| 850 – 900 | 0,35 | 0,34 | 0,21 | 0,32 |
-| 900 – 960 | 0,45 | 0,24 | 0,28 | 0,42 |
+| :----------------------------- | :---- | :------------------------- | :---------------------------- | :------------------------ |
+| 100 – 700                      | 0,20  | 0,72                       | 0,14                          | 0,22                      |
+| 700 – 800                      | 0,25  | 0,61                       | 0,16                          | 0,25                      |
+| 800 – 850                      | 0,30  | 0,50                       | 0,18                          | 0,28                      |
+| 850 – 900                      | 0,35  | 0,34                       | 0,21                          | 0,32                      |
+| 900 – 960                      | 0,45  | 0,24                       | 0,28                          | 0,42                      |
 
 Em termos práticos, o p75 equilibra aderência à política atual e contenção da cauda mais agressiva: o p50 seria conservador demais e o p90 herdaria exceções que enfraquecem o papel prudencial de R2.
 
@@ -155,18 +154,18 @@ A análise (detalhada em `scripts/analise_09_calibracao_final.py`, sobre 17.366 
 
 A tabela abaixo apresenta a calibração final. Para o cluster $k$, o decil $d(k)$ é determinado pelo $PD_k$ representativo, e a PD calibrada é $PD_k^{cal} = PD_k \cdot \gamma_{d(k)}$.
 
-| Decil $d$ | Faixa de `pd_produto` | $\overline{PD}_d$ | $N_{obs}$ | $\gamma_d$ empírico (IC95%) | $\gamma_d$ adotado | Fonte |
-| :-------: | :-------------------- | :---------------: | --------: | :--------------------------: | :----------------: | :---- |
-| D1  | 0,000 – 0,211 | 0,155 | 2.357 | 0,209 [0,164; 0,258] | 0,21 | empírico |
-| D2  | 0,211 – 0,296 | 0,253 | 3.744 | 0,213 [0,187; 0,242] | 0,21 | empírico |
-| D3  | 0,296 – 0,378 | 0,336 | 5.567 | 0,242 [0,220; 0,266] | 0,24 | empírico |
-| D4  | 0,378 – 0,461 | 0,419 | 5.624 | 0,235 [0,218; 0,255] | 0,24 | empírico |
-| D5  | 0,461 – 0,543 | 0,502 | 60   | 0,442 [0,239; 0,679] | 0,44 | empírico (amostra reduzida) |
-| D6  | 0,543 – 0,619 | 0,581 | 8    | —                    | 0,40 | extrapolação linear |
-| D7  | 0,619 – 0,687 | 0,653 | 5    | —                    | 0,40 | extrapolação linear |
-| D8  | 0,687 – 0,746 | 0,717 | 0    | —                    | 0,40 | extrapolação linear |
-| D9  | 0,746 – 0,804 | 0,774 | 0    | —                    | 0,40 | extrapolação linear |
-| D10 | 0,804 – 1,000 | 0,841 | 1    | —                    | 0,40 | extrapolação linear |
+| Decil $d$ | Faixa de `pd_produto` | $\overline{PD}_d$ | $N_{obs}$ | $\gamma_d$ empírico (IC95%) | $\gamma_d$ adotado | Fonte                       |
+| :-------: | :-------------------- | :---------------: | --------: | :-------------------------: | :----------------: | :-------------------------- |
+|    D1     | 0,000 – 0,211         |       0,155       |     2.357 |    0,209 [0,164; 0,258]     |        0,21        | empírico                    |
+|    D2     | 0,211 – 0,296         |       0,253       |     3.744 |    0,213 [0,187; 0,242]     |        0,21        | empírico                    |
+|    D3     | 0,296 – 0,378         |       0,336       |     5.567 |    0,242 [0,220; 0,266]     |        0,24        | empírico                    |
+|    D4     | 0,378 – 0,461         |       0,419       |     5.624 |    0,235 [0,218; 0,255]     |        0,24        | empírico                    |
+|    D5     | 0,461 – 0,543         |       0,502       |        60 |    0,442 [0,239; 0,679]     |        0,44        | empírico (amostra reduzida) |
+|    D6     | 0,543 – 0,619         |       0,581       |         8 |              -              |        0,40        | extrapolação linear         |
+|    D7     | 0,619 – 0,687         |       0,653       |         5 |              -              |        0,40        | extrapolação linear         |
+|    D8     | 0,687 – 0,746         |       0,717       |         0 |              -              |        0,40        | extrapolação linear         |
+|    D9     | 0,746 – 0,804         |       0,774       |         0 |              -              |        0,40        | extrapolação linear         |
+|    D10    | 0,804 – 1,000         |       0,841       |         1 |              -              |        0,40        | extrapolação linear         |
 
 **Por que decis e não um valor único:** o $\gamma$ uniforme representa bem o miolo da distribuição, mas distorce os extremos. A discretização por decis preserva a heterogeneidade observada sem exigir um hiperparâmetro contínuo, e o pipeline pode aplicar a regra por cliente ou por cluster; aqui usamos por cluster por consistência com o modelo.
 
@@ -252,7 +251,7 @@ Se violada, clusters com maior $PD_k$ e menor $c_k$ são removidos iterativament
 
 $$n_k \cdot L_k \leq \alpha \cdot \sum_{j=1}^{K} n_j \cdot L_j, \quad \forall k \in \{1, \dots, K\}$$
 
-Nenhum cluster pode concentrar mais do que uma fração $\alpha$ da exposição total da carteira. Essa restrição impede que o solver despeje limite em um único cluster "ideal", forçando diversificação. Sem ela, um cluster com $c_k$ alto e $CP_k$ generoso absorveria a maior parte da folga de R1, gerando uma carteira rentável mas concentrada — vulnerável a choques setoriais ou regionais que afetem justamente esse perfil.
+Nenhum cluster pode concentrar mais do que uma fração $\alpha$ da exposição total da carteira. Essa restrição impede que o solver despeje limite em um único cluster "ideal", forçando diversificação. Sem ela, um cluster com $c_k$ alto e $CP_k$ generoso absorveria a maior parte da folga de R1, gerando uma carteira rentável mas concentrada - vulnerável a choques setoriais ou regionais que afetem justamente esse perfil.
 
 **Versão linearizada:** Reorganizando:
 
@@ -266,7 +265,7 @@ Isso equivale a $K$ restrições lineares adicionais, uma por cluster. Para cada
 
 $$\sum_{k=1}^{K} n_k \cdot L_k \geq V^{min}$$
 
-O volume total de limite ofertado deve atingir um piso $V^{min}$ definido pelo parceiro. Essa restrição garante que o modelo não produza uma solução excessivamente conservadora que, embora ótima no sentido de maximizar retorno por real, oferece volume insuficiente para justificar a operação comercial do produto. Sem essa restrição, o solver pode convergir para um cenário onde apenas poucos clusters de baixíssimo risco recebem ofertas modestas — financeiramente seguro, mas comercialmente inviável.
+O volume total de limite ofertado deve atingir um piso $V^{min}$ definido pelo parceiro. Essa restrição garante que o modelo não produza uma solução excessivamente conservadora que, embora ótima no sentido de maximizar retorno por real, oferece volume insuficiente para justificar a operação comercial do produto. Sem essa restrição, o solver pode convergir para um cenário onde apenas poucos clusters de baixíssimo risco recebem ofertas modestas - financeiramente seguro, mas comercialmente inviável.
 
 A restrição é linear em $L_k$. Se o LP for infactível com $V^{min}$, isso sinaliza que as demais restrições (especialmente R1 e R4) estão demasiadamente restritivas para o volume desejado, informando diretamente uma negociação entre área comercial e área de risco.
 
@@ -282,14 +281,14 @@ $$L_k^{\text{final}} = \begin{cases} 50 \cdot \left\lceil \dfrac{L_k}{50} \right
 
 #### Resumo das restrições
 
-| ID | Restrição | Tipo |
-| :- | :-------- | :--- |
-| R1 | Teto de inadimplência financeira ($\overline{PD}$ ponderada por $n_k \cdot L_k$ $\leq$ teto) | Linear (após linearização) |
-| R2 | Capacidade de pagamento ($L_k \leq m_k \cdot CP_k$) | Linear |
-| R3 | Teto máximo ($L_k \leq L^{max}$) | Bound |
-| R4 | Teto de inadimplência física (média simples de $PD_k$ dos clusters ativos $\leq$ teto) | Pós-otimização |
-| R5 | Concentração máxima por cluster ($n_k \cdot L_k \leq \alpha \cdot \sum n_j L_j$) | Linear |
-| R6 | Meta de produção mínima ($\sum n_k \cdot L_k \geq V^{min}$) | Linear |
+| ID  | Restrição                                                                                    | Tipo                       |
+| :-- | :------------------------------------------------------------------------------------------- | :------------------------- |
+| R1  | Teto de inadimplência financeira ($\overline{PD}$ ponderada por $n_k \cdot L_k$ $\leq$ teto) | Linear (após linearização) |
+| R2  | Capacidade de pagamento ($L_k \leq m_k \cdot CP_k$)                                          | Linear                     |
+| R3  | Teto máximo ($L_k \leq L^{max}$)                                                             | Bound                      |
+| R4  | Teto de inadimplência física (média simples de $PD_k$ dos clusters ativos $\leq$ teto)       | Pós-otimização             |
+| R5  | Concentração máxima por cluster ($n_k \cdot L_k \leq \alpha \cdot \sum n_j L_j$)             | Linear                     |
+| R6  | Meta de produção mínima ($\sum n_k \cdot L_k \geq V^{min}$)                                  | Linear                     |
 
 **Restrições futuras identificadas (não formalizadas nesta sprint):** Ao longo do projeto, espera-se incorporar restrições adicionais como rentabilidade mínima por cluster, tetos de exposição por faixa de risco, e número mínimo de clusters ativos. Essas restrições dependem de parâmetros que ainda serão definidos com o parceiro.
 
@@ -315,11 +314,11 @@ Os valores abaixo são ilustrativos e servem apenas para viabilizar a visualiza�
 
 | Parâmetro | Cluster 1 (baixo risco) | Cluster 2 (risco moderado) |
 | :-------- | :---------------------: | :------------------------: |
-| $PD_k$ | 0,002 | 0,004 |
-| $\pi_k$ | 0,80 | 0,70 |
-| $CP_k$ | R\$ 4.000 | R\$ 1.500 |
-| $m_k$ | 1,5 | 0,8 |
-| $n_k$ | 500 | 300 |
+| $PD_k$    |          0,002          |           0,004            |
+| $\pi_k$   |          0,80           |            0,70            |
+| $CP_k$    |        R\$ 4.000        |         R\$ 1.500          |
+| $m_k$     |           1,5           |            0,8             |
+| $n_k$     |           500           |            300             |
 
 Com $T = 22$, $\bar{u} = 0{,}75$, $t = 0{,}0175$, $\text{LGD} = 0{,}80$ e $\overline{PD}_{fin}^{atual} = 0{,}0022$, os coeficientes de retorno líquido unitário são:
 
@@ -370,32 +369,32 @@ A análise desta seção é aplicada **diretamente sobre a base real do Banco Pa
 
 **Solução ótima de referência:**
 
-| Indicador | Valor |
-| :-------- | ----: |
-| Função objetivo $Z^*$ | R$ 30.121.656 |
-| Volume total ofertado $\sum n_k L_k^*$ | R$ 613.482.710 |
-| PD financeira ponderada da carteira | 32,00 % |
-| Clusters com oferta efetiva ($L_k^* > 0$) | 7 de 10 (D1–D7) |
-| Clusters sem oferta ($L_k^* = 0$) | 3 de 10 (D8, D9, D10) |
+| Indicador                                 |                 Valor |
+| :---------------------------------------- | --------------------: |
+| Função objetivo $Z^*$                     |         R$ 30.121.656 |
+| Volume total ofertado $\sum n_k L_k^*$    |        R$ 613.482.710 |
+| PD financeira ponderada da carteira       |               32,00 % |
+| Clusters com oferta efetiva ($L_k^* > 0$) |       7 de 10 (D1–D7) |
+| Clusters sem oferta ($L_k^* = 0$)         | 3 de 10 (D8, D9, D10) |
 
 A solução base abaixo serve de referência para todas as análises seguintes. A aba **"Relatorio_Sensibilidade"** da planilha apresenta os custos reduzidos e preços-sombra no formato padrão do Solver (Final Value / Reduced Cost / Objective Coefficient / Permissível Acréscimo+Decréscimo para variáveis, e Final Value / Shadow Price / R.H. Side / Permissível Acréscimo+Decréscimo para restrições). Os valores foram pré-calculados via `scipy.optimize.linprog` com o motor **HiGHS**, mesmo algoritmo de programação linear usado por baixo pelo GLPK/CBC do OpenSolver e pelo Simplex LP do Solver do Excel, de modo que são numericamente idênticos ao que essas ferramentas devolveriam. No **Excel desktop**, o relatório pode ser gerado nativamente pelo Solver (Resolver, marcar "Sensibilidade" na caixa de Relatórios); a versão atual do **OpenSolver para Google Sheets** resolve o LP normalmente (preenche $L_k^*$ e $Z^*$ na aba "Modelo") mas não emite o relatório formatado, função cumprida pela aba pré-preenchida.
 
-| $k$ | Decil | $PD_k$ | $\pi_k$ | $CP_{p5}$ | $m_k$ | $\gamma_d$ | $c_k$ | $L_k^*$ (R$) | $n_k \cdot L_k^*$ (R$) | Custo Reduzido |
-| :-: | :---: | -----: | -----: | --------: | ----: | --------: | -----: | -----------: | ---------------------: | -------------: |
-| 1 | D1 | 0,156 | 0,158 | 800 | 0,35 | 0,21 | 0,04147 | 258,47 | 184.044.813 | 0 |
-| 2 | D2 | 0,254 | 0,213 | 465 | 0,35 | 0,21 | 0,05246 | 162,75 | 113.571.995 | 0 |
-| 3 | D3 | 0,336 | 0,260 | 450 | 0,30 | 0,24 | 0,05837 | 135,00 |  98.192.250 | 0 |
-| 4 | D4 | 0,419 | 0,304 | 442 | 0,30 | 0,24 | 0,06323 | 132,75 |  95.815.366 | 0 |
-| 5 | D5 | 0,503 | 0,346 | 427 | 0,25 | 0,44 | 0,03873 | 106,84 |  73.899.131 | 0 |
-| 6 | D6 | 0,581 | 0,389 | 250 | 0,25 | 0,40 | 0,03996 |  62,50 |  41.847.438 | 0 |
-| 7 | D7 | 0,653 | 0,425 | 150 | 0,25 | 0,40 | 0,03387 |   9,17 |   6.111.718 | 0 |
-| 8 | D8 | 0,716 | 0,455 | 125 | 0,25 | 0,40 | 0,02707 |   **0,00** | 0 | **−12.310,50** |
-| 9 | D9 | 0,774 | 0,479 | 100 | 0,20 | 0,40 | 0,01966 |   **0,00** | 0 | **−24.264,67** |
-| 10 | D10 | 0,840 | 0,498 |  75 | 0,20 | 0,40 | 0,00987 |   **0,00** | 0 | **−37.201,42** |
+| $k$ | Decil | $PD_k$ | $\pi_k$ | $CP_{p5}$ | $m_k$ | $\gamma_d$ |   $c_k$ | $L_k^*$ (R$) | $n_k \cdot L_k^*$ (R$) | Custo Reduzido |
+| :-: | :---: | -----: | ------: | --------: | ----: | ---------: | ------: | -----------: | ---------------------: | -------------: |
+|  1  |  D1   |  0,156 |   0,158 |       800 |  0,35 |       0,21 | 0,04147 |       258,47 |            184.044.813 |              0 |
+|  2  |  D2   |  0,254 |   0,213 |       465 |  0,35 |       0,21 | 0,05246 |       162,75 |            113.571.995 |              0 |
+|  3  |  D3   |  0,336 |   0,260 |       450 |  0,30 |       0,24 | 0,05837 |       135,00 |             98.192.250 |              0 |
+|  4  |  D4   |  0,419 |   0,304 |       442 |  0,30 |       0,24 | 0,06323 |       132,75 |             95.815.366 |              0 |
+|  5  |  D5   |  0,503 |   0,346 |       427 |  0,25 |       0,44 | 0,03873 |       106,84 |             73.899.131 |              0 |
+|  6  |  D6   |  0,581 |   0,389 |       250 |  0,25 |       0,40 | 0,03996 |        62,50 |             41.847.438 |              0 |
+|  7  |  D7   |  0,653 |   0,425 |       150 |  0,25 |       0,40 | 0,03387 |         9,17 |              6.111.718 |              0 |
+|  8  |  D8   |  0,716 |   0,455 |       125 |  0,25 |       0,40 | 0,02707 |     **0,00** |                      0 | **−12.310,50** |
+|  9  |  D9   |  0,774 |   0,479 |       100 |  0,20 |       0,40 | 0,01966 |     **0,00** |                      0 | **−24.264,67** |
+| 10  |  D10  |  0,840 |   0,498 |        75 |  0,20 |       0,40 | 0,00987 |     **0,00** |                      0 | **−37.201,42** |
 
 #### 4.1 Aplicação prática
 
-A solução ótima do LP é calculada com base em parâmetros que representam estimativas do comportamento esperado da carteira: probabilidade de default, propensão à contratação, taxa de utilização do limite e capacidade de pagamento. No mundo real, nenhum desses parâmetros é fixo — eles variam em função de ciclos econômicos, drift do modelo de scoring, pressões competitivas e decisões regulatórias. A análise de sensibilidade é parte integrante do processo de decisão, pois determina até onde os parâmetros podem se mover sem invalidar a política de limites vigente.
+A solução ótima do LP é calculada com base em parâmetros que representam estimativas do comportamento esperado da carteira: probabilidade de default, propensão à contratação, taxa de utilização do limite e capacidade de pagamento. No mundo real, nenhum desses parâmetros é fixo - eles variam em função de ciclos econômicos, drift do modelo de scoring, pressões competitivas e decisões regulatórias. A análise de sensibilidade é parte integrante do processo de decisão, pois determina até onde os parâmetros podem se mover sem invalidar a política de limites vigente.
 
 No caso específico do Banco Pan, a análise apoia a área de crédito em quatro decisões recorrentes: (i) **quais perfis (clusters) oferecer cartão pré-aprovado**, lendo diretamente os $L_k^*$ resultantes; (ii) **quais restrições políticas estão de fato limitando a rentabilidade**, lendo as restrições ativas e os preços-sombra; (iii) **quanto custaria, em R\$ de retorno, incluir um cluster atualmente descartado**, lendo o custo reduzido; (iv) **em que momento a política precisa ser revista**, lendo os intervalos de permissibilidade (acréscimo/decréscimo permitido em cada parâmetro sem mudança de base ótima).
 
@@ -405,34 +404,34 @@ A leitura desses indicadores transforma o LP de uma ferramenta de cálculo pontu
 
 #### 4.2 Variações na função objetivo
 
-A análise dos coeficientes da FO determina o **intervalo de variação** dentro do qual cada $c_k$ pode se mover sem que a base ótima se altere. Enquanto $c_k$ permanece nesse intervalo, os mesmos clusters continuam recebendo oferta nos mesmos valores; apenas o valor numérico de $Z^*$ muda. Quando $c_k$ ultrapassa o limite, a base muda — algum cluster entra ou sai da solução.
+A análise dos coeficientes da FO determina o **intervalo de variação** dentro do qual cada $c_k$ pode se mover sem que a base ótima se altere. Enquanto $c_k$ permanece nesse intervalo, os mesmos clusters continuam recebendo oferta nos mesmos valores; apenas o valor numérico de $Z^*$ muda. Quando $c_k$ ultrapassa o limite, a base muda - algum cluster entra ou sai da solução.
 
 No LP do Banco Pan, uma variação em $c_k$ pode decorrer de: (i) revisão da $PD_k$ por modelos de scoring atualizados; (ii) recalibração de $\gamma_d$ pela observação de novas safras; (iii) mudança na propensão $\pi_k$ por campanha de marketing; ou (iv) revisão da utilização $\bar{u}$ por análise de comportamento da carteira ativada. A tabela abaixo apresenta os intervalos de permissibilidade calculados via solver, lendo diretamente do Relatório de Sensibilidade gerado pelo OpenSolver/Solver:
 
-| Cluster | $c_k$ atual | Permissível Acréscimo | Permissível Decréscimo | Faixa de estabilidade de $c_k$ |
-| :-----: | ----------: | --------------------: | ---------------------: | :----------------------------- |
-| D1 (básica) | 0,04147 | +0,4147 | −0,0581 | [−0,017 ; +0,456] |
-| D2 (básica) | 0,05246 | +0,5246 | −0,0969 | [−0,044 ; +0,577] |
-| D3 (básica) | 0,05837 | +0,5837 | −0,0867 | [−0,028 ; +0,642] |
-| D4 (básica) | 0,06323 | +0,6323 | −0,0753 | [−0,012 ; +0,695] |
-| D5 (básica) | 0,03873 | +0,3873 | −0,0344 | [+0,004 ; +0,426] |
-| D6 (básica) | 0,03996 | +0,3996 | −0,0202 | [+0,020 ; +0,440] |
-| D7 (básica) | 0,03387 | +0,0277 | −0,0155 | [+0,018 ; +0,062] |
-| D8 (não-básica) | 0,02707 | +0,0192 | infinito | até $c_8 \leq 0{,}0463$ permanece fora |
-| D9 (não-básica) | 0,01966 | +0,0379 | infinito | até $c_9 \leq 0{,}0576$ permanece fora |
-| D10 (não-básica) | 0,00987 | +0,0608 | infinito | até $c_{10} \leq 0{,}0707$ permanece fora |
+|     Cluster      | $c_k$ atual | Permissível Acréscimo | Permissível Decréscimo | Faixa de estabilidade de $c_k$            |
+| :--------------: | ----------: | --------------------: | ---------------------: | :---------------------------------------- |
+|   D1 (básica)    |     0,04147 |               +0,4147 |                −0,0581 | [−0,017 ; +0,456]                         |
+|   D2 (básica)    |     0,05246 |               +0,5246 |                −0,0969 | [−0,044 ; +0,577]                         |
+|   D3 (básica)    |     0,05837 |               +0,5837 |                −0,0867 | [−0,028 ; +0,642]                         |
+|   D4 (básica)    |     0,06323 |               +0,6323 |                −0,0753 | [−0,012 ; +0,695]                         |
+|   D5 (básica)    |     0,03873 |               +0,3873 |                −0,0344 | [+0,004 ; +0,426]                         |
+|   D6 (básica)    |     0,03996 |               +0,3996 |                −0,0202 | [+0,020 ; +0,440]                         |
+|   D7 (básica)    |     0,03387 |               +0,0277 |                −0,0155 | [+0,018 ; +0,062]                         |
+| D8 (não-básica)  |     0,02707 |               +0,0192 |               infinito | até $c_8 \leq 0{,}0463$ permanece fora    |
+| D9 (não-básica)  |     0,01966 |               +0,0379 |               infinito | até $c_9 \leq 0{,}0576$ permanece fora    |
+| D10 (não-básica) |     0,00987 |               +0,0608 |               infinito | até $c_{10} \leq 0{,}0707$ permanece fora |
 
-**Exemplo numérico aplicado — cluster D4 (variável básica).** Suponha que uma recalibração de $\gamma_4$ no próximo trimestre eleve $PD_4 \cdot \gamma_d$ de 0,1006 para 0,1106 (acréscimo de 1 ponto percentual, equivalente a +10 % no produto), o que reduz $c_4$ de 0,06323 para:
+**Exemplo numérico aplicado - cluster D4 (variável básica).** Suponha que uma recalibração de $\gamma_4$ no próximo trimestre eleve $PD_4 \cdot \gamma_d$ de 0,1006 para 0,1106 (acréscimo de 1 ponto percentual, equivalente a +10 % no produto), o que reduz $c_4$ de 0,06323 para:
 
 $$c_4' = \pi_4 \cdot (T \bar{u} t - 0{,}1106 \cdot \text{LGD}) = 0{,}304 \cdot (0{,}28875 - 0{,}1106 \cdot 0{,}80) = 0{,}304 \cdot 0{,}20027 = 0{,}06088$$
 
 A variação $\Delta c_4 = -0{,}00235$ está confortavelmente dentro do intervalo de permissibilidade $[-0{,}075;\; +0{,}632]$, de modo que a base ótima permanece inalterada. O efeito é apenas sobre o valor de $Z$: $\Delta Z = n_4 \cdot \Delta c_4 \cdot L_4^* = 721{.}773 \cdot (-0{,}00235) \cdot 132{,}75 \approx -\text{R\$}\;225.000$ no retorno anualizado. A política não precisa ser revista; apenas o retorno esperado é ajustado para baixo. Esse é o uso típico do intervalo de permissibilidade: filtrar pequenas variações que não justificam reotimização.
 
-**Exemplo numérico aplicado — cluster D8 (variável não-básica) e custo reduzido.** O cluster D8 (PD média 71,6 %) recebe $L_8^* = 0$ na solução ótima e tem **custo reduzido de −R\$ 12.310,50**. A leitura desse número segue exatamente a definição do slide da aula: **"o custo reduzido de uma variável não-básica é a quantidade pela qual o valor de Z vai diminuir (em um problema de máx) se insistirmos em incluir uma unidade da variável na base"**. Portanto, se forçássemos $L_8 = \text{R\$}\;1$ (uma unidade monetária de exposição por cliente de D8), o valor da FO cairia em R\$ 12.310,50 por causa do deslocamento de orçamento de risco de outros clusters mais rentáveis.
+**Exemplo numérico aplicado - cluster D8 (variável não-básica) e custo reduzido.** O cluster D8 (PD média 71,6 %) recebe $L_8^* = 0$ na solução ótima e tem **custo reduzido de −R\$ 12.310,50**. A leitura desse número segue exatamente a definição do slide da aula: **"o custo reduzido de uma variável não-básica é a quantidade pela qual o valor de Z vai diminuir (em um problema de máx) se insistirmos em incluir uma unidade da variável na base"**. Portanto, se forçássemos $L_8 = \text{R\$}\;1$ (uma unidade monetária de exposição por cliente de D8), o valor da FO cairia em R\$ 12.310,50 por causa do deslocamento de orçamento de risco de outros clusters mais rentáveis.
 
 A leitura simétrica (também ensinada no slide) é o **valor que $c_k$ precisaria atingir para tornar a variável atrativa**. Como cada cluster tem $n_k$ clientes, o custo reduzido por cliente é $-12.310{,}50 / 640.559 = -0{,}01922$ por real de exposição. Portanto, para D8 entrar na base, $c_8$ teria que subir de 0,02707 para no mínimo $0{,}02707 + 0{,}01922 = 0{,}04629$, um aumento de 71 %. Equivalentemente, $\gamma_8$ teria que cair de 0,40 para aproximadamente 0,22 (uma melhora de calibração que dependeria de evidência empírica de over-prediction da PD nesse decil), ou $\pi_8$ teria que crescer 71 %. Enquanto nenhum desses movimentos ocorrer, é racional manter D8 fora da oferta.
 
-O mesmo raciocínio aplica-se a D9 (custo reduzido $−$R\$ 24.264, $c_9$ precisaria subir para 0,058) e D10 ($−$R\$ 37.201, $c_{10}$ precisaria subir para 0,071) — ambos requereriam mudanças muito mais agressivas, consistente com o fato de que esses clusters têm PD acima de 77 % e estão claramente fora da fronteira de rentabilidade da política atual.
+O mesmo raciocínio aplica-se a D9 (custo reduzido $−$R\$ 24.264, $c_9$ precisaria subir para 0,058) e D10 ($−$R\$ 37.201, $c_{10}$ precisaria subir para 0,071) - ambos requereriam mudanças muito mais agressivas, consistente com o fato de que esses clusters têm PD acima de 77 % e estão claramente fora da fronteira de rentabilidade da política atual.
 
 **Validação cruzada via solver.** Resolvendo o LP com $L_8 = 1$ forçado, o solver retorna $Z = 30.121.656 - 12.310{,}50 = 30.109.346$, confirmando exatamente o custo reduzido reportado.
 
@@ -442,29 +441,29 @@ Cada restrição do LP representa uma escolha de política: R1 codifica o apetit
 
 **Informação obtida do RHS das restrições.** O lado direito de cada restrição expressa o "orçamento" daquele recurso, e o relatório de sensibilidade informa: (i) o **valor final do LHS**, que comparado ao RHS identifica restrições ativas (LHS = RHS) e folgadas (LHS < RHS); (ii) o **preço-sombra**, que quantifica em R\$ o valor marginal de relaxar a restrição em uma unidade; e (iii) o **intervalo de permissibilidade**, que delimita até onde o RHS pode ser alterado sem que o preço-sombra deixe de ser constante (ou seja, sem que a base ótima mude).
 
-**Informação obtida dos preços-sombra.** O preço-sombra responde à pergunta gerencial *"quanto a mais de retorno o banco obteria se pudesse afrouxar essa política?"*. Valores altos indicam gargalos com maior retorno marginal; valores zero indicam folga.
+**Informação obtida dos preços-sombra.** O preço-sombra responde à pergunta gerencial _"quanto a mais de retorno o banco obteria se pudesse afrouxar essa política?"_. Valores altos indicam gargalos com maior retorno marginal; valores zero indicam folga.
 
 Os preços-sombra do LP resolvido são:
 
-| Restrição | Status | LHS (Final) | RHS | Preço-Sombra | Interpretação |
-| :-------- | :----: | :---------: | :-: | -----------: | :------------ |
-| **R1 — PD financeira** ($\leq 0{,}32$) | **ATIVA** | 0,3200 | 0,3200 | **R\$ 0,1964** por unidade de $\sum n_k L_k$ excedente | Apertar/afrouxar o teto altera $Z$ proporcionalmente ao volume |
-| R2 — D1 ($L_1 \leq 280$) | folgada | 258,47 | 280,00 | 0 | Não é gargalo (R5 limita antes) |
-| **R2 — D2** ($L_2 \leq 162{,}75$) | **ATIVA** | 162,75 | 162,75 | **R\$ 67.633** por R\$ 1 de $m_k CP_k$ | Maior gargalo da carteira |
-| **R2 — D3** ($L_3 \leq 135{,}00$) | **ATIVA** | 135,00 | 135,00 | **R\$ 63.064** por R\$ 1 de $m_k CP_k$ | Segundo maior gargalo |
-| **R2 — D4** ($L_4 \leq 132{,}75$) | **ATIVA** | 132,75 | 132,75 | **R\$ 54.333** | Gargalo relevante |
-| **R2 — D5** ($L_5 \leq 106{,}84$) | **ATIVA** | 106,84 | 106,84 | **R\$ 23.807** | Gargalo moderado |
-| **R2 — D6** ($L_6 \leq 62{,}50$) | **ATIVA** | 62,50 | 62,50 | **R\$ 13.507** | Gargalo menor |
-| R2 — D7, D8, D9, D10 | folgadas | < RHS | varia | 0 | Não são gargalos individuais |
-| R3 — todos os clusters ($\leq 25.000$) | folgadas | $\leq 280$ | 25.000 | 0 | R3 nunca é binding nesta carteira |
-| **R5 — D1** (concentração $\leq 30\%$) | **ATIVA** | 0,00 | 0,00 | **R\$ 0,1052** por R\$ adicional de concentração | D1 está no teto de 30 % do volume |
-| R5 — demais clusters | folgadas | < 0 | 0 | 0 | Nenhum outro cluster atinge 30 % |
+| Restrição                              |  Status   | LHS (Final) |  RHS   |                                           Preço-Sombra | Interpretação                                                  |
+| :------------------------------------- | :-------: | :---------: | :----: | -----------------------------------------------------: | :------------------------------------------------------------- |
+| **R1 - PD financeira** ($\leq 0{,}32$) | **ATIVA** |   0,3200    | 0,3200 | **R\$ 0,1964** por unidade de $\sum n_k L_k$ excedente | Apertar/afrouxar o teto altera $Z$ proporcionalmente ao volume |
+| R2 - D1 ($L_1 \leq 280$)               |  folgada  |   258,47    | 280,00 |                                                      0 | Não é gargalo (R5 limita antes)                                |
+| **R2 - D2** ($L_2 \leq 162{,}75$)      | **ATIVA** |   162,75    | 162,75 |                 **R\$ 67.633** por R\$ 1 de $m_k CP_k$ | Maior gargalo da carteira                                      |
+| **R2 - D3** ($L_3 \leq 135{,}00$)      | **ATIVA** |   135,00    | 135,00 |                 **R\$ 63.064** por R\$ 1 de $m_k CP_k$ | Segundo maior gargalo                                          |
+| **R2 - D4** ($L_4 \leq 132{,}75$)      | **ATIVA** |   132,75    | 132,75 |                                         **R\$ 54.333** | Gargalo relevante                                              |
+| **R2 - D5** ($L_5 \leq 106{,}84$)      | **ATIVA** |   106,84    | 106,84 |                                         **R\$ 23.807** | Gargalo moderado                                               |
+| **R2 - D6** ($L_6 \leq 62{,}50$)       | **ATIVA** |    62,50    | 62,50  |                                         **R\$ 13.507** | Gargalo menor                                                  |
+| R2 - D7, D8, D9, D10                   | folgadas  |    < RHS    | varia  |                                                      0 | Não são gargalos individuais                                   |
+| R3 - todos os clusters ($\leq 25.000$) | folgadas  | $\leq 280$  | 25.000 |                                                      0 | R3 nunca é binding nesta carteira                              |
+| **R5 - D1** (concentração $\leq 30\%$) | **ATIVA** |    0,00     |  0,00  |       **R\$ 0,1052** por R\$ adicional de concentração | D1 está no teto de 30 % do volume                              |
+| R5 - demais clusters                   | folgadas  |     < 0     |   0    |                                                      0 | Nenhum outro cluster atinge 30 %                               |
 
-**Exemplo numérico aplicado — R1 (teto de inadimplência financeira).** A restrição R1 ($\sum n_k \cdot PD_k \cdot L_k / \sum n_k \cdot L_k \leq 0{,}32$) está ativa exatamente em 0,32. O preço-sombra de 0,1964 informa que cada **unidade do termo de excesso** ($\sum n_k (PD_k - 0{,}32) L_k$) que pudermos tolerar gera +R\$ 0,1964 de $Z$. Traduzindo para a linguagem gerencial: relaxar $\overline{PD}_{fin}^{atual}$ de 0,32 para 0,33 (1 ponto percentual de tolerância adicional) equivale a aumentar o RHS em$0,01 \cdot \sum n_k L_k^* = 0,01 \cdot 613.482.710 = \text{R\$ 6.134.827}$. O ganho esperado em $Z$ é portanto $0,1964 \cdot 6.134.827 \approx \text{R\$ 1.205.000}$ de retorno adicional. Em outras palavras, **cada ponto percentual adicional de apetite de risco vale R\$ 1,2 milhões anuais para a carteira**. A decisão de ampliar esse apetite passa a ser uma comparação direta: o custo de provisão regulatória sobre a inadimplência incremental supera ou não esses R\$ 1,2 M?
+**Exemplo numérico aplicado - R1 (teto de inadimplência financeira).** A restrição R1 ($\sum n_k \cdot PD_k \cdot L_k / \sum n_k \cdot L_k \leq 0{,}32$) está ativa exatamente em 0,32. O preço-sombra de 0,1964 informa que cada **unidade do termo de excesso** ($\sum n_k (PD_k - 0{,}32) L_k$) que pudermos tolerar gera +R\$ 0,1964 de $Z$. Traduzindo para a linguagem gerencial: relaxar $\overline{PD}_{fin}^{atual}$ de 0,32 para 0,33 (1 ponto percentual de tolerância adicional) equivale a aumentar o RHS em$0,01 \cdot \sum n_k L_k^* = 0,01 \cdot 613.482.710 = \text{R\$ 6.134.827}$. O ganho esperado em $Z$ é portanto $0,1964 \cdot 6.134.827 \approx \text{R\$ 1.205.000}$ de retorno adicional. Em outras palavras, **cada ponto percentual adicional de apetite de risco vale R\$ 1,2 milhões anuais para a carteira**. A decisão de ampliar esse apetite passa a ser uma comparação direta: o custo de provisão regulatória sobre a inadimplência incremental supera ou não esses R\$ 1,2 M?
 
-**Exemplo numérico aplicado — R2 do cluster D2 (capacidade de pagamento).** A R2 de D2 está ativa em $L_2^* = 162{,}75$. O preço-sombra de R\$ 67.633 mostra que cada R\$ 1 adicional no termo $m_k \cdot CP_{p5}$ gera +R\$ 67.633 de $Z$. Na prática, isso pode vir de melhorar $CP_{p5}$ ou de elevar $m_2$; qualquer uma das alavancas aumenta retorno, mas também deve ser lida junto com R1.
+**Exemplo numérico aplicado - R2 do cluster D2 (capacidade de pagamento).** A R2 de D2 está ativa em $L_2^* = 162{,}75$. O preço-sombra de R\$ 67.633 mostra que cada R\$ 1 adicional no termo $m_k \cdot CP_{p5}$ gera +R\$ 67.633 de $Z$. Na prática, isso pode vir de melhorar $CP_{p5}$ ou de elevar $m_2$; qualquer uma das alavancas aumenta retorno, mas também deve ser lida junto com R1.
 
-**Exemplo numérico aplicado — R5 do cluster D1 (concentração).** A R5 de D1 está ativa: o cluster está no teto de 30 % da exposição total. O preço-sombra de 0,1052 indica que cada R\$ 1 adicional de concentração em D1 vale +R\$ 0,1052 de $Z$. Elevar o teto para 31 % aumenta o retorno, mas reduz a diversificação.
+**Exemplo numérico aplicado - R5 do cluster D1 (concentração).** A R5 de D1 está ativa: o cluster está no teto de 30 % da exposição total. O preço-sombra de 0,1052 indica que cada R\$ 1 adicional de concentração em D1 vale +R\$ 0,1052 de $Z$. Elevar o teto para 31 % aumenta o retorno, mas reduz a diversificação.
 
 **Síntese gerencial.** R2 é o maior gargalo de retorno marginal, R1 é a alavanca de apetite de risco e R5 é a alavanca de diversificação. R3 permanece folgada porque R2 já limita os $L_k$ bem abaixo de R\$ 25.000.
 
@@ -479,11 +478,11 @@ No ambiente real de gestão de crédito, as variações nos parâmetros não oco
 Suponha um choque que reduz $CP_{p5}$ em 10 % em todos os clusters e eleva $PD_k$ em 5 %. Os efeitos isolados, lidos do relatório de sensibilidade:
 
 - **Em R2 (D2):** $CP_{p5,2}$ cai de R\$ 465 para R\$ 418, reduzindo $m_2 CP_{p5,2}$ em R\$ 16,28. Pelo preço-sombra de R\$ 67.633/R\$, isso custa $\text{R\$ 67.633} \cdot 16{,}28 \approx \text{R\$ 1,1 M}$. Aplicando o mesmo raciocínio para D3 a D6 e somando, o impacto agregado é de aproximadamente **R\$ 4,3 M** de redução em $Z$.
-- **Em R1:** $PD_k$ +5 % significa que cada cluster contribui mais para a inadimplência ponderada. Para manter R1 em 0,32, o solver precisa realocar volume — provavelmente reduzindo $L_k$ dos clusters de PD mais alta dentro da base (D5–D7). O impacto não é diretamente lido do preço-sombra (porque a mudança não é só no RHS, é estrutural), e exige reotimização do LP.
+- **Em R1:** $PD_k$ +5 % significa que cada cluster contribui mais para a inadimplência ponderada. Para manter R1 em 0,32, o solver precisa realocar volume - provavelmente reduzindo $L_k$ dos clusters de PD mais alta dentro da base (D5–D7). O impacto não é diretamente lido do preço-sombra (porque a mudança não é só no RHS, é estrutural), e exige reotimização do LP.
 
 A área de crédito pode pré-rodar esse cenário combinado na própria planilha (alterando os valores das colunas $CP_{p5}$ e $PD$ e re-executando o Solver) e comparar o novo $Z^*$ e a nova alocação $L_k^*$ com a base. Se a mudança for significativa, o ambiente saiu do intervalo de estabilidade da política vigente e a reotimização deve ser oficializada. Se permanecer próxima, a política base é robusta ao cenário testado.
 
-**Cenário de variação estrutural — calibração $\gamma_d$.** Diferentemente das variações conjunturais acima, uma recalibração de $\gamma_d$ por nova safra é um movimento previsível e regular. O protocolo recomendado é: (i) a cada trimestre, recalcular $\gamma_d$ empiricamente sobre o `over30mob3` da safra mais recente; (ii) comparar com os $\gamma_d$ vigentes no modelo; (iii) se algum $\gamma_d$ saiu do intervalo $\pm$ IC95% bootstrap (Seção 1.5.1), atualizar o parâmetro; (iv) re-rodar o LP e comparar a nova solução com a vigente. Esse ciclo trimestral integra a análise de sensibilidade ao processo de governança de risco do banco.
+**Cenário de variação estrutural - calibração $\gamma_d$.** Diferentemente das variações conjunturais acima, uma recalibração de $\gamma_d$ por nova safra é um movimento previsível e regular. O protocolo recomendado é: (i) a cada trimestre, recalcular $\gamma_d$ empiricamente sobre o `over30mob3` da safra mais recente; (ii) comparar com os $\gamma_d$ vigentes no modelo; (iii) se algum $\gamma_d$ saiu do intervalo $\pm$ IC95% bootstrap (Seção 1.5.1), atualizar o parâmetro; (iv) re-rodar o LP e comparar a nova solução com a vigente. Esse ciclo trimestral integra a análise de sensibilidade ao processo de governança de risco do banco.
 
 **Protocolo de decisão integrado.** O protocolo operacional derivado das análises anteriores pode ser sintetizado em três regras de gestão:
 
@@ -495,7 +494,6 @@ A área de crédito pode pré-rodar esse cenário combinado na própria planilha
 
 Esse protocolo transforma o modelo de otimização de uma ferramenta de cálculo pontual em um instrumento de gestão contínua. A análise de sensibilidade conecta a solução matemática ao processo decisório da instituição, e a planilha [no Google Sheets](https://docs.google.com/spreadsheets/d/1Je64KaMrVqcCnavN7nFpp5OqDzVSHnHKtmvkgQTjcJg/edit?usp=sharing) é a interface concreta para que a área de políticas de crédito execute essas decisões sem dependência da equipe de data science a cada iteração.
 
-
 ---
 
 ## Fontes
@@ -504,8 +502,8 @@ Esse protocolo transforma o modelo de otimização de uma ferramenta de cálculo
 2. Moody's Analytics. [Determining the Optimal Dynamic Credit Card Limit](https://www.moodys.com/web/en/us/insights/resources/Determining-the-Optimal-Dynamic-Credit-Card-Limit.pdf). White Paper.
 3. Experian. [Balancing Growth and Risk with Credit Limit Optimization](https://www.experian.com/blogs/insights/credit-limit-optimization/). Experian Insights, 2024.
 4. Budd, J. K.; Taylor, P. G. [Calculating Optimal Limits for Transacting Credit Card Customers](https://arxiv.org/pdf/1506.05376). arXiv:1506.05376, 2015.
-5. Hillier, F. S.; Lieberman, G. J. *Introduction to Operations Research*. 9th ed. McGraw-Hill, 2010.
-6. Pannell, D. J. (1997). Sensitivity analysis of normative economic models. *Agricultural Economics*, 16, 139-152.
+5. Hillier, F. S.; Lieberman, G. J. _Introduction to Operations Research_. 9th ed. McGraw-Hill, 2010.
+6. Pannell, D. J. (1997). Sensitivity analysis of normative economic models. _Agricultural Economics_, 16, 139-152.
 7. Banco Pan S.A. [Relações com Investidores](https://ri.bancopan.com.br/). Demonstrações Financeiras Padronizadas, 2024.
 8. BRASIL. Conselho Monetário Nacional. Resolução CMN nº 4.966/2021. Perda esperada associada ao risco de crédito.
-        
+           

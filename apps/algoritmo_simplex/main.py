@@ -6,10 +6,10 @@ Uso:
     python main.py <arquivo_clientes.csv> <parametros.json>
 
     Exemplo:
-        python main.py clientes.csv parametros_producao.json
-        python main.py clientes.csv parametros_teste.json
+        python main.py clientes_calibrado.csv parametros_producao.json
+        python main.py clientes_calibrado.csv parametros_teste.json
 
-Arquivos CSV devem estar em apps/data/csv/
+Arquivos CSV devem estar em data/csv/
 Arquivos JSON devem estar em apps/algoritmo_simplex/input/
 """
 
@@ -48,9 +48,9 @@ def carregar_dados(arquivo_csv: Path, arquivo_json: Path) -> tuple[pd.DataFrame,
 def calcular_pd_fin_atual(df: pd.DataFrame) -> float:
     """
     Calcula a inadimplência financeira atual da carteira
-    como média de pd_produto dos clientes elegíveis (flag_filtros == 0).
+    como média de pd_calibrada dos clientes elegíveis (flag_filtros == 0).
     """
-    pd_fin_atual = df[df["flag_filtros"] == 0]["pd_produto"].mean()
+    pd_fin_atual = df[df["flag_filtros"] == 0]["pd_calibrada"].mean()
     print(f"PD_fin_atual: {pd_fin_atual:.4f}")
     return pd_fin_atual
 
@@ -62,11 +62,14 @@ def garantir_clusters(arquivo_csv_nome: str) -> pd.DataFrame:
     Retorna:
         clusters : DataFrame com os parâmetros agregados por cluster
     """
-    # determina o caminho do arquivo clusterizado correspondente ao CSV de entrada
     stem = Path(arquivo_csv_nome).stem
-    arquivo_clusters = Path("../data/csv/") / f"{stem}_clusters.csv"
+    arquivo_clusters = (
+        Path(__file__).resolve().parent.parent.parent
+        / "data"
+        / "csv"
+        / f"{stem}_clusters.csv"
+    )
 
-    # se o arquivo clusterizado não existir, roda o clustering antes de continuar
     if not arquivo_clusters.exists():
         print(f"Gerando clusters para {arquivo_clusters.name}...")
         from clustering import main as clustering_main
@@ -76,7 +79,6 @@ def garantir_clusters(arquivo_csv_nome: str) -> pd.DataFrame:
     else:
         print(f"Arquivo {arquivo_clusters.name} encontrado. Pulando clustering.")
 
-    # lê os parâmetros agregados por cluster gerados pelo clustering
     clusters = pd.read_csv(arquivo_clusters)
     print(f"Clusters carregados: {len(clusters)} clusters")
     return clusters
@@ -101,7 +103,7 @@ def montar_problema(
     # monta o vetor de coeficientes da função objetivo (um por cluster)
     c = []
     for _, row in clusters.iterrows():
-        ck = row["n_k"] * row["pi_k"] * (u_bar * t - row["PD_k"] * LGD)
+        ck = row["n_k"] * row["pi_k"] * (u_bar * t * 22 - row["PD_k"] * LGD)
         c.append(ck)
 
     # monta a matriz de restrições A e o vetor b
@@ -129,6 +131,19 @@ def montar_problema(
         A.append(linha)
         b.append(L_max)
 
+    # # R5: concentração máxima por cluster
+    # alpha = params["alpha"]
+
+    # for _, row_k in clusters.iterrows():
+    #     linha = []
+    #     for _, row_j in clusters.iterrows():
+    #         if row_j["cluster_id"] == row_k["cluster_id"]:
+    #             linha.append(row_j["n_k"] * (1 - alpha))
+    #         else:
+    #             linha.append(-row_j["n_k"] * alpha)
+    #     A.append(linha)
+    #     b.append(0.0)
+
     return Problema(c=c, A=A, b=b)
 
 
@@ -145,7 +160,6 @@ def exibir_resultado(
 
     for i, row in clusters.iterrows():
         limite = x[i]
-        # arredonda para múltiplo de 50, ou 0 se menor que 200
         if limite >= 200:
             limite_final = 50 * round(limite / 50)
         else:
@@ -159,11 +173,13 @@ if len(sys.argv) < 3:
     print("Uso:")
     print("    python main.py <arquivo_clientes.csv> <parametros.json>")
     print("Exemplo:")
-    print("    python main.py clientes.csv parametros.json")
+    print("    python main.py clientes_calibrado.csv parametros.json")
     sys.exit(1)
 
-arquivo_csv = Path("../data/csv/" + sys.argv[1])
-arquivo_json = Path("input/" + sys.argv[2])
+arquivo_csv = (
+    Path(__file__).resolve().parent.parent.parent / "data" / "csv" / sys.argv[1]
+)
+arquivo_json = Path(__file__).resolve().parent / "input" / sys.argv[2]
 
 if not arquivo_csv.exists():
     print(f"Erro: arquivo CSV {sys.argv[1]} não encontrado em data/csv/")

@@ -1,12 +1,12 @@
 """
 scripts/convert_parquet_to_csv.py
-Converte um arquivo .parquet em apps/data/parquet e salva como .csv em apps/data/csv/
+Converte um arquivo .parquet em data/parquet e salva como .csv em data/csv/
 
 Uso:
     python convert_parquet_to_csv.py <arquivo_entrada.parquet> [nome_saida.csv] [--reduced [porcentagem]]
 
 Argumentos:
-    arquivo_entrada.parquet : arquivo em apps/data/parquet/
+    arquivo_entrada.parquet : arquivo em data/parquet/
     nome_saida.csv          : nome do arquivo de saída (padrão: mesmo nome do parquet)
     --reduced               : após converter, gera também uma versão reduzida
     porcentagem             : porcentagem a usar com --reduced (padrão: 10)
@@ -37,17 +37,17 @@ if not args:
 nome_parquet = args[0]
 args = args[1:]
 
-arquivo_entrada = ROOT / "apps" / "data" / "parquet" / nome_parquet
+arquivo_entrada = ROOT / "data" / "parquet" / nome_parquet
 
 if not arquivo_entrada.exists():
-    print(f"Erro: arquivo {nome_parquet} não encontrado em apps/data/parquet/")
+    print(f"Erro: arquivo {nome_parquet} não encontrado em data/parquet/")
     sys.exit(1)
 
 if args and not args[0].startswith("--"):
-    arquivo_saida = ROOT / "apps" / "data" / "csv" / args[0]
+    arquivo_saida = ROOT / "data" / "csv" / args[0]
     args = args[1:]
 else:
-    arquivo_saida = ROOT / "apps" / "data" / "csv" / (arquivo_entrada.stem + ".csv")
+    arquivo_saida = ROOT / "data" / "csv" / (arquivo_entrada.stem + ".csv")
 
 reduced = False
 porcentagem = 10
