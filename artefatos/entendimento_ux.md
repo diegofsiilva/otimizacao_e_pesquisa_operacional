@@ -42,7 +42,7 @@ Com o mapeamento das dores, necessidades, objetivos e benefícios esperados de c
 
 ## 2. User Stories (5 pontos)
 
-Segundo Max Rehkopf, gerente de _Marketing_ de Produto na **_Atlassian_** (empresa multinacional de _software_), _User Stories_ se tratam de tarefas de desenvolvimento, composta por descrições concisas e focadas nos usuários. Para o projeto com o _Banco Pan_, as _User Stories_ são derivadas das duas _personas_ mapeadas: **Rodinei Filho** e **Larissa Paiva**. Cada história é desenvolvida levando em consideração as suas dores específicas e ganhos esperados, buscando uma maior robustez e alinhamento da solução. 
+Segundo Max Rehkopf, gerente de _Marketing_ de Produto na **_Atlassian_** (empresa multinacional de _software_), _User Stories_ se tratam de tarefas de desenvolvimento, composta por descrições concisas e focadas nos usuários. Para o projeto com o _Banco Pan_, as _User Stories_ são derivadas das duas _personas_ mapeadas: XXXX e YYYY. Cada história é desenvolvida levando em consideração as suas dores específicas e ganhos esperados, buscando uma maior robustez e alinhamento da solução. 
 
 As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir que as histórias criadas são independentes umas das outras, negociáveis (podem ser ajustadas futuramente), geram valor para os usuários, estimáveis, concisas e testáveis.
 
@@ -56,23 +56,16 @@ As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir 
 
 **Dores relacionadas:**
 
-* Quando a base chega com colunas faltantes/tipos errados, ela perde tempo “descobrindo no braço” o problema e refazendo cargas, atrasando a entrega do cenário para o time de Crédito.
-
-* Quando a carga não é padronizada/reprodutível, o resultado muda entre execuções (ou entre ambientes), reduzindo a confiança no pipeline e dificultando comparar cenários.
-
-* Quando o erro não é explícito, o troubleshooting vira tentativa-e-erro (reprocessar, filtrar, reexportar), gerando retrabalho.
+- Bases inconsistentes.
+- Retrabalho técnico.
+- Falta de padronização.
 
 **Critérios de aceitação:**
 
-- Carrega arquivo parquet válido e informa: total de linhas e total de clientes elegíveis (flag_filtros == 0).
-
-- Valida colunas mínimas; se faltar alguma, bloqueia a carga e lista explicitamente as colunas ausentes.
-
-- Para arquivo corrompido/inválido, interrompe o processo e exibe erro claro (sem seguir para clusterização).
-
-- Suporta carga de até ~1,8 milhão de registros elegíveis sem perda de registros (contagem preservada).
-
-- Permite usar base mock com o mesmo esquema mínimo para executar as etapas seguintes.
+- Aceita arquivos parquet contendo as 17 variáveis do TAPI.
+- Carrega bases com até ~1,8 milhões de registros elegíveis.
+- Exibe erro claro para arquivo corrompido ou colunas ausentes.
+- Permite uso de base mock para testes.
 
 ---
 
@@ -84,23 +77,16 @@ As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir 
 
 **Dores relacionadas:**
 
-* Quando o número de clusters não é configurável, ela não consegue testar hipóteses de segmentação (granularidade vs estabilidade), atrasando iterações com o time de Crédito.
-
-* Quando a clusterização não é reprodutível, os clusters mudam entre execuções e ela não consegue comparar cenários com segurança nem explicar diferenças para Rodinei.
-
-* Quando parâmetros inválidos não são barrados, a execução falha “no meio” e vira retrabalho (rodar novamente, ajustar dados, interpretar erro técnico).
+- Segmentação ruim.
+- Pouca flexibilidade.
+- Ajustes manuais.
 
 **Critérios de aceitação:**
 
-- Aceita n_clusters inteiro ≥ 2; caso contrário, bloqueia e exibe erro.
-
-- Se n_clusters > nº de clientes elegíveis (flag_filtros == 0), bloqueia e exibe erro.
-
-- Ao executar, gera cluster_id para 100% dos elegíveis, com valores entre 0 e n_clusters-1.
-
-- Com mesma base + mesmos parâmetros (incluindo random_state), gera o mesmo resultado de cluster_id (reprodutibilidade).
-
-- Gera também a tabela agregada por cluster com colunas n_k, PD_k, pi_k, CP_k, m_k (1 linha por cluster_id).
+- Permite definir número inteiro de clusters.
+- Aceita mínimo de 100 clusters.
+- Exibe erro para valores inválidos.
+- Executa clusterização com base mock e base real.
 
 ---
 
@@ -112,23 +98,16 @@ As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir 
 
 **Dores relacionadas:**
 
-* Quando as metas ficam “na mão” do time técnico, Rodinei perde autonomia para testar cenários e depende de idas e vindas com Data Science.
-
-* Quando as metas não ficam registradas, versões diferentes de parâmetros circulam e a comparação entre cenários fica confusa.
-
-* Quando não há validação, metas incoerentes (ex.: acima do elegível) geram resultados inválidos e retrabalho.*
+- Falta de controle.
+- Metas desalinhadas.
+- Dependência técnica.
 
 **Critérios de aceitação:**
 
-- Permite definir meta de clientes aprovados (inteiro ≥ 0) e meta de volume financeiro (≥ 0); valores inválidos são bloqueados com mensagem clara.
-
-- Bloqueia meta de clientes aprovados maior que a quantidade de clientes elegíveis carregados.
-
-- Salva as metas (persistência) e permite consultar quais metas estão ativas antes de rodar o solver.
-
-- Alterar metas não executa o solver automaticamente (ação de executar é separada).
-
-- Mantém registro do “cenário” (ex.: nome/identificador + data/hora) para rastreabilidade.
+- Permite definir meta de clientes aprovados.
+- Permite definir meta de volume financeiro.
+- Bloqueia valores fora das faixas válidas.
+- Salva metas sem executar solver.
 
 ---
 
@@ -140,23 +119,16 @@ As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir 
 
 **Dores relacionadas:**
 
-* Rodinei hoje precisa montar políticas manualmente (regras/planilhas), o que gera inconsistência e demora para fechar uma decisão.
-
-* Sem padronização (arredondamento/faixas), os limites viram difíceis de comunicar e de implementar operacionalmente.
-
-* Quando o solver falha ou não há solução útil, ele fica sem explicação e não sabe como ajustar restrições/metas.
+- Processo manual.
+- Limites genéricos.
+- Decisão lenta.
 
 **Critérios de aceitação:**
 
-- Retorna um limite sugerido para cada cluster_id existente na base agregada.
-
-- Aplica regra de padronização: limite final é múltiplo de R$50 e é 0 ou ≥ R$200 (se < R$200, retorna 0).
-
-- Respeita o teto máximo (L_max) definido nos parâmetros do modelo.
-
-- Exibe o status da otimização (ex.: ótimo/múltiplas soluções/erro) junto com o resultado.
-
-- Se a execução falhar, não retorna resultado parcial e exibe erro claro.
+- Retorna um limite para cada cluster ativo.
+- Nenhum limite é inferior a R$200.
+- Todos os limites finais são múltiplos de R$50.
+- Exibe clusters sem solução viável.
 
 ---
 
@@ -168,23 +140,16 @@ As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir 
 
 **Dores relacionadas:**
 
-* Rodinei precisa justificar por que um cluster recebeu certo limite; sem transparência das restrições, a decisão perde confiança.
-
-* Em auditorias e alinhamentos internos, ele precisa explicar “o que travou” o resultado (risco x capacidade x teto), sem depender do time técnico.
-
-* Sem busca rápida por cluster, vira um processo manual e demorado para responder perguntas pontuais.
+- Falta de clareza.
+- Baixa confiança.
+- Dificuldade de justificar.
 
 **Critérios de aceitação:**
 
-- Para um cluster_id consultado, retorna: limite sugerido e lista de restrições que ficaram ativas/limitantes.
-
-- Considera como restrições do modelo: teto de inadimplência da carteira (R1) e restrições por cluster (capacidade/alavancagem R2 e teto máximo R3).
-
-- Permite busca por cluster_id e retorna erro claro para cluster inexistente.
-
-- Retorna até 10.000 registros em até 3 segundos (em base mock definida para testes).
-                        
-- Exibe também o status da otimização associado ao resultado consultado.
+- Exibe restrições aplicadas por cluster.
+- Mostra identificador do cluster e limite sugerido.
+- Permite busca por cluster.
+- Retorna até 10.000 registros em até 3 segundos.
 
 ---
 
@@ -196,23 +161,16 @@ As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir 
 
 **Dores relacionadas:**
 
-* Rodinei precisa de visão geral para decidir política; uma lista de números sem resumo dificulta entender o “shape” da solução.
-
-* Sem comparação visual entre clusters, fica difícil identificar outliers e revisar restrições/metas com confiança.
-
-* Se só existe “output técnico”, a tomada de decisão fica lenta e dependente de análises adicionais.
+- Outputs técnicos.
+- Pouca visão geral.
+- Insegurança na decisão.
 
 **Critérios de aceitação:**
 
-- Exibe a distribuição dos limites entre clusters (mínimo, máximo, média e mediana dos limites sugeridos).
-
-- Permite visualizar em tabela e em gráfico, com os mesmos valores.
-
-- Permite ordenar a tabela por limite e por cluster_id.
-
+- Exibe média, mediana, mínimo e máximo por cluster.
+- Permite visualização em tabela ou gráfico.
+- Permite ordenar resultados.
 - Funciona com dataset mock.
-
-- Indica clusters com limite 0 (abaixo do mínimo operacional) como casos a revisar.
 
 ---
 
@@ -224,22 +182,16 @@ As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir 
 
 **Dores relacionadas:**
 
-* Larissa precisa integrar a saída em outros fluxos; sem exportação padronizada vira “copiar/colar” e gera erro.
-
-* Sem um formato consistente, diferentes áreas consomem arquivos incompatíveis e o pipeline quebra.
-
-* Sem confirmação/erro claro, o time perde tempo tentando descobrir se exportou “certo” ou “a versão certa”.
+- Retrabalho manual.
+- Compartilhamento difícil.
+- Integração lenta.
 
 **Critérios de aceitação:**
 
-- Exporta os resultados em CSV e/ou objeto Python (conforme o modo de uso definido).
-
-- O CSV contém, no mínimo: cluster_id, limite_sugerido (final) e status_otimizacao.
-Bloqueia exportação se não existir resultado gerado para o cenário atual e exibe mensagem clara.
-
-- Exporta com sucesso a partir de um resultado já existente (sem reexecutar solver).
-
-- Exibe mensagem de sucesso com o local/nome do arquivo exportado (ou confirmação do objeto retornado).
+- Exporta arquivo CSV ou objeto Python.
+- Contém identificador do cluster, limite atribuído e métricas principais.
+- Funciona a partir de arquivo de resultados existente.
+- Exibe mensagem de sucesso ou erro.
 
 ---
 
