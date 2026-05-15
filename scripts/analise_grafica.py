@@ -18,12 +18,13 @@ m1, m2 = 1.5, 0.8
 n1, n2 = 500, 300
 u_bar = 0.75
 t = 0.0175
-LGD = 0.60
+T = 22
+LGD = 0.80
 PD_fin_atual = 0.0022
 
 # Coeficientes de retorno líquido unitário
-c1 = pi1 * (u_bar * t - PD1 * LGD)  # 0.00954
-c2 = pi2 * (u_bar * t - PD2 * LGD)  # 0.00751
+c1 = pi1 * (T * u_bar * t - PD1 * LGD)
+c2 = pi2 * (T * u_bar * t - PD2 * LGD)
 
 # Coeficientes da FO: max (n1*c1)*L1 + (n2*c2)*L2
 fo_coef1 = n1 * c1  # 1.8
