@@ -6,7 +6,7 @@ Uso:
     python reduce_csv.py <arquivo_entrada.csv> [porcentagem]
 
 Argumentos:
-    arquivo_entrada.csv : arquivo CSV em apps/data/csv/
+    arquivo_entrada.csv : arquivo CSV em data/csv/
     porcentagem         : porcentagem das linhas a manter, de 1 a 100 (padrão: 10)
 
 O arquivo reduzido é salvo com o sufixo _reduzido no mesmo diretório.
@@ -27,10 +27,10 @@ if len(sys.argv) < 2 or len(sys.argv) > 3:
     print("    python reduce_csv.py <arquivo_entrada.csv> [porcentagem]")
     sys.exit(1)
 
-arquivo_entrada = ROOT / "apps" / "data" / "csv" / sys.argv[1]
+arquivo_entrada = ROOT / "data" / "csv" / sys.argv[1]
 
 if not arquivo_entrada.exists():
-    print(f"Erro: arquivo {sys.argv[1]} não encontrado em apps/data/csv/")
+    print(f"Erro: arquivo {sys.argv[1]} não encontrado em data/csv/")
     sys.exit(1)
 
 if len(sys.argv) == 3:

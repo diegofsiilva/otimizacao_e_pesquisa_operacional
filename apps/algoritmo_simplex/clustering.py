@@ -5,7 +5,7 @@ Agrupa clientes em clusters usando K-Means e calcula os parâmetros agregados
 necessários para o modelo de otimização de limites de crédito via Simplex.
 
 A clusterização é feita sobre clientes elegíveis (flag_filtros == 0), usando as
-features pd_produto, capacidade_pagamento, score_credito_cross, score_propensao_contrato
+features pd_calibrada, capacidade_pagamento, score_credito_cross, score_propensao_contrato
 e fx_idade. Para cada cluster, são calculados os parâmetros que o LP precisa:
 n_k, PD_k, pi_k, CP_k e m_k.
 
@@ -13,14 +13,14 @@ Uso:
     python clustering.py <arquivo_clientes.csv>
 
 Entrada:
-    - <nome>.csv: base de clientes no nível individual
+    - <nome>.csv: base de clientes no nível individual (com coluna pd_calibrada)
 
 Saída:
     - <nome>_com_cluster.csv : base original com a coluna cluster_id adicionada
     - <nome>_clusters.csv    : tabela agregada no nível do cluster com parâmetros para o LP
 
-Arquivos CSV devem estar em apps/data/csv/
-Arquivos de saída serão gerados em apps/data/csv/
+Arquivos CSV devem estar em data/csv/
+Arquivos de saída serão gerados em data/csv/
 """
 
 from pathlib import Path
@@ -62,7 +62,7 @@ def main(
     random_state: int = 42,
 ):
     input_path = (
-        Path(__file__).resolve().parent.parent / "data" / "csv" / input_csv_name
+        Path(__file__).resolve().parent.parent.parent / "data" / "csv" / input_csv_name
     )
     df = pd.read_csv(input_path)
 
@@ -74,7 +74,7 @@ def main(
     df["cp_proxy"] = build_cp_proxy(df)
 
     # (3) define colunas para clusterização
-    numeric_features = ["pd_produto", "cp_proxy", "score_credito_cross", "pi"]
+    numeric_features = ["pd_calibrada", "cp_proxy", "score_credito_cross", "pi"]
     categorical_features = ["fx_idade"]
 
     pre = ColumnTransformer(
@@ -104,7 +104,7 @@ def main(
 
     clusters = df.groupby("cluster_id", as_index=False).agg(
         n_k=("token", "count"),
-        PD_k=("pd_produto", "mean"),
+        PD_k=("pd_calibrada", "mean"),
         pi_k=("pi", "mean"),
         CP_k=("cp_proxy", p5),
         score_cross_mean=("score_credito_cross", "mean"),
@@ -112,7 +112,7 @@ def main(
     clusters["m_k"] = clusters["score_cross_mean"].apply(score_to_m)
 
     # (5) salva saídas com nomes derivados do arquivo de entrada
-    out_dir = Path(__file__).resolve().parent.parent / "data" / "csv"
+    out_dir = Path(__file__).resolve().parent.parent.parent / "data" / "csv"
     stem = Path(input_csv_name).stem
 
     df.to_csv(out_dir / f"{stem}_com_cluster.csv", index=False)

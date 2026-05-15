@@ -141,7 +141,7 @@ Orquestra o pipeline completo:
 1. Leitura do CSV de clientes e do JSON de parâmetros
 2. Cálculo de $\overline{PD}_{fin}^{atual}$
 3. Verificação de cache: se o arquivo clusterizado já existir, a clusterização é pulada
-4. Montagem do problema ($c$, $A$, $b$) a partir dos clusters
+4. Montagem do problema ($c$, $A$, $b$) a partir dos clusters - restrições R1, R2 e R3
 5. Execução do Simplex
 6. Pós-otimização e exibição dos resultados
 
@@ -151,11 +151,12 @@ A solução recebe dois arquivos como entrada:
 
 ### CSV de clientes
 
-Arquivo com os dados individuais dos clientes elegíveis, localizado em `apps/data/csv/`. As colunas utilizadas pelo modelo são:
+Arquivo com os dados individuais dos clientes elegíveis, localizado em `data/csv/`. As colunas utilizadas pelo modelo são:
 
 | Coluna                     | Descrição                                                                              |
 | -------------------------- | -------------------------------------------------------------------------------------- |
 | `pd_produto`               | Probabilidade de inadimplência no produto                                              |
+| `pd_calibrada`             | PD corrigida pelos fatores gamma por decil de risco                                    |
 | `capacidade_pagamento`     | Estimativa de capacidade de pagamento do cliente                                       |
 | `score_credito_cross`      | Score de crédito multiproduto, usado para calcular $m_k$                               |
 | `score_propensao_contrato` | Score de propensão à contratação, normalizado para obter $\pi_k$                       |
@@ -195,7 +196,9 @@ As restrições do modelo e o algoritmo Simplex implementado são independentes 
 
 ## Clusterização
 
-A clusterização é feita de forma **não supervisionada**, utilizando **K-means**, visando juntar clientes elegíveis e com perfis semelhantes de **risco, capacidade de pagamento e propensão**, buscando viabilizar a otimização no nível de cluster.
+A clusterização é feita de forma **não supervisionada**, utilizando **K-Means**, visando juntar clientes elegíveis e com perfis semelhantes de **risco, capacidade de pagamento e propensão**, buscando viabilizar a otimização no nível de cluster.
+
+O K-Means foi escolhido nesta sprint por ser um algoritmo simples e bem compreendido, adequado para validar o pipeline completo e o algoritmo Simplex com um número controlado de clusters. No entanto, reconhecemos que ele **não é o algoritmo ideal para o problema real**: o K-Means exige que o número de clusters $K$ seja definido a priori, enquanto o ideal seria um algoritmo que determinasse o número de clusters de forma automática e adaptativa à estrutura dos dados - como DBSCAN ou modelos de mistura gaussiana. A substituição do algoritmo de clusterização está prevista para as próximas sprints, à medida que o modelo for calibrado e expandido para a base completa.
 
 ### População considerada
 
@@ -205,23 +208,23 @@ Inicialmente, a base de dados é filtrada para incluir apenas clientes elegívei
 
 O K-Means é treinado usando:
 
-* pd_produto: (proxy de risco / probabilidade padrão do produto)
+- pd_calibrada: (probabilidade de inadimplência calibrada por decil de risco)
 
-* cp_proxy: (proxy de capacidade de pagamento)
+- cp_proxy: (proxy de capacidade de pagamento)
 
-* score_credito_cross: (score multiproduto, também usado para derivar alavancagem)
+- score_credito_cross: (score multiproduto, também usado para derivar alavancagem)
 
-* pi: (propensão nnormalizada)
+- pi: (propensão normalizada)
 
-* fx_idade (variável categórica, transformada com _one-hot encoding_)
+- fx*idade (variável categórica, transformada com \_one-hot encoding*)
 
 ### Pré-processamento
 
-Antes do K-Means atuar em si, a variável pi é criada, na qual o score_propensao_contrato é normallizado para o intervalo [0, 1]. O cp_proxy também é definido, utiliznado a capacidade_pagamento quando existente. No caso de estar nula, o valor é substituido por renda_estimada * 0,3.
+Antes do K-Means atuar em si, a variável pi é criada, na qual o score_propensao_contrato é normalizado para o intervalo [0, 1]. O cp_proxy também é definido, utilizando a capacidade_pagamento quando existente. No caso de estar nula, o valor é substituído por renda_estimada \* 0,3.
 
 ### Tratamento das variáveis
 
-Para as variáveis numéricas, é aplicado a imputação de valores faltanates pela mediana, e os valores são padronizados pelo StandardScaler (média 0, desvio padrão 1). Já para a variável categórica, o OneHotEncoder transforma os valores de forma binária, permitindo que os mesmos funcionem com o K-means.
+Para as variáveis numéricas, é aplicada a imputação de valores faltantes pela mediana, e os valores são padronizados pelo StandardScaler (média 0, desvio padrão 1). Já para a variável categórica, o OneHotEncoder transforma os valores de forma binária, permitindo que os mesmos funcionem com o K-means.
 
 ## Dependências
 
@@ -243,19 +246,19 @@ O algoritmo Simplex em si não utiliza nenhuma biblioteca externa, foi implement
 
 ## Execução
 
-A partir do diretório `apps/algoritmo_simplex/`:
+A partir do diretório raíz do projeto (`g04/`):
 
 ```bash
-python main.py <arquivo_clientes.csv> <parametros.json>
+python apps/algoritmo_simplex/main.py <arquivo_clientes.csv> <parametros.json>
 ```
 
 Exemplo:
 
 ```bash
-python main.py clientes_reduzido.csv parametros.json
+python apps/algoritmo_simplex/main.py clientes_calibrado.csv parametros.json
 ```
 
-Na primeira execução, a clusterização é gerada automaticamente e salva em `apps/data/csv/<nome>_clusters.csv`. Nas execuções seguintes, o arquivo clusterizado é reutilizado, tornando a execução significativamente mais rápida.
+Na primeira execução, a clusterização é gerada automaticamente e salva em `data/csv/<nome>_clusters.csv`. Nas execuções seguintes, o arquivo clusterizado é reutilizado, tornando a execução significativamente mais rápida.
 
 ## Saída dos dados
 
@@ -352,31 +355,27 @@ status: multiplas_solucoes
 
 O algoritmo detectou corretamente a existência de múltiplas soluções e retornou uma delas.
 
-### Teste 4: Execução completa com base de clientes reduzida
+### Teste 4: Execução completa com base de clientes calibrada
 
-**Entrada:** `clientes_reduzido.csv` com `parametros.json` padrão.
+**Entrada:** `clientes_calibrado.csv` com `parametros.json` padrão.
 
 **Saída obtida:**
 
 ```
 Status: otimo
-Valor ótimo (z): 0.00
+Valor ótimo (z): 81240312.34
 
 Limites ótimos por cluster:
-  Cluster 0: R$ 0 (n=72426)
-  Cluster 1: R$ 0 (n=40096)
-  Cluster 2: R$ 0 (n=10897)
-  Cluster 3: R$ 0 (n=40468)
-  Cluster 4: R$ 0 (n=97178)
-  Cluster 5: R$ 0 (n=31288)
-  Cluster 6: R$ 0 (n=59103)
+  Cluster 0: R$ 250 (n=281831)
+  Cluster 1: R$ 0 (n=256336)
+  Cluster 2: R$ 0 (n=355880)
+  Cluster 3: R$ 0 (n=259746)
+  Cluster 4: R$ 18500 (n=84120)
+  Cluster 5: R$ 1600 (n=444876)
+  Cluster 6: R$ 0 (n=153296)
 ```
 
-O algoritmo convergiu corretamente para o ótimo. O resultado com todos os limites zerados é matematicamente consistente com os dados da base atual: para que um cluster seja rentável, é necessário que seu $PD_k$ satisfaça:
-
-$$PD_k < \frac{\bar{u} \cdot t}{\text{LGD}} = \frac{0{,}75 \times 0{,}0175}{0{,}60} \approx 2{,}19\%$$
-
-A calibração dos parâmetros e a revisão dos dados de entrada serão realizadas em conjunto com o parceiro nas próximas sprints, com base nos dados reais da carteira.
+O algoritmo convergiu para o ótimo. Os clusters que receberam limite zero apresentam $c_k \leq 0$, ou seja, para esses perfis a perda esperada por inadimplência supera a receita esperada de interchange - o modelo corretamente indica que não devem receber oferta. Os clusters com limite positivo concentram os perfis com melhor relação risco-retorno.
 
 ## Conclusões
 
@@ -386,4 +385,5 @@ Os próximos passos previstos são:
 
 - Revisão e calibração dos parâmetros do modelo com o parceiro
 - Expansão do número de clusters para pelo menos 100, conforme requisito da entrega final
+- Substituição do K-Means por um algoritmo de clusterização que determine o número de clusters automaticamente
 - Incorporação das restrições adicionais mapeadas no TAPI, como teto de inadimplência física, metas de produção mínima e rentabilidade mínima da carteira

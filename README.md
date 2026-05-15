@@ -40,15 +40,17 @@
 ## 👩‍🏫 Professores
 
 ### Orientador
-* [Tomaz Mikio Sasaki](https://www.linkedin.com/in/tmsasaki/)
+
+- [Tomaz Mikio Sasaki](https://www.linkedin.com/in/tmsasaki/)
 
 ### Instrutores
-* [Bruna Mayer Costa](https://www.linkedin.com/in/bruna-mayer/)
-* [Fillipe Manoel Xavier Resina](https://www.linkedin.com/in/fillipe-resina-b2211a22/)
-* [Laíza Ribeiro Silva](https://www.linkedin.com/in/laizaribeiro/)
-* [Maria Cristina Nogueira Gramani](https://www.linkedin.com/in/cristinagramani/)
-* [Natalia Varela da Rocha Kloeckner](https://www.linkedin.com/in/natalia-k-37a62052/)
-* [Rodolfo Goya](https://www.linkedin.com/in/rodolfo-goya-6ab187/)
+
+- [Bruna Mayer Costa](https://www.linkedin.com/in/bruna-mayer/)
+- [Fillipe Manoel Xavier Resina](https://www.linkedin.com/in/fillipe-resina-b2211a22/)
+- [Laíza Ribeiro Silva](https://www.linkedin.com/in/laizaribeiro/)
+- [Maria Cristina Nogueira Gramani](https://www.linkedin.com/in/cristinagramani/)
+- [Natalia Varela da Rocha Kloeckner](https://www.linkedin.com/in/natalia-k-37a62052/)
+- [Rodolfo Goya](https://www.linkedin.com/in/rodolfo-goya-6ab187/)
 
 ## 📜 Descrição
 
@@ -76,7 +78,12 @@ g04/
 │   ├── modelagem_matematica.md
 │   └── algoritmo_simplex.md
 ├── apresentacoes/              # apresentações de cada sprint
+├── data/                       # dados do projeto (não versionados)
+│   ├── parquet/                # arquivos de entrada no formato Parquet (fornecidos pelo parceiro)
+│   └── csv/                    # arquivos gerados pelos scripts de preparação
 ├── scripts/                    # utilitários de preparação de dados
+│   ├── analise_09_calibracao_final.py
+│   ├── calibrar_pd.py
 │   ├── convert_parquet_to_csv.py
 │   └── reduce_csv.py
 └── README.md
@@ -89,55 +96,74 @@ g04/
 Instale as dependências a partir do diretório `apps/algoritmo_simplex/`:
 
 ```bash
-pip install -r requirements.txt
+pip install -r apps/algoritmo_simplex/requirements.txt
 ```
 
 ### Preparação dos dados
 
-Converta o arquivo de dados do formato Parquet para CSV:
+Os arquivos `.parquet` fornecidos pelo parceiro devem ser colocados em `data/parquet/`. Todos os scripts abaixo devem ser executados a partir do diretório `scripts/`.
 
 ```bash
 cd scripts
-python convert_parquet_to_csv.py <arquivo.parquet>
 ```
 
-Para gerar uma versão reduzida (útil para testes):
+**Passo 1 - Calcular os fatores de calibração da PD**
+
+Este script lê os três parquets (M1, M2, M3) diretamente de `data/parquet/`, calcula empiricamente os fatores de correção da probabilidade de inadimplência por decil de risco e salva o resultado em `data/csv/tabela_gamma_decil.csv`. Só precisa ser rodado uma vez, ou quando os dados de entrada forem atualizados.
 
 ```bash
-python convert_parquet_to_csv.py <arquivo.parquet> --reduced 10
+python analise_09_calibracao_final.py
 ```
 
-### Execução
+**Passo 2 - Converter o parquet para CSV**
 
-A partir do diretório `apps/algoritmo_simplex/`:
+Converte um arquivo `.parquet` de `data/parquet/` para `.csv` em `data/csv/`. Para a execução completa, use a safra desejada (M1, M2 ou M3):
 
 ```bash
-python main.py <arquivo_clientes.csv> <parametros.json>
+python convert_parquet_to_csv.py base_ref_M1_v2.parquet clientes.csv
 ```
 
-Exemplo:
+Para gerar uma versão reduzida (útil para testes rápidos):
 
 ```bash
-python main.py clientes.csv parametros.json
+python convert_parquet_to_csv.py base_ref_M1_v2.parquet clientes.csv --reduced 10
 ```
 
-Na primeira execução, a clusterização é gerada automaticamente. Nas execuções seguintes, o arquivo clusterizado é reutilizado.
+**Passo 3 - Calibrar a PD dos clientes**
 
-Os arquivos CSV devem estar em `apps/data/csv/` e os arquivos JSON em `apps/algoritmo_simplex/input/`.
+Aplica os fatores de correção calculados no Passo 1 a cada cliente, adicionando a coluna `pd_calibrada` ao CSV. O arquivo de saída é salvo em `data/csv/` com o sufixo `_calibrado`:
+
+```bash
+python calibrar_pd.py clientes.csv
+# gera → data/csv/clientes_calibrado.csv
+```
+
+**Passo 4 - Executar o modelo de otimização**
+
+A partir da raíz do projeto (`g04/`), execute o pipeline completo passando o CSV calibrado e o arquivo de parâmetros:
+
+```bash
+cd ..
+python apps/algoritmo_simplex/main.py clientes_calibrado.csv parametros.json
+```
+
+Na primeira execução, a clusterização é gerada automaticamente e salva em `data/csv/clientes_calibrado_clusters.csv`. Nas execuções seguintes, o arquivo clusterizado é reutilizado, tornando a execução significativamente mais rápida.
+
+Os arquivos JSON de parâmetros devem estar em `apps/algoritmo_simplex/input/`.
 
 ## 📅 Histórico de versões
 
-* 0.1.0 - 30/04/2026
-    * Sprint 1 - Definição do contexto de negócio e modelagem matemática inicial
+- 0.1.0 - 30/04/2026
+  - Sprint 1 - Definição do contexto de negócio e modelagem matemática inicial
 
-* 0.2.0 - 15/05/2026
-    * Sprint 2 - Refinamento do modelo matemático, implementação do algoritmo Simplex e protótipo do front-end
+- 0.2.0 - 15/05/2026
+  - Sprint 2 - Refinamento do modelo matemático, implementação do algoritmo Simplex e protótipo do front-end
 
-* 0.3.0 - xx/xx/xxxx
+- 0.3.0 - xx/xx/xxxx
 
-* 0.4.0 - xx/xx/xxxx
+- 0.4.0 - xx/xx/xxxx
 
-* 0.5.0 - xx/xx/xxxx
+- 0.5.0 - xx/xx/xxxx
 
 ## 📋 Licença/License
 

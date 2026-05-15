@@ -1,5 +1,5 @@
 # =============================
-# DADOS SIGILOSOS — NÃO REMOVER
+# DADOS SIGILOSOS - NÃO REMOVER
 # =============================
 data/
 *.csv
@@ -27,7 +27,7 @@ build/
 .eggs/
 
 # ==============================
-# JUPYTER NOTEBOOKS — OUTPUTS
+# JUPYTER NOTEBOOKS - OUTPUTS
 # ==============================
 .ipynb_checkpoints/
 
@@ -50,13 +50,13 @@ results/
 *.log
 
 # ==============================
-# FRONTEND — UNIVERSAL
+# FRONTEND - UNIVERSAL
 # ==============================
 
 # Dependências (qualquer stack JS/TS usa node_modules)
 node_modules/
 
-# Builds gerados — nomes variam por ferramenta, mas estes cobrem a maioria
+# Builds gerados - nomes variam por ferramenta, mas estes cobrem a maioria
 dist/
 build/
 out/
@@ -73,7 +73,7 @@ out/
 .turbo/
 .vite/
 
-# Arquivos de lock — escolha apenas um para versionar (o do seu gerenciador)
+# Arquivos de lock - escolha apenas um para versionar (o do seu gerenciador)
 # e ignore os demais para evitar conflitos entre npm, yarn e pnpm
 # Descomente a linha do gerenciador que NÃO for usar:
 # package-lock.json
@@ -136,7 +136,7 @@ tmp/
 temp/
 
 # ==============================
-# DVC — CONTROLE DE VERSÃO DE DADOS
+# DVC - CONTROLE DE VERSÃO DE DADOS
 # ==============================
 .dvc/cache
 .dvc/tmp

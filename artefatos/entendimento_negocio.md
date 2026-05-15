@@ -22,16 +22,16 @@ Os oito atributos a seguir foram selecionados com base em três critérios: rele
 
 <div align="center">Tabela 1: Matriz de Atributos</div>
 
-| # | Atributo | Descrição |
-|---|----------|-----------|
-| 1 | Automação do retrabalho analítico | Grau de automação na recalibragem da política de limites a cada mudança de cenário |
-| 2 | Independência de decisão empírica | Grau em que a decisão dispensa julgamento individual por cliente ou cluster |
-| 3 | Explicabilidade e rastreabilidade da decisão | Capacidade de justificar, de forma quantitativa e auditável, por que cada limite foi atribuído |
-| 4 | Personalização por perfil do cliente | Granularidade na diferenciação de limites entre clientes distintos, mesmo dentro da mesma faixa de score |
-| 5 | Controle do risco agregado da carteira | Capacidade de impor tetos agregados de exposição, com monitoramento simultâneo de inadimplência física e financeira, conforme exigido pelo parceiro |
-| 6 | Aderência ao conceito de perda esperada (PD × exposição) | Grau em que a solução incorpora estruturalmente PD e exposição na decisão de limite, em linha com a Resolução CMN nº 4.966/2021 (BRASIL, 2021) |
-| 7 | Aderência à capacidade de pagamento (alavancagem diferenciada) | Garantia formal de compatibilidade entre limite e renda, com multiplicador diferenciado por perfil de risco, conforme diretriz do parceiro |
-| 8 | Arbitragem quantitativa entre apetite comercial e de risco | Capacidade de mediar objetivamente o conflito entre conversão (comercial) e proteção (risco) via função objetivo |
+| #   | Atributo                                                       | Descrição                                                                                                                                           |
+| --- | -------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Automação do retrabalho analítico                              | Grau de automação na recalibragem da política de limites a cada mudança de cenário                                                                  |
+| 2   | Independência de decisão empírica                              | Grau em que a decisão dispensa julgamento individual por cliente ou cluster                                                                         |
+| 3   | Explicabilidade e rastreabilidade da decisão                   | Capacidade de justificar, de forma quantitativa e auditável, por que cada limite foi atribuído                                                      |
+| 4   | Personalização por perfil do cliente                           | Granularidade na diferenciação de limites entre clientes distintos, mesmo dentro da mesma faixa de score                                            |
+| 5   | Controle do risco agregado da carteira                         | Capacidade de impor tetos agregados de exposição, com monitoramento simultâneo de inadimplência física e financeira, conforme exigido pelo parceiro |
+| 6   | Aderência ao conceito de perda esperada (PD × exposição)       | Grau em que a solução incorpora estruturalmente PD e exposição na decisão de limite, em linha com a Resolução CMN nº 4.966/2021 (BRASIL, 2021)      |
+| 7   | Aderência à capacidade de pagamento (alavancagem diferenciada) | Garantia formal de compatibilidade entre limite e renda, com multiplicador diferenciado por perfil de risco, conforme diretriz do parceiro          |
+| 8   | Arbitragem quantitativa entre apetite comercial e de risco     | Capacidade de mediar objetivamente o conflito entre conversão (comercial) e proteção (risco) via função objetivo                                    |
 
 <div align="center">Fonte: Material produzido pelos autores</div>
 
@@ -41,16 +41,16 @@ A tabela a seguir apresenta as pontuações atribuídas a cada abordagem nos oit
 
 <div align="center">Tabela 2: Matriz de Avaliação de Valor</div>
 
-| # | Atributo | Tradicional (A) | ML Black-Box (B) | Otimização (C) | Justificativa das Notas |
-|---|----------|:---:|:---:|:---:|---|
-| 1 | Automação do retrabalho analítico | 1 | 5 | 8 | Na prática tradicional, a recalibragem é quase inteiramente manual (1). O ML automatiza parcialmente via retraining (5). A otimização exige apenas alterar parâmetros e rerodar (8). |
-| 2 | Independência de decisão empírica | 2 | 7 | 10 | A prática tradicional depende fortemente de julgamento humano em casos de borda (2). O ML automatiza, mas ainda exige intervenção em retraining (7). A otimização substitui completamente a decisão empírica por solução matemática (10). |
-| 3 | Explicabilidade e rastreabilidade da decisão | 5 | 2 | 9 | Regras fixas são superficialmente explicáveis, mas a calibragem é opaca (5). Modelos ML são os piores em explicabilidade (2). Na otimização, cada limite rastreia-se até a função objetivo e às restrições ativas (9). |
-| 4 | Personalização por perfil do cliente | 3 | 9 | 7 | Regras por faixa de score ignoram heterogeneidade intra-faixa (3). ML captura padrões não lineares complexos e personaliza profundamente (9). Otimização personaliza por cluster, capturando parte dessa heterogeneidade (7). |
-| 5 | Controle do risco agregado da carteira | 5 | 3 | 9 | A prática tradicional controla via apetite fixo por faixa (5). ML otimiza cliente por cliente sem visão agregada estrutural (3). A otimização inclui como restrições formais tanto a inadimplência física quanto a financeira, conforme exigido pelo parceiro (9). |
-| 6 | Aderência ao conceito de perda esperada (PD × exposição) | 5 | 3 | 9 | Instituições tradicionais possuem infraestrutura regulatória madura, mas desacoplada da decisão de limite (5). ML dificulta mapear aderência por opacidade (3). A otimização formaliza PD × exposição diretamente na função objetivo e nas restrições, conforme diretriz do parceiro e em linha com a Resolução CMN nº 4.966/2021 (BRASIL, 2021) (9). |
-| 7 | Aderência à capacidade de pagamento (alavancagem diferenciada) | 2 | 4 | 9 | A prática tradicional usa renda declarada de forma superficial (2). ML pode capturar via features, mas não garante aderência formal (4). A otimização impõe capacidade de pagamento como restrição rígida, com multiplicador diferenciado por perfil de risco conforme diretriz do parceiro (9). |
-| 8 | Arbitragem quantitativa entre comercial e risco | 1 | 3 | 9 | No modelo tradicional, a arbitragem é política e subjetiva (1). ML oferece um número, mas não formaliza o trade-off (3). Otimização formaliza na função objetivo a maximização sujeita a restrições, tornando o trade-off matematicamente explícito (9). |
+| #   | Atributo                                                       | Tradicional (A) | ML Black-Box (B) | Otimização (C) | Justificativa das Notas                                                                                                                                                                                                                                                                                                                               |
+| --- | -------------------------------------------------------------- | :-------------: | :--------------: | :------------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Automação do retrabalho analítico                              |        1        |        5         |       8        | Na prática tradicional, a recalibragem é quase inteiramente manual (1). O ML automatiza parcialmente via retraining (5). A otimização exige apenas alterar parâmetros e rerodar (8).                                                                                                                                                                  |
+| 2   | Independência de decisão empírica                              |        2        |        7         |       10       | A prática tradicional depende fortemente de julgamento humano em casos de borda (2). O ML automatiza, mas ainda exige intervenção em retraining (7). A otimização substitui completamente a decisão empírica por solução matemática (10).                                                                                                             |
+| 3   | Explicabilidade e rastreabilidade da decisão                   |        5        |        2         |       9        | Regras fixas são superficialmente explicáveis, mas a calibragem é opaca (5). Modelos ML são os piores em explicabilidade (2). Na otimização, cada limite rastreia-se até a função objetivo e às restrições ativas (9).                                                                                                                                |
+| 4   | Personalização por perfil do cliente                           |        3        |        9         |       7        | Regras por faixa de score ignoram heterogeneidade intra-faixa (3). ML captura padrões não lineares complexos e personaliza profundamente (9). Otimização personaliza por cluster, capturando parte dessa heterogeneidade (7).                                                                                                                         |
+| 5   | Controle do risco agregado da carteira                         |        5        |        3         |       9        | A prática tradicional controla via apetite fixo por faixa (5). ML otimiza cliente por cliente sem visão agregada estrutural (3). A otimização inclui como restrições formais tanto a inadimplência física quanto a financeira, conforme exigido pelo parceiro (9).                                                                                    |
+| 6   | Aderência ao conceito de perda esperada (PD × exposição)       |        5        |        3         |       9        | Instituições tradicionais possuem infraestrutura regulatória madura, mas desacoplada da decisão de limite (5). ML dificulta mapear aderência por opacidade (3). A otimização formaliza PD × exposição diretamente na função objetivo e nas restrições, conforme diretriz do parceiro e em linha com a Resolução CMN nº 4.966/2021 (BRASIL, 2021) (9). |
+| 7   | Aderência à capacidade de pagamento (alavancagem diferenciada) |        2        |        4         |       9        | A prática tradicional usa renda declarada de forma superficial (2). ML pode capturar via features, mas não garante aderência formal (4). A otimização impõe capacidade de pagamento como restrição rígida, com multiplicador diferenciado por perfil de risco conforme diretriz do parceiro (9).                                                      |
+| 8   | Arbitragem quantitativa entre comercial e risco                |        1        |        3         |       9        | No modelo tradicional, a arbitragem é política e subjetiva (1). ML oferece um número, mas não formaliza o trade-off (3). Otimização formaliza na função objetivo a maximização sujeita a restrições, tornando o trade-off matematicamente explícito (9).                                                                                              |
 
 <div align="center">Fonte: Material produzido pelos autores</div>
 
@@ -58,7 +58,7 @@ A matriz foi construída no Google Sheets, onde a tabela acima foi convertida em
 
 <div align="center">Figura 1: Curva de Valor (Strategy Canvas)</div>
 <div align="center">
-  <img src="assets/Curva de Valor — Strategy Canvas.png">
+  <img src="assets/Curva de Valor - Strategy Canvas.png">
 </div>
 <div align="center">Fonte: Material produzido pelos autores</div>
 
@@ -114,23 +114,23 @@ As tabelas utilizam duas dimensões de classificação: probabilidade de ocorrê
 
 **Probabilidade**
 
-| Faixa | Classificação | Descrição |
-|:---:|---|---|
-| 10% | Muito Baixa | Evento improvável dado o contexto atual do projeto |
-| 30% | Baixa | Evento possível, mas com condições desfavoráveis à ocorrência |
-| 50% | Média | Evento com chances equilibradas de ocorrer ou não |
-| 70% | Alta | Evento provável dado o contexto da equipe e dependências externas |
-| 90% | Muito Alta | Evento quase certo, independente de ações preventivas |
+| Faixa | Classificação | Descrição                                                         |
+| :---: | ------------- | ----------------------------------------------------------------- |
+|  10%  | Muito Baixa   | Evento improvável dado o contexto atual do projeto                |
+|  30%  | Baixa         | Evento possível, mas com condições desfavoráveis à ocorrência     |
+|  50%  | Média         | Evento com chances equilibradas de ocorrer ou não                 |
+|  70%  | Alta          | Evento provável dado o contexto da equipe e dependências externas |
+|  90%  | Muito Alta    | Evento quase certo, independente de ações preventivas             |
 
 **Impacto**
 
-| Classificação | Descrição |
-|---|---|
-| Muito Baixo | Efeito negligenciável sobre qualidade, prazo ou adotabilidade |
-| Baixo | Efeito localizado, corrigível sem comprometer a entrega |
-| Moderado | Efeito relevante, exige retrabalho mas não compromete o MVP |
-| Alto | Efeito significativo sobre qualidade técnica ou credibilidade do modelo |
-| Muito Alto | Efeito crítico, compromete a adotabilidade ou validade da solução |
+| Classificação | Descrição                                                               |
+| ------------- | ----------------------------------------------------------------------- |
+| Muito Baixo   | Efeito negligenciável sobre qualidade, prazo ou adotabilidade           |
+| Baixo         | Efeito localizado, corrigível sem comprometer a entrega                 |
+| Moderado      | Efeito relevante, exige retrabalho mas não compromete o MVP             |
+| Alto          | Efeito significativo sobre qualidade técnica ou credibilidade do modelo |
+| Muito Alto    | Efeito crítico, compromete a adotabilidade ou validade da solução       |
 
 **Posição na Matriz**
 
@@ -140,37 +140,37 @@ A posição na matriz combina as duas dimensões e determina a prioridade de ate
 
 ![Matriz de Riscos e Oportunidades](assets/Riscosg04.jpg)
 
-*Figura 2: Matriz de Riscos e Oportunidades do Projeto. Fonte: Material produzido pelos autores (2026).*
+_Figura 2: Matriz de Riscos e Oportunidades do Projeto. Fonte: Material produzido pelos autores (2026)._
 
 ### 2.3 Tabela de Ameaças
 
-| ID | Descrição | Probabilidade | Impacto | Posição | Justificativa | Plano de Mitigação |
-|----|-----------|:---:|:---:|:---:|---|---|
-| A01 | Função objetivo desalinhada com o apetite de risco real do PAN | 50% | Muito Alto | Vermelho | Formulação incorreta produz soluções tecnicamente ótimas, mas economicamente inadequadas, comprometendo toda a proposta. | Validação formal em Sprint Review específica de modelagem (Sprint 2), com sign-off documentado do líder técnico do PAN. Trade-offs da função objetivo registrados em ata interna do grupo. Discrepância entre o limite ótimo do modelo e o limite atual em mais de 30% nas safras M1, M2 e M3 dispara revisão da formulação. |
-| A02 | Baixa qualidade dos dados para calibração | 70% | Muito Alto | Vermelho | A exploração da base identificou problemas concretos: 42% de nulos em `capacidade_pagamento` e 99,97% em `over30mob3`. A probabilidade permanece alta pois variáveis críticas seguem com cobertura insuficiente para calibração confiável. | Relatório de cobertura por variável entregue no Sprint 2. Variáveis com mais de 30% de nulos recebem proxy documentada ou são excluídas com justificativa formal. Solicitação de imputação ao parceiro formalizada via pauta de Sprint Review. Caso nenhuma proxy viável seja encontrada para `capacidade_pagamento` em M2 e M3, escopo do backtesting é restrito à safra M1. |
-| A03 | Viés amostral e uso inadequado de variáveis | 70% | Alto | Vermelho | Dados restritos a clientes já aprovados induzem o modelo a replicar vieses da política atual em vez de otimizá-la. | Análise de survivorship bias documentada no Sprint 2 (comparação entre distribuição da base elegível e distribuição da base aprovada). Variáveis de entrada validadas com especialista de crédito do PAN antes da clusterização. Teste de robustez com holdout por safra (treino em M1, validação em M2 e M3). |
-| A04 | Premissas de modelagem não documentadas ou injustificadas | 70% | Moderado | Amarelo | Sem registro formal das premissas (taxas, multiplicadores de alavancagem, tetos de PD por faixa), o modelo perde auditabilidade e a política de limites torna-se não replicável após qualquer mudança de contexto econômico ou regulatório, comprometendo o uso continuado da ferramenta. | Manter "caderno de hipóteses" com todas as premissas. Realizar análise de sensibilidade e validar premissas-chave com o parceiro. |
-| A05 | Deriva de escopo do modelo, comprometendo a calibragem do MVP de cartões pré-aprovados | 70% | Alto | Vermelho | Em projetos de modelagem em ambiente regulado, a tentação de generalizar a função objetivo para outros produtos antes da validação do modelo-base é um padrão recorrente que compromete a defensabilidade técnica em comitê. | Manter MVP rígido conforme escopo definido pelo parceiro (cartões pré-aprovados, mínimo de 100 clusters, restrições explícitas listadas). Adições à formulação só após validação de baseline com safras M1, M2 e M3 e sign-off do líder técnico do PAN. |
-| A06 | Dificuldade de implementação no ambiente do parceiro | 50% | Moderado | Amarelo | Restrições de infraestrutura ou sistemas legados podem dificultar a adoção, mas, em um contexto de MVP acadêmico, a inviabilização total é menos provável. | Mapear requisitos de infraestrutura no Sprint 1. Adotar arquitetura modular com stack simples e dependências claras. |
-| A07 | Baixa explicabilidade e defensabilidade em comitê | 50% | Alto | Amarelo | Otimização linear é inerentemente explicável, mas a ausência de documentação das restrições ativas pode comprometer a defesa em comitê de crédito ou auditoria. | Gerar relatório de restrições ativas por decisão. Construir dashboard de transparência rastreando cada limite até a função objetivo. |
-| A08 | Calibragem incorreta dos limites recomendados | 50% | Alto | Amarelo | Limites excessivos amplificam inadimplência; limites conservadores demais reduzem receita. Na dúvida, errar para o lado conservador é preferível enquanto o modelo amadurece. | Backtesting contra safras históricas, hard caps por faixa de PD e comparação sistemática contra a política atual como baseline. |
-| A09 | Não aderência ao framework regulatório (CMN nº 4.966/2021) | 30% | Muito Alto | Vermelho | A Resolução CMN nº 4.966/2021 não foi explicitamente exigida pelo parceiro, mas é referência complementar adotada pelo grupo. Não incorporar a lógica de perda esperada (PD × exposição) pode limitar a adotabilidade da solução no ambiente real do PAN. | Mapeamento das exigências da Resolução CMN nº 4.966/2021 entregue como anexo metodológico até Sprint 3. Restrições do modelo nomeadas em aderência ao vocabulário regulatório (PD, exposição, ECL). Aderência regulatória explicitada no artefato como contribuição do grupo, e não como exigência do briefing. |
-| A10 | Descasamento entre inadimplência física e financeira | 50% | Muito Alto | Vermelho | Otimizar apenas uma métrica pode violar a outra: limites altos a poucos clientes arriscados estouram a inadimplência financeira mesmo respeitando a física. | Implementar inadimplência física e financeira como restrições independentes no LP (R1 financeira já formalizada; física a ser adicionada no Sprint 2). Backtesting por safra deve reportar ambas as métricas lado a lado. Violação de qualquer uma das duas em backtesting dispara revisão da parametrização do teto. |
-| A11 | Modelo ignora propensão à conversão dos clientes | 50% | Moderado | Amarelo | Desconsiderar que parte dos clientes não converterá superestima o retorno esperado, mas não compromete a estrutura do modelo. Trata-se de ajuste de calibragem, não de arquitetura. | Incorporar score de propensão à conversão na função objetivo ou como variável de segmentação. |
+| ID  | Descrição                                                                              | Probabilidade |  Impacto   | Posição  | Justificativa                                                                                                                                                                                                                                                                             | Plano de Mitigação                                                                                                                                                                                                                                                                                                                                                            |
+| --- | -------------------------------------------------------------------------------------- | :-----------: | :--------: | :------: | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A01 | Função objetivo desalinhada com o apetite de risco real do PAN                         |      50%      | Muito Alto | Vermelho | Formulação incorreta produz soluções tecnicamente ótimas, mas economicamente inadequadas, comprometendo toda a proposta.                                                                                                                                                                  | Validação formal em Sprint Review específica de modelagem (Sprint 2), com sign-off documentado do líder técnico do PAN. Trade-offs da função objetivo registrados em ata interna do grupo. Discrepância entre o limite ótimo do modelo e o limite atual em mais de 30% nas safras M1, M2 e M3 dispara revisão da formulação.                                                  |
+| A02 | Baixa qualidade dos dados para calibração                                              |      70%      | Muito Alto | Vermelho | A exploração da base identificou problemas concretos: 42% de nulos em `capacidade_pagamento` e 99,97% em `over30mob3`. A probabilidade permanece alta pois variáveis críticas seguem com cobertura insuficiente para calibração confiável.                                                | Relatório de cobertura por variável entregue no Sprint 2. Variáveis com mais de 30% de nulos recebem proxy documentada ou são excluídas com justificativa formal. Solicitação de imputação ao parceiro formalizada via pauta de Sprint Review. Caso nenhuma proxy viável seja encontrada para `capacidade_pagamento` em M2 e M3, escopo do backtesting é restrito à safra M1. |
+| A03 | Viés amostral e uso inadequado de variáveis                                            |      70%      |    Alto    | Vermelho | Dados restritos a clientes já aprovados induzem o modelo a replicar vieses da política atual em vez de otimizá-la.                                                                                                                                                                        | Análise de survivorship bias documentada no Sprint 2 (comparação entre distribuição da base elegível e distribuição da base aprovada). Variáveis de entrada validadas com especialista de crédito do PAN antes da clusterização. Teste de robustez com holdout por safra (treino em M1, validação em M2 e M3).                                                                |
+| A04 | Premissas de modelagem não documentadas ou injustificadas                              |      70%      |  Moderado  | Amarelo  | Sem registro formal das premissas (taxas, multiplicadores de alavancagem, tetos de PD por faixa), o modelo perde auditabilidade e a política de limites torna-se não replicável após qualquer mudança de contexto econômico ou regulatório, comprometendo o uso continuado da ferramenta. | Manter "caderno de hipóteses" com todas as premissas. Realizar análise de sensibilidade e validar premissas-chave com o parceiro.                                                                                                                                                                                                                                             |
+| A05 | Deriva de escopo do modelo, comprometendo a calibragem do MVP de cartões pré-aprovados |      70%      |    Alto    | Vermelho | Em projetos de modelagem em ambiente regulado, a tentação de generalizar a função objetivo para outros produtos antes da validação do modelo-base é um padrão recorrente que compromete a defensabilidade técnica em comitê.                                                              | Manter MVP rígido conforme escopo definido pelo parceiro (cartões pré-aprovados, mínimo de 100 clusters, restrições explícitas listadas). Adições à formulação só após validação de baseline com safras M1, M2 e M3 e sign-off do líder técnico do PAN.                                                                                                                       |
+| A06 | Dificuldade de implementação no ambiente do parceiro                                   |      50%      |  Moderado  | Amarelo  | Restrições de infraestrutura ou sistemas legados podem dificultar a adoção, mas, em um contexto de MVP acadêmico, a inviabilização total é menos provável.                                                                                                                                | Mapear requisitos de infraestrutura no Sprint 1. Adotar arquitetura modular com stack simples e dependências claras.                                                                                                                                                                                                                                                          |
+| A07 | Baixa explicabilidade e defensabilidade em comitê                                      |      50%      |    Alto    | Amarelo  | Otimização linear é inerentemente explicável, mas a ausência de documentação das restrições ativas pode comprometer a defesa em comitê de crédito ou auditoria.                                                                                                                           | Gerar relatório de restrições ativas por decisão. Construir dashboard de transparência rastreando cada limite até a função objetivo.                                                                                                                                                                                                                                          |
+| A08 | Calibragem incorreta dos limites recomendados                                          |      50%      |    Alto    | Amarelo  | Limites excessivos amplificam inadimplência; limites conservadores demais reduzem receita. Na dúvida, errar para o lado conservador é preferível enquanto o modelo amadurece.                                                                                                             | Backtesting contra safras históricas, hard caps por faixa de PD e comparação sistemática contra a política atual como baseline.                                                                                                                                                                                                                                               |
+| A09 | Não aderência ao framework regulatório (CMN nº 4.966/2021)                             |      30%      | Muito Alto | Vermelho | A Resolução CMN nº 4.966/2021 não foi explicitamente exigida pelo parceiro, mas é referência complementar adotada pelo grupo. Não incorporar a lógica de perda esperada (PD × exposição) pode limitar a adotabilidade da solução no ambiente real do PAN.                                 | Mapeamento das exigências da Resolução CMN nº 4.966/2021 entregue como anexo metodológico até Sprint 3. Restrições do modelo nomeadas em aderência ao vocabulário regulatório (PD, exposição, ECL). Aderência regulatória explicitada no artefato como contribuição do grupo, e não como exigência do briefing.                                                               |
+| A10 | Descasamento entre inadimplência física e financeira                                   |      50%      | Muito Alto | Vermelho | Otimizar apenas uma métrica pode violar a outra: limites altos a poucos clientes arriscados estouram a inadimplência financeira mesmo respeitando a física.                                                                                                                               | Implementar inadimplência física e financeira como restrições independentes no LP (R1 financeira já formalizada; física a ser adicionada no Sprint 2). Backtesting por safra deve reportar ambas as métricas lado a lado. Violação de qualquer uma das duas em backtesting dispara revisão da parametrização do teto.                                                         |
+| A11 | Modelo ignora propensão à conversão dos clientes                                       |      50%      |  Moderado  | Amarelo  | Desconsiderar que parte dos clientes não converterá superestima o retorno esperado, mas não compromete a estrutura do modelo. Trata-se de ajuste de calibragem, não de arquitetura.                                                                                                       | Incorporar score de propensão à conversão na função objetivo ou como variável de segmentação.                                                                                                                                                                                                                                                                                 |
 
-*Tabela 3: Tabela de Ameaças do Projeto. Fonte: Material produzido pelos autores (2026).*
+_Tabela 3: Tabela de Ameaças do Projeto. Fonte: Material produzido pelos autores (2026)._
 
 ### 2.4 Tabela de Oportunidades
 
-| ID | Descrição | Probabilidade | Impacto | Posição | Justificativa | Plano de Potencialização |
-|----|-----------|:---:|:---:|:---:|---|---|
-| O01 | Alinhamento com a Resolução CMN nº 4.966/2021 e Basel | 70% | Muito Alto | Vermelho | Incorporar o framework de perda esperada (PD × LGD × EAD) desde o início transforma uma referência regulatória em diferencial competitivo da solução frente a abordagens mais simples. | Estruturar restrições com nomenclatura aderente ao framework. Explicitar a conformidade no artefato final como contribuição do grupo. |
-| O02 | Acesso a dados reais de safras históricas do PAN | 90% | Muito Alto | Vermelho | A base já foi disponibilizada pelo parceiro, com variáveis de performance observada. Dados reais permitem calibração com nível de realismo inatingível por dados sintéticos. | Priorizar variáveis com boa cobertura identificadas na exploração. Estruturar dicionário de dados e validar qualidade continuamente ao longo dos sprints. |
-| O03 | Feedback contínuo do parceiro em Sprint Reviews | 90% | Alto | Vermelho | Checkpoints quinzenais permitem validar decisões cedo, evitando retrabalho custoso. É a oportunidade de maior frequência e menor custo de captura do projeto. | Preparar pautas objetivas e levar protótipos a cada review. Registrar decisões, pendências e responsáveis após cada encontro. |
-| O04 | Benchmark com literatura consolidada de Credit Limit Optimization | 90% | Alto | Vermelho | Literatura madura em Credit Limit Optimization (Experian, Moody's Analytics, publicações acadêmicas recentes) ancora decisões de modelagem em práticas de mercado e evita reinvenção. | Revisão bibliográfica antes de fechar a função objetivo. Citar referências no artefato para fortalecer credibilidade junto ao parceiro. |
-| O05 | Reuso da formulação em outros produtos do PAN (consignado, veículos) | 70% | Moderado | Amarelo | A estrutura do LP (função objetivo e restrições parametrizáveis) é genérica o suficiente para ser adaptada a outros produtos de crédito do portfólio do PAN, ampliando o retorno sobre o investimento de modelagem. | Documentar a formulação de forma modular, separando a lógica genérica (solver, estrutura de restrições) dos parâmetros específicos do cartão pré-aprovado. Avaliar viabilidade de generalização após validação do MVP com o parceiro. |
+| ID  | Descrição                                                            | Probabilidade |  Impacto   | Posição  | Justificativa                                                                                                                                                                                                       | Plano de Potencialização                                                                                                                                                                                                              |
+| --- | -------------------------------------------------------------------- | :-----------: | :--------: | :------: | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| O01 | Alinhamento com a Resolução CMN nº 4.966/2021 e Basel                |      70%      | Muito Alto | Vermelho | Incorporar o framework de perda esperada (PD × LGD × EAD) desde o início transforma uma referência regulatória em diferencial competitivo da solução frente a abordagens mais simples.                              | Estruturar restrições com nomenclatura aderente ao framework. Explicitar a conformidade no artefato final como contribuição do grupo.                                                                                                 |
+| O02 | Acesso a dados reais de safras históricas do PAN                     |      90%      | Muito Alto | Vermelho | A base já foi disponibilizada pelo parceiro, com variáveis de performance observada. Dados reais permitem calibração com nível de realismo inatingível por dados sintéticos.                                        | Priorizar variáveis com boa cobertura identificadas na exploração. Estruturar dicionário de dados e validar qualidade continuamente ao longo dos sprints.                                                                             |
+| O03 | Feedback contínuo do parceiro em Sprint Reviews                      |      90%      |    Alto    | Vermelho | Checkpoints quinzenais permitem validar decisões cedo, evitando retrabalho custoso. É a oportunidade de maior frequência e menor custo de captura do projeto.                                                       | Preparar pautas objetivas e levar protótipos a cada review. Registrar decisões, pendências e responsáveis após cada encontro.                                                                                                         |
+| O04 | Benchmark com literatura consolidada de Credit Limit Optimization    |      90%      |    Alto    | Vermelho | Literatura madura em Credit Limit Optimization (Experian, Moody's Analytics, publicações acadêmicas recentes) ancora decisões de modelagem em práticas de mercado e evita reinvenção.                               | Revisão bibliográfica antes de fechar a função objetivo. Citar referências no artefato para fortalecer credibilidade junto ao parceiro.                                                                                               |
+| O05 | Reuso da formulação em outros produtos do PAN (consignado, veículos) |      70%      |  Moderado  | Amarelo  | A estrutura do LP (função objetivo e restrições parametrizáveis) é genérica o suficiente para ser adaptada a outros produtos de crédito do portfólio do PAN, ampliando o retorno sobre o investimento de modelagem. | Documentar a formulação de forma modular, separando a lógica genérica (solver, estrutura de restrições) dos parâmetros específicos do cartão pré-aprovado. Avaliar viabilidade de generalização após validação do MVP com o parceiro. |
 
-*Tabela 4: Tabela de Oportunidades do Projeto. Fonte: Material produzido pelos autores (2026).*
+_Tabela 4: Tabela de Oportunidades do Projeto. Fonte: Material produzido pelos autores (2026)._
 
 ### 2.5 Conclusão
 
@@ -265,15 +265,15 @@ Essa diretriz, alinhada à orientação do parceiro, garante que o limite respei
 
 Uma proposta de valor só se consolida quando pode ser medida em produção. Esta análise estende o canvas de Osterwalder ao conectar diretamente cada dor mapeada ao elemento matemático da solução e ao KPI que validará, após a implementação, se o alívio proposto se concretiza. Esse encadeamento cumpre três funções: (i) conecta o canvas à modelagem matemática, garantindo o fit técnico-conceitual; (ii) sustenta a análise financeira (seção 4), ao traduzir benefícios qualitativos em métricas que embasam o ROI; (iii) antecipa a mitigação de riscos como baixa explicabilidade e dificuldade de implementação (seção 2). Ao definir previamente como o valor será medido, a proposta deixa de ser apenas qualitativa e se torna um compromisso auditável.
 
-| # | Dor mapeada no canvas | Elemento do modelo que ataca | KPI de validação | Baseline → Target esperado |
-|---|----------------------|------------------------------|------------------|----------------------------|
-| 1 | Calibragem manual em planilhas | Modelo paramétrico executável em solver de otimização | Tempo médio de recalibragem completa | Dias → Minutos |
-| 2 | Regras fixas ignoram heterogeneidade | Variáveis de decisão por cluster | Variância intra-cluster dos limites | Zero → Diferenciação significativa |
-| 3 | Subjetividade e baixa explicabilidade | Restrições ativas identificáveis | % de decisões com restrição documentada | Não rastreável → 100% |
-| 4 | Tensão entre áreas comercial e risco | Função objetivo com restrição explícita de apetite (PDD ≤ teto) | Aderência entre PDD realizada e tolerada | PDD de referência: ~8,3% (NPL >90 dias, BANCO PAN, 2025)¹ → Target: ≤ 8,3% após implementação |
-| 5 | Limites incompatíveis com capacidade de pagamento | Restrição de limite baseada em renda com multiplicador por risco | % de clientes acima do teto de comprometimento | Não monitorado → ~0% |
-| 6 | Simulações lentas | Parametrização do apetite como input do modelo | Nº de cenários testados por ciclo | 1 a 2 → 10+ |
-| 7 | Descasamento entre risco individual e carteira | Restrições de inadimplência física e financeira + tetos por PD | Inadimplência e concentração por risco | Não controlada → Dentro dos limites |
+| #   | Dor mapeada no canvas                             | Elemento do modelo que ataca                                     | KPI de validação                               | Baseline → Target esperado                                                                    |
+| --- | ------------------------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 1   | Calibragem manual em planilhas                    | Modelo paramétrico executável em solver de otimização            | Tempo médio de recalibragem completa           | Dias → Minutos                                                                                |
+| 2   | Regras fixas ignoram heterogeneidade              | Variáveis de decisão por cluster                                 | Variância intra-cluster dos limites            | Zero → Diferenciação significativa                                                            |
+| 3   | Subjetividade e baixa explicabilidade             | Restrições ativas identificáveis                                 | % de decisões com restrição documentada        | Não rastreável → 100%                                                                         |
+| 4   | Tensão entre áreas comercial e risco              | Função objetivo com restrição explícita de apetite (PDD ≤ teto)  | Aderência entre PDD realizada e tolerada       | PDD de referência: ~8,3% (NPL >90 dias, BANCO PAN, 2025)¹ → Target: ≤ 8,3% após implementação |
+| 5   | Limites incompatíveis com capacidade de pagamento | Restrição de limite baseada em renda com multiplicador por risco | % de clientes acima do teto de comprometimento | Não monitorado → ~0%                                                                          |
+| 6   | Simulações lentas                                 | Parametrização do apetite como input do modelo                   | Nº de cenários testados por ciclo              | 1 a 2 → 10+                                                                                   |
+| 7   | Descasamento entre risco individual e carteira    | Restrições de inadimplência física e financeira + tetos por PD   | Inadimplência e concentração por risco         | Não controlada → Dentro dos limites                                                           |
 
 ¹ Métrica de referência da carteira total. A métrica específica da carteira de cartões ainda será obtida com o parceiro nas próximas sprints.
 
@@ -313,52 +313,52 @@ Toda estimativa repousa em premissas. A coluna **Confiança** indica o grau de c
 
 #### A. Operação do parceiro
 
-| # | Premissa | Valor | Conf. | Fonte / Justificativa |
-|:---:|:---|:---|:---:|:---|
-| A1 | Carteira de cartão de crédito | ~R$ 2,9 bi | Média | BANCO PAN (2025), 3T25. ~5% da carteira total. |
-| A2 | NPL >90 dias (carteira total) | 8,3% | Alta | BANCO PAN (2025), Q2 2025 |
-| A3 | Taxa de recuperação (crédito sem garantia) | 30% | Média | BCB (2024), Relatório de Estabilidade Financeira. Média do sistema bancário. |
-| A4 | Perda líquida anual (carteira de cartões) | ~R$ 168 mi | Média | Derivada: A1 × A2 × (1 − A3) = R$ 2,9 bi × 8,3% × 70% |
+|  #  | Premissa                                   | Valor      | Conf. | Fonte / Justificativa                                                        |
+| :-: | :----------------------------------------- | :--------- | :---: | :--------------------------------------------------------------------------- |
+| A1  | Carteira de cartão de crédito              | ~R$ 2,9 bi | Média | BANCO PAN (2025), 3T25. ~5% da carteira total.                               |
+| A2  | NPL >90 dias (carteira total)              | 8,3%       | Alta  | BANCO PAN (2025), Q2 2025                                                    |
+| A3  | Taxa de recuperação (crédito sem garantia) | 30%        | Média | BCB (2024), Relatório de Estabilidade Financeira. Média do sistema bancário. |
+| A4  | Perda líquida anual (carteira de cartões)  | ~R$ 168 mi | Média | Derivada: A1 × A2 × (1 − A3) = R$ 2,9 bi × 8,3% × 70%                        |
 
 #### B. Modelo de receita
 
-| # | Premissa | Valor | Conf. | Fonte / Justificativa |
-|:---:|:---|:---|:---:|:---|
-| B1 | Receita do cartão = interchange a taxa fixa | Sim | Alta | Conforme orientação do parceiro, para manter a linearidade do modelo. |
-| B2 | Taxa de interchange do emissor | ~1,6% | Média | Média ponderada do mercado brasileiro (ABECS, 2024; BCB, 2024). Faixa: 1,5 a 1,7%. |
-| B3 | Utilização média do limite | ~30% | Média | Benchmark da ABECS (2024) para cartões sem garantia em perfil renda baixa. |
-| B4 | Receita anual de interchange (baseline) | ~R$ 167 mi | N/A | Derivada: A1 × B3 × B2 × 12 = R$ 2,9 bi × 30% × 1,6% × 12 |
+|  #  | Premissa                                    | Valor      | Conf. | Fonte / Justificativa                                                              |
+| :-: | :------------------------------------------ | :--------- | :---: | :--------------------------------------------------------------------------------- |
+| B1  | Receita do cartão = interchange a taxa fixa | Sim        | Alta  | Conforme orientação do parceiro, para manter a linearidade do modelo.              |
+| B2  | Taxa de interchange do emissor              | ~1,6%      | Média | Média ponderada do mercado brasileiro (ABECS, 2024; BCB, 2024). Faixa: 1,5 a 1,7%. |
+| B3  | Utilização média do limite                  | ~30%       | Média | Benchmark da ABECS (2024) para cartões sem garantia em perfil renda baixa.         |
+| B4  | Receita anual de interchange (baseline)     | ~R$ 167 mi |  N/A  | Derivada: A1 × B3 × B2 × 12 = R$ 2,9 bi × 30% × 1,6% × 12                          |
 
 #### C. Benefício esperado do modelo
 
-| # | Premissa | Valor | Conf. | Fonte / Justificativa |
-|:---:|:---|:---|:---:|:---|
-| C1 | Melhoria esperada pelo modelo sobre o resultado econômico combinado | 1,0% (cenário base) | Baixa | Thomas (2009) e Trench et al. (2003) reportam ganhos de 1 a 5% em carteiras já geridas por scoring. Adotamos o piso da faixa como cenário base, por ser a estimativa mais defensável na ausência de backtesting com dados do parceiro. |
-| C2 | Percentual de captura dos benefícios no Ano 1 | 25% (cenário base) | Baixa | Premissa conservadora que incorpora rampagem lenta da adoção interna, ciclo de validação com a área de crédito, atrasos de integração com sistemas legados e resistência organizacional à mudança de processo. Em projetos de otimização de carteira, o primeiro ano raramente captura mais de 30% do benefício potencial. |
+|  #  | Premissa                                                            | Valor               | Conf. | Fonte / Justificativa                                                                                                                                                                                                                                                                                                      |
+| :-: | :------------------------------------------------------------------ | :------------------ | :---: | :------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1  | Melhoria esperada pelo modelo sobre o resultado econômico combinado | 1,0% (cenário base) | Baixa | Thomas (2009) e Trench et al. (2003) reportam ganhos de 1 a 5% em carteiras já geridas por scoring. Adotamos o piso da faixa como cenário base, por ser a estimativa mais defensável na ausência de backtesting com dados do parceiro.                                                                                     |
+| C2  | Percentual de captura dos benefícios no Ano 1                       | 25% (cenário base)  | Baixa | Premissa conservadora que incorpora rampagem lenta da adoção interna, ciclo de validação com a área de crédito, atrasos de integração com sistemas legados e resistência organizacional à mudança de processo. Em projetos de otimização de carteira, o primeiro ano raramente captura mais de 30% do benefício potencial. |
 
 #### D. Custos de implementação
 
-| # | Premissa | Valor | Conf. | Fonte / Justificativa |
-|:---:|:---|:---|:---:|:---|
-| D1 | Cientista de dados sênior (líder técnico) | R$ 30.000/mês (com encargos CLT ~35%) | Média | GLASSDOOR (2025); ROBERT HALF (2025). Faixa: R$ 18.000 a R$ 30.000/mês. |
-| D2 | Cientista de dados pleno | R$ 17.500/mês (com encargos) | Média | GLASSDOOR (2025). Faixa: R$ 10.000 a R$ 18.000/mês. |
-| D3 | Engenheiro de dados pleno | R$ 20.000/mês (com encargos) | Média | GLASSDOOR (2025). Faixa: R$ 12.000 a R$ 20.000/mês. |
-| D4 | Tech Lead / Gerente de Projeto | R$ 38.000/mês (com encargos) | Média | GLASSDOOR (2025). Faixa: R$ 22.000 a R$ 38.000/mês. |
-| D5 | Prazo total de desenvolvimento e integração | 6 meses | Média | Estimativa do grupo |
-| D6 | Infraestrutura cloud (dev/staging) | R$ 5.000/mês | Média | Pricing AWS para workloads analíticos (AWS, 2026) |
-| D7 | Infraestrutura de produção (cloud enterprise) | R$ 10.000/mês | Média | Pricing AWS com SLA bancário (AWS, 2026) |
+|  #  | Premissa                                      | Valor                                 | Conf. | Fonte / Justificativa                                                   |
+| :-: | :-------------------------------------------- | :------------------------------------ | :---: | :---------------------------------------------------------------------- |
+| D1  | Cientista de dados sênior (líder técnico)     | R$ 30.000/mês (com encargos CLT ~35%) | Média | GLASSDOOR (2025); ROBERT HALF (2025). Faixa: R$ 18.000 a R$ 30.000/mês. |
+| D2  | Cientista de dados pleno                      | R$ 17.500/mês (com encargos)          | Média | GLASSDOOR (2025). Faixa: R$ 10.000 a R$ 18.000/mês.                     |
+| D3  | Engenheiro de dados pleno                     | R$ 20.000/mês (com encargos)          | Média | GLASSDOOR (2025). Faixa: R$ 12.000 a R$ 20.000/mês.                     |
+| D4  | Tech Lead / Gerente de Projeto                | R$ 38.000/mês (com encargos)          | Média | GLASSDOOR (2025). Faixa: R$ 22.000 a R$ 38.000/mês.                     |
+| D5  | Prazo total de desenvolvimento e integração   | 6 meses                               | Média | Estimativa do grupo                                                     |
+| D6  | Infraestrutura cloud (dev/staging)            | R$ 5.000/mês                          | Média | Pricing AWS para workloads analíticos (AWS, 2026)                       |
+| D7  | Infraestrutura de produção (cloud enterprise) | R$ 10.000/mês                         | Média | Pricing AWS com SLA bancário (AWS, 2026)                                |
 
 ### 4.3 Investimento Inicial
 
 O investimento estima o custo que o Banco PAN incorreria para implementar a solução em produção, e não o custo do projeto acadêmico do Inteli. A estimativa está organizada por fase do projeto e reflete o ciclo de vida de uma solução de analytics em crédito.
 
-| Fase | Escopo | Duração | Custo (R$) |
-|:---|:---|:---:|---:|
-| **1. Desenvolvimento e modelagem** | Formulação matemática, implementação do solver, análise exploratória, definição de clusters | 3 meses | 230.000 |
-| **2. Backtesting e validação** | Testes com safras históricas (M1 a M3), análise de sensibilidade, validação independente pelo time de risco do banco | 1 mês | 130.000 |
-| **3. Integração e homologação** | Conexão ao motor de crédito existente do PAN, construção dos pipelines de dados, deploy em ambiente segregado | 2 meses | 200.000 |
-| **4. Conformidade regulatória** | Revisão de compliance e proteção de dados, controles de acesso à base sigilosa, documentação de modelo, aprovação em comitê de crédito | Paralelo às Fases 2 e 3 (meses 4 a 6), ~0,5 FTE | 65.000 |
-| **Investimento inicial total** | | **~6 meses** | **R$ 625.000** |
+| Fase                               | Escopo                                                                                                                                 |                     Duração                     |     Custo (R$) |
+| :--------------------------------- | :------------------------------------------------------------------------------------------------------------------------------------- | :---------------------------------------------: | -------------: |
+| **1. Desenvolvimento e modelagem** | Formulação matemática, implementação do solver, análise exploratória, definição de clusters                                            |                     3 meses                     |        230.000 |
+| **2. Backtesting e validação**     | Testes com safras históricas (M1 a M3), análise de sensibilidade, validação independente pelo time de risco do banco                   |                      1 mês                      |        130.000 |
+| **3. Integração e homologação**    | Conexão ao motor de crédito existente do PAN, construção dos pipelines de dados, deploy em ambiente segregado                          |                     2 meses                     |        200.000 |
+| **4. Conformidade regulatória**    | Revisão de compliance e proteção de dados, controles de acesso à base sigilosa, documentação de modelo, aprovação em comitê de crédito | Paralelo às Fases 2 e 3 (meses 4 a 6), ~0,5 FTE |         65.000 |
+| **Investimento inicial total**     |                                                                                                                                        |                  **~6 meses**                   | **R$ 625.000** |
 
 **Composição dos custos por fase.** O time técnico core (D1, D2 e D3) custa ~R$ 67.500/mês. Ao longo dos 6 meses de desenvolvimento, esse time responde por ~R$ 405.000 do investimento total. Os R$ 220.000 restantes se distribuem em:
 
@@ -374,13 +374,13 @@ Total detalhado: R$ 405k + R$ 30k + R$ 41k + R$ 60k + R$ 24k + R$ 65k = **R$ 625
 
 Após a entrada em produção, o modelo requer manutenção contínua para manter performance e aderência regulatória.
 
-| Item | Anual (R$) | Premissa |
-|:---|---:|:---|
-| Infraestrutura de produção (cloud) | 120.000 | D7: R$ 10.000/mês |
-| Monitoramento do modelo (cientista de dados pleno, 30% dedicação) | 63.000 | D2: R$ 17.500 × 30% |
-| Ajustes periódicos (recalibração trimestral, ~40h/ciclo) | 30.000 | D1: R$ 30.000 ÷ 160h × 40h × 4 ciclos |
-| Suporte analítico e reportes ao comitê de crédito (~20h/mês) | 26.000 | D2: R$ 17.500 ÷ 160h × 20h × 12 |
-| **Total custos anuais** | **R$ 239.000** | |
+| Item                                                              |     Anual (R$) | Premissa                              |
+| :---------------------------------------------------------------- | -------------: | :------------------------------------ |
+| Infraestrutura de produção (cloud)                                |        120.000 | D7: R$ 10.000/mês                     |
+| Monitoramento do modelo (cientista de dados pleno, 30% dedicação) |         63.000 | D2: R$ 17.500 × 30%                   |
+| Ajustes periódicos (recalibração trimestral, ~40h/ciclo)          |         30.000 | D1: R$ 30.000 ÷ 160h × 40h × 4 ciclos |
+| Suporte analítico e reportes ao comitê de crédito (~20h/mês)      |         26.000 | D2: R$ 17.500 ÷ 160h × 20h × 12       |
+| **Total custos anuais**                                           | **R$ 239.000** |                                       |
 
 ### 4.5 Benefícios Econômicos Estimados
 
@@ -433,11 +433,11 @@ $$
 
 As premissas C1 (melhoria) e C2 (captura no Ano 1) são os principais drivers de incerteza da análise (ambas com confiança Baixa). Para avaliar a robustez do resultado, recalculamos o ROI em três cenários que variam ambos os parâmetros simultaneamente:
 
-| Cenário | C1 (melhoria) | C2 (captura Y1) | Ganho efetivo Y1 | Custos anuais | Benefício líquido | **ROI** | **Payback** |
-|:---|:---:|:---:|---:|---:|---:|---:|---:|
-| Pessimista | 0,5% | 15% | R$ 251 mil | R$ 239 mil | R$ 12 mil | **2%** | **não paga em 1 ano** |
-| **Base** | **1,0%** | **25%** | **R$ 838 mil** | **R$ 239 mil** | **R$ 599 mil** | **96%** | **12,5 meses** |
-| Otimista | 2,0% | 40% | R$ 2.680 mil | R$ 239 mil | R$ 2.441 mil | **391%** | **3,1 meses** |
+| Cenário    | C1 (melhoria) | C2 (captura Y1) | Ganho efetivo Y1 |  Custos anuais | Benefício líquido |  **ROI** |           **Payback** |
+| :--------- | :-----------: | :-------------: | ---------------: | -------------: | ----------------: | -------: | --------------------: |
+| Pessimista |     0,5%      |       15%       |       R$ 251 mil |     R$ 239 mil |         R$ 12 mil |   **2%** | **não paga em 1 ano** |
+| **Base**   |   **1,0%**    |     **25%**     |   **R$ 838 mil** | **R$ 239 mil** |    **R$ 599 mil** |  **96%** |        **12,5 meses** |
+| Otimista   |     2,0%      |       40%       |     R$ 2.680 mil |     R$ 239 mil |      R$ 2.441 mil | **391%** |         **3,1 meses** |
 
 No cenário pessimista (C1 = 0,5% e captura de apenas 15%), o projeto gera valor marginalmente positivo, mas não se paga no horizonte de 1 ano, exigindo justificativa estratégica complementar (ganhos regulatórios, maturidade analítica) para aprovação em comitê. No cenário base, o ROI de ~96% indica que o projeto praticamente se paga no primeiro ano, com payback de ~12,5 meses.
 
@@ -488,4 +488,4 @@ ROBERT HALF. **Guia salarial 2025**. São Paulo: Robert Half, 2025. Disponível 
 
 THOMAS, L. C. **Consumer credit models: pricing, profit and portfolios**. Oxford: Oxford University Press, 2009.
 
-TRENCH, M. S. *et al.* Managing credit lines and prices for Bank One credit cards. **Interfaces**, v. 33, n. 5, p. 4–21, 2003.
+TRENCH, M. S. _et al._ Managing credit lines and prices for Bank One credit cards. **Interfaces**, v. 33, n. 5, p. 4–21, 2003.
