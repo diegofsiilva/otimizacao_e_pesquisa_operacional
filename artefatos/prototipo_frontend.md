@@ -240,6 +240,18 @@ As decisões de User Experience (UX) foram guiadas pelos princípios de clareza,
 
 *   **Acessibilidade:** Embora não detalhado no protótipo visual, o design considera a legibilidade da tipografia, o contraste adequado de cores e a organização lógica dos elementos para garantir que a interface seja acessível a um público amplo. Melhorias futuras podem incluir a implementação de navegação por teclado e suporte a leitores de tela.
 
+## 8. Melhorias Futuras
 
+
+Com base na análise do protótipo e nos critérios de avaliação, as seguintes melhorias são sugeridas para futuras iterações do Sistema de Crédito:
+
+
+*   **Escalabilidade da Tela de Configurações:** Avaliar a apresentação de parâmetros de configuração para garantir escalabilidade caso o número de unidades produtivas ou parâmetros aumente significativamente.
+*   **Detalhes na Home:** Aprimorar a utilidade da miniatura de mapa (se aplicável ao contexto de crédito) ou substituí-la por informações mais estratégicas e acionáveis para a tomada de decisão do operador, conforme sugerido no feedback.
+*   **Padronização de Ícones:** Garantir que todos os ícones utilizados na documentação e no protótipo sejam consistentes e apresentados previamente, evitando ambiguidades.
+*   **Validação Técnica:** Validar a viabilidade técnica de funcionalidades como a atualização em "tempo real" mencionada nas User Stories, para garantir que as expectativas do usuário sejam realistas e implementáveis.
+*   **Feedback Visual de Processamento:** Implementar indicadores visuais claros de progresso durante o carregamento de bases e a geração de limites, para informar o usuário sobre o status das operações de longa duração.
+*   **Exploração de Restrições:** Desenvolver uma funcionalidade mais robusta para a **US05 - Consultar restrições ativas**, permitindo ao usuário explorar em detalhes quais restrições impactaram cada cluster e por quê, facilitando auditorias e justificativas.
+*   **Protótipo Interativo Completo:** Desenvolver um protótipo interativo mais abrangente, com todos os fluxos de usabilidade estruturados e demonstráveis, conforme a expectativa da avaliação.
 
 
