@@ -38,4 +38,9 @@ Representa a estrutura para a funcionalidade de upload de arquivos, com uma áre
 
 Detalha a organização dos parâmetros editáveis e não editáveis, com campos claros para a inserção e visualização de configurações do modelo.
 
+## 4. Protótipo Interativo
 
+
+O protótipo interativo do Modelo de Otimização Linear visa demonstrar a funcionalidade e a experiência de usuário das principais interações.
+
+* [Protótipo interativo do Figma](https://www.figma.com/design/OC2gQQXzaZVLYfvDv4ixnr/Devedores?node-id=62-2&t=ft6Y4FQXwoefHD2f-1)
