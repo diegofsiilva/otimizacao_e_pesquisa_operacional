@@ -8,3 +8,19 @@ Este projeto desenvolve um Modelo de Otimização Linear para a definição de l
 
 
 A interface do Modelo de Otimização Linear foi projetada com foco na clareza, organização e coerência visual, buscando proporcionar uma experiência de usuário intuitiva. A navegação principal é composta por um menu superior que inclui as seções **Dashboard**, **Gerar Limites** e **Resultados**, permitindo um acesso rápido às funcionalidades essenciais da solução. O padrão visual adota uma paleta de cores neutras com destaques em azul e verde para elementos interativos e indicadores de sucesso, respectivamente, mantendo a consistência em todas as telas. A tipografia e a iconografia foram selecionadas para garantir legibilidade e reconhecimento imediato das ações e informações.
+
+## 3. Rascunhos Iniciais
+
+
+Os Rascunhos iniciais representam a fase de baixa fidelidade do projeto, onde as estruturas básicas das telas foram definidas. Eles serviram como base para o desenvolvimento do protótipo de alta fidelidade, garantindo a coesão entre o planejamento e a implementação visual.
+
+
+### Rascunho da Home (Dashboard)
+
+
+![Rascunho da Home](/artefatos/assets/ux/rascunho_home.png)
+
+Este rascunho ilustra a disposição inicial dos elementos na tela principal, focando na apresentação de um resumo de dados e uma tabela de clientes.
+
+
+
