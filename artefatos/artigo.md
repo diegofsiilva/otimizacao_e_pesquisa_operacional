@@ -64,34 +64,32 @@
 
 ## 3. TRABALHOS RELACIONADOS
 
-### 3.1 Processo de Busca Bibliográfica
+### 3.1 Protocolo de Busca e Seleção
 
-[Parágrafo introdutório explicando a estratégia de busca: quais bases foram consultadas, por que essas bases foram escolhidas e qual o critério de relevância adotado para selecionar os trabalhos.]
+A busca foi conduzida nas bases ScienceDirect, SciELO, arXiv.org, IEEE Xplore e Google Scholar. As consultas foram realizadas em português e inglês, combinando termos de domínio como *cartão de crédito*, *concessão de crédito*, *credit limit* e *credit line management* com termos metodológicos como *programação linear*, *programação inteira mista* e *decision optimization*. As principais queries utilizadas foram:
 
-**Bases bibliográficas consultadas:**
+| # | Query |
+|---|---|
+| 1 | `"credit limit optimization" AND "linear programming" AND "bank"` |
+| 2 | `"credit card line assignment" AND "optimization" AND "portfolio"` |
+| 3 | `"credit risk" AND "credit limit optimization"` |
+| 4 | `"credit line assignment" AND "customer segmentation"` |
+| 5 | `"otimização de limite de crédito" AND "cartão de crédito"` |
+| 6 | `"gestão de linha de crédito" AND "modelos contínuos"` |
 
-| Base | URL | Justificativa de uso |
-|---|---|---|
-| [ex.: Google Scholar] | scholar.google.com | [ex.: cobertura ampla de periódicos e conferências] |
-| [ex.: IEEE Xplore] | ieeexplore.ieee.org | |
-| [ex.: ScienceDirect] | sciencedirect.com | |
-| [ex.: arXiv.org] | arxiv.org | |
+As queries foram adaptadas e aplicadas às bases listadas, respeitando as particularidades de indexação de cada uma.
 
-**Queries realizadas:**
+**Critérios de inclusão:** aderência ao problema de definição, ajuste ou otimização de decisões de crédito; tratamento explícito de otimização, modelagem prescritiva ou formulação matemática aplicável ao contexto financeiro; publicação nos últimos cinco anos, preferencialmente. Trabalhos fora desse recorte temático, mas relevantes como base metodológica para a formulação do modelo, também foram considerados quando contribuíam diretamente para a estrutura de otimização adotada.
 
-| # | Query | Base | Resultados relevantes encontrados |
-|---|---|---|---|
-| 1 | `"[termo1]" AND "[termo2]"` | [Base] | [Título do artigo encontrado ou "nenhum"] |
-| 2 | `"[termo1]" AND "[termo3]"` | [Base] | |
-| 3 | `"[termo4]" OR "[termo5]"` | [Base] | |
+**Critérios de exclusão:** materiais sem densidade técnica; textos promocionais ou instrucionais voltados ao consumidor final; referências sem conexão com modelagem analítica ou otimização de política de crédito.
 
-[Parágrafo explicando os critérios de inclusão e exclusão aplicados: período temporal considerado (ex.: últimos 5 anos), idiomas aceitos, tipo de publicação (artigo de periódico, conferência, etc.) e por que trabalhos foram descartados.]
+Após a etapa de triagem, foram selecionados quatro trabalhos para análise comparativa. Três deles são recentes e tratam de gestão de limites de crédito, otimização matemática e decisões financeiras orientadas por risco e retorno. Um quarto trabalho, mais antigo, foi incluído por sua relevância metodológica consolidada na integração entre modelagem estatística e otimização aplicada à concessão de crédito.
 
 ---
 
-### 3.2 [Título resumido do Trabalho 1]
+### 3.2 Application of Linear Programming for Optimal Net Revenue on Bank Loan
 
-**Resumo do trabalho:** [Descreva o problema que o trabalho aborda, a metodologia utilizada e os principais resultados obtidos. Use citação indireta (SOBRENOME, ano).]
+**Resumo do trabalho:** [Descreva o problema que o trabalho aborda, a metodologia utilizada e os principais resultados obtidos. Use citação indireta (AL-MUSBAHU et al., 2025).]
 
 **Pontos positivos:** [O que o trabalho faz bem e que é relevante para o nosso contexto.]
 
@@ -101,13 +99,13 @@
 
 **Referência ABNT:**
 
-> SOBRENOME, Nome; SOBRENOME, Nome. Título do artigo. **Nome do Periódico**, v. X, n. X, p. X–X, ano. DOI: xx.xxxx/xxxxx.
+> AL-MUSBAHU, Abdulrahim; TETE, Ahmed Rufai; MANYISA, Yisa Emmanuel; MOHAMMED, Jibrin. Application of linear programming for optimal net revenue on bank loan. **Kontagora Journal of Mathematics**, v. 1, n. 1, p. 214–230, 2025. DOI: 10.5281/zenodo.17401383.
 
 ---
 
-### 3.3 [Título resumido do Trabalho 2]
+### 3.3 Turbinando a gestão de limites de crédito com analíticos avançados
 
-**Resumo do trabalho:** [Descreva o problema que o trabalho aborda, a metodologia utilizada e os principais resultados obtidos. Use citação indireta (SOBRENOME, ano).]
+**Resumo do trabalho:** [Descreva o problema que o trabalho aborda, a metodologia utilizada e os principais resultados obtidos. Use citação indireta (IT FORUM, [s.d.]).]
 
 **Pontos positivos:** [O que o trabalho faz bem e que é relevante para o nosso contexto.]
 
@@ -117,13 +115,13 @@
 
 **Referência ABNT:**
 
-> SOBRENOME, Nome; SOBRENOME, Nome. Título do artigo. **Nome do Periódico**, v. X, n. X, p. X–X, ano. DOI: xx.xxxx/xxxxx.
+> IT FORUM. Turbinando a gestão de limites de crédito com analíticos avançados. **IT Forum**, [s.d.]. Disponível em: https://itforum.com.br/noticias/gestao-limites-redito-analiticos-avancados/. Acesso em: 19 maio 2026.
 
 ---
 
-### 3.4 [Título resumido do Trabalho 3]
+### 3.4 Otimização matemática: o grande trunfo para geração de retorno financeiro para as empresas
 
-**Resumo do trabalho:** [Descreva o problema que o trabalho aborda, a metodologia utilizada e os principais resultados obtidos. Use citação indireta (SOBRENOME, ano).]
+**Resumo do trabalho:** [Descreva o problema que o trabalho aborda, a metodologia utilizada e os principais resultados obtidos. Use citação indireta (FERNANDES, 2021).]
 
 **Pontos positivos:** [O que o trabalho faz bem e que é relevante para o nosso contexto.]
 
@@ -133,7 +131,23 @@
 
 **Referência ABNT:**
 
-> SOBRENOME, Nome; SOBRENOME, Nome. Título do artigo. **Nome do Periódico**, v. X, n. X, p. X–X, ano. DOI: xx.xxxx/xxxxx.
+> FERNANDES, Marcelo. Otimização matemática: o grande trunfo para geração de retorno financeiro para as empresas. **TI Inside Online**, 19 fev. 2021. Disponível em: https://tiinside.com.br/19/02/2021/otimizacao-matematica-o-grande-trunfo-para-geracao-de-retorno-financeiro-para-as-empresas/. Acesso em: 19 maio 2026.
+
+---
+
+### 3.5 Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito *(referência clássica)*
+
+**Resumo do trabalho:** [Descreva o problema que o trabalho aborda, a metodologia utilizada e os principais resultados obtidos. Use citação indireta (SCARPEL; MILIONI, 2002). Justifique brevemente a inclusão de um trabalho fora do recorte temporal dos últimos cinco anos.]
+
+**Pontos positivos:** [O que o trabalho faz bem e que é relevante para o nosso contexto.]
+
+**Pontos negativos / limitações:** [Limitações metodológicas, de dados ou de escopo identificadas no trabalho.]
+
+**Diferença em relação ao nosso problema:** [Explique de forma clara por que o problema tratado neste trabalho **não é idêntico** ao nosso.]
+
+**Referência ABNT:**
+
+> SCARPEL, R. A.; MILIONI, A. Z. Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito. **Pesquisa Operacional**, v. 22, n. 1, p. 61–72, 2002. Disponível em: https://www.scielo.br/j/pope/a/3DkFSwbgRxdtDDG6MSPBDLM/. Acesso em: 19 maio 2026.
 
 ---
 
@@ -142,17 +156,17 @@
 >
 > Ao final da seção, após a tabela comparativa, adicione um parágrafo de **lacuna identificada** (*research gap*): explique o que nenhum dos trabalhos encontrados resolve e que este projeto se propõe a resolver. Algo como: "Observa-se que nenhum dos trabalhos revisados combina simultaneamente X, Y e Z no contexto de W — lacuna que este trabalho busca preencher." Isso é padrão em artigos de conferência e periódico, e deixa o leitor com clareza sobre a contribuição original do trabalho.
 
-### 3.5 Tabela Comparativa
+### 3.6 Tabela Comparativa
 
-| Dimensão | Trabalho 1 (ano) | Trabalho 2 (ano) | Trabalho 3 (ano) | Este trabalho |
-|---|---|---|---|---|
-| Problema central | | | | |
-| Técnica de otimização | | | | |
-| Uso de clusterização | | | | |
-| Variável de decisão | | | | |
-| Controle de risco | | | | |
-| Domínio de aplicação | | | | |
-| Similaridade com nosso problema | Média / Alta / Baixa | | | — |
+| Dimensão | AL-MUSBAHU et al. (2025) | IT FORUM ([s.d.]) | FERNANDES (2021) | SCARPEL; MILIONI (2002) | Este trabalho |
+|---|---|---|---|---|---|
+| Problema central | | | | | |
+| Técnica de otimização | | | | | |
+| Uso de clusterização | | | | | |
+| Variável de decisão | | | | | |
+| Controle de risco | | | | | |
+| Domínio de aplicação | | | | | |
+| Similaridade com nosso problema | | | | | — |
 
 ---
 
@@ -176,8 +190,10 @@
 
 ## REFERÊNCIAS BIBLIOGRÁFICAS
 
-SOBRENOME, Nome. **Título do artigo**. Nome do Periódico, v. X, n. X, p. X–X, ano. DOI: xx.xxxx/xxxxx.
+AL-MUSBAHU, Abdulrahim; TETE, Ahmed Rufai; MANYISA, Yisa Emmanuel; MOHAMMED, Jibrin. Application of linear programming for optimal net revenue on bank loan. **Kontagora Journal of Mathematics**, v. 1, n. 1, p. 214–230, 2025. DOI: 10.5281/zenodo.17401383.
 
-SOBRENOME, Nome. **Título do artigo**. Nome do Periódico, v. X, n. X, p. X–X, ano. DOI: xx.xxxx/xxxxx.
+FERNANDES, Marcelo. Otimização matemática: o grande trunfo para geração de retorno financeiro para as empresas. **TI Inside Online**, 19 fev. 2021. Disponível em: https://tiinside.com.br/19/02/2021/otimizacao-matematica-o-grande-trunfo-para-geracao-de-retorno-financeiro-para-as-empresas/. Acesso em: 19 maio 2026.
 
-SOBRENOME, Nome. **Título do artigo**. Nome do Periódico, v. X, n. X, p. X–X, ano. DOI: xx.xxxx/xxxxx.
+IT FORUM. Turbinando a gestão de limites de crédito com analíticos avançados. **IT Forum**, [s.d.]. Disponível em: https://itforum.com.br/noticias/gestao-limites-redito-analiticos-avancados/. Acesso em: 19 maio 2026.
+
+SCARPEL, R. A.; MILIONI, A. Z. Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito. **Pesquisa Operacional**, v. 22, n. 1, p. 61–72, 2002. Disponível em: https://www.scielo.br/j/pope/a/3DkFSwbgRxdtDDG6MSPBDLM/. Acesso em: 19 maio 2026.
