@@ -5,6 +5,7 @@ Implementação do algoritmo Simplex para problemas de programação linear.
 
 from models import Problema, Tableau
 
+EPSILON = 1e-9
 
 def construir_tableau_inicial(problema: Problema) -> Tableau:
     """
@@ -91,111 +92,94 @@ def simplex(problema: Problema) -> tuple[list[float], float, str]:
     tableau = construir_tableau_inicial(problema)
 
     while True:
-        cj_zj_x = []
+# 1. Calcula Z_j e C_j - Z_j
+        todos_cj_zj = []
+
+        # Para variáveis de decisão x
         for j in range(n):
-            cj_zj_x.append(
-                calcular_cj_zj(tableau.x[j], problema.c[j], tableau.contributions)
-            )
+            zj = sum(tableau.contributions[i] * tableau.x[j][i] for i in range(m))
+            todos_cj_zj.append(problema.c[j] - zj)
 
-        cj_zj_s = []
+        # Para variáveis de folga s
         for j in range(m):
-            cj_zj_s.append(calcular_cj_zj(tableau.s[j], 0.0, tableau.contributions))
+            zj = sum(tableau.contributions[i] * tableau.s[j][i] for i in range(m))
+            todos_cj_zj.append(0.0 - zj)
 
-        todos_cj_zj = cj_zj_x + cj_zj_s
-
-        # se todos os valores forem não-positivos, não há mais ponto de melhoria
-        todos_nao_positivos = True
-        for valor in todos_cj_zj:
-            if valor > 0:
-                todos_nao_positivos = False
-                break
-
-        if todos_nao_positivos:
-            # verifica se há múltiplas soluções: alguma variável fora da base tem cj_zj == 0
-            status = "otimo"
-            for j in range(len(todos_cj_zj)):
-                if j not in tableau.base and todos_cj_zj[j] == 0.0:
-                    status = "multiplas_solucoes"
-                    break
-            break
-
-        # regra de Bland: escolhe o menor índice com cj_zj positivo (evita ciclagem por degeneração)
+        # 2. Verifica critério de parada (Regra de Bland com EPSILON)
         indice_entra = -1
         for j in range(len(todos_cj_zj)):
-            if todos_cj_zj[j] > 0:
+            if todos_cj_zj[j] > EPSILON:
                 indice_entra = j
                 break
 
-        # pega a coluna da variável que entra
-        if indice_entra < n:
-            # Se indice_entra < n, é um x
-            coluna_entra = tableau.x[indice_entra]
-        else:
-            # Se indice_entra >= n, é um s
-            coluna_entra = tableau.s[indice_entra - n]
+        if indice_entra == -1:
+            status = "otimo"
+            break
 
-        # teste da razão mínima
-        # encontra a linha da variável que sai
+        # 3. Determina a variável que sai da base (Razão Mínima)
         indice_sai = -1
-        menor_razao = -1.0
+        menor_razao = float("inf")
 
         for i in range(m):
-            if coluna_entra[i] > 0:
-                razao = tableau.values[i] / coluna_entra[i]
-                if indice_sai == -1 or razao < menor_razao:
+            # Obtém o coeficiente correto da variável que entra
+            if indice_entra < n:
+                coeficiente = tableau.x[indice_entra][i]
+            else:
+                coeficiente = tableau.s[indice_entra - n][i]
+
+            if coeficiente > EPSILON:
+                razao = tableau.values[i] / coeficiente
+                if razao < menor_razao:
                     menor_razao = razao
                     indice_sai = i
 
-        # se nenhuma linha foi escolhida, o problema é ilimitado
         if indice_sai == -1:
-            raise ValueError("O problema é ilimitado.")
+            status = "ilimitado"
+            break
 
-        # elemento pivô (coeficiente da variável que entra na linha que sai)
-        elemento_pivo = coluna_entra[indice_sai]
+        # 4. Operações de Pivoteamento (Eliminação Gaussiana Dinâmica)
+        if indice_entra < n:
+            elemento_pivo = tableau.x[indice_entra][indice_sai]
+        else:
+            elemento_pivo = tableau.s[indice_entra - n][indice_sai]
 
-        # normaliza a linha pivô dividindo tudo pelo elemento pivô
+        # Divide a linha do pivô
         tableau.values[indice_sai] /= elemento_pivo
-
         for j in range(n):
             tableau.x[j][indice_sai] /= elemento_pivo
-
         for j in range(m):
             tableau.s[j][indice_sai] /= elemento_pivo
 
-        # zera a coluna pivô em todas as outras linhas
+        # Zera os elementos acima e abaixo do pivô nas outras linhas
         for i in range(m):
-            if i == indice_sai:
-                continue
+            if i != indice_sai:
+                if indice_entra < n:
+                    fator = tableau.x[indice_entra][i]
+                else:
+                    fator = tableau.s[indice_entra - n][i]
 
-            fator = coluna_entra[i]
+                tableau.values[i] -= fator * tableau.values[indice_sai]
+                for j in range(n):
+                    tableau.x[j][i] -= fator * tableau.x[j][indice_sai]
+                for j in range(m):
+                    tableau.s[j][i] -= fator * tableau.s[j][indice_sai]
 
-            tableau.values[i] -= fator * tableau.values[indice_sai]
-
-            for j in range(n):
-                tableau.x[j][i] -= fator * tableau.x[j][indice_sai]
-
-            for j in range(m):
-                tableau.s[j][i] -= fator * tableau.s[j][indice_sai]
-
-        # atualiza a base e a contribution da linha que mudou
+        # Atualiza a base
         tableau.base[indice_sai] = indice_entra
         tableau.contributions[indice_sai] = (
             problema.c[indice_entra] if indice_entra < n else 0.0
         )
 
-    # monta o vetor de solução
-    # variáveis que não estão na base valem 0
-    x = [0.0] * n
+    # Monta o vetor de solução final
+    x_final = [0.0] * n
     for i in range(m):
-        if tableau.base[i] < n:  # se a variável da base é uma variável de decisão
-            x[tableau.base[i]] = tableau.values[i]
+        if tableau.base[i] < n:
+            x_final[tableau.base[i]] = max(0.0, tableau.values[i])
 
-    # calcula o valor ótimo da função objetivo
-    z = 0.0
-    for j in range(n):
-        z += problema.c[j] * x[j]
+    # Calcula o valor ótimo de Z
+    z_otimo = sum(problema.c[j] * x_final[j] for j in range(n))
 
-    return x, z, status
+    return x_final, z_otimo, status
 
 
 if __name__ == "__main__":

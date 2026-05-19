@@ -44,6 +44,72 @@ def carregar_dados(arquivo_csv: Path, arquivo_json: Path) -> tuple[pd.DataFrame,
 
     return df, params
 
+def executar_pipeline_otimizacao(df_clusters: pd.DataFrame, params: dict, pd_fin_atual: float) -> dict:
+    """
+    FUNÇÃO NOVA: Executa a montagem do problema linear e chama o Simplex dinamicamente.
+    Retorna um dicionário com os resultados limpos e pós-processados para o Back-end.
+    """
+    t = params["t"]
+    LGD = params["LGD"]
+    u_bar = params["u_bar"]
+    L_max = params["L_max"]
+
+    c = []
+    A = []
+    b = []
+
+    # 1. Montagem da Função Objetivo (c) baseada na quantidade dinâmica de clusters
+    for _, row in df_clusters.iterrows():
+        ck = row["n_k"] * row["pi_k"] * (u_bar * t - row["PD_k"] * LGD)
+        c.append(float(ck))
+
+    # 2. Restrição R1: Teto de inadimplência média global
+    r1 = []
+    for _, row in df_clusters.iterrows():
+        r1.append(float(row["n_k"] * (row["PD_k"] - pd_fin_atual)))
+    A.append(r1)
+    b.append(0.0)
+
+    total_clusters = len(df_clusters)
+
+    # 3. Restrições R2 (Capacidade de Pagamento por cluster)
+    for i, row in df_clusters.iterrows():
+        linha_r2 = [0.0] * total_clusters
+        linha_r2[i] = 1.0
+        A.append(linha_r2)
+        b.append(float(row["m_k"] * row["CP_k"]))
+
+    # 4. Restrições R3 (Teto máximo L_max por cluster)
+    for i in range(total_clusters):
+        linha_r3 = [0.0] * total_clusters
+        linha_r3[i] = 1.0
+        A.append(linha_r3)
+        b.append(float(L_max))
+
+    # 5. Instancia o Problema e Resolve via Simplex Autoral
+    problema = Problema(c=c, A=A, b=b)
+    x_otimo, z_otimo, status = simplex(problema)
+
+    # 6. Pós-Processamento dos limites (Regras de negócio de R$50 e corte de R$200)
+    lista_limites_finais = []
+    for i, row in df_clusters.iterrows():
+        limite_cru = x_otimo[i]
+        if limite_cru >= 200:
+            limite_final = 50 * round(limite_cru / 50)
+        else:
+            limite_final = 0
+        
+        lista_limites_finais.append({
+            "cluster_id": int(row["cluster_id"]),
+            "n_k": int(row["n_k"]),
+            "limite_otimizado": limite_final
+        })
+
+    return {
+        "status": status,
+        "valor_otimo": float(z_otimo),
+        "resultados_por_cluster": lista_limites_finais
+    }
 
 def calcular_pd_fin_atual(df: pd.DataFrame) -> float:
     """
@@ -169,32 +235,42 @@ def exibir_resultado(
         )
 
 
-if len(sys.argv) < 3:
-    print("Uso:")
-    print("    python main.py <arquivo_clientes.csv> <parametros.json>")
-    print("Exemplo:")
-    print("    python main.py clientes_calibrado.csv parametros.json")
-    sys.exit(1)
+if __name__ == "__main__":
+    if len(sys.argv) < 3:
+        print("Uso:")
+        print("    python main.py <arquivo_clientes.csv> <parametros.json>")
+        print("Exemplo:")
+        print("    python main.py clientes.csv parametros.json")
+        sys.exit(1)
 
-arquivo_csv = (
-    Path(__file__).resolve().parent.parent.parent / "data" / "csv" / sys.argv[1]
-)
-arquivo_json = Path(__file__).resolve().parent / "input" / sys.argv[2]
+    # Define os caminhos baseados na estrutura de pastas recomendada
+    raiz_projeto = Path(__file__).resolve().parent.parent
+    arquivo_csv_origem = raiz_projeto / "data" / "csv" / sys.argv[1]
+    arquivo_json = raiz_projeto / "algoritmo_simplex" / "input" / sys.argv[2]
 
-if not arquivo_csv.exists():
-    print(f"Erro: arquivo CSV {sys.argv[1]} não encontrado em data/csv/")
-    sys.exit(1)
+    # Deriva o nome do arquivo de clusters gerado pelo clustering.py
+    stem = arquivo_csv_origem.stem
+    arquivo_clusters = arquivo_csv_origem.parent / f"{stem}_clusters.csv"
 
-if not arquivo_json.exists():
-    print(
-        f"Erro: arquivo JSON {sys.argv[2]} não encontrado em algoritmo_simplex/input/"
-    )
-    sys.exit(1)
+    if not arquivo_clusters.exists():
+        print(f"Erro: Arquivo de clusters agrupados {arquivo_clusters.name} não encontrado.")
+        print("Certifique-se de rodar o clustering.py primeiro.")
+        sys.exit(1)
 
-# executa o pipeline completo
-df, params = carregar_dados(arquivo_csv, arquivo_json)
-pd_fin_atual = calcular_pd_fin_atual(df)
-clusters = garantir_clusters(sys.argv[1])
-problema = montar_problema(clusters, params, pd_fin_atual)
-x, z, status = simplex(problema)
-exibir_resultado(x, z, status, clusters)
+    if not arquivo_json.exists():
+        print(f"Erro: Arquivo JSON de parâmetros {arquivo_json.name} não encontrado.")
+        sys.exit(1)
+
+    # 1. Carrega os dados dos clusters agregados
+    df_c, parametros = carregar_dados(arquivo_clusters, arquivo_json)
+    
+    # 2. Chama a nova pipeline dinâmica
+    resposta = executar_pipeline_otimizacao(df_c, parametros, pd_fin_atual=0.0175)
+    
+    # 3. Extrai e exibe o resultado formatado no terminal para conferência
+    # (Mantendo compatibilidade com o formato original de logs que você já usava)
+    vetor_x_puro = [
+        next(c["limite_otimizado"] for c in resposta["resultados_por_cluster"] if c["cluster_id"] == idx)
+        for idx in df_c["cluster_id"]
+    ]
+    exibir_resultado(vetor_x_puro, resposta["valor_otimo"], resposta["status"], df_c
