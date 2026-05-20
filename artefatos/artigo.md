@@ -79,7 +79,6 @@ A busca foi conduzida nas bases ScienceDirect, SciELO, arXiv.org, IEEE Xplore e 
 | 7 | `"optimal credit portfolio" AND "linear programming"` |
 | 8 | `"loan returns" AND "financial institution" AND "linear programming"` |
 | 9 | `"clustering" AND "financial risk" AND "bank"` |
-| 10 | `"credit scoring" AND "consumer credit" AND "survey"` |
 
 As queries foram adaptadas e aplicadas às bases listadas, respeitando as particularidades de indexação de cada uma.
 
@@ -87,7 +86,7 @@ As queries foram adaptadas e aplicadas às bases listadas, respeitando as partic
 
 **Critérios de exclusão:** materiais sem densidade técnica; textos promocionais ou instrucionais voltados ao consumidor final; referências sem conexão com modelagem analítica, otimização ou apoio quantitativo à decisão de crédito; e trabalhos cujo foco principal não permitisse estabelecer relação com o problema de alocação, aprovação ou gestão de crédito.
 
-Após a etapa de triagem, foram selecionados quatro trabalhos para análise comparativa. Três deles foram escolhidos por sua aderência contemporânea aos temas de otimização de limite de crédito, ajuste adversarial de crédito e identificação de risco financeiro via clusterização. Um quarto trabalho, mais antigo, foi incluído por sua relevância metodológica consolidada como referência seminal em credit scoring e modelagem de risco ao consumidor.
+Após a etapa de triagem, foram selecionados quatro trabalhos para análise comparativa. Três deles foram escolhidos por sua aderência aos temas de otimização de portfólio de crédito via programação linear e identificação de risco financeiro via clusterização. Um quarto trabalho, mais antigo, foi incluído por sua relevância metodológica consolidada na integração entre modelagem econométrica e otimização aplicada à concessão de crédito.
 
 ---
 
@@ -107,9 +106,9 @@ Após a etapa de triagem, foram selecionados quatro trabalhos para análise comp
 
 ---
 
-### 3.3 Optimizing Credit Limit Adjustments under Adversarial Goals using Reinforcement Learning — ALFONSO-SÁNCHEZ et al. (2024)
+### 3.3 Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd. — KWAPONG (2013)
 
-**Resumo do trabalho:** [Descreva o problema que o trabalho aborda, a metodologia utilizada e os principais resultados obtidos. Use citação indireta (ALFONSO-SÁNCHEZ et al., 2024).]
+**Resumo do trabalho:** [Descreva o problema que o trabalho aborda, a metodologia utilizada e os principais resultados obtidos. Use citação indireta (KWAPONG, 2013).]
 
 **Pontos positivos:** [O que o trabalho faz bem e que é relevante para o nosso contexto.]
 
@@ -119,13 +118,13 @@ Após a etapa de triagem, foram selecionados quatro trabalhos para análise comp
 
 **Referência ABNT:**
 
-> ALFONSO-SÁNCHEZ, Sherly; SOLANO, Jesús; CORREA-BAHNSEN, Alejandro; SENDOVA, Kristina P.; BRAVO, Cristián. Optimizing credit limit adjustments under adversarial goals using reinforcement learning. **European Journal of Operational Research**, v. 315, n. 2, p. 802–817, 2024. DOI: 10.1016/j.ejor.2023.09.002.
+> KWAPONG, Samuel Darkwa. Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd. 2013. Dissertação (MSc in Industrial Mathematics) — Kwame Nkrumah University of Science and Technology, Institute of Distance Learning, 2013. Disponível em: <https://ir.knust.edu.gh/handle/123456789/5841>. Acesso em: 20 maio 2026.
 
 ---
 
-### 3.4 Identification of Enterprise Financial Risk Based on Clustering Algorithm — LI et al. (2022)
+### 3.4 Identification of Enterprise Financial Risk Based on Clustering Algorithm — LI; TAO; LI (2022)
 
-**Resumo do trabalho:** [Descreva o problema que o trabalho aborda, a metodologia utilizada e os principais resultados obtidos. Use citação indireta (LI et al., 2022).]
+**Resumo do trabalho:** [Descreva o problema que o trabalho aborda, a metodologia utilizada e os principais resultados obtidos. Use citação indireta (LI; TAO; LI, 2022).]
 
 **Pontos positivos:** [O que o trabalho faz bem e que é relevante para o nosso contexto.]
 
@@ -135,13 +134,13 @@ Após a etapa de triagem, foram selecionados quatro trabalhos para análise comp
 
 **Referência ABNT:**
 
-> LI, Bingxiang et al. Identification of enterprise financial risk based on clustering algorithm. **Computational Intelligence and Neuroscience**, v. 2022, artigo 1086945, 2022. DOI: 10.1155/2022/1086945.
+> LI, Bingxiang; TAO, Rui; LI, Meng. Identification of Enterprise Financial Risk Based on Clustering Algorithm. **Computational Intelligence and Neuroscience**, v. 2022, art. 1086945, 2022. DOI: 10.1155/2022/1086945.
 
 ---
 
-### 3.5 A Survey of Credit and Behavioural Scoring: Forecasting Financial Risk of Lending to Consumers — THOMAS (2000) *(referência clássica)*
+### 3.5 Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito — SCARPEL; MILIONI (2002) *(referência clássica)*
 
-**Resumo do trabalho:** [Descreva o problema que o trabalho aborda, a metodologia utilizada e os principais resultados obtidos. Use citação indireta (THOMAS, 2000). Justifique brevemente a inclusão de um trabalho fora do recorte temporal dos últimos cinco anos.]
+**Resumo do trabalho:** [Descreva o problema que o trabalho aborda, a metodologia utilizada e os principais resultados obtidos. Use citação indireta (SCARPEL; MILIONI, 2002). Justifique brevemente a inclusão de um trabalho fora do recorte temporal dos últimos cinco anos.]
 
 **Pontos positivos:** [O que o trabalho faz bem e que é relevante para o nosso contexto.]
 
@@ -151,7 +150,7 @@ Após a etapa de triagem, foram selecionados quatro trabalhos para análise comp
 
 **Referência ABNT:**
 
-> THOMAS, Lyn C. A survey of credit and behavioural scoring: forecasting financial risk of lending to consumers. **International Journal of Forecasting**, v. 16, n. 2, p. 149–172, 2000. DOI: 10.1016/S0169-2070(00)00034-0.
+> SCARPEL, R. A.; MILIONI, A. Z. Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito. **Pesquisa Operacional**, v. 22, n. 1, p. 61-72, 2002. DOI: 10.1590/S0101-74382002000100004. Disponível em: <https://www.scielo.br/j/pope/a/3DkFSwbgRxdtDDG6MSPBDLM/>. Acesso em: 20 maio 2026.
 
 ---
 
@@ -162,7 +161,7 @@ Após a etapa de triagem, foram selecionados quatro trabalhos para análise comp
 
 ### 3.6 Tabela Comparativa
 
-| Dimensão | AL-MUSBAHU et al. (2025) | ALFONSO-SÁNCHEZ et al. (2024) | LI et al. (2022) | THOMAS (2000) | Este trabalho |
+| Dimensão | AL-MUSBAHU et al. (2025) | KWAPONG (2013) | LI; TAO; LI (2022) | SCARPEL; MILIONI (2002) | Este trabalho |
 |---|---|---|---|---|---|
 | Problema central | | | | | |
 | Técnica de otimização | | | | | |
@@ -194,10 +193,10 @@ Após a etapa de triagem, foram selecionados quatro trabalhos para análise comp
 
 ## REFERÊNCIAS BIBLIOGRÁFICAS
 
-AL-MUSBAHU, Abdulrahim; TETE, Ahmed Rufai; MANYISA, Yisa Emmanuel; MOHAMMED, Jibrin. Application of linear programming for optimal net revenue on bank loan. **Kontagora Journal of Mathematics**, v. 1, n. 1, p. 214–230, 2025. DOI: 10.5281/zenodo.17401383.
+AL-MUSBAHU, Abdulrahim; TETE, Ahmed Rufai; MANYISA, Yisa Emmanuel; MOHAMMED, Jibrin. Application of Linear Programming for Optimal Net Revenue on Bank Loan. **Kontagora Journal of Mathematics**, v. 1, n. 1, p. 214-230, 2025. DOI: 10.5281/zenodo.17401383.
 
-ALFONSO-SÁNCHEZ, Sherly; SOLANO, Jesús; CORREA-BAHNSEN, Alejandro; SENDOVA, Kristina P.; BRAVO, Cristián. Optimizing credit limit adjustments under adversarial goals using reinforcement learning. **European Journal of Operational Research**, v. 315, n. 2, p. 802–817, 2024. DOI: 10.1016/j.ejor.2023.09.002.
+KWAPONG, Samuel Darkwa. Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd. 2013. Dissertação (MSc in Industrial Mathematics) — Kwame Nkrumah University of Science and Technology, Institute of Distance Learning, 2013.
 
-LI, Bingxiang et al. Identification of enterprise financial risk based on clustering algorithm. **Computational Intelligence and Neuroscience**, v. 2022, artigo 1086945, 2022. DOI: 10.1155/2022/1086945.
+LI, Bingxiang; TAO, Rui; LI, Meng. Identification of Enterprise Financial Risk Based on Clustering Algorithm. **Computational Intelligence and Neuroscience**, v. 2022, art. 1086945, 2022. DOI: 10.1155/2022/1086945.
 
-THOMAS, Lyn C. A survey of credit and behavioural scoring: forecasting financial risk of lending to consumers. **International Journal of Forecasting**, v. 16, n. 2, p. 149–172, 2000. DOI: 10.1016/S0169-2070(00)00034-0.
+SCARPEL, R. A.; MILIONI, A. Z. Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito. **Pesquisa Operacional**, v. 22, n. 1, p. 61-72, 2002. DOI: 10.1590/S0101-74382002000100004. Disponível em: <https://www.scielo.br/j/pope/a/3DkFSwbgRxdtDDG6MSPBDLM/>. Acesso em: 20 maio 2026.
