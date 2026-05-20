@@ -2,10 +2,21 @@
 algoritmo_simplex/simplex.py
 Implementação do algoritmo Simplex para problemas de programação linear.
 """
-
+import logging
 from models import Problema, Tableau
 
 EPSILON = 1e-9
+
+# Configuração padrão do logger para o módulo do otimizador
+logger = logging.getLogger("otimizador_simplex")
+logger.setLevel(logging.INFO)
+
+# Formato limpo e profissional para os logs do terminal/back-end
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] [Simplex] %(message)s", "%H:%M:%S")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 def construir_tableau_inicial(problema: Problema) -> Tableau:
     """
@@ -20,6 +31,8 @@ def construir_tableau_inicial(problema: Problema) -> Tableau:
     """
     n = len(problema.c)  # número de variáveis de decisão
     m = len(problema.b)  # número de restrições
+
+    logger.info(f"Iniciando Simplex. Variáveis de decisão (N): {n} | Restrições (M): {m}")
 
     valores_iniciais = problema.b
     indices_variaveis_folga = list(range(n, n + m))
@@ -92,6 +105,7 @@ def simplex(problema: Problema) -> tuple[list[float], float, str]:
     tableau = construir_tableau_inicial(problema)
 
     while True:
+        iteracao += 1
 # 1. Calcula Z_j e C_j - Z_j
         todos_cj_zj = []
 
@@ -105,6 +119,10 @@ def simplex(problema: Problema) -> tuple[list[float], float, str]:
             zj = sum(tableau.contributions[i] * tableau.s[j][i] for i in range(m))
             todos_cj_zj.append(0.0 - zj)
 
+
+        # Calcula o valor atual de Z para o log de progresso
+        z_atual = sum(problema.c[j] * (tableau.values[tableau.base.index(j)] if j in tableau.base else 0.0) for j in range(n))
+
         # 2. Verifica critério de parada (Regra de Bland com EPSILON)
         indice_entra = -1
         for j in range(len(todos_cj_zj)):
@@ -112,7 +130,12 @@ def simplex(problema: Problema) -> tuple[list[float], float, str]:
                 indice_entra = j
                 break
 
-        if indice_entra == -1:
+        # LOG DA ITERAÇÃO CORRENTE
+        nome_variavel_entra = f"x{indice_entra + 1}" if indice_entra < n else f"s{indice_entra - n + 1}"
+        if indice_entra != -1:
+            logger.info(f"Iteração {iteracao:03d} | Z Atual = {z_atual:12.2f} | Candidata a entrar: {nome_variavel_entra} (C_j - Z_j = {todos_cj_zj[indice_entra]:.4f})")
+        else:
+            logger.info(f"Iteração {iteracao:03d} | Z Atual = {z_atual:12.2f} | Nenhuma variável candidata a entrar. Condição de otimalidade atingida.")
             status = "otimo"
             break
 
@@ -134,8 +157,14 @@ def simplex(problema: Problema) -> tuple[list[float], float, str]:
                     indice_sai = i
 
         if indice_sai == -1:
+            logger.warning(f"Iteração {iteracao:03d} | Erro: Coeficientes da coluna {nome_variavel_entra} são todos <= 0. O problema é ilimitado.")
             status = "ilimitado"
             break
+
+        # Identifica o nome da variável que está saindo da base para o log
+        id_variavel_sai = tableau.base[indice_sai]
+        nome_variavel_sai = f"x{id_variavel_sai + 1}" if id_variavel_sai < n else f"s{id_variavel_sai - n + 1}"
+        logger.info(f"             └──> Pivotagem: {nome_variavel_entra} entra na base no lugar de {nome_variavel_sai} (Razão Mínima = {menor_razao:.4f})")
 
         # 4. Operações de Pivoteamento (Eliminação Gaussiana Dinâmica)
         if indice_entra < n:
@@ -178,6 +207,8 @@ def simplex(problema: Problema) -> tuple[list[float], float, str]:
 
     # Calcula o valor ótimo de Z
     z_otimo = sum(problema.c[j] * x_final[j] for j in range(n))
+
+    logger.info(f"Simplex finalizado com status: '{status.upper()}'. Total de iterações: {iteracao}. Z Ótimo = {z_otimo:.2f}")
 
     return x_final, z_otimo, status
 
