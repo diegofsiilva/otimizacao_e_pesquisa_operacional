@@ -110,7 +110,14 @@ O artigo, além de mapear a função-objetivo, também traz as restrições do p
 
 Por outro lado, um aspecto que ambos também tratam é da aplicação direta da Progamação Linear para problemas do mundo financeiro. Apesar de não abordarem o mesmo tema diretamente (empréstimos X limites de crédito), tanto o artigo de Al-Musbahu (2025) quanto este trabalho buscam trazer a computação e utilização de algoritmos para ambientes financeiros especializados. Como forma de validação, os dois empregam dados reais de instituições financeiras, trabalhando sobre informações condinzentes com os cenários existentes, trazendo uma maior confiabilidade para os resultados encontrados.
 
-**Pontos negativos / limitações:** [Limitações metodológicas, de dados ou de escopo identificadas no trabalho.]
+**Pontos negativos / limitações:** 
+
+Conforme mencionado anteriormente, um aspecto que pode ser considerado negativo no trabalho de Al-Musbahu (2025) em relação a este trabalho se trata do tema proposto. Apesar de ambos estarem localizados no ambiente financeiro, eles abordam categorias essencialmente diferentes, que são a oferta de empréstimos e definição de limites de crédito. 
+
+Essa divergência não está limitada a apenas o objetivo da função matemática, mas também nos parâmetros que são levados em consideração. A função utilizada no presente trabalho aborda variáveis que não estão presentes no artigo de Al-Mushabu (2025) e vice-versa, fator que pode limitar a comparação direta entre os dois casos.
+
+Outro ponto que deve ser levado em consideração é em relação a amostragem de dados. O artigo de Al-Musbahu leva em consideração as informações coletadas por apenas uma filial do banco durante um único período, fator que pode limitar a robustez de seu modelo e da definição das variáveis do modelo, afetando o resultado direto da função matemática.
+
 
 **Diferença em relação ao nosso problema:** [Explique de forma clara por que o problema tratado neste trabalho **não é idêntico** ao nosso: diferenças no objetivo (ex.: minimização de custo vs. maximização de retorno), no tipo de dado (ex.: crédito corporativo vs. crédito ao consumidor), na técnica (ex.: heurística vs. PL exata) ou no contexto de aplicação. Este campo é especialmente importante para justificar a pertinência da busca sem que o trabalho resolva exatamente o mesmo problema.]
 
