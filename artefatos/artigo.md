@@ -119,11 +119,17 @@ Essa divergência não está limitada a apenas o objetivo da função matemátic
 Outro ponto que deve ser levado em consideração é em relação a amostragem de dados. O artigo de Al-Musbahu leva em consideração as informações coletadas por apenas uma filial do banco durante um único período, fator que pode limitar a robustez de seu modelo e da definição das variáveis do modelo, afetando o resultado direto da função matemática.
 
 
-**Diferença em relação ao nosso problema:** [Explique de forma clara por que o problema tratado neste trabalho **não é idêntico** ao nosso: diferenças no objetivo (ex.: minimização de custo vs. maximização de retorno), no tipo de dado (ex.: crédito corporativo vs. crédito ao consumidor), na técnica (ex.: heurística vs. PL exata) ou no contexto de aplicação. Este campo é especialmente importante para justificar a pertinência da busca sem que o trabalho resolva exatamente o mesmo problema.]
+**Diferença em relação ao nosso problema:** 
 
-**Referência ABNT:**
+ O principal ponto de divergência entre ambos os trabalhos se trata do tema abordado. Enquanto o artigo de Al-Musbahu (2025) investiga a definição ótima de categorias para empréstimos bancários, o tema do presente artigo é sobre a oferta de limite de créditos para clientes de um banco. 
 
-> AL-MUSBAHU, Abdulrahim; TETE, Ahmed Rufai; MANYISA, Yisa Emmanuel; MOHAMMED, Jibrin. Application of linear programming for optimal net revenue on bank loan. **Kontagora Journal of Mathematics**, v. 1, n. 1, p. 214–230, 2025. DOI: 10.5281/zenodo.17401383.
+ Apesar de tratarem de categorias diferentes, isso não significa que o trabalho de Al-Musbahu (2025) não é útil para o contexto atual. Ele traz uma perspectiva valiosa em relação a modelagem matemática do problema, e de quais maneiras as restrições definidas podem afetar no contexto da solução.
+
+ Outro ponto de destaque em relação às divergências está no escopo. O artigo de Al-Musbahu tem um escopo menor do que este trabalho. O modelo do artigo comparado utiliza um conjunto menor de variáveis, agregadas por tipo de empréstimo (taxa de juros e de inadimplência), enquanto o presente trabalho opera com um número maior de variáveis e parâmetros por cluster de clientes, como a capacidade de pagamento e propensão à contratação. 
+
+ Esse aspecto também está presente na base de dados. O artigo de Al-Musbahu trabalha com uma amostra limitada, enquanto este trabalho considera um volume maior de dados, contendo milhões de clientes, assim ampliando a complexidade do modelo e definição da solução ótima.
+ 
+ De forma geral, o trabalho de Al-Mushabu apresenta-se como uma base sólida inicial para o mapeamento da solução desse artigo. O artigo traz conceitos-chave que também serão abordados, porém diferenciando-se o suficiente para evitar que este trabalho se torne redundante.
 
 ---
 
