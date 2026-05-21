@@ -102,7 +102,13 @@ Com informações de Janeiro de 2025, coletadas do **Access Bank**, localizado n
 
 No caso de teste, era desejado alocar ₦300.000.000. A alocação ótima mapeou que 20% do valor deveria ser destinado para o financiamento de residências, 50% para cartões de crédito e 30% para empréstimos para organizações, trazendo um retorno anual de ₦24.615.000 Categorias como empréstimos pessoais receberam uma alocação de zero, demonstrando como, em comparação com outras categorias, elas mostram-se como opções menos lucrativas para o banco (AL-MUSBAHU et al., 2025).
 
-**Pontos positivos:** [O que o trabalho faz bem e que é relevante para o nosso contexto.]
+**Pontos positivos:**
+
+O artigo aborda pontos importantes que estão diretamente relacionados com o contexto do trabalho elaborado. O principal deles é em relação a metodologia utilizada para a resolução do problema de alocação de empréstimos. Tanto o artigo de Al-Musbahu (2025) quanto neste trabalho empregam da Programação Linear, que se trata de uma técnica matemática de otimização, que busca determinar o melhor resultado possível (tanto de maximização ou minimização).
+
+O artigo, além de mapear a função-objetivo, também traz as restrições do problema, aspecto extremamente importante para o funcionamento da solução. Um ponto explicitado é sobre a influência dessas restrições no resultado. Por exemplo, uma restrição pode exigir percentuais mínimos para certos tipos de empréstimos (como no caso de teste apresentado na introdução), forçando a inclusão de categorias que, quando analisadas por um escopo individual, não se apresentam como ideais (tendo um retorno financeiro menor). Com isso, o trabalho destaca que a solução ótima do modelo abordado por esse artigo não deve contemplar apenas o resultado das taxas de retorno, mas sim levar em consideração as regras de negócio específicas. Aspectos como a taxa de inadimplência permitem a abordagem de cenários mais realistas e completos para a solução.  
+
+Por outro lado, um aspecto que ambos também tratam é da aplicação direta da Progamação Linear para problemas do mundo financeiro. Apesar de não abordarem o mesmo tema diretamente (empréstimos X limites de crédito), tanto o artigo de Al-Musbahu (2025) quanto este trabalho buscam trazer a computação e utilização de algoritmos para ambientes financeiros especializados. Como forma de validação, os dois empregam dados reais de instituições financeiras, trabalhando sobre informações condinzentes com os cenários existentes, trazendo uma maior confiabilidade para os resultados encontrados.
 
 **Pontos negativos / limitações:** [Limitações metodológicas, de dados ou de escopo identificadas no trabalho.]
 
