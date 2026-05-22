@@ -8,20 +8,12 @@ Essa comparação funciona como um *golden test*: se os dois solvers convergem p
 
 ## Por que PuLP
 
-A escolha do PuLP em vez de outras alternativas (como `scipy.optimize.linprog`, `cvxpy` ou `Gurobi`) se deu pelos seguintes motivos:
+A escolha do PuLP em vez de outras alternativas se deu pelos seguintes motivos:
 
 - **API legível**: declarar variáveis, função objetivo e restrições como expressões algébricas torna o código de comparação fácil de auditar lado a lado com a formulação matemática do problema.
 - **Licença permissiva e instalação simples**: PuLP é open-source (MIT) e instalável via `pip` sem dependências nativas pesadas. O CBC vem embutido no pacote.
 - **Solver maduro**: o CBC é amplamente usado em produção e referência em livros-texto, o que dá robustez ao papel de "ground truth" da comparação.
-- **Mesma família de algoritmo**: o CBC usa o método Simplex (com refinamentos e Branch-and-Cut para casos inteiros, irrelevantes aqui pois nosso problema é puramente contínuo). Assim, a comparação é entre duas implementações do mesmo método, e não entre métodos diferentes.
-
-## Arquivos adicionados
-
-| Arquivo                                                     | Função                                                                                                                                              |
-| ----------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/algoritmo_simplex/simplex_pulp.py`                    | Implementação de referência que resolve o mesmo `Problema` usando PuLP/CBC. Mantém a mesma assinatura da função `simplex` do projeto.               |
-| `apps/algoritmo_simplex/comparar.py`                        | Script de comparação. Executa os dois solvers nos mesmos problemas e imprime os valores de `x`, `z`, `status` e o erro absoluto `|Δz|` entre ambos. |
-| `apps/algoritmo_simplex/requirements.txt`                   | Atualizado para incluir a dependência `pulp`.                                                                                                       |
+- **Mesma família de algoritmo**: o CBC usa o método Simplex (com refinamentos e Branch-and-Cut para casos inteiros, irrelevantes aqui pois nosso problema é puramente contínuo). Assim, a comparação é entre duas implementações do mesmo método, e não entre métodos diferentes.                                                                                    |
 
 ## Metodologia
 
@@ -136,10 +128,6 @@ Esta comparação cruzada justificou seu papel de validação ao revelar **um bu
 A função `construir_tableau_inicial` atribuía `valores_iniciais = problema.b` sem copiar a lista. Como Python passa listas por referência, a coluna `Value` do tableau passava a compartilhar a mesma memória com `problema.b`. Cada operação de pivotamento (`tableau.values[i] /= elemento_pivo`, etc.) **mutava o vetor `b` original do problema**.
 
 O sintoma só apareceu no `comparar.py` porque ele invocava os dois solvers em sequência sobre o mesmo objeto `Problema`: o nosso simplex rodava primeiro e deixava `b` corrompido; o PuLP, em seguida, recebia um problema diferente do original e retornava o ótimo *desse problema corrompido*. Por exemplo, no Caso 1, ao final do nosso simplex `b` virava `[8, 18]` em vez de `[60, 96]`, e o ótimo desse problema modificado é exatamente o `(4, 0)` com `z = 160` que o PuLP devolveu inicialmente.
-
-A correção foi trocar `valores_iniciais = problema.b` por `valores_iniciais = list(problema.b)`, garantindo que a coluna `Value` seja uma cópia independente. Como reforço, o `comparar.py` também passa `copy.deepcopy(problema)` a cada solver, oferecendo defesa em profundidade.
-
-Esse bug não afetava a corretude do simplex em uso isolado (o resultado retornado estava sempre certo na *primeira* chamada), mas qualquer código que reaproveitasse o mesmo `Problema` em uma segunda chamada produziria resultado errado silenciosamente.
 
 ## Conclusão
 
