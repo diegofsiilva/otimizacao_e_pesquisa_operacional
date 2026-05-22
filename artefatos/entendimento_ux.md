@@ -288,6 +288,135 @@ As oportunidades identificadas reforçam a importância de soluções que facili
 
 ---
 
+## 4. Levantamento e Priorização das User Stories
+
+O backlog do projeto contém 7 User Stories, derivadas das duas personas mapeadas: **Larissa Paiva** (cientista de dados) e **Rodinei Filho** (analista de estratégia de crédito).
+
+| ID | Título | Persona | Depende de |
+|---|---|---|---|
+| US01 | Carregar base de dados | Larissa | — |
+| US02 | Ajustar clusterização | Larissa | US01 |
+| US03 | Configurar metas de produção | Rodinei | US01 |
+| US04 | Gerar limite por cluster | Rodinei | US02, US03 |
+| US05 | Consultar restrições ativas | Rodinei | US04 |
+| US06 | Visualizar distribuição dos limites | Rodinei | US04 |
+| US07 | Exportar resultados | Larissa | US04 |
+
+
+
+Critérios de priorização
+
+Para decidir quais USs entram primeiro, foram aplicados três critérios:
+
+1. **Dependência técnica** — USs que bloqueiam outras têm prioridade máxima. Sem US01 validada, nenhuma outra US roda.
+2. **Impacto no fluxo principal** — USs que fazem parte do caminho crítico do MVP (carga → clusterização → metas → geração de limites) são priorizadas antes das periféricas.
+3. **Viabilidade sem back-end** — USs que dependem de resultado real do solver (US05, US06, US07) são postergadas, pois a integração com o back-end ainda não está disponível.
+
+
+
+Resultado da priorização
+
+| ID | Título | Prioridade | Motivo |
+|---|---|---|---|
+| US01 | Carregar base de dados | 🔴 Alta | Pré-requisito de todas as outras USs; sem carga validada nada funciona |
+| US02 | Ajustar clusterização | 🔴 Alta | Pré-requisito direto de US04; o TAPI exige mínimo de 100 clusters |
+| US03 | Configurar metas de produção | 🔴 Alta | Pré-requisito direto de US04; autonomia do analista é dor central da persona Rodinei |
+| US04 | Gerar limite por cluster | 🔴 Alta | Núcleo do MVP; define as regras de negócio centrais (R$50, mínimo R$200, L_max) |
+| US05 | Consultar restrições ativas | 🟡 Média | Depende de resultado real do solver (US04 integrada) |
+| US06 | Visualizar distribuição dos limites | 🟡 Média | Depende de resultado real; gráfico com mock não agrega valor de validação |
+| US07 | Exportar resultados | 🟢 Baixa | Depende de US04 integrada; exportar mock não tem utilidade operacional |
+
+
+
+## User Stories priorizadas
+
+
+
+### US01 — Carregar base de dados
+
+> Como **cientista de dados**, eu quero **carregar a base de dados no formato parquet**, para **utilizar informações corretas e completas na segmentação e otimização de limites por cluster**.
+
+**Dores relacionadas:**
+- Base com colunas faltantes ou tipos errados gera retrabalho de carga e atrasa entrega do cenário
+- Carga não padronizada faz o resultado mudar entre execuções, reduzindo confiança no pipeline
+- Erro não explícito transforma o troubleshooting em tentativa e erro
+
+**Critérios de aceitação:**
+
+| # | Critério |
+|---|---|
+| CA01 | Carrega arquivo `.parquet` válido e exibe: total de linhas e total de elegíveis (`flag_filtros == 0`) |
+| CA02 | Valida colunas mínimas obrigatórias; se faltar alguma, bloqueia a carga e lista explicitamente as colunas ausentes — nunca mensagem genérica |
+| CA03 | Para arquivo corrompido ou inválido, interrompe o processo e exibe erro claro, sem avançar para clusterização |
+| CA04 | Suporta até ~1,8 milhão de registros elegíveis sem perda de registros |
+| CA05 | Permite usar base mock com o mesmo esquema mínimo para executar as etapas seguintes |
+
+
+
+### US02 — Ajustar clusterização
+
+> Como **cientista de dados**, eu quero **configurar o número de clusters na segmentação**, para **testar diferentes cenários de agrupamento dos clientes**.
+
+**Dores relacionadas:**
+- Número de clusters não configurável impede testar hipóteses de segmentação
+- Clusterização não reprodutível impede comparar cenários com segurança
+- Parâmetros inválidos não barrados causam falha no meio da execução
+
+**Critérios de aceitação:**
+
+| # | Critério |
+|---|---|
+| CA01 | Aceita `n_clusters` inteiro ≥ 2; bloqueia com erro inline caso contrário |
+| CA02 | Bloqueia se `n_clusters` > número de clientes elegíveis (`flag_filtros == 0`) |
+| CA03 | Gera `cluster_id` para 100% dos elegíveis, com valores entre `0` e `n_clusters - 1` |
+| CA04 | Com mesma base + mesmos parâmetros (incluindo `random_state`) → mesmo resultado (reprodutibilidade) |
+| CA05 | Gera tabela agregada por cluster com colunas: `n_k`, `PD_k`, `pi_k`, `CP_k`, `m_k` |
+
+
+
+### US03 — Configurar metas de produção
+
+> Como **analista de estratégia de crédito**, eu quero **configurar metas de clientes aprovados e volume total de limite**, para **alinhar a otimização aos objetivos do negócio**.
+
+**Dores relacionadas:**
+- Metas na mão do time técnico tiram autonomia do analista de negócios
+- Metas não registradas fazem versões diferentes de parâmetros circularem sem controle
+- Ausência de validação permite metas incoerentes que geram resultados inválidos
+
+**Critérios de aceitação:**
+
+| # | Critério |
+|---|---|
+| CA01 | Permite definir meta de aprovados (inteiro ≥ 0) e meta de volume financeiro (≥ 0); valores inválidos bloqueados com mensagem clara |
+| CA02 | Bloqueia meta de aprovados maior que o total de elegíveis carregados em US01 |
+| CA03 | Salva as metas com persistência e permite consultar quais estão ativas antes de rodar o solver |
+| CA04 | Alterar metas não executa o solver automaticamente — ação de execução é sempre separada e explícita |
+| CA05 | Mantém registro do cenário: nome/identificador + data e hora automáticos |
+
+
+
+### US04 — Gerar limite por cluster
+
+> Como **analista de estratégia de crédito**, eu quero **gerar limites sugeridos para cada cluster**, para **aplicar políticas segmentadas de crédito**.
+
+**Dores relacionadas:**
+- Políticas montadas manualmente em planilhas geram inconsistência e demora
+- Sem padronização de arredondamento, os limites são difíceis de comunicar e implementar
+- Falha do solver sem explicação impede que o analista saiba como ajustar restrições ou metas
+
+**Critérios de aceitação:**
+
+| # | Critério |
+|---|---|
+| CA01 | Retorna `limite_sugerido` para cada `cluster_id` da base agregada |
+| CA02 | Limite final é múltiplo de R$50 e é 0 ou ≥ R$200 — se < R$200, retorna 0 |
+| CA03 | Respeita o teto máximo `L_max` definido nos parâmetros do modelo |
+| CA04 | Exibe status da otimização (`ótimo` / `múltiplas soluções` / `erro`) junto ao resultado |
+| CA05 | Em caso de falha, não retorna resultado parcial — exibe erro claro e bloqueia a visualização |
+
+
+---
+
 ## Fontes
 
 BONILHA, Dani. Como escrever as melhores User Stories com INVEST. _Blog Adaptworks_, [S. l.], [s. d.]. Disponível em: https://blog.adapt.works/como-escrever-as-melhores-user-stories-com-invest. Acesso em: 30 abr. 2026.
