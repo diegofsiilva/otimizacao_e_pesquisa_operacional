@@ -66,14 +66,21 @@
 
 ### 3.1 Protocolo de Busca e Seleção
 
-A busca foi conduzida nas bases SciELO, ScienceDirect, Google Scholar, BDTD/NDLTD, Scopus/Web of Science, IEEE Xplore, arXiv.org, Dimensions e BASE. As consultas foram realizadas em português e inglês, combinando termos de domínio como *concessão de crédito*, *limite de crédito*, *credit portfolio*, *credit limit* e *bank loan* com termos metodológicos como *programação linear*, *simplex*, *otimização*, *clustering* e *risk identification*. ScienceDirect, IEEE Xplore e arXiv não retornaram resultados aderentes aos critérios de inclusão definidos. Para cada trabalho selecionado, a busca foi conduzida com uma estratégia específica, conforme descrito na tabela a seguir:
+A busca foi conduzida nas bases SciELO, Google Scholar, BDTD/NDLTD, Scopus/Web of Science, Dimensions e BASE. As consultas foram realizadas em português e inglês, combinando termos de domínio como *credit portfolio*, *credit limit* e *bank loan* com termos metodológicos como *linear programming*, *simplex*, *optimization*, *clustering* e *risk identification*. ScienceDirect, IEEE Xplore e arXiv.org também foram consultados, mas não retornaram resultados aderentes aos critérios de inclusão definidos. As queries são documentadas em inglês para fins de padronização e reprodutibilidade; buscas equivalentes foram realizadas em português nas bases que suportam indexação no idioma. As principais queries utilizadas foram:
 
-| Trabalho | Base | Palavras-chave | Busca utilizada |
-|---|---|---|---|
-| SCARPEL; MILIONI (2002) | SciELO | concessão de crédito, modelagem econométrica, otimização, programação linear, simplex | `"Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito"` |
-| LI; TAO; LI (2022) | Google Scholar / Dimensions / Scopus / Web of Science | enterprise financial risk, clustering algorithm, financial risk, risk identification, data clustering | `"Identification of Enterprise Financial Risk Based on Clustering Algorithm"` |
-| KWAPONG (2013) | BDTD / NDLTD | optimal credit portfolio, linear programming, credit portfolio, Akuapem Rural Bank, industrial mathematics | `"Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd."` |
-| AL-MUSBAHU et al. (2025) | Google Scholar / Dimensions / BASE | linear programming, bank loan, net revenue, optimal revenue, credit optimization | `"Application of Linear Programming for Optimal Net Revenue on Bank Loan"` |
+| # | Query |
+|---|---|
+| 1 | `"credit limit optimization" AND "linear programming" AND "bank"` |
+| 2 | `"optimal credit portfolio" AND "linear programming"` |
+| 3 | `"credit portfolio" AND "linear programming" AND "risk"` |
+| 4 | `"loan allocation" AND "linear programming" AND "financial institution"` |
+| 5 | `"linear programming" AND "bank loan" AND "optimal revenue"` |
+| 6 | `"credit line assignment" AND "customer segmentation"` |
+| 7 | `"enterprise financial risk" AND "clustering algorithm"` |
+| 8 | `"clustering" AND "financial risk" AND "bank"` |
+| 9 | `"credit risk" AND "cluster analysis" AND "bank"` |
+
+As queries foram adaptadas e aplicadas às bases listadas, respeitando as particularidades de indexação de cada uma.
 
 **Critérios de inclusão:** aderência ao problema de definição, ajuste ou otimização de decisões de crédito; tratamento explícito de otimização, modelagem prescritiva ou formulação matemática aplicável ao contexto financeiro; e contribuição para a discussão de risco, retorno e alocação de crédito em instituições financeiras. Foram priorizadas publicações dos últimos cinco anos, preferencialmente. Trabalhos fora desse recorte temporal ou temático estrito também foram considerados quando apresentavam relevância metodológica consolidada e contribuição direta para a formulação do modelo adotado.
 
