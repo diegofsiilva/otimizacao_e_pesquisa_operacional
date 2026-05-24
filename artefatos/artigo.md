@@ -34,25 +34,25 @@
 
 ## 2. MATERIAIS E MÉTODOS
 
-[Descreva os dados utilizados, as ferramentas, os algoritmos e a metodologia adotada para resolver o problema.]
+Esta seção descreve o _pipeline_ metodologico adotado no estudo, desde a caracterização dos dados de entrada até a definição do modelo de otimização e sua resolução. O fluxo seguido inclui a preparação e transformação dos dados, a segmentação dos clientes em perfis homogêneos, a formulação do problema de programação linear e a implementação do algoritmo de solução. Por fim, são detalhadas as ferramentas e tecnologias utilizadas para garantir a reprodutibilidade do processo.
 
-### 2.1 [Subseção — ex.: Dados]
+### 2.1 Dados utilizados
 
 [Descrição dos dados de entrada, fontes, volume e variáveis relevantes.]
 
-### 2.2 [Subseção — ex.: Pré-processamento]
+### 2.2 Pré-processamento
 
 [Etapas de limpeza, transformação e preparação dos dados.]
 
-### 2.3 [Subseção — ex.: Modelagem]
+### 2.3 Modelagem matemática
 
 [Descrição do modelo matemático, variáveis de decisão, função objetivo e restrições.]
 
-### 2.4 [Subseção — ex.: Algoritmo]
+### 2.4 Implementação do algoritmo
 
 [Descrição do algoritmo implementado e suas etapas.]
 
-### 2.5 [Subseção — ex.: Ferramentas e Tecnologias]
+### 2.5 Ferramentas e Tecnologias
 
 [Linguagens, bibliotecas e ambientes utilizados.]
 
