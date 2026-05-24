@@ -66,21 +66,14 @@
 
 ### 3.1 Protocolo de Busca e Seleção
 
-A busca foi conduzida nas bases ScienceDirect, SciELO, arXiv.org, IEEE Xplore e Google Scholar. As consultas foram realizadas em português e inglês, combinando termos de domínio como *crédito bancário*, *cartão de crédito*, *concessão de crédito*, *credit limit*, *credit line management* e *credit portfolio* com termos metodológicos como *programação linear*, *programação inteira mista* e *decision optimization*. As principais queries utilizadas foram:
+A busca foi conduzida nas bases SciELO, ScienceDirect, Google Scholar, BDTD/NDLTD, Scopus/Web of Science, IEEE Xplore, arXiv.org, Dimensions e BASE. As consultas foram realizadas em português e inglês, combinando termos de domínio como *concessão de crédito*, *limite de crédito*, *credit portfolio*, *credit limit* e *bank loan* com termos metodológicos como *programação linear*, *simplex*, *otimização*, *clustering* e *risk identification*. ScienceDirect, IEEE Xplore e arXiv não retornaram resultados aderentes aos critérios de inclusão definidos. Para cada trabalho selecionado, a busca foi conduzida com uma estratégia específica, conforme descrito na tabela a seguir:
 
-| # | Query |
-|---|---|
-| 1 | `"credit limit optimization" AND "linear programming" AND "bank"` |
-| 2 | `"credit card line assignment" AND "optimization" AND "portfolio"` |
-| 3 | `"credit risk" AND "credit limit optimization"` |
-| 4 | `"credit line assignment" AND "customer segmentation"` |
-| 5 | `"otimização de limite de crédito" AND "cartão de crédito"` |
-| 6 | `"gestão de linha de crédito" AND "modelos contínuos"` |
-| 7 | `"optimal credit portfolio" AND "linear programming"` |
-| 8 | `"loan returns" AND "financial institution" AND "linear programming"` |
-| 9 | `"clustering" AND "financial risk" AND "bank"` |
-
-As queries foram adaptadas e aplicadas às bases listadas, respeitando as particularidades de indexação de cada uma.
+| Trabalho | Base | Palavras-chave | Busca utilizada |
+|---|---|---|---|
+| SCARPEL; MILIONI (2002) | SciELO | concessão de crédito, modelagem econométrica, otimização, programação linear, simplex | `"Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito"` |
+| LI; TAO; LI (2022) | Google Scholar / Dimensions / Scopus / Web of Science | enterprise financial risk, clustering algorithm, financial risk, risk identification, data clustering | `"Identification of Enterprise Financial Risk Based on Clustering Algorithm"` |
+| KWAPONG (2013) | BDTD / NDLTD | optimal credit portfolio, linear programming, credit portfolio, Akuapem Rural Bank, industrial mathematics | `"Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd."` |
+| AL-MUSBAHU et al. (2025) | Google Scholar / Dimensions / BASE | linear programming, bank loan, net revenue, optimal revenue, credit optimization | `"Application of Linear Programming for Optimal Net Revenue on Bank Loan"` |
 
 **Critérios de inclusão:** aderência ao problema de definição, ajuste ou otimização de decisões de crédito; tratamento explícito de otimização, modelagem prescritiva ou formulação matemática aplicável ao contexto financeiro; e contribuição para a discussão de risco, retorno e alocação de crédito em instituições financeiras. Foram priorizadas publicações dos últimos cinco anos, preferencialmente. Trabalhos fora desse recorte temporal ou temático estrito também foram considerados quando apresentavam relevância metodológica consolidada e contribuição direta para a formulação do modelo adotado.
 
@@ -135,17 +128,17 @@ Outro ponto que deve ser levado em consideração é em relação a amostragem d
 
 ### 3.3 Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd. — KWAPONG (2013)
 
-**Resumo do trabalho:** [Descreva o problema que o trabalho aborda, a metodologia utilizada e os principais resultados obtidos. Use citação indireta (KWAPONG, 2013).]
+**Resumo do trabalho:** Kwapong (2013) formula e resolve um modelo de programação linear para maximizar o retorno líquido da carteira de crédito do Akuapem Rural Bank Ltd., banco rural de Gana com portfólio total de GH¢ 15 milhões. O banco opera com cinco modalidades de empréstimo (Indústria Artesanal, Transporte, Agricultura, Salário e Microfinanças), cada uma com taxa de juros e probabilidade de inadimplência distintas: o empréstimo de Transporte, por exemplo, opera a 32% com 5% de inadimplência, enquanto o Salário apresenta 30% de taxa e apenas 1% de inadimplência. A função objetivo maximiza a receita líquida de cada modalidade, descontando a perda esperada por inadimplência, formulada como $Z = \sum_j I_j(1 - P_j)x_j$. O modelo é resolvido sob quatro restrições principais: teto total de fundos, alocação mínima de 40% para Salário e Microfinanças, mínimo de 60% para os demais segmentos e teto de inadimplência agregada de 3% (KWAPONG, 2013).
 
-**Pontos positivos:** [O que o trabalho faz bem e que é relevante para o nosso contexto.]
+Para testar a robustez da solução, o autor analisa sete cenários variando o número de restrições e as taxas de juros. No cenário base, a solução ótima aloca GH¢ 7 milhões a Transporte, GH¢ 2 milhões a Agricultura e GH¢ 6 milhões a Salário, com retorno de GH¢ 4,48 milhões, descartando Indústria Artesanal e Microfinanças por baixa atratividade líquida. O trabalho conclui que há relação positiva entre risco e retorno e que o aumento das taxas de juros melhora o resultado, desde que o risco seja controlado (KWAPONG, 2013).
 
-**Pontos negativos / limitações:** [Limitações metodológicas, de dados ou de escopo identificadas no trabalho.]
+**Pontos positivos:** A estrutura da função objetivo de Kwapong (2013) guarda relação estrutural direta com o presente trabalho: ambas maximizam a receita líquida descontando a perda esperada por inadimplência, com a forma $Z = \sum_j I_j(1 - P_j)x_j$ mapeando explicitamente o trade-off risco-retorno de cada categoria de crédito. Essa equivalência valida que a programação linear é um instrumento adequado para problemas de portfólio de crédito com controle simultâneo de risco. Vale destacar também a análise de sensibilidade conduzida nos sete cenários: ao variar o número de restrições e as taxas de juros, o autor identifica quais restrições são de fato limitantes por meio dos preços duais, como o valor negativo de -0,013 associado à restrição de alocação setorial, que sinaliza um efeito desfavorável sobre o retorno. Essa prática de análise de sensibilidade é metodologicamente sólida e diretamente replicável no pipeline do presente projeto.
 
-**Diferença em relação ao nosso problema:** [Explique de forma clara por que o problema tratado neste trabalho **não é idêntico** ao nosso.]
+**Pontos negativos / limitações:** A principal limitação do trabalho é tratar todos os tomadores dentro de uma mesma categoria como homogêneos. Ao definir apenas uma taxa de juros e uma probabilidade de inadimplência por modalidade, o modelo ignora a variação de perfil entre clientes de um mesmo segmento. Na prática, dois clientes de Salário com capacidade de pagamento muito diferente recebem o mesmo tratamento na formulação, o que reduz a precisão da estimativa de retorno. Outra limitação é a ausência de variável de decisão por cliente: a formulação define quanto alocar em cada categoria, não quanto conceder a cada indivíduo. Esse design é adequado para o problema de Kwapong (2013), mas não resolve diretamente problemas onde o limite individual é a variável central.
 
-**Referência ABNT:**
+**Diferença em relação ao nosso problema:** A diferença fundamental está no nível de análise. Kwapong (2013) trabalha com cinco categorias de empréstimo, cada uma tratada como uma variável única no modelo LP. O presente trabalho opera no nível do cliente individual, agrupado por perfil via CART, com a programação linear sendo aplicada para definir o limite de crédito de cada cluster. Enquanto Kwapong (2013) responde "quanto alocar para Transporte versus Salário", o presente projeto responde "qual limite conceder ao cliente do cluster X dado seu perfil de risco e capacidade de pagamento". A segmentação em Kwapong (2013) é predefinida e fixa (modalidades institucionais do banco), enquanto aqui ela é endógena ao modelo, determinada pelos dados via CART.
 
-> KWAPONG, Samuel Darkwa. Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd. 2013. Dissertação (MSc in Industrial Mathematics) — Kwame Nkrumah University of Science and Technology, Institute of Distance Learning, 2013. Disponível em: <https://ir.knust.edu.gh/handle/123456789/5841>. Acesso em: 20 maio 2026.
+De forma geral, Kwapong (2013) é o antecedente mais próximo do presente trabalho em termos de formulação matemática, confirmando que a estrutura LP com função objetivo de receita líquida ajustada por risco é aplicável ao crédito bancário. A diferença principal está na granularidade: o salto do nível de portfólio para o nível de cliente segmentado é o que este projeto propõe acrescentar.
 
 ---
 
@@ -219,9 +212,13 @@ De forma geral, Li, Tao e Li (2022) contribuem como referência para a etapa de 
 ## REFERÊNCIAS BIBLIOGRÁFICAS
 
 AL-MUSBAHU, Abdulrahim; TETE, Ahmed Rufai; MANYISA, Yisa Emmanuel; MOHAMMED, Jibrin. Application of Linear Programming for Optimal Net Revenue on Bank Loan. **Kontagora Journal of Mathematics**, v. 1, n. 1, p. 214-230, 2025. DOI: 10.5281/zenodo.17401383.
+// https://fuekjournals.org/index.php/KJM/article/view/166
 
-KWAPONG, Samuel Darkwa. Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd. 2013. Dissertação (MSc in Industrial Mathematics) — Kwame Nkrumah University of Science and Technology, Institute of Distance Learning, 2013.
+KWAPONG, Samuel Darkwa. Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd. 2013. Dissertação (MSc in Industrial Mathematics) — Kwame Nkrumah University of Science and Technology, Institute of Distance Learning, Kumasi, 2013. Disponível em: <https://ir.knust.edu.gh/handle/123456789/5841>. Acesso em: 20 maio 2026.
+// https://ir.knust.edu.gh/items/ffdc0243-2ecc-4937-8aa1-6a752e613d93
 
 LI, Bingxiang; TAO, Rui; LI, Meng. Identification of Enterprise Financial Risk Based on Clustering Algorithm. **Computational Intelligence and Neuroscience**, v. 2022, art. 1086945, 2022. DOI: 10.1155/2022/1086945.
+// https://www.researchgate.net/publication/359925373_Identification_of_Enterprise_Financial_Risk_Based_on_Clustering_Algorithm
 
 SCARPEL, R. A.; MILIONI, A. Z. Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito. **Pesquisa Operacional**, v. 22, n. 1, p. 61-72, 2002. DOI: 10.1590/S0101-74382002000100004. Disponível em: <https://www.scielo.br/j/pope/a/3DkFSwbgRxdtDDG6MSPBDLM/>. Acesso em: 20 maio 2026.
+// https://www.scielo.br/j/pope/a/3DkFSwbgRxdtDDG6MSPBDLM/
