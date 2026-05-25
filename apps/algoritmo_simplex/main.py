@@ -1,16 +1,9 @@
 """
-algoritmo_simplex/main.py
+apps/algoritmo_simplex/main.py
+
 Entrada de dados e execução do modelo de otimização de limites de crédito.
-
-Uso:
-    python main.py <arquivo_clientes.csv> <parametros.json>
-
-    Exemplo:
-        python main.py clientes_calibrado.csv parametros_producao.json
-        python main.py clientes_calibrado.csv parametros_teste.json
-
-Arquivos CSV devem estar em data/csv/
-Arquivos JSON devem estar em apps/algoritmo_simplex/input/
+Suporta execução via terminal (CLI) e chamadas dinâmicas pelo Back-end.
+Inclui logs de iteração e parametrização dinâmica de limites superiores (L_max).
 """
 
 import sys
@@ -23,11 +16,7 @@ from simplex import simplex
 
 def carregar_dados(arquivo_csv: Path, arquivo_json: Path) -> tuple[pd.DataFrame, dict]:
     """
-    Carrega o CSV de clientes e o JSON de parâmetros do modelo.
-
-    Retorna:
-        df     : DataFrame com os dados dos clientes
-        params : dicionário com os parâmetros do modelo (t, LGD, u_bar, L_max)
+    Carrega o CSV de clientes (já clusterizados) e o JSON de parâmetros do modelo.
     """
     df = pd.read_csv(arquivo_csv)
     print(f"Dados carregados: {len(df)} linhas, {len(df.columns)} colunas")
@@ -35,24 +24,21 @@ def carregar_dados(arquivo_csv: Path, arquivo_json: Path) -> tuple[pd.DataFrame,
     with open(arquivo_json) as f:
         params = json.load(f)
 
-    t = params["t"]
-    LGD = params["LGD"]
-    u_bar = params["u_bar"]
-    L_max = params["L_max"]
-
-    print(f"t={t}, LGD={LGD}, u_bar={u_bar}, L_max={L_max}")
-
     return df, params
+
 
 def executar_pipeline_otimizacao(df_clusters: pd.DataFrame, params: dict, pd_fin_atual: float) -> dict:
     """
-    FUNÇÃO NOVA: Executa a montagem do problema linear e chama o Simplex dinamicamente.
+    Executa a montagem do problema linear e chama o Simplex dinamicamente.
     Retorna um dicionário com os resultados limpos e pós-processados para o Back-end.
     """
     t = params["t"]
     LGD = params["LGD"]
     u_bar = params["u_bar"]
-    L_max = params["L_max"]
+    
+    # PARAMETRIZAÇÃO DINÂMICA DO L_MAX:
+    # Obtém o parâmetro L_max. Pode ser um número único (global) ou um dicionário mapeando por cluster_id.
+    l_max_config = params.get("L_max", 5000.0) 
 
     c = []
     A = []
@@ -79,14 +65,23 @@ def executar_pipeline_otimizacao(df_clusters: pd.DataFrame, params: dict, pd_fin
         A.append(linha_r2)
         b.append(float(row["m_k"] * row["CP_k"]))
 
-    # 4. Restrições R3 (Teto máximo L_max por cluster)
-    for i in range(total_clusters):
+    # 4. Restrições R3: PARAMETRIZAÇÃO DINÂMICA DO TETO MÁXIMO POR CLUSTER
+    for i, row in df_clusters.iterrows():
+        cluster_id = str(int(row["cluster_id"]))
         linha_r3 = [0.0] * total_clusters
         linha_r3[i] = 1.0
         A.append(linha_r3)
-        b.append(float(L_max))
+        
+        # Se L_max no JSON for um dicionário, busca pelo ID do cluster em formato string.
+        # Caso contrário, assume que é um valor numérico global único para todos os clusters.
+        if isinstance(l_max_config, dict):
+            teto_cluster = l_max_config.get(cluster_id, l_max_config.get("default", 5000.0))
+        else:
+            teto_cluster = l_max_config
+            
+        b.append(float(teto_cluster))
 
-    # 5. Instancia o Problema e Resolve via Simplex Autoral
+    # 5. Instancia o Problema e Resolve via Simplex Autoral com Logs por Iteração
     problema = Problema(c=c, A=A, b=b)
     x_otimo, z_otimo, status = simplex(problema)
 
@@ -111,130 +106,23 @@ def executar_pipeline_otimizacao(df_clusters: pd.DataFrame, params: dict, pd_fin
         "resultados_por_cluster": lista_limites_finais
     }
 
-def calcular_pd_fin_atual(df: pd.DataFrame) -> float:
+
+def exibir_resultado(x: list[float], z: float, status: str, clusters: pd.DataFrame):
     """
-    Calcula a inadimplência financeira atual da carteira
-    como média de pd_calibrada dos clientes elegíveis (flag_filtros == 0).
+    Exibe os resultados formatados no terminal (usado na execução manual).
     """
-    pd_fin_atual = df[df["flag_filtros"] == 0]["pd_calibrada"].mean()
-    print(f"PD_fin_atual: {pd_fin_atual:.4f}")
-    return pd_fin_atual
-
-
-def garantir_clusters(arquivo_csv_nome: str) -> pd.DataFrame:
-    """
-    Verifica se o arquivo clusterizado já existe. Se não existir, roda o clustering.
-
-    Retorna:
-        clusters : DataFrame com os parâmetros agregados por cluster
-    """
-    stem = Path(arquivo_csv_nome).stem
-    arquivo_clusters = (
-        Path(__file__).resolve().parent.parent.parent
-        / "data"
-        / "csv"
-        / f"{stem}_clusters.csv"
-    )
-
-    if not arquivo_clusters.exists():
-        print(f"Gerando clusters para {arquivo_clusters.name}...")
-        from clustering import main as clustering_main
-
-        clustering_main(arquivo_csv_nome)
-        print("Clustering concluído.")
-    else:
-        print(f"Arquivo {arquivo_clusters.name} encontrado. Pulando clustering.")
-
-    clusters = pd.read_csv(arquivo_clusters)
-    print(f"Clusters carregados: {len(clusters)} clusters")
-    return clusters
-
-
-def montar_problema(
-    clusters: pd.DataFrame, params: dict, pd_fin_atual: float
-) -> Problema:
-    """
-    Monta o problema de programação linear a partir dos parâmetros dos clusters.
-
-    Restrições:
-        R1: teto de inadimplência financeira (uma restrição para a carteira inteira)
-        R2: capacidade de pagamento com alavancagem (uma restrição por cluster)
-        R3: teto máximo de limite (uma restrição por cluster)
-    """
-    t = params["t"]
-    LGD = params["LGD"]
-    u_bar = params["u_bar"]
-    L_max = params["L_max"]
-
-    # monta o vetor de coeficientes da função objetivo (um por cluster)
-    c = []
-    for _, row in clusters.iterrows():
-        ck = row["n_k"] * row["pi_k"] * (u_bar * t * 22 - row["PD_k"] * LGD)
-        c.append(ck)
-
-    # monta a matriz de restrições A e o vetor b
-    A = []
-    b = []
-
-    # R1: teto de inadimplência financeira (uma restrição para a carteira inteira)
-    r1 = []
-    for _, row in clusters.iterrows():
-        r1.append(row["n_k"] * (row["PD_k"] - pd_fin_atual))
-    A.append(r1)
-    b.append(0.0)
-
-    # R2: capacidade de pagamento com alavancagem (uma restrição por cluster)
-    for _, row in clusters.iterrows():
-        linha = [0.0] * len(clusters)
-        linha[int(row["cluster_id"])] = 1.0
-        A.append(linha)
-        b.append(row["m_k"] * row["CP_k"])
-
-    # R3: teto máximo de limite (uma restrição por cluster)
-    for _, row in clusters.iterrows():
-        linha = [0.0] * len(clusters)
-        linha[int(row["cluster_id"])] = 1.0
-        A.append(linha)
-        b.append(L_max)
-
-    # # R5: concentração máxima por cluster
-    # alpha = params["alpha"]
-
-    # for _, row_k in clusters.iterrows():
-    #     linha = []
-    #     for _, row_j in clusters.iterrows():
-    #         if row_j["cluster_id"] == row_k["cluster_id"]:
-    #             linha.append(row_j["n_k"] * (1 - alpha))
-    #         else:
-    #             linha.append(-row_j["n_k"] * alpha)
-    #     A.append(linha)
-    #     b.append(0.0)
-
-    return Problema(c=c, A=A, b=b)
-
-
-def exibir_resultado(
-    x: list[float], z: float, status: str, clusters: pd.DataFrame
-) -> None:
-    """
-    Exibe os limites ótimos por cluster após pós-otimização:
-    arredonda para múltiplo de 50, ou 0 se menor que 200.
-    """
-    print(f"\nStatus: {status}")
-    print(f"Valor ótimo (z): {z:.2f}")
-    print(f"\nLimites ótimos por cluster:")
+    print(f"\nStatus Final do Modelo: {status.upper()}")
+    print(f"Valor ótimo da Carteira (Z): R$ {z:.2f}")
+    print(f"\nLimites recomendados por cluster:")
 
     for i, row in clusters.iterrows():
-        limite = x[i]
-        if limite >= 200:
-            limite_final = 50 * round(limite / 50)
-        else:
-            limite_final = 0
+        limite_final = x[i]
         print(
             f"  Cluster {int(row['cluster_id'])}: R$ {limite_final:.0f} (n={int(row['n_k'])})"
         )
 
 
+# Bloco executável caso você rode "python main.py ..." pelo terminal
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("Uso:")
@@ -264,13 +152,12 @@ if __name__ == "__main__":
     # 1. Carrega os dados dos clusters agregados
     df_c, parametros = carregar_dados(arquivo_clusters, arquivo_json)
     
-    # 2. Chama a nova pipeline dinâmica
+    # 2. Chama a pipeline dinâmica
     resposta = executar_pipeline_otimizacao(df_c, parametros, pd_fin_atual=0.0175)
     
     # 3. Extrai e exibe o resultado formatado no terminal para conferência
-    # (Mantendo compatibilidade com o formato original de logs que você já usava)
     vetor_x_puro = [
         next(c["limite_otimizado"] for c in resposta["resultados_por_cluster"] if c["cluster_id"] == idx)
         for idx in df_c["cluster_id"]
     ]
-    exibir_resultado(vetor_x_puro, resposta["valor_otimo"], resposta["status"], df_c
+    exibir_resultado(vetor_x_puro, resposta["valor_otimo"], resposta["status"], df_c)
