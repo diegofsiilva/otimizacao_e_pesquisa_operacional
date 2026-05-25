@@ -15,7 +15,6 @@
   <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script src="https://unpkg.com/recharts/umd/Recharts.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
@@ -23,8 +22,8 @@
 
     /* Range slider cross-browser */
     .slider-range { -webkit-appearance:none; appearance:none; width:100%; height:6px; background:#e2e8f0; border-radius:3px; outline:none; }
-    .slider-range::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#0ea5e9; border:2px solid #fff; box-shadow:0 0 0 1px #0ea5e9; cursor:pointer; }
-    .slider-range::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#0ea5e9; border:2px solid #fff; cursor:pointer; }
+    .slider-range::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#102C26; border:2px solid #fff; box-shadow:0 0 0 1px #102C26; cursor:pointer; }
+    .slider-range::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#102C26; border:2px solid #fff; cursor:pointer; }
 
     /* Upload zone hover */
     .upload-zone { transition: all .2s; }
@@ -39,7 +38,7 @@
     ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
   </style>
 </head>
-<body class="bg-[#DDD9CC] text-slate-900 antialiased">
+<body class="bg-[#E8D5B0] text-slate-900 antialiased">
 
   <div id="root"></div>
 
@@ -55,24 +54,46 @@
 
   <!-- App raiz -->
   <script type="text/babel">
+
+    class ErrorBoundary extends React.Component {
+      constructor(props) { super(props); this.state = { error: null }; }
+      static getDerivedStateFromError(e) { return { error: e }; }
+      render() {
+        if (this.state.error) {
+          return (
+            <div className="bg-red-50 border border-red-300  p-6 text-sm text-red-700">
+              <p className="font-bold mb-2">Erro ao renderizar a página:</p>
+              <pre className="whitespace-pre-wrap text-xs">{String(this.state.error)}</pre>
+            </div>
+          );
+        }
+        return this.props.children;
+      }
+    }
+
     var App = function() {
       var s1 = React.useState('dashboard');
       var page = s1[0]; var setPage = s1[1];
       var s2 = React.useState(false);
       var cfgOpen = s2[0]; var setCfgOpen = s2[1];
+      var s3 = React.useState(false);
+      var hasData = s3[0]; var setHasData = s3[1];
 
-      var views = {
-        dashboard:  <Dashboard />,
-        gerar:      <GerarLimites setPage={setPage} />,
-        resultados: <Resultados />,
-      };
+      function renderPage(p) {
+        if (p === 'dashboard')  return <Dashboard setPage={setPage} hasData={hasData} />;
+        if (p === 'gerar')      return <GerarLimites setPage={setPage} setHasData={setHasData} />;
+        if (p === 'resultados') return <Resultados hasData={hasData} setPage={setPage} />;
+        return null;
+      }
 
       return (
-        <div className="min-h-screen bg-[#DDD9CC]">
+        <div className="min-h-screen bg-[#E8D5B0]">
           <Navbar page={page} setPage={setPage} onConfig={function(){ setCfgOpen(true); }} />
           <main className="pt-24">
-            <div className="max-w-6xl mx-auto px-8 py-8">
-              {views[page]}
+            <div className="w-[calc(100%-4rem)] max-w-7xl mx-auto px-0 py-8">
+              <ErrorBoundary key={page}>
+                {renderPage(page)}
+              </ErrorBoundary>
             </div>
           </main>
           {cfgOpen && <ConfigModal onClose={function(){ setCfgOpen(false); }} />}

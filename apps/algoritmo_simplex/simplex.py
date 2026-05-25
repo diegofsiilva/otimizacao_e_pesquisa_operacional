@@ -20,7 +20,7 @@ def construir_tableau_inicial(problema: Problema) -> Tableau:
     n = len(problema.c)  # número de variáveis de decisão
     m = len(problema.b)  # número de restrições
 
-    valores_iniciais = problema.b
+    valores_iniciais = list(problema.b)  # cópia para não mutar o Problema original
     indices_variaveis_folga = list(range(n, n + m))
     contribuicao_variaveis_folga = [0.0] * m
 

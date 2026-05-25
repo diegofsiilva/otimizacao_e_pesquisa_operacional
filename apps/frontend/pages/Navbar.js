@@ -5,6 +5,14 @@ var Navbar = function(props) {
   var setPage = props.setPage;
   var onConfig = props.onConfig;
 
+  var s1 = React.useState(false); var scrolled = s1[0]; var setScrolled = s1[1];
+
+  React.useEffect(function() {
+    function onScroll() { setScrolled(window.scrollY > 40); }
+    window.addEventListener('scroll', onScroll);
+    return function() { window.removeEventListener('scroll', onScroll); };
+  }, []);
+
   var links = [
     {
       key: 'dashboard', label: 'Dashboard',
@@ -25,18 +33,28 @@ var Navbar = function(props) {
   ];
 
   return (
-    <header className="fixed top-4 left-1/2 -translate-x-1/2 w-[calc(100%-3rem)] max-w-5xl h-14 bg-[#F0EEE4] border border-slate-200 flex items-center px-6 z-40 shadow-lg rounded-2xl">
+    <header style={{ transition: 'top .35s ease, width .35s ease, padding .35s ease, box-shadow .35s ease, border-radius .35s ease' }}
+      className={[
+        'fixed left-1/2 -translate-x-1/2 z-40 bg-[#102C26] border border-[#1e4a3f] flex items-center',
+        scrolled
+          ? 'top-3 w-[calc(100%-4rem)] max-w-7xl px-6 h-12 shadow-xl '
+          : 'top-5 w-[calc(100%-4rem)] max-w-7xl px-8 h-16 shadow-lg '
+      ].join(' ')}>
+
       {/* Logo */}
-      <div className="flex items-center gap-2.5 mr-8">
-        <img src="assets/Logo_PAN.jpg" alt="Banco PAN" className="h-7 w-auto rounded object-contain flex-shrink-0" />
-        <div>
-          <div className="text-sm font-bold text-slate-800 leading-tight">Banco PAN</div>
-          <div className="text-[10px] text-slate-400 leading-tight">Otimizador de Limites</div>
+      <div className="flex items-center gap-2.5 mr-6 flex-shrink-0" style={{ transition: 'gap .35s ease' }}>
+        <img src="assets/Logo_PAN.jpg" alt="Banco PAN"
+          style={{ transition: 'height .35s ease' }}
+          className={['w-auto object-contain flex-shrink-0', scrolled ? 'h-6' : 'h-8'].join(' ')} />
+        <div style={{ transition: 'opacity .35s ease', opacity: scrolled ? 0.85 : 1 }}>
+          <div className={['font-bold text-[#F7E7CE] leading-tight', scrolled ? 'text-xs' : 'text-sm'].join(' ')}
+            style={{ transition: 'font-size .35s ease' }}>Banco PAN</div>
+          {!scrolled && <div className="text-[10px] text-[#F7E7CE]/60 leading-tight">Otimizador de Limites</div>}
         </div>
       </div>
 
       {/* Divisor */}
-      <div className="w-px h-6 bg-slate-200 mr-6" />
+      <div className="w-px h-5 bg-[#F7E7CE]/20 mr-5 flex-shrink-0" />
 
       {/* Links */}
       <nav className="flex items-center gap-1">
@@ -44,14 +62,16 @@ var Navbar = function(props) {
           var active = page === l.key;
           return (
             <button key={l.key} onClick={function() { l.isConfig ? onConfig() : setPage(l.key); }}
-              className={['flex items-center gap-2 px-3.5 py-2 rounded-lg text-sm font-medium transition-colors',
-                active ? 'bg-sky-500 text-white shadow-sm' : 'text-slate-600 hover:bg-slate-200'].join(' ')}>
+              className={[
+                'flex items-center gap-2  font-medium transition-colors',
+                scrolled ? 'px-3 py-1.5 text-xs' : 'px-3.5 py-2 text-sm',
+                active ? 'bg-[#F7E7CE] text-[#102C26] shadow-sm' : 'text-[#F7E7CE]/80 hover:bg-[#1e4a3f]'
+              ].join(' ')}>
               {l.icon}{l.label}
             </button>
           );
         })}
       </nav>
-
     </header>
   );
 };
