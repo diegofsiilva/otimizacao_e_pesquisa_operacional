@@ -68,10 +68,12 @@
       };
 
       return (
-        <div className="min-h-screen bg-[#DDD9CC] flex">
+        <div className="min-h-screen bg-[#DDD9CC]">
           <Navbar page={page} setPage={setPage} onConfig={function(){ setCfgOpen(true); }} />
-          <main className="ml-56 flex-1 p-8" style={{ maxWidth: '1200px' }}>
-            {views[page]}
+          <main className="pt-24">
+            <div className="max-w-6xl mx-auto px-8 py-8">
+              {views[page]}
+            </div>
           </main>
           {cfgOpen && <ConfigModal onClose={function(){ setCfgOpen(false); }} />}
         </div>

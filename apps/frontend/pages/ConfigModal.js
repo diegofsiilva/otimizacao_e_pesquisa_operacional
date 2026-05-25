@@ -12,7 +12,7 @@ var ConfigModal = function(props) {
 
   function formatVal(key, v) {
     if (key === 'L_max') return 'R$ ' + Number(v).toLocaleString('pt-BR');
-    if (key === 'pd' || key === 't') return (Number(v) * 100).toFixed(2) + '%';
+    if (key === 't' || key === 'LGD' || key === 'u_bar') return (Number(v) * 100).toFixed(0) + '%';
     return v;
   }
 

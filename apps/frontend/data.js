@@ -90,9 +90,10 @@ var SOLVER_COMPARISON = {
 
 /* ── Parâmetros configuráveis ─────────────────────────────── */
 var PARAMS_EDITAVEIS = [
-  { key: 't',     label: 'Taxa de interchange',      value: 0.0115, min: 0,    max: 0.05,   step: 0.0001 },
-  { key: 'pd',    label: 'Probabilidade de Default', value: 0.05,   min: 0,    max: 0.3,    step: 0.001  },
-  { key: 'L_max', label: 'Limite máximo (R$)',       value: 50000,  min: 1000, max: 200000, step: 1000   },
+  { key: 't',     label: 'Taxa de interchange',           value: 0.0175, min: 0.30,  max: 1.0,   step: 0.01   },
+  { key: 'LGD',   label: 'Loss Given Default (LGD)',      value: 0.60,   min: 0.30,  max: 1.0,   step: 0.01   },
+  { key: 'u_bar', label: 'Utilização esperada do limite', value: 0.75,   min: 0.30,  max: 1.0,   step: 0.01   },
+  { key: 'L_max', label: 'Limite máximo (R$)',            value: 25000,  min: 10000, max: 50000, step: 500    },
 ];
 
 var PARAMS_NAO_EDITAVEIS = [
