@@ -64,6 +64,8 @@
 
 ## 3. TRABALHOS RELACIONADOS
 
+Esta seção apresenta e analisa os trabalhos identificados na revisão de literatura, posicionando-os em relação ao problema proposto. A busca sistemática descrita em 3.1 resultou na seleção de três estudos que cobrem os dois componentes técnicos centrais do projeto — programação linear aplicada a decisões de crédito e clusterização para identificação de risco financeiro —, analisados individualmente nas seções 3.2 a 3.4, comparados sistematicamente em 3.5 e sintetizados em termos de lacuna em 3.6.
+
 ### 3.1 Protocolo de Busca e Seleção
 
 A busca foi conduzida nas bases SciELO, Google Scholar, BDTD/NDLTD, Scopus/Web of Science, Dimensions e BASE. As consultas foram realizadas em português e inglês, combinando termos de domínio como *credit portfolio*, *credit limit* e *bank loan* com termos metodológicos como *linear programming*, *simplex*, *optimization*, *clustering* e *risk identification*. ScienceDirect, IEEE Xplore e arXiv.org também foram consultados, mas não retornaram resultados aderentes aos critérios de inclusão definidos. As queries são documentadas em inglês para fins de padronização e reprodutibilidade; buscas equivalentes foram realizadas em português nas bases que suportam indexação no idioma. As principais queries utilizadas foram:
@@ -165,11 +167,31 @@ De forma geral, Li, Tao e Li (2022) contribuem como referência para a etapa de 
 
 ---
 
+### 3.5 Tabela Comparativa dos Trabalhos Analisados
+
+Examinados individualmente nas seções anteriores, os três trabalhos revelam padrões de convergência e divergência que se tornam mais nítidos numa comparação direta. A tabela a seguir organiza as dimensões analíticas mais relevantes para posicionar este trabalho em relação a cada um deles, estruturadas em torno de dois eixos que a análise anterior identificou como centrais: o nível de análise — se a variável de decisão opera sobre o portfólio agregado ou sobre grupos homogêneos de tomadores — e o papel atribuído à segmentação no pipeline, distinguindo se ela é o produto final do método ou uma etapa intermediária que viabiliza uma decisão operacional subsequente.
+
+Essa distinção importa porque os trabalhos revisados se distribuem de forma assimétrica nesses dois eixos. Al-Musbahu et al. (2025) e Kwapong (2013) empregam programação linear para otimizar decisões de crédito, mas operam no nível de portfólio e não realizam segmentação baseada em dados — as categorias são predefinidas institucionalmente, sem derivação a partir do comportamento observado. Li, Tao e Li (2022) demonstram que a segmentação por dados é eficaz para separar perfis de risco, mas não avançam para nenhuma decisão operacional: a clusterização é o fim, não o meio. O presente trabalho ocupa o espaço que nenhum deles cobre isoladamente — segmentação endógena seguida de otimização contínua de limite.
+
+| Dimensão | AL-MUSBAHU et al. (2025) | KWAPONG (2013) | LI; TAO; LI (2022) | Este trabalho |
+|---|---|---|---|---|
+| **Problema central** | Alocação ótima de portfólio de empréstimos bancários | Maximização de receita líquida de portfólio de crédito rural | Identificação de empresas de alto risco financeiro | Otimização de limites de crédito pré-aprovados por cluster de clientes |
+| **Técnica principal** | Programação Linear | Programação Linear + análise de sensibilidade (7 cenários) | K-Means em dois níveis + PCA | CART + Programação Linear (Simplex / HiGHS) |
+| **Nível de análise** | Portfólio agregado por tipo de produto | Portfólio agregado por modalidade | Grupo de empresas (sem decisão operacional) | Cluster de clientes individuais (~800 grupos) |
+| **Segmentação dos tomadores** | Ausente — categorias predefinidas institucionalmente | Ausente — modalidades predefinidas institucionalmente | Endógena via K-Means — **produto final** do pipeline | Endógena via CART — **etapa intermediária** do pipeline |
+| **Variável de decisão** | Volume alocado por tipo de empréstimo (R$) | Volume alocado por modalidade de crédito (R$) | Não há | Limite contínuo $L_k \in \mathbb{R}^+$ por cluster |
+| **Controle de risco** | Taxa de inadimplência por categoria de empréstimo | Teto de PD agregada (3%) + PD por modalidade | Concentração de eventos ST no cluster de risco | PD financeira ponderada (R1), alavancagem diferenciada por score (R2), concentração por cluster (R5) |
+| **Domínio de aplicação** | Empréstimos bancários — Nigéria | Crédito rural — Gana | Risco corporativo — China | Cartão de crédito PF — Brasil (~1,8M elegíveis/safra) |
+
+A leitura conjunta da tabela permite uma observação que o texto das subseções anteriores não torna imediatamente evidente: o antecedente estrutural mais próximo deste trabalho é Kwapong (2013), não pelo contexto ou pela escala, mas pela forma funcional da função objetivo. A estrutura $Z = \sum_j I_j(1 - P_j)x_j$ de Kwapong mapeia diretamente para $c_k = \pi_k \cdot (T\bar{u}t - PD_k \cdot \gamma_{d(k)} \cdot \text{LGD})$: em ambos os casos, o retorno líquido por unidade alocada é o produto entre uma taxa de retorno bruta e um desconto pela perda esperada por inadimplência. A diferença não está na estrutura do problema, mas na granularidade da variável de decisão: Kwapong (2013) resolve para cinco modalidades predefinidas de crédito; este trabalho resolve para aproximadamente 800 clusters determinados pelos dados via CART. Esse salto — do nível de portfólio para o nível de cluster endogeneamente formado — é o que a seção a seguir formaliza como contribuição central.
+
+A contribuição de Li, Tao e Li (2022), por sua vez, não é estrutural, mas epistemológica: o artigo demonstra que variáveis financeiras conseguem separar perfis de risco de forma objetiva e reprodutível, validando empiricamente a premissa que sustenta a Etapa 1 do pipeline deste trabalho. As implicações dessas diferenças para a identificação da lacuna que o presente trabalho ocupa são desenvolvidas na seção a seguir.
 
 ---
-### 3.5 Lacuna Identificada
 
-A análise dos trabalhos revisados permite identificar três dimensões de lacuna relevantes para o presente projeto.
+### 3.6 Lacuna Identificada
+
+A comparação sistematizada na seção anterior permite precisar três dimensões de lacuna relevantes para o presente projeto.
 
 A primeira diz respeito à granularidade da variável de decisão. Os trabalhos que empregam programação linear para crédito — Kwapong (2013) e Al-Musbahu et al. (2025) — operam sobre categorias predefinidas de empréstimo, tratando todos os tomadores de um mesmo segmento como homogêneos. Nenhum dos dois opera no nível do cliente individual nem realiza uma etapa de segmentação baseada em dados: as categorias são definidas institucionalmente, não derivadas do comportamento observado. Isso limita a capacidade do modelo de capturar a heterogeneidade real da base e de atribuir limites proporcionais ao perfil de cada tomador.
 
@@ -177,26 +199,7 @@ A segunda lacuna está na desconexão entre segmentação e decisão. Li, Tao e 
 
 A terceira lacuna diz respeito à integração entre as duas etapas anteriores — segmentação e otimização — num pipeline unificado para decisões de crédito ao consumidor em escala real. Essa lacuna é parcialmente endereçada por Scarpel e Milioni (2002), que combinam um modelo Logit com Programação Inteira para apoiar decisões de concessão de crédito, validando o paradigma de duas etapas — estimar primeiro, otimizar depois — no contexto brasileiro. No entanto, o trabalho restringe-se ao crédito corporativo e a uma decisão binária de aprovação ou rejeição, sem contemplar a atribuição contínua de limite a pessoas físicas em escala de portfólio. Por essa razão, optou-se por não detalhar o trabalho numa seção própria de análise comparativa: o contexto de aplicação e a natureza da variável de decisão diferem substancialmente do problema abordado aqui, o que limitaria a profundidade e a pertinência da comparação. Ainda assim, o trabalho permanece relevante como referência de validação metodológica do pipeline adotado.
 
-O presente trabalho busca endereçar essas três dimensões ao propor um pipeline que combina segmentação baseada em dados via CART com otimização contínua de limite via programação linear, aplicado a um portfólio de crédito ao consumidor em escala real. Reconhece-se, contudo, que a abordagem introduz limitações próprias: a qualidade da otimização é dependente da estabilidade dos clusters gerados, e o modelo requer revalidação periódica diante da evolução do comportamento de crédito da base — aspectos que ficam fora do escopo deste trabalho e constituem direções para pesquisas futuras.
-
----
-
----
-> 💡 **Sugestão de "ir além" — Trabalhos Relacionados**
->
-> Ao final da seção, após a tabela comparativa, adicione um parágrafo de **lacuna identificada** (*research gap*): explique o que nenhum dos trabalhos encontrados resolve e que este projeto se propõe a resolver. Algo como: "Observa-se que nenhum dos trabalhos revisados combina simultaneamente X, Y e Z no contexto de W — lacuna que este trabalho busca preencher." Isso é padrão em artigos de conferência e periódico, e deixa o leitor com clareza sobre a contribuição original do trabalho.
-
-### 3.6 Tabela Comparativa
-
-| Dimensão | AL-MUSBAHU et al. (2025) | KWAPONG (2013) | LI; TAO; LI (2022) | SCARPEL; MILIONI (2002) | Este trabalho |
-|---|---|---|---|---|---|
-| Problema central | | | | | |
-| Técnica de otimização | | | | | |
-| Uso de clusterização | | | | | |
-| Variável de decisão | | | | | |
-| Controle de risco | | | | | |
-| Domínio de aplicação | | | | | |
-| Similaridade com nosso problema | | | | | — |
+Reconhece-se que a abordagem proposta introduz limitações próprias: a qualidade da otimização é dependente da estabilidade dos clusters gerados, e o modelo requer revalidação periódica diante da evolução do comportamento de crédito da base — aspectos que ficam fora do escopo deste trabalho e constituem direções para pesquisas futuras. O presente trabalho busca endereçar as três dimensões identificadas ao propor um pipeline que combina segmentação baseada em dados via CART com otimização contínua de limite via programação linear, aplicado a um portfólio de crédito ao consumidor em escala real.
 
 ---
 
