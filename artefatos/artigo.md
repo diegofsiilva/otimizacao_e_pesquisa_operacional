@@ -70,7 +70,34 @@ Além das variáveis das três safras, alguns parâmetros necessários à formul
 
 ### 2.3 Modelagem matemática
 
-[Descrição do modelo matemático, variáveis de decisão, função objetivo e restrições.]
+Esta seção apresenta a formulação matemática do problema de definição de limites de crédito pré-aprovados. Dado um conjunto de clientes elegíveis, agrupados por $K$ _clusters_ relativamente homogêneos, busca-se determinar o limite $L_k$ a ser ofertado a cada cluster $k$ de modo a maximizar o retorno líquido esperado da carteira. Opta-se por uma formulação de Programação Linear (LP) por sua interpretabilidade em larga escala, uma vez que a decisão deve ser tomada simultaneamente para múltiplos perfis de clientes, além de ser um requisito mapeado pelo parceiro. 
+
+Para preservar a linearidade do modelo, grandezas de risco e comportamento (como probabilidade de inadimplência ($PD_k$), propensão à contratação ($\pi$_k) e parâmetros operacionais do produto) são tratadas como parâmetros estimados na etapa de pré-processamento, enquanto os limites $L_k$ constituem as variáveis de decisão. A função objetivo considera a receita esperada de _interchange_ descontada da perda esperada por inadimplência, e as restrições incorporam políticas prudenciais e operacionais, como teto de risco agregado, alavancagem em relação à capacidade  d epagamento e limites máximos por oferta.
+
+A Tabela 2 resume os principais parâmetros utilizados na formulação, incluindo grandezas estimadas a partir dos dados (por exemplo, $PD_k$, $\pi_k$, $CP_k$) e constantes operacionais fornecidas pelo parceiro (por exemplo, taxa de _interchange_ $t$, horizonte de receita $T$ e $\mathrm{LGD}$). Esses parâmetros são calculados na etapa de pré-processamento e, em seguida, tratados como constantes no problema de otimização, garantindo que a função objetivo e as restrições permaneçam lineares nas variáveis de decisão $L_k$.
+
+**Tabela 2 — Parâmetros do modelo de otimização**
+
+| Símbolo | Descrição | Unidade / Domínio | Como é obtido (no pipeline) | Fonte |
+|---|---|---|---|---|
+| $K$ | Número de clusters de clientes elegíveis | inteiro, $K \ge 100$ | Definido na etapa de clusterização | Pré-processamento |
+| $k$ | Índice do cluster | $k \in \{1,\dots,K\}$ | — | — |
+| $n_k$ | Número de clientes no cluster $k$ | inteiro positivo | Contagem de observações no cluster | Dados + clusterização |
+| $PD_k$ | Probabilidade de default representativa do cluster $k$ | $[0,1]$ | Média de `pd_produto` dentro do cluster $k$ | Dados (scoring interno) |
+| $\pi_k$ | Propensão à contratação (normalizada) do cluster $k$ | $[0,1]$ | Normaliza `score_propensao_contrato` via min–max e tira média no cluster | Dados + normalização |
+| $CP_k$ | Capacidade de pagamento representativa do cluster $k$ | R\$ | Percentil 5 de `capacidade_pagamento` no cluster; quando nulo, proxy via `renda_estimada \times 0{,}30` | Dados + regra de proxy |
+| $m_k$ | Multiplicador de alavancagem permitido no cluster $k$ | ex.: $[0{,}20,\,0{,}45]$ | Mapeado por faixas do `score_credito_cross` (médio do cluster) | Política/heurística calibrada |
+| $t$ | Taxa de interchange mensal | adimensional | Constante | Parceiro / premissa |
+| $T$ | Horizonte de receita considerado | meses | Constante (ex.: $T=22$) | Parceiro / premissa |
+| $\bar{u}$ | Utilização média esperada do limite | $[0,1]$ | Constante (ex.: $\bar{u}=0{,}75$) | Parceiro / premissa |
+| $\mathrm{LGD}$ | Loss Given Default | $[0,1]$ | Constante (ex.: $\mathrm{LGD}=0{,}80$) | Parceiro / premissa |
+| $d(k)$ | Decil associado ao $PD_k$ (para calibração) | $\{1,\dots,10\}$ | Identifica o decil onde o $PD_k$ cai | Pré-processamento |
+| $\gamma_d$ | Fator de calibração da PD no decil $d$ | $>0$ | Razão empírica (ex.: baseada em `over30mob3` vs `pd_produto`) por decil | Estimado em análise histórica |
+| $PD_k^{cal}$ | PD calibrada do cluster $k$ | $[0,1]$ | $PD_k^{cal} = PD_k \cdot \gamma_{d(k)}$ | Derivado |
+| $\overline{PD}_{fin}^{atual}$ | Teto de risco financeiro da carteira (ponderado por exposição) | $[0,1]$ | Definido como benchmark/limite de política | Parceiro / política |
+| $L^{max}$ | Limite máximo permitido por oferta | R\$ | Constante (ex.: $25.000$) | Política operacional |
+| $\alpha$  | Concentração máxima de exposição em um único cluster | $[0,1]$ | Constante (ex.: 5%) para as restrições | Política/prudencial |
+| $V^{min}$  | Piso de produção (volume total de limite ofertado) | R\$ | Constante para as restrições | Meta comercial |
 
 ### 2.4 Implementação do algoritmo
 
