@@ -11,7 +11,7 @@ import pandas as pd
 
 from db.storage import UPLOAD_DIR, ensure_dirs, load_params, load_state, read_dataframe, save_params, save_state
 from model.schemas import (
-    Cliente,
+    Cluster,
     DashboardKPIs,
     DashboardResponse,
     GeracaoLimitesResponse,
@@ -108,16 +108,16 @@ def _validate_columns(df: pd.DataFrame) -> None:
         raise ValueError(f"Base sem colunas obrigatorias: {', '.join(missing)}")
 
 
-def _clientes_from_df(df: pd.DataFrame, limit: int = 50) -> list[Cliente]:
-    clientes: list[Cliente] = []
+def _clientes_from_df(df: pd.DataFrame, limit: int = 50) -> list[Cluster]:
+    clientes: list[Cluster] = []
     for position, (_, row) in enumerate(df.head(limit).iterrows()):
         cluster = row.get("cluster_id", row.get("cluster", None))
         limite = row.get("limite_sugerido", row.get("limite", None))
         cadastro = row.get("cadastro", None)
         score = row.get("score_credito_cross", row.get("score", None))
         clientes.append(
-            Cliente(
-                cliente_id=_client_id(row, position),
+            Cluster(
+                id_=_client_id(row, position),
                 cluster=f"CLU-{int(cluster) + 1:03d}" if pd.notna(cluster) else None,
                 score=float(score) if pd.notna(score) else None,
                 status=_status_from_row(row),
@@ -277,7 +277,7 @@ def gerar_limites(path: Path, n_clusters: int | None = None) -> GeracaoLimitesRe
     state = load_state()
     state["last_upload"] = str(path)
     state["last_result"] = _dump_model(result)
-    state["clientes"] = [_dump_model(item) for item in _clientes_from_df(eligible, limit=100)]
+    state["clusters"] = [_dump_model(item) for item in _clientes_from_df(eligible, limit=100)]
     state["n_clusters"] = params.n_clusters
     save_state(state)
     return result
@@ -285,7 +285,7 @@ def gerar_limites(path: Path, n_clusters: int | None = None) -> GeracaoLimitesRe
 
 def get_dashboard() -> DashboardResponse:
     state = load_state()
-    clientes = [Cliente(**item) for item in state.get("clientes", [])]
+    clientes = [Cluster(**item) for item in state.get("clusters", [])]
     if not clientes:
         clientes = _sample_clientes()
     ativos = sum(1 for item in clientes if item.status == "Ativo")
@@ -299,18 +299,18 @@ def get_dashboard() -> DashboardResponse:
             limite_total=_money(limite_total) or 0,
             taxa_aprovacao=round(taxa, 2),
         ),
-        clientes=clientes,
+        clusters=clientes,
     )
 
 
-def list_clientes(q: str | None = None, status: str | None = None) -> list[Cliente]:
-    clientes = get_dashboard().clientes
+def list_clientes(q: str | None = None, status: str | None = None) -> list[Cluster]:
+    clientes = get_dashboard().clusters
     if q:
         normalized = q.lower()
         clientes = [
             item
             for item in clientes
-            if normalized in item.cliente_id.lower()
+            if normalized in item.id_.lower()
             or (item.cluster is not None and normalized in item.cluster.lower())
         ]
     if status:
@@ -318,29 +318,29 @@ def list_clientes(q: str | None = None, status: str | None = None) -> list[Clien
     return clientes
 
 
-def upsert_cliente(payload: Cliente) -> Cliente:
+def upsert_cliente(payload: Cluster) -> Cluster:
     state = load_state()
-    clientes = [Cliente(**item) for item in state.get("clientes", [])]
+    clientes = [Cluster(**item) for item in state.get("clusters", [])]
     found = False
     for index, cliente in enumerate(clientes):
-        if cliente.cliente_id == payload.cliente_id:
+        if cliente.id_ == payload.id_:
             clientes[index] = payload
             found = True
             break
     if not found:
         clientes.append(payload)
-    state["clientes"] = [_dump_model(item) for item in clientes]
+    state["clusters"] = [_dump_model(item) for item in clientes]
     save_state(state)
     return payload
 
 
 def delete_cliente(cliente_id: str) -> bool:
     state = load_state()
-    clientes = [Cliente(**item) for item in state.get("clientes", [])]
-    remaining = [item for item in clientes if item.cliente_id != cliente_id]
+    clientes = [Cluster(**item) for item in state.get("clusters", [])]
+    remaining = [item for item in clientes if item.id_ != cliente_id]
     if len(remaining) == len(clientes):
         return False
-    state["clientes"] = [_dump_model(item) for item in remaining]
+    state["clusters"] = [_dump_model(item) for item in remaining]
     save_state(state)
     return True
 
@@ -397,13 +397,13 @@ def _sample_limites() -> list[LimiteCluster]:
     ]
 
 
-def _sample_clientes() -> list[Cliente]:
+def _sample_clientes() -> list[Cluster]:
     limites = [5000, 9800, None, 18200, 8800, None, 15000, 4900]
     scores = [850, 720, 620, 910, 780, 450, 990, 680]
     statuses = ["Ativo", "Ativo", "Em Analise", "Ativo", "Ativo", "Inativo", "Ativo", "Ativo"]
     return [
-        Cliente(
-            cliente_id=f"CLI-{index + 1:03d}",
+        Cluster(
+            id_=f"CLI-{index + 1:03d}",
             cluster=f"CLU-{(index % 5) + 1:03d}",
             score=scores[index],
             status=statuses[index],
