@@ -127,6 +127,53 @@ $$
 
 O coeficiente $c_k$ pode ser interpretado como o retorno líquido marginal esperado por unidade monetária de limite ofertado ao cluster $k$. Como todos os fatores em $c_k$ são parâmetros, a função objetivo é linear em $L_k$, caracterizando um problema de Programação Linear (LP).
 
+#### Restrições
+
+As restrições do modelo traduzem regras prudenciais e operacionais do produto em limites matemáticos para o conjunto de soluções factíveis. Em todas elas, assume-se que o volume total de exposição é proporcional ao somatório dos limites ofertados ponderados pelo tamanho dos clusters, isto é, $E = \sum_{k=1}^{K} n_k L_k$.
+
+**(R0) Não negatividade (domínio).** Como o limite é uma quantia monetária ofertada, impõe-se:
+$$
+L_k \ge 0,\quad \forall k \in \{1,\dots,K\}.
+$$
+
+**(R1) Teto de inadimplência financeira (risco ponderado por exposição).** Para controlar o risco agregado da carteira em termos financeiros, limita-se a inadimplência média ponderada pela exposição. Na forma de razão, tem-se:
+$$
+\frac{\sum_{k=1}^{K} n_k \cdot PD_k^{cal} \cdot L_k}{\sum_{k=1}^{K} n_k \cdot L_k}
+\le \overline{PD}_{fin}^{atual}.
+$$
+
+Para manter o modelo linear, a restrição é escrita na forma equivalente (multiplicando ambos os lados por $\sum_{k} n_k L_k$, que é não negativa e estritamente positiva em qualquer solução não-trivial):
+$$
+\sum_{k=1}^{K} n_k \cdot PD_k^{cal} \cdot L_k
+\le
+\overline{PD}_{fin}^{atual}\cdot \sum_{k=1}^{K} n_k \cdot L_k.
+$$
+
+Essa formulação garante que, mesmo que o otimizador aumente limites em clusters rentáveis, a carteira resultante não ultrapasse o patamar de risco financeiro observado/aceito na política vigente.
+
+**(R2) Restrição de capacidade de pagamento (alavancagem por cluster).** Para evitar concessões desproporcionais à capacidade de pagamento do perfil, o limite do cluster $k$ é limitado por uma fração $m_k$ da capacidade representativa $CP_k$:
+$$
+L_k \le m_k \cdot CP_k,\quad \forall k.
+$$
+O multiplicador $m_k$ reflete faixas de política (por exemplo, derivadas do `score_credito_cross`), enquanto $CP_k$ consolida a informação de renda/capacidade em nível de cluster (por exemplo, via percentil inferior para robustez).
+
+**(R3) Teto operacional de limite por oferta.** Por diretriz operacional, cada oferta possui limite máximo:
+$$
+L_k \le L^{max},\quad \forall k.
+$$
+
+**(R4) Concentração máxima por cluster (diversificação).** Para evitar que a exposição total se concentre excessivamente em um único perfil, limita-se a participação de cada cluster na exposição total:
+$$
+n_k \cdot L_k \le \alpha \cdot \sum_{j=1}^{K} n_j \cdot L_j,\quad \forall k.
+$$
+Como $\alpha$ é constante, essa restrição é linear e induz diversificação, reduzindo sensibilidade a erros de estimação em um único cluster.
+
+**(R5) Piso de produção (meta comercial).** Para garantir um nível mínimo de volume de limites ofertados (quando aplicável), impõe-se:
+$$
+\sum_{k=1}^{K} n_k \cdot L_k \ge V^{min}.
+$$
+Quando $V^{min}=0$, a restrição é inativa; valores positivos representam metas comerciais definidas pelo parceiro.
+
 ### 2.4 Implementação do algoritmo
 
 [Descrição do algoritmo implementado e suas etapas.]
