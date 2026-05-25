@@ -86,27 +86,20 @@ def calcular_cj_zj(coluna: list[float], cj: float, contributions: list[float]) -
 
 def simplex(problema: Problema) -> tuple[list[float], float, str]:
     """
-    Resolve um problema de programação linear pelo método Simplex.
-
-    Parâmetros:
-        problema: instância de Problema contendo c, A e b
-
-    Retorna:
-        x      : lista com o valor ótimo de cada variável de decisão (tamanho n)
-        z      : valor ótimo da função objetivo
-        status : "otimo", "multiplas_solucoes" ou "ilimitado"
-
-    Raises:
-        ValueError: se o problema for ilimitado
+    Executa o algoritmo Simplex clássico exato com captura de logs por iteração.
     """
-    n = len(problema.c)  # número de variáveis de decisão
-    m = len(problema.b)  # número de restrições
+    n = len(problema.c)
+    m = len(problema.b)
 
+    logger.info(f"Iniciando Simplex. Variáveis de decisão (N): {n} | Restrições (M): {m}")
+    
     tableau = construir_tableau_inicial(problema)
+    
+    # CORREÇÃO AQUI: Iniciamos em 1 e controlamos o incremento com segurança
+    iteracao = 1
 
     while True:
-        iteracao += 1
-# 1. Calcula Z_j e C_j - Z_j
+        # 1. Calcula Z_j e C_j - Z_j
         todos_cj_zj = []
 
         # Para variáveis de decisão x
@@ -119,10 +112,14 @@ def simplex(problema: Problema) -> tuple[list[float], float, str]:
             zj = sum(tableau.contributions[i] * tableau.s[j][i] for i in range(m))
             todos_cj_zj.append(0.0 - zj)
 
-
         # Calcula o valor atual de Z para o log de progresso
-        z_atual = sum(problema.c[j] * (tableau.values[tableau.base.index(j)] if j in tableau.base else 0.0) for j in range(n))
-
+        # Encontra o valor atual de cada x se ele estiver na base, caso contrário 0
+        z_atual = 0.0
+        for j in range(n):
+            if j in tableau.base:
+                idx_base = tableau.base.index(j)
+                z_atual += problema.c[j] * tableau.values[idx_base]
+        
         # 2. Verifica critério de parada (Regra de Bland com EPSILON)
         indice_entra = -1
         for j in range(len(todos_cj_zj)):
@@ -144,7 +141,6 @@ def simplex(problema: Problema) -> tuple[list[float], float, str]:
         menor_razao = float("inf")
 
         for i in range(m):
-            # Obtém o coeficiente correto da variável que entra
             if indice_entra < n:
                 coeficiente = tableau.x[indice_entra][i]
             else:
@@ -172,14 +168,14 @@ def simplex(problema: Problema) -> tuple[list[float], float, str]:
         else:
             elemento_pivo = tableau.s[indice_entra - n][indice_sai]
 
-        # Divide a linha do pivô
+        # Divide a linha do pivô pelo elemento pivô
         tableau.values[indice_sai] /= elemento_pivo
         for j in range(n):
             tableau.x[j][indice_sai] /= elemento_pivo
         for j in range(m):
             tableau.s[j][indice_sai] /= elemento_pivo
 
-        # Zera os elementos acima e abaixo do pivô nas outras linhas
+        # Zera os elements acima e abaixo do pivô nas outras linhas
         for i in range(m):
             if i != indice_sai:
                 if indice_entra < n:
@@ -193,11 +189,14 @@ def simplex(problema: Problema) -> tuple[list[float], float, str]:
                 for j in range(m):
                     tableau.s[j][i] -= fator * tableau.s[j][indice_sai]
 
-        # Atualiza a base
+        # Atualiza as estruturas da base
         tableau.base[indice_sai] = indice_entra
         tableau.contributions[indice_sai] = (
             problema.c[indice_entra] if indice_entra < n else 0.0
         )
+        
+        # Incrementa o número da iteração para o próximo ciclo
+        iteracao += 1
 
     # Monta o vetor de solução final
     x_final = [0.0] * n
@@ -205,9 +204,9 @@ def simplex(problema: Problema) -> tuple[list[float], float, str]:
         if tableau.base[i] < n:
             x_final[tableau.base[i]] = max(0.0, tableau.values[i])
 
-    # Calcula o valor ótimo de Z
+    # Calcula o valor ótimo final de Z
     z_otimo = sum(problema.c[j] * x_final[j] for j in range(n))
-
+    
     logger.info(f"Simplex finalizado com status: '{status.upper()}'. Total de iterações: {iteracao}. Z Ótimo = {z_otimo:.2f}")
 
     return x_final, z_otimo, status
