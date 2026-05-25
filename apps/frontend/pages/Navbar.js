@@ -21,15 +21,13 @@ var Navbar = function(props) {
   ];
 
   return (
-    <aside className="fixed left-0 top-0 bottom-0 w-56 bg-white border-r border-slate-200 flex flex-col z-40 shadow-sm">
+    <aside className="fixed left-0 top-0 bottom-0 w-56 bg-[#F0EEE4] border-r border-slate-200 flex flex-col z-40 shadow-sm">
       <div className="px-5 py-5 border-b border-slate-100">
         <div className="flex items-center gap-2.5">
-          <div className="w-8 h-8 rounded-lg bg-sky-500 flex items-center justify-center flex-shrink-0">
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="white" strokeWidth="2.5"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
-          </div>
+          <img src="assets/Logo_PAN.jpg" alt="Banco PAN" className="h-8 w-auto rounded-lg object-contain flex-shrink-0" />
           <div>
             <div className="text-sm font-bold text-slate-800 leading-tight">Banco PAN</div>
-            <div className="text-[10px] text-slate-400 leading-tight">Otimização de Limites</div>
+            <div className="text-[10px] text-slate-400 leading-tight">Otimizador de Limites</div>
           </div>
         </div>
       </div>

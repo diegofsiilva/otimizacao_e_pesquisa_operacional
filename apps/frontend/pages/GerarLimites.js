@@ -1,12 +1,19 @@
 // pages/GerarLimites.js  –  Deps globals: CLUSTERS_UPLOAD, fmt
 
-var GerarLimites = function() {
+var GerarLimites = function(props) {
+  var setPage = props.setPage;
   var s1 = React.useState(null);  var file = s1[0]; var setFile = s1[1];
   var s2 = React.useState(false); var drag = s2[0]; var setDrag = s2[1];
+  var s3 = React.useState(false); var ran  = s3[0]; var setRan  = s3[1];
+  var s4 = React.useState(false); var running = s4[0]; var setRunning = s4[1];
   var inputRef = React.useRef(null);
 
-  function handleFile(f) { if (f) setFile(f); }
+  function handleFile(f) { if (f) { setFile(f); setRan(false); } }
   function onDrop(e) { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]); }
+  function handleExecutar() {
+    setRunning(true);
+    setTimeout(function() { setRunning(false); setRan(true); }, 1200);
+  }
 
   var total  = CLUSTERS_UPLOAD.length;
   var viavel = CLUSTERS_UPLOAD.filter(function(c) { return c.status === 'viavel'; }).length;
@@ -24,7 +31,7 @@ var GerarLimites = function() {
         <p className="text-sm font-semibold text-slate-700 mb-3">Fazer Upload</p>
         <div
           className={'upload-zone flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-14 px-6 cursor-pointer '
-            + (drag ? 'border-sky-400 bg-sky-50' : file ? 'border-green-400 bg-green-50' : 'border-slate-300 bg-white hover:border-sky-400 hover:bg-sky-50')}
+            + (drag ? 'border-sky-400 bg-sky-50' : file ? 'border-green-400 bg-green-50' : 'border-slate-300 bg-[#F0EEE4] hover:border-sky-400 hover:bg-sky-50')}
           onDragOver={function(e) { e.preventDefault(); setDrag(true); }}
           onDragLeave={function() { setDrag(false); }}
           onDrop={onDrop}
@@ -52,8 +59,32 @@ var GerarLimites = function() {
         </div>
       </div>
 
+      {/* Botão executar – aparece após upload, antes de rodar */}
+      {file && !ran && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleExecutar}
+            disabled={running}
+            className={'flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm '
+              + (running ? 'bg-sky-300 text-white cursor-not-allowed' : 'bg-sky-500 text-white hover:bg-sky-600')}>
+            {running ? (
+              <>
+                <svg className="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0"/></svg>
+                Executando...
+              </>
+            ) : (
+              <>
+                <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Executar Simplex
+              </>
+            )}
+          </button>
+          <span className="text-xs text-slate-400">Arquivo: {file.name}</span>
+        </div>
+      )}
+
       {/* Resultado */}
-      {file && (
+      {ran && (
         <div className="space-y-4">
           <div className="flex items-center gap-2 text-base font-semibold text-slate-800">
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#0ea5e9" strokeWidth="2.5">
@@ -64,22 +95,22 @@ var GerarLimites = function() {
 
           {/* Mini cards */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+            <div className="bg-[#F0EEE4] rounded-xl border border-slate-200 shadow-sm p-5">
               <div className="text-xs font-medium text-slate-500 mb-1">Total de Clusters</div>
               <div className="text-3xl font-bold text-slate-800">{total}</div>
             </div>
-            <div className="bg-white rounded-xl border border-green-200 shadow-sm p-5">
+            <div className="bg-[#F0EEE4] rounded-xl border border-green-200 shadow-sm p-5">
               <div className="text-xs font-medium text-green-600 mb-1">Com Solução Viável</div>
               <div className="text-3xl font-bold text-green-600">{viavel}</div>
             </div>
-            <div className="bg-white rounded-xl border border-amber-200 shadow-sm p-5">
-              <div className="text-xs font-medium text-amber-600 mb-1">Sem Solução</div>
-              <div className="text-3xl font-bold text-amber-500">{sem}</div>
+            <div className="bg-[#F0EEE4] rounded-xl border border-amber-200 shadow-sm p-5">
+              <div className="text-xs font-medium text-amber-700 mb-1">Sem Solução</div>
+              <div className="text-3xl font-bold text-amber-700">{sem}</div>
             </div>
           </div>
 
           {/* Tabela */}
-          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+          <div className="bg-[#F0EEE4] rounded-xl border border-slate-200 shadow-sm overflow-hidden">
             <table className="w-full text-sm">
               <thead>
                 <tr className="bg-slate-800">
@@ -112,6 +143,16 @@ var GerarLimites = function() {
                 })}
               </tbody>
             </table>
+          </div>
+
+          {/* CTA navegação */}
+          <div className="flex justify-end">
+            <button
+              onClick={function() { if (setPage) setPage('resultados'); }}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-sky-600 border border-sky-300 bg-sky-50 hover:bg-sky-100 transition-colors">
+              Ver análise completa em Resultados
+              <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+            </button>
           </div>
         </div>
       )}

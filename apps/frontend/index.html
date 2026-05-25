@@ -39,7 +39,7 @@
     ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
   </style>
 </head>
-<body class="bg-slate-100 text-slate-900 antialiased">
+<body class="bg-[#DDD9CC] text-slate-900 antialiased">
 
   <div id="root"></div>
 
@@ -63,12 +63,12 @@
 
       var views = {
         dashboard:  <Dashboard />,
-        gerar:      <GerarLimites />,
+        gerar:      <GerarLimites setPage={setPage} />,
         resultados: <Resultados />,
       };
 
       return (
-        <div className="min-h-screen bg-slate-100 flex">
+        <div className="min-h-screen bg-[#DDD9CC] flex">
           <Navbar page={page} setPage={setPage} onConfig={function(){ setCfgOpen(true); }} />
           <main className="ml-56 flex-1 p-8" style={{ maxWidth: '1200px' }}>
             {views[page]}

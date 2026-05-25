@@ -7,7 +7,7 @@ var Resultados = function() {
   var TooltipLimite = function(props) {
     if (!props.active || !props.payload || !props.payload.length) return null;
     return (
-      <div className="bg-white border border-slate-200 rounded-lg shadow-lg px-3 py-2 text-xs">
+      <div className="bg-[#F0EEE4] border border-slate-200 rounded-lg shadow-lg px-3 py-2 text-xs">
         <p className="font-semibold text-slate-700">{props.payload[0].payload.name}</p>
         <p className="text-sky-600">Limite: {fmt(props.payload[0].value)}</p>
       </div>
@@ -34,7 +34,7 @@ var Resultados = function() {
       <div className="grid grid-cols-4 gap-4">
         {KPIs.map(function(k) {
           return (
-            <div key={k.label} className={'bg-white rounded-xl border shadow-sm p-5 ' + (k.highlight ? 'border-sky-300 bg-sky-50' : 'border-slate-200')}>
+            <div key={k.label} className={'bg-[#F0EEE4] rounded-xl border shadow-sm p-5 ' + (k.highlight ? 'border-sky-300 bg-sky-50' : 'border-slate-200')}>
               <div className="text-xs font-medium text-slate-500 mb-2">{k.label}</div>
               <div className={'text-2xl font-bold mb-1 ' + (k.highlight ? 'text-sky-600' : 'text-slate-800')}>{k.value}</div>
               <div className="text-xs text-slate-500">{k.sub}</div>
@@ -45,7 +45,7 @@ var Resultados = function() {
 
       {/* Gráficos linha 1 */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+        <div className="bg-[#F0EEE4] rounded-xl border border-slate-200 shadow-sm p-5">
           <div className="text-sm font-semibold text-slate-800 mb-4">Limites por Cluster</div>
           <RC.ResponsiveContainer width="100%" height={220}>
             <RC.BarChart data={CLUSTER_LIMITES} margin={{ top:4, right:8, left:0, bottom:4 }}>
@@ -59,7 +59,7 @@ var Resultados = function() {
           </RC.ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+        <div className="bg-[#F0EEE4] rounded-xl border border-slate-200 shadow-sm p-5">
           <div className="text-sm font-semibold text-slate-800 mb-4">Distribuição por Status</div>
           <div className="flex items-center gap-6">
             <RC.ResponsiveContainer width={180} height={180}>
@@ -87,7 +87,7 @@ var Resultados = function() {
       </div>
 
       {/* ── Comparação Simplex vs PuLP ──────────────────────────── */}
-      <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+      <div className="bg-[#F0EEE4] rounded-xl border border-slate-200 shadow-sm p-5">
         <div className="mb-1 text-sm font-semibold text-slate-800">Comparação de Solvers: Simplex vs PuLP</div>
         <div className="text-xs text-slate-400 mb-5">Validação da solução ótima com biblioteca externa (PuLP / CBC)</div>
 
@@ -157,7 +157,7 @@ var Resultados = function() {
 
       {/* Gráficos linha 2 */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+        <div className="bg-[#F0EEE4] rounded-xl border border-slate-200 shadow-sm p-5">
           <div className="text-sm font-semibold text-slate-800 mb-4">Evolução Temporal de Limites</div>
           <RC.ResponsiveContainer width="100%" height={190}>
             <RC.LineChart data={EVOLUCAO} margin={{ top:4, right:8, left:0, bottom:4 }}>
@@ -172,7 +172,7 @@ var Resultados = function() {
           </RC.ResponsiveContainer>
         </div>
 
-        <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+        <div className="bg-[#F0EEE4] rounded-xl border border-slate-200 shadow-sm p-5">
           <div className="text-sm font-semibold text-slate-800 mb-4">Distribuição por Faixa de Score</div>
           <RC.ResponsiveContainer width="100%" height={190}>
             <RC.AreaChart data={SCORE_DIST} margin={{ top:4, right:8, left:0, bottom:4 }}>
