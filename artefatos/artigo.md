@@ -38,7 +38,31 @@ Esta seção descreve o _pipeline_ metodologico adotado no estudo, desde a carac
 
 ### 2.1 Dados utilizados
 
-[Descrição dos dados de entrada, fontes, volume e variáveis relevantes.]
+Os dados foram fornecidos pelo **Banco Pan** em três tabelas correspondentes a safras temporais (M1, M2, e M3), contendo clientes correntistas com variáveis de perfil, risco capacidade de pagamento e comportamento. A base total tem cerca de 15 milhões de clientes por safra, das quais uma fração é elegível ao produto e segue para a etapa de otimização. A Tabela 1 resume as variáveis utilizadas diretamente no modelo e seu papel na formulação; as demais colunas são usadas apenas para controle a análises descritivas. As restrições e o papel na função associadas a essas variáveis são detalhadas na Seção 2.3.
+
+**Tabela 1 — Variáveis fornecidas pelo parceiro (estatísticas da safra M1)**
+
+| Variável                     | Descrição                                     | Estatísticas (M1)                                                  | Papel no modelo |
+|:-----------------------------|:----------------------------------------------|:-------------------------------------------------------------------|:---------------|
+| `token`                      | Identificador anônimo por safra               | 0 a 14.569.141                                                     | Chave de identificação |
+| `safra_ref_uso`              | Safra de referência                           | M1, M2, M3                                                         | Permite backtesting entre safras |
+| `score_interno`              | Score de crédito interno                      | min=54, med=292, max=975                                           | Não usado diretamente; gera `pd_produto` |
+| `pd_produto`                 | Probabilidade de default no produto           | min=0,025, med=0,71, max=0,946                                     | Parâmetro de risco na função objetivo e na restrição R1 |
+| `score_generico_1`           | Score de bureau (bureau 1)                    | min=49, med=409, max=995. Nulls: 0,1%                              | Variável de segmentação para clusterização |
+| `score_generico_2`           | Score de bureau (bureau 2)                    | min=1, med=713, max=942. Nulls: <0,01%                             | Variável de segmentação para clusterização |
+| `capacidade_pagamento`       | Estimativa interna de capacidade de pagamento | min=0, med=548, max=25.000. Nulls: 0,3% M1; 42,2% M2; 43,5% M3     | Restrição R2 (alavancagem) |
+| `delta_capacidade_pagamento` | Capacidade deduzida dos saldos a vencer       | min=−25.000, med=55, max=25.000. Nulls: idem                       | Variante conservadora (apoio à análise) |
+| `renda_estimada`             | Estimativa interna de renda                   | min=1.275, med=1.908, max=17.950. Nulls: 0,3%                      | Proxy para R2 quando `capacidade_pagamento` é nula |
+| `fx_idade`                   | Faixa etária                                  | 9 faixas: 21–30 (35,5%), 31–40 (31,1%), 41–50 (18,8%)              | Segmentação e análise de resultados |
+| `flag_filtros`               | Indicador de perfil restrito                  | 0 = elegível (1,84M), 1 = restrito (12,73M)                        | Filtro de elegibilidade |
+| `score_propensao_contrato`   | Score de propensão à conversão                | min=3, med=315, max=846                                            | Parâmetro de conversão na função objetivo |
+| `score_credito_cross`        | Score de crédito multiproduto                 | min=103, med=706, max=954                                          | Define a faixa de alavancagem do cluster (mₖ) |
+| `limite_ofertado`            | Limite ofertado na política atual             | min=200, med=806, max=20.000. 99,2% null                           | Baseline para backtesting |
+| `flag_contrato`              | Indicadora de contratação (1 = contratou)     | 6.506 (0,04%)                                                      | Backtesting (conversão) |
+| `flag_ativacao`              | Indicadora de ativação (1 = ativou)           | 5.704 (87,7% dos que contrataram)                                  | Backtesting (ativação) |
+| `over30mob3`                 | Atraso >30 dias nas 3 primeiras parcelas      | 4.966 válidos, 377 eventos (7,6%). 99,97% null                     | Inadimplência observada (viés de seleção) |
+
+Além das variáveis das três safras, alguns parâmetros necessários à formulação do modelo foram informados diretamente pelo parceiro (por exemplo, taxa de _interchange_, LGD e horizonte de receita). Esses valores são tratados como constantes na formulação e são apresentados explicitamente na seção 2.3, junto com a função objetivo e as restrições.
 
 ### 2.2 Pré-processamento
 
