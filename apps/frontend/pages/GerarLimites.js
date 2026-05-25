@@ -1,143 +1,108 @@
-// ─────────────────────────────────────────
-//  pages/GerarLimites.js  –  upload de base + tabela de clusters
-//  Depende de: data.js (CLUSTERS_UPLOAD, fmt)
-// ─────────────────────────────────────────
+// pages/GerarLimites.js  –  Deps globals: CLUSTERS_UPLOAD, fmt
 
 var GerarLimites = function() {
-  var _f = React.useState(null);
-  var file = _f[0];
-  var setFile = _f[1];
+  var s1 = React.useState(null);  var file = s1[0]; var setFile = s1[1];
+  var s2 = React.useState(false); var drag = s2[0]; var setDrag = s2[1];
+  var inputRef = React.useRef(null);
 
-  var _d = React.useState(false);
-  var drag = _d[0];
-  var setDrag = _d[1];
-
-  var inputRef = React.useRef();
-
-  function handleFile(f) {
-    if (f) setFile(f);
-  }
-
-  function onDrop(e) {
-    e.preventDefault();
-    setDrag(false);
-    handleFile(e.dataTransfer.files[0]);
-  }
+  function handleFile(f) { if (f) setFile(f); }
+  function onDrop(e) { e.preventDefault(); setDrag(false); handleFile(e.dataTransfer.files[0]); }
 
   var total  = CLUSTERS_UPLOAD.length;
   var viavel = CLUSTERS_UPLOAD.filter(function(c) { return c.status === 'viavel'; }).length;
-  var sem    = CLUSTERS_UPLOAD.filter(function(c) { return c.status === 'sem'; }).length;
-
-  var zoneClass = 'upload-zone'
-    + (drag ? ' drag' : '')
-    + (file ? ' has-file' : '');
+  var sem    = total - viavel;
 
   return (
-    <div className="page">
-      <h1 className="page-title">Carregar Base &amp; Gerar Limites</h1>
-      <div className="page-title-underline" />
+    <div className="space-y-6">
+      <div>
+        <h1 className="text-xl font-bold text-slate-800">Carregar Base &amp; Gerar Limites</h1>
+        <div className="mt-1 h-0.5 w-10 bg-sky-500 rounded-full" />
+      </div>
 
-      {/* Upload */}
-      <div style={{ marginBottom: 24 }}>
-        <p style={{ fontWeight:600, marginBottom:12, fontSize:14 }}>Fazer Upload</p>
+      {/* Dropzone */}
+      <div>
+        <p className="text-sm font-semibold text-slate-700 mb-3">Fazer Upload</p>
         <div
-          className={zoneClass}
+          className={'upload-zone flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-14 px-6 cursor-pointer '
+            + (drag ? 'border-sky-400 bg-sky-50' : file ? 'border-green-400 bg-green-50' : 'border-slate-300 bg-white hover:border-sky-400 hover:bg-sky-50')}
           onDragOver={function(e) { e.preventDefault(); setDrag(true); }}
           onDragLeave={function() { setDrag(false); }}
           onDrop={onDrop}
           onClick={function() { inputRef.current.click(); }}
         >
-          <input
-            ref={inputRef}
-            type="file"
-            accept=".csv,.xlsx"
-            style={{ display:'none' }}
-            onChange={function(e) { handleFile(e.target.files[0]); }}
-          />
-
-          <div className="upload-icon-wrap">
-            <svg width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="#64748b" strokeWidth="2">
+          <input ref={inputRef} type="file" accept=".csv,.xlsx" className="hidden"
+            onChange={function(e) { handleFile(e.target.files[0]); }} />
+          <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+            <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#64748b" strokeWidth="2">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/>
-              <line x1="12" y1="3" x2="12" y2="15"/>
+              <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
             </svg>
           </div>
-
           {file ? (
             <>
-              <p className="upload-main">Arquivo carregado: {file.name}</p>
-              <p className="upload-sub">Clique para substituir ou arraste outro arquivo</p>
+              <p className="text-sm font-semibold text-slate-700">Arquivo carregado: {file.name}</p>
+              <p className="text-xs text-slate-400">Clique para substituir ou arraste outro arquivo</p>
             </>
           ) : (
             <>
-              <p className="upload-main">Arraste seu arquivo aqui ou clique para selecionar</p>
-              <p className="upload-sub">Formatos suportados: CSV, XLSX</p>
+              <p className="text-sm font-semibold text-slate-700">Arraste seu arquivo aqui ou clique para selecionar</p>
+              <p className="text-xs text-slate-400">Formatos suportados: CSV, XLSX</p>
             </>
           )}
         </div>
       </div>
 
-      {/* Resultado do upload */}
+      {/* Resultado */}
       {file && (
-        <div>
-          <div style={{ display:'flex', alignItems:'center', gap:8, marginBottom:16, fontWeight:600, fontSize:16 }}>
+        <div className="space-y-4">
+          <div className="flex items-center gap-2 text-base font-semibold text-slate-800">
             <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#0ea5e9" strokeWidth="2.5">
-              <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
-              <polyline points="16 7 22 7 22 13"/>
+              <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
             </svg>
             Limites Gerados por Cluster
           </div>
 
           {/* Mini cards */}
-          <div className="cluster-stats">
-            <div className="cluster-stat-card">
-              <div className="cluster-stat-label">Total de Clusters</div>
-              <div className="cluster-stat-val">{total}</div>
+          <div className="grid grid-cols-3 gap-4">
+            <div className="bg-white rounded-xl border border-slate-200 shadow-sm p-5">
+              <div className="text-xs font-medium text-slate-500 mb-1">Total de Clusters</div>
+              <div className="text-3xl font-bold text-slate-800">{total}</div>
             </div>
-            <div className="cluster-stat-card green">
-              <div className="cluster-stat-label">Com Solução Viável</div>
-              <div className="cluster-stat-val green">{viavel}</div>
+            <div className="bg-white rounded-xl border border-green-200 shadow-sm p-5">
+              <div className="text-xs font-medium text-green-600 mb-1">Com Solução Viável</div>
+              <div className="text-3xl font-bold text-green-600">{viavel}</div>
             </div>
-            <div className="cluster-stat-card yellow">
-              <div className="cluster-stat-label">Sem Solução</div>
-              <div className="cluster-stat-val yellow">{sem}</div>
+            <div className="bg-white rounded-xl border border-amber-200 shadow-sm p-5">
+              <div className="text-xs font-medium text-amber-600 mb-1">Sem Solução</div>
+              <div className="text-3xl font-bold text-amber-500">{sem}</div>
             </div>
           </div>
 
           {/* Tabela */}
-          <div className="section-card" style={{ padding:0, overflow:'hidden' }}>
-            <table className="table-dark">
+          <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+            <table className="w-full text-sm">
               <thead>
-                <tr>
-                  <th>Cluster ID</th>
-                  <th>Limite Sugerido</th>
-                  <th>Status</th>
+                <tr className="bg-slate-800">
+                  {['Cluster ID','Limite Sugerido','Status'].map(function(h) {
+                    return <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide">{h}</th>;
+                  })}
                 </tr>
               </thead>
               <tbody>
                 {CLUSTERS_UPLOAD.map(function(c) {
                   return (
-                    <tr key={c.id}>
-                      <td style={{ fontWeight:500 }}>{c.id}</td>
-                      <td style={{ fontWeight:500 }}>
-                        {c.limite ? fmt(c.limite) + ',00' : '—'}
-                      </td>
-                      <td>
+                    <tr key={c.id} className="border-b border-slate-50 hover:bg-slate-50">
+                      <td className="px-4 py-3 font-medium text-slate-800">{c.id}</td>
+                      <td className="px-4 py-3 font-medium text-slate-700">{c.limite ? fmt(c.limite) + ',00' : '—'}</td>
+                      <td className="px-4 py-3">
                         {c.status === 'viavel' ? (
-                          <span className="badge badge-viavel">
-                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#16a34a" strokeWidth="2.5">
-                              <circle cx="12" cy="12" r="10"/>
-                              <path d="M9 12l2 2 4-4"/>
-                            </svg>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-50 text-green-700 border border-green-200">
+                            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/></svg>
                             Solução Viável
                           </span>
                         ) : (
-                          <span className="badge badge-sem">
-                            <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="#dc2626" strokeWidth="2.5">
-                              <circle cx="12" cy="12" r="10"/>
-                              <line x1="15" y1="9" x2="9" y2="15"/>
-                              <line x1="9"  y1="9" x2="15" y2="15"/>
-                            </svg>
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-50 text-red-600 border border-red-200">
+                            <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>
                             Sem Solução
                           </span>
                         )}

@@ -1,119 +1,128 @@
 // ─────────────────────────────────────────
 //  data.js  –  dados globais + helpers de UI
-//  Carregado como type="text/babel" antes das páginas.
-//  Usa `var` para que cada símbolo vire global (window.X).
+//  Carregado como <script src> antes dos pages.
+//  Usa `var` para expor tudo em window.
 // ─────────────────────────────────────────
 
-/* ── Dados ── */
+/* ── Clientes (Dashboard) ─────────────────────────────────── */
 var CLIENTS = [
-  { id:'CLI-001', score:850, status:'Ativo',      limite:5000,  cadastro:'14/01/2024' },
-  { id:'CLI-002', score:720, status:'Ativo',      limite:3500,  cadastro:'19/02/2024' },
-  { id:'CLI-003', score:620, status:'Em Análise', limite:null,  cadastro:'09/03/2024' },
-  { id:'CLI-004', score:910, status:'Ativo',      limite:12500, cadastro:'04/11/2023' },
-  { id:'CLI-005', score:780, status:'Ativo',      limite:8000,  cadastro:'27/01/2024' },
-  { id:'CLI-006', score:450, status:'Inativo',    limite:null,  cadastro:'11/08/2023' },
-  { id:'CLI-007', score:950, status:'Ativo',      limite:15000, cadastro:'29/09/2023' },
-  { id:'CLI-008', score:680, status:'Ativo',      limite:4200,  cadastro:'13/02/2024' },
+  { id: 'CLI-001', score: 850, status: 'Ativo',    limite: 5000,  cadastro: '14/01/2024' },
+  { id: 'CLI-002', score: 620, status: 'Pendente', limite: null,  cadastro: '02/02/2024' },
+  { id: 'CLI-003', score: 780, status: 'Ativo',    limite: 3200,  cadastro: '19/01/2024' },
+  { id: 'CLI-004', score: 430, status: 'Inativo',  limite: null,  cadastro: '05/03/2024' },
+  { id: 'CLI-005', score: 910, status: 'Ativo',    limite: 8500,  cadastro: '22/01/2024' },
+  { id: 'CLI-006', score: 540, status: 'Pendente', limite: null,  cadastro: '11/03/2024' },
+  { id: 'CLI-007', score: 720, status: 'Ativo',    limite: 2800,  cadastro: '28/02/2024' },
+  { id: 'CLI-008', score: 680, status: 'Ativo',    limite: 4100,  cadastro: '07/03/2024' },
 ];
 
+/* ── Gráficos – Resultados ────────────────────────────────── */
 var CLUSTER_LIMITES = [
-  { name:'CLU-001', limite:4000  },
-  { name:'CLU-002', limite:3500  },
-  { name:'CLU-003', limite:2000  },
-  { name:'CLU-004', limite:12000 },
-  { name:'CLU-005', limite:8000  },
-  { name:'CLU-006', limite:1500  },
-  { name:'CLU-007', limite:15500 },
+  { name: 'CLU-1', limite: 250   },
+  { name: 'CLU-2', limite: 0     },
+  { name: 'CLU-3', limite: 0     },
+  { name: 'CLU-4', limite: 0     },
+  { name: 'CLU-5', limite: 18500 },
+  { name: 'CLU-6', limite: 1600  },
+  { name: 'CLU-7', limite: 0     },
 ];
 
 var STATUS_PIE = [
-  { name:'Ativo',      value:84, color:'#22c55e' },
-  { name:'Em Análise', value:6,  color:'#eab308' },
-  { name:'Inativo',    value:10, color:'#ef4444' },
+  { name: 'Ativo',    value: 84, color: '#22c55e' },
+  { name: 'Inativo',  value:  6, color: '#f87171' },
+  { name: 'Pendente', value: 10, color: '#fbbf24' },
 ];
 
 var EVOLUCAO = [
-  { mes:'Jan', valor:8.0  },
-  { mes:'Fev', valor:8.5  },
-  { mes:'Mar', valor:10.0 },
-  { mes:'Abr', valor:11.5 },
-  { mes:'Mai', valor:12.0 },
-  { mes:'Jun', valor:13.5 },
-  { mes:'Jul', valor:15.7 },
+  { mes: 'Jan', valor: 8.0  },
+  { mes: 'Fev', valor: 9.2  },
+  { mes: 'Mar', valor: 10.1 },
+  { mes: 'Abr', valor: 11.4 },
+  { mes: 'Mai', valor: 13.0 },
+  { mes: 'Jun', valor: 15.7 },
 ];
 
 var SCORE_DIST = [
-  { score:300, n:50  }, { score:400, n:180 }, { score:500, n:420 },
-  { score:600, n:730 }, { score:700, n:1150}, { score:800, n:950 },
-  { score:900, n:600 }, { score:1000,n:180 },
+  { score: '300-400', n: 50  },
+  { score: '400-500', n: 120 },
+  { score: '500-600', n: 280 },
+  { score: '600-700', n: 410 },
+  { score: '700-800', n: 260 },
+  { score: '800-900', n: 100 },
+  { score: '900+',    n:  27 },
 ];
 
+/* ── Comparação Simplex vs PuLP (resultados reais) ──────────── */
+var SOLVER_COMPARISON = {
+  simplex: {
+    label: 'Simplex (próprio)',
+    z: 81240312.34,
+    status: 'Ótimo',
+    tempo_ms: 142,
+    clusters: [
+      { id: 'CLU-1', limite: 250   },
+      { id: 'CLU-2', limite: 0     },
+      { id: 'CLU-3', limite: 0     },
+      { id: 'CLU-4', limite: 0     },
+      { id: 'CLU-5', limite: 18500 },
+      { id: 'CLU-6', limite: 1600  },
+      { id: 'CLU-7', limite: 0     },
+    ],
+  },
+  pulp: {
+    label: 'PuLP / CBC',
+    z: 81240312.70,
+    status: 'Ótimo',
+    tempo_ms: 310,
+    clusters: [
+      { id: 'CLU-1', limite: 250   },
+      { id: 'CLU-2', limite: 0     },
+      { id: 'CLU-3', limite: 0     },
+      { id: 'CLU-4', limite: 0     },
+      { id: 'CLU-5', limite: 18500 },
+      { id: 'CLU-6', limite: 1600  },
+      { id: 'CLU-7', limite: 0     },
+    ],
+  },
+  delta_z_pct: 0.0,
+  pd_fin_atual: 0.1375,
+};
+
+/* ── Parâmetros configuráveis ─────────────────────────────── */
 var PARAMS_EDITAVEIS = [
-  { key:'t',     label:'Taxa de interchange',           value:0.0115, min:0, max:0.05,  step:0.0001 },
-  { key:'LGD',   label:'Loss Given Default',            value:0.6,    min:0, max:1,     step:0.01   },
-  { key:'u_bar', label:'Utilização esperada do Limite', value:0.75,   min:0, max:1,     step:0.01   },
-  { key:'L_max', label:'Teto máximo de Limite',         value:25000,  min:0, max:50000, step:500    },
+  { key: 't',     label: 'Taxa de interchange',      value: 0.0115, min: 0,    max: 0.05,   step: 0.0001 },
+  { key: 'pd',    label: 'Probabilidade de Default', value: 0.05,   min: 0,    max: 0.3,    step: 0.001  },
+  { key: 'L_max', label: 'Limite máximo (R$)',       value: 50000,  min: 1000, max: 200000, step: 1000   },
 ];
 
 var PARAMS_NAO_EDITAVEIS = [
-  { label:'Taxa de interchange', value:'0.0115' },
-  { label:'Taxa de interchange', value:'0.0115' },
-  { label:'Taxa de interchange', value:'0.0115' },
-  { label:'Taxa de interchange', value:'0.0115' },
+  { label: 'Custo de capital (Ke)',    value: '14,25%' },
+  { label: 'Custo de funding (Kd)',    value: '11,50%' },
+  { label: 'Taxa de recuperação (RR)', value: '30%'    },
+  { label: 'Exposição padrão (EAD)',   value: 'Limite' },
+  { label: 'LGD',                      value: '70%'    },
+  { label: 'PD financeiro atual',      value: '13,75%' },
 ];
 
+/* ── Clusters upload (GerarLimites) ──────────────────────── */
 var CLUSTERS_UPLOAD = [
-  { id:'CLU-001', limite:1500,  status:'viavel' },
-  { id:'CLU-002', limite:5000,  status:'viavel' },
-  { id:'CLU-003', limite:null,  status:'sem'    },
-  { id:'CLU-004', limite:200,   status:'viavel' },
-  { id:'CLU-005', limite:12500, status:'viavel' },
+  { id: 'CLU-001', limite: 1500,  status: 'viavel' },
+  { id: 'CLU-002', limite: 3200,  status: 'viavel' },
+  { id: 'CLU-003', limite: null,  status: 'sem'    },
+  { id: 'CLU-004', limite: 800,   status: 'viavel' },
+  { id: 'CLU-005', limite: null,  status: 'sem'    },
+  { id: 'CLU-006', limite: 5000,  status: 'viavel' },
+  { id: 'CLU-007', limite: 2100,  status: 'viavel' },
+  { id: 'CLU-008', limite: null,  status: 'sem'    },
+  { id: 'CLU-009', limite: 4400,  status: 'viavel' },
+  { id: 'CLU-010', limite: 900,   status: 'viavel' },
 ];
 
-/* ── Helpers de formatação ── */
+/* ── Helpers ─────────────────────────────────────────────── */
 var fmt = function(v) {
-  if (v == null) return '—';
-  return 'R$ ' + v.toLocaleString('pt-BR');
+  return 'R$ ' + Number(v).toLocaleString('pt-BR');
 };
 
-/* ── Componentes de UI reutilizáveis ── */
-var StatusBadge = function({ status }) {
-  var cls = status === 'Ativo' ? 'badge-ativo'
-          : status === 'Em Análise' ? 'badge-analise'
-          : 'badge-inativo';
-  return <span className={'badge ' + cls}>{status}</span>;
-};
-
-var ScoreBar = function({ score }) {
-  var pct = Math.round((score / 1000) * 100);
-  return (
-    <div className="score-cell">
-      <div className="score-bar-track">
-        <div className="score-bar-fill" style={{ width: pct + '%' }} />
-      </div>
-      <span className="score-val">{score}</span>
-    </div>
-  );
-};
-
-var DotsMenu = function() {
-  return (
-    <button style={{ background:'none', border:'none', cursor:'pointer', color:'#94a3b8', fontSize:18 }}>
-      ⋮
-    </button>
-  );
-};
-
-var TooltipLimite = function({ active, payload, label }) {
-  if (active && payload && payload.length) {
-    return (
-      <div style={{ background:'#fff', border:'1px solid #e2e8f0', borderRadius:8, padding:'8px 12px', fontSize:12 }}>
-        <p style={{ fontWeight:600, marginBottom:2 }}>{label}</p>
-        <p style={{ color:'#0ea5e9' }}>
-          R$ {payload[0].value.toLocaleString('pt-BR')}k
-        </p>
-      </div>
-    );
-  }
-  return null;
+var fmtZ = function(v) {
+  return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
