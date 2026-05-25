@@ -86,7 +86,9 @@ As queries foram adaptadas e aplicadas às bases listadas, respeitando as partic
 
 **Critérios de exclusão:** materiais sem densidade técnica; textos promocionais ou instrucionais voltados ao consumidor final; referências sem conexão com modelagem analítica, otimização ou apoio quantitativo à decisão de crédito; e trabalhos cujo foco principal não permitisse estabelecer relação com o problema de alocação, aprovação ou gestão de crédito.
 
-Após a etapa de triagem, foram selecionados quatro trabalhos para análise comparativa. Três deles foram escolhidos por sua aderência aos temas de otimização de portfólio de crédito via programação linear e identificação de risco financeiro via clusterização. Um quarto trabalho, mais antigo, foi incluído por sua relevância metodológica consolidada na integração entre modelagem econométrica e otimização aplicada à concessão de crédito.
+Após a etapa de triagem, foram selecionados três trabalhos para análise comparativa. O critério de seleção priorizou cobertura dos componentes técnicos centrais do projeto: programação linear aplicada a decisões de crédito (AL-MUSBAHU et al., 2025; KWAPONG, 2013) e clusterização para identificação de risco financeiro (LI; TAO; LI, 2022). Um trabalho adicional identificado na busca — Scarpel e Milioni (2002) — aborda a integração entre modelagem preditiva e otimização prescritiva em decisões de crédito, o que o aproxima conceitualmente do pipeline adotado neste projeto. Contudo, sua formulação emprega Programação Inteira sobre uma variável de decisão binária aplicada a crédito corporativo, contexto e natureza de decisão suficientemente distintos para que uma análise comparativa direta fosse de profundidade limitada. Por essa razão, o trabalho é referenciado como validação metodológica do paradigma de duas etapas na seção de lacuna identificada, sem integrar o conjunto de análises comparativas detalhadas.
+
+Ressalta-se que esta revisão de literatura constitui uma base inicial, compatível com a fase de desenvolvimento em que o projeto se encontra. O conjunto de três trabalhos foi escolhido por oferecer uma fundação sólida para cada componente técnico do modelo, sem pretensão de exaustividade. Trabalhos adicionais poderão ser incorporados em versões futuras do artigo à medida que o escopo da análise for ampliado.
 
 ---
 
@@ -163,19 +165,19 @@ De forma geral, Li, Tao e Li (2022) contribuem como referência para a etapa de 
 
 ---
 
-### 3.5 Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito — SCARPEL; MILIONI (2002) *(referência clássica)*
 
-**Resumo do trabalho:** [Descreva o problema que o trabalho aborda, a metodologia utilizada e os principais resultados obtidos. Use citação indireta (SCARPEL; MILIONI, 2002). Justifique brevemente a inclusão de um trabalho fora do recorte temporal dos últimos cinco anos.]
+---
+### 3.5 Lacuna Identificada
 
-**Pontos positivos:** [O que o trabalho faz bem e que é relevante para o nosso contexto.]
+A análise dos trabalhos revisados permite identificar três dimensões de lacuna relevantes para o presente projeto.
 
-**Pontos negativos / limitações:** [Limitações metodológicas, de dados ou de escopo identificadas no trabalho.]
+A primeira diz respeito à granularidade da variável de decisão. Os trabalhos que empregam programação linear para crédito — Kwapong (2013) e Al-Musbahu et al. (2025) — operam sobre categorias predefinidas de empréstimo, tratando todos os tomadores de um mesmo segmento como homogêneos. Nenhum dos dois opera no nível do cliente individual nem realiza uma etapa de segmentação baseada em dados: as categorias são definidas institucionalmente, não derivadas do comportamento observado. Isso limita a capacidade do modelo de capturar a heterogeneidade real da base e de atribuir limites proporcionais ao perfil de cada tomador.
 
-**Diferença em relação ao nosso problema:** [Explique de forma clara por que o problema tratado neste trabalho **não é idêntico** ao nosso.]
+A segunda lacuna está na desconexão entre segmentação e decisão. Li, Tao e Li (2022) demonstram que dados financeiros permitem separar perfis de risco de forma objetiva e reprodutível, mas encerram o pipeline na etapa de classificação — os grupos identificados não são traduzidos em nenhuma decisão operacional. A segmentação, nesses trabalhos, é o produto final, não uma etapa intermediária de um processo de otimização.
 
-**Referência ABNT:**
+A terceira lacuna diz respeito à integração entre as duas etapas anteriores — segmentação e otimização — num pipeline unificado para decisões de crédito ao consumidor em escala real. Essa lacuna é parcialmente endereçada por Scarpel e Milioni (2002), que combinam um modelo Logit com Programação Inteira para apoiar decisões de concessão de crédito, validando o paradigma de duas etapas — estimar primeiro, otimizar depois — no contexto brasileiro. No entanto, o trabalho restringe-se ao crédito corporativo e a uma decisão binária de aprovação ou rejeição, sem contemplar a atribuição contínua de limite a pessoas físicas em escala de portfólio. Por essa razão, optou-se por não detalhar o trabalho numa seção própria de análise comparativa: o contexto de aplicação e a natureza da variável de decisão diferem substancialmente do problema abordado aqui, o que limitaria a profundidade e a pertinência da comparação. Ainda assim, o trabalho permanece relevante como referência de validação metodológica do pipeline adotado.
 
-> SCARPEL, R. A.; MILIONI, A. Z. Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito. **Pesquisa Operacional**, v. 22, n. 1, p. 61-72, 2002. DOI: 10.1590/S0101-74382002000100004. Disponível em: <https://www.scielo.br/j/pope/a/3DkFSwbgRxdtDDG6MSPBDLM/>. Acesso em: 20 maio 2026.
+O presente trabalho busca endereçar essas três dimensões ao propor um pipeline que combina segmentação baseada em dados via CART com otimização contínua de limite via programação linear, aplicado a um portfólio de crédito ao consumidor em escala real. Reconhece-se, contudo, que a abordagem introduz limitações próprias: a qualidade da otimização é dependente da estabilidade dos clusters gerados, e o modelo requer revalidação periódica diante da evolução do comportamento de crédito da base — aspectos que ficam fora do escopo deste trabalho e constituem direções para pesquisas futuras.
 
 ---
 
