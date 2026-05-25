@@ -20,9 +20,9 @@ $$L_k \geq 0 \quad \text{(limite de crédito a ser ofertado ao cluster } k\text{
 
 O banco busca maximizar o retorno líquido total esperado da carteira:
 
-$$\max \sum_{k=1}^{K} n_k \cdot \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD}) \cdot L_k$$
+$$\max \sum_{k=1}^{K} n_k \cdot \pi_k \cdot (\bar{u} \cdot t \cdot T - PD_k \cdot \text{LGD}) \cdot L_k$$
 
-O coeficiente de cada cluster, $c_k = n_k \cdot \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})$, representa o retorno líquido unitário esperado por real alocado ao cluster $k$. Clusters com $c_k > 0$ são rentáveis; clusters com $c_k \leq 0$ destroem valor a cada real adicional de limite e recebem $L_k = 0$ como solução natural do modelo.
+O coeficiente de cada cluster, $c_k = n_k \cdot \pi_k \cdot (\bar{u} \cdot t \cdot T - PD_k \cdot \text{LGD})$, representa o retorno líquido unitário esperado por real alocado ao cluster $k$. Clusters com $c_k > 0$ são rentáveis; clusters com $c_k \leq 0$ destroem valor a cada real adicional de limite e recebem $L_k = 0$ como solução natural do modelo.
 
 Os parâmetros utilizados são:
 
@@ -32,8 +32,9 @@ Os parâmetros utilizados são:
 | $\pi_k$      | Propensão média de contratação do cluster $k$                           | calculado da base |
 | $\bar{u}$    | Fração esperada de utilização do limite pelo cliente                    | 0,75              |
 | $t$          | Taxa de interchange recebida pelo banco sobre o volume transacionado    | 1,75%             |
-| $PD_k$       | Probabilidade de inadimplência média do cluster $k$                     | calculado da base |
-| $\text{LGD}$ | Fração do saldo exposto perdida em caso de default (Loss Given Default) | 0,60              |
+| $T$          | Horizonte de uso do limite em meses, definido pelo parceiro             | 22                |
+| $PD_k$       | Probabilidade de inadimplência calibrada média do cluster $k$           | calculado da base |
+| $\text{LGD}$ | Fração do saldo exposto perdida em caso de default (Loss Given Default) | 0,80              |
 
 ### Restrições
 
@@ -41,7 +42,7 @@ Os parâmetros utilizados são:
 
 $$\sum_{k=1}^{K} n_k \cdot (PD_k - \overline{PD}_{fin}^{atual}) \cdot L_k \leq 0$$
 
-onde $\overline{PD}_{fin}^{atual}$ é calculado como a média de `pd_produto` dos clientes elegíveis da base.
+onde $\overline{PD}_{fin}^{atual}$ é calculado como a média de `pd_calibrada` dos clientes elegíveis da base.
 
 **R2 - Capacidade de pagamento com alavancagem diferenciada:** o limite de cada cluster é restrito pela capacidade de pagamento de seus membros, multiplicada por um fator de alavancagem $m_k$ que varia de 0,3 a 1,8 conforme o score de crédito médio do cluster. Clusters de menor risco recebem $m_k$ próximo de 1,8; clusters de maior risco recebem $m_k$ próximo de 0,3:
 
@@ -134,6 +135,10 @@ Define as estruturas de dados:
 
 Implementação pura do algoritmo Simplex, sem nenhuma dependência da lógica de negócio do projeto. Recebe um `Problema` e devolve a solução ótima, o valor da função objetivo e o status da solução.
 
+### `clustering.py`
+
+Agrupa os clientes elegíveis em $K$ clusters usando CART e calcula os parâmetros agregados necessários para o LP: $n_k$, $PD_k$, $\pi_k$, $CP_k$ e $m_k$. Detalhes na seção de Clusterização.
+
 ### `main.py`
 
 Orquestra o pipeline completo:
@@ -151,16 +156,15 @@ A solução recebe dois arquivos como entrada:
 
 ### CSV de clientes
 
-Arquivo com os dados individuais dos clientes elegíveis, localizado em `data/csv/`. As colunas utilizadas pelo modelo são:
+Arquivo com os dados individuais dos clientes calibrados, localizado em `data/csv/`. As colunas utilizadas pelo modelo são:
 
 | Coluna                     | Descrição                                                                              |
 | -------------------------- | -------------------------------------------------------------------------------------- |
 | `pd_produto`               | Probabilidade de inadimplência no produto                                              |
 | `pd_calibrada`             | PD corrigida pelos fatores gamma por decil de risco                                    |
 | `capacidade_pagamento`     | Estimativa de capacidade de pagamento do cliente                                       |
-| `score_credito_cross`      | Score de crédito multiproduto, usado para calcular $m_k$                               |
+| `score_credito_cross`      | Score de crédito multiproduto, usado para calcular $m_k$ e como feature de clustering  |
 | `score_propensao_contrato` | Score de propensão à contratação, normalizado para obter $\pi_k$                       |
-| `fx_idade`                 | Faixa etária do cliente                                                                |
 | `flag_filtros`             | Indicador de perfil restrito: apenas clientes com `flag_filtros == 0` são elegíveis    |
 | `renda_estimada`           | Usada como proxy de capacidade de pagamento quando `capacidade_pagamento` está ausente |
 
@@ -171,60 +175,80 @@ Arquivo de configuração localizado em `apps/algoritmo_simplex/input/`, que per
 ```json
 {
   "t": 0.0175,
-  "LGD": 0.6,
+  "LGD": 0.8,
   "u_bar": 0.75,
-  "L_max": 25000.0
+  "L_max": 25000.0,
+  "T": 22.0
 }
 ```
 
 Onde:
 
 - `t`: taxa de interchange (1,75%), fornecida pelo parceiro
-- `LGD`: fração da exposição perdida em caso de default (60%), padrão de modelos de risco de crédito
+- `LGD`: fração da exposição perdida em caso de default (80%)
 - `u_bar`: fração esperada de utilização do limite (75%)
 - `L_max`: teto máximo absoluto de limite por cluster (R$25.000), definido pelo parceiro
-
-## Simplificações realizadas
-
-De acordo com os requisitos do parceiro, a solução final deve operar com pelo menos 100 clusters para a base completa de mais de um milhão de clientes. Nesta versão simplificada, foram adotadas as seguintes reduções de escopo:
-
-**Número de clusters:** foram utilizados 7 clusters em vez dos pelo menos 100 exigidos na entrega final. Essa simplificação reduz a dimensão do problema de programação linear, tornando a validação do algoritmo mais direta.
-
-**Tamanho da base:** nos casos de teste, a base foi reduzida para aproximadamente 10% dos clientes originais, mantendo a proporcionalidade das características da base completa.
-
-As restrições do modelo e o algoritmo Simplex implementado são independentes dessas simplificações e funcionarão sem alterações quando o número de clusters for expandido.
+- `T`: horizonte de uso do limite em meses (22), definido pelo parceiro
 
 ## Clusterização
 
-A clusterização é feita de forma **não supervisionada**, utilizando **K-Means**, visando juntar clientes elegíveis e com perfis semelhantes de **risco, capacidade de pagamento e propensão**, buscando viabilizar a otimização no nível de cluster.
+A clusterização é feita usando **CART** (Classification and Regression Trees), agrupando clientes elegíveis em segmentos homogêneos na dimensão que o LP maximiza.
 
-O K-Means foi escolhido nesta sprint por ser um algoritmo simples e bem compreendido, adequado para validar o pipeline completo e o algoritmo Simplex com um número controlado de clusters. No entanto, reconhecemos que ele **não é o algoritmo ideal para o problema real**: o K-Means exige que o número de clusters $K$ seja definido a priori, enquanto o ideal seria um algoritmo que determinasse o número de clusters de forma automática e adaptativa à estrutura dos dados - como DBSCAN ou modelos de mistura gaussiana. A substituição do algoritmo de clusterização está prevista para as próximas sprints, à medida que o modelo for calibrado e expandido para a base completa.
+### Motivação da escolha do CART
+
+O K-Means, usado em versões anteriores, minimiza distância euclidiana no espaço das features — métrica sem relação direta com o objetivo do LP. O CART particiona o espaço de features minimizando a variância de uma variável guia escolhida, que neste caso é o score composto:
+
+$$c_k = \pi \cdot (\bar{u} \cdot t \cdot T - PD_{calib} \cdot \text{LGD})$$
+
+Esse é exatamente o coeficiente da função objetivo do LP (sem o fator $n_k$, que só existe após a clusterização). Ao usar $c_k$ como variável guia, o CART garante que cada cluster seja internamente homogêneo na dimensão que o LP otimiza — e não em distância euclidiana, que não tem significado econômico aqui.
+
+Além disso, uma análise empírica com HDBSCAN confirmou que os dados não possuem estrutura de densidade natural suficiente para produzir 100 ou mais clusters: o algoritmo encontrou no máximo 22 clusters independente do parâmetro `min_cluster_size`. A segmentação precisa ser guiada pelo objetivo do LP, não por densidade geométrica dos dados.
+
+### Escolha de K = 800
+
+O número de clusters foi definido por varredura empírica. Para cada valor de $K$ de 50 a 2000, o pipeline completo (clustering + Simplex) foi executado e o valor ótimo $z$ da função objetivo registrado. O resultado mostrou que a partir de $K = 800$, cada incremento adicional de clusters aumenta $z$ em menos de 0,5%. $K = 800$ captura 98,4% do retorno máximo encontrado com $K = 2000$.
+
+A justificativa para o banco: a partir de $K = 800$, clusters adicionais não aumentam o retorno esperado da carteira de forma relevante — o ganho marginal cai abaixo de 0,5% por incremento de 50 clusters.
 
 ### População considerada
 
-Inicialmente, a base de dados é filtrada para incluir apenas clientes elegíveis (flag_filtros = 0). Além disso, apenas as 10% primeiras linhas da base de dados foram consideradas.
+A base é filtrada para incluir apenas clientes elegíveis (`flag_filtros == 0`) antes de qualquer processamento. Os clientes inelegíveis não participam da clusterização nem do LP.
 
 ### Variáveis usadas na clusterização
 
-O K-Means é treinado usando:
+O CART é treinado usando as seguintes features de split:
 
-- pd_calibrada: (probabilidade de inadimplência calibrada por decil de risco)
+- `pd_calibrada`: probabilidade de inadimplência calibrada por decil de risco
+- `pi`: propensão normalizada, derivada de `score_propensao_contrato`
+- `cp_proxy`: proxy de capacidade de pagamento
+- `score_credito_cross`: score multiproduto, também usado para derivar $m_k$
 
-- cp_proxy: (proxy de capacidade de pagamento)
-
-- score_credito_cross: (score multiproduto, também usado para derivar alavancagem)
-
-- pi: (propensão normalizada)
-
-- fx*idade (variável categórica, transformada com \_one-hot encoding*)
+A variável `fx_idade` foi excluída porque não tem impacto direto nas variáveis que o LP consome ($PD_k$, $\pi_k$, $CP_k$, $m_k$).
 
 ### Pré-processamento
 
-Antes do K-Means atuar em si, a variável pi é criada, na qual o score_propensao_contrato é normalizado para o intervalo [0, 1]. O cp_proxy também é definido, utilizando a capacidade_pagamento quando existente. No caso de estar nula, o valor é substituído por renda_estimada \* 0,3.
+A variável `pi` é criada normalizando `score_propensao_contrato` para o intervalo [0, 1]. O `cp_proxy` utiliza `capacidade_pagamento` quando disponível; quando nula, usa `renda_estimada * 0,30` como fallback.
 
-### Tratamento das variáveis
+Nulos residuais nas features de split são imputados pela mediana antes do treinamento. O CART não requer padronização (StandardScaler) nem codificação de variáveis categóricas (OneHotEncoder) porque seus critérios de split são baseados em limiares ordinais, invariantes a transformações monotônicas.
 
-Para as variáveis numéricas, é aplicada a imputação de valores faltantes pela mediana, e os valores são padronizados pelo StandardScaler (média 0, desvio padrão 1). Já para a variável categórica, o OneHotEncoder transforma os valores de forma binária, permitindo que os mesmos funcionem com o K-means.
+### Parâmetros do CART
+
+| Parâmetro          | Valor | Justificativa                                                                  |
+| ------------------ | ----- | ------------------------------------------------------------------------------ |
+| `max_leaf_nodes`   | 800   | K ótimo identificado empiricamente via varredura de z vs K                     |
+| `min_samples_leaf` | 500   | Garante que cada cluster tenha pelo menos 500 clientes para agregados estáveis |
+| `random_state`     | 42    | Reproducibilidade                                                              |
+
+## Calibração da PD
+
+Antes da clusterização, a `pd_produto` de cada cliente é calibrada pelo script `calibrar_pd.py`, que aplica fatores gamma por decil de risco calculados em `analise_09_calibracao_final.py`.
+
+A calibração segue dois passos:
+
+1. Os decis são definidos pelos percentis de `pd_produto` da **população elegível completa** (6,7 milhões de clientes das 3 safras combinadas), garantindo que cada decil contenha ~10% dos elegíveis.
+2. O gamma empírico de cada decil é estimado a partir das observações de `over30mob3` que caem naquele decil, usando a razão entre defaults observados e PD esperada.
+
+Os decis D1-D4 possuem estimativas empíricas robustas (2.200 a 6.500 observações cada). D5 tem 103 observações com IC95 mais largo. D6-D10 têm menos de 16 observações cada e recebem gamma por extrapolação linear — limitação estrutural dos dados, pois clientes de alto risco raramente foram aprovados historicamente.
 
 ## Dependências
 
@@ -236,11 +260,11 @@ pip install -r requirements.txt
 
 As bibliotecas utilizadas são:
 
-| Biblioteca     | Uso                                               |
-| -------------- | ------------------------------------------------- |
-| `pandas`       | Leitura e manipulação dos arquivos CSV            |
-| `scikit-learn` | Algoritmo K-Means para clusterização dos clientes |
-| `numpy`        | Cálculo de percentis na agregação dos clusters    |
+| Biblioteca     | Uso                                            |
+| -------------- | ---------------------------------------------- |
+| `pandas`       | Leitura e manipulação dos arquivos CSV         |
+| `scikit-learn` | Algoritmo CART para clusterização dos clientes |
+| `numpy`        | Cálculo de percentis na agregação dos clusters |
 
 O algoritmo Simplex em si não utiliza nenhuma biblioteca externa, foi implementado do zero com Python puro.
 
@@ -249,13 +273,13 @@ O algoritmo Simplex em si não utiliza nenhuma biblioteca externa, foi implement
 A partir do diretório raíz do projeto (`g04/`):
 
 ```bash
-python apps/algoritmo_simplex/main.py <arquivo_clientes.csv> <parametros.json>
+python apps/algoritmo_simplex/main.py <arquivo_clientes_calibrado.csv> <parametros.json>
 ```
 
 Exemplo:
 
 ```bash
-python apps/algoritmo_simplex/main.py clientes_calibrado.csv parametros.json
+python apps/algoritmo_simplex/main.py clientes_m1_calibrado.csv parametros.json
 ```
 
 Na primeira execução, a clusterização é gerada automaticamente e salva em `data/csv/<nome>_clusters.csv`. Nas execuções seguintes, o arquivo clusterizado é reutilizado, tornando a execução significativamente mais rápida.
@@ -266,16 +290,14 @@ Ao final da execução, o algoritmo exibe no console o status da solução, o va
 
 ```
 Status: otimo
-Valor ótimo (z): 1234567.89
+Valor ótimo (z): 36183592.28
 
 Limites ótimos por cluster:
-  Cluster 0: R$ 1500 (n=72426)
-  Cluster 1: R$ 800 (n=40096)
-  Cluster 2: R$ 2050 (n=10897)
-  Cluster 3: R$ 0 (n=40468)
-  Cluster 4: R$ 1200 (n=97178)
-  Cluster 5: R$ 650 (n=31288)
-  Cluster 6: R$ 3000 (n=59103)
+  Cluster 0: R$ 250 (n=891)
+  Cluster 1: R$ 250 (n=855)
+  Cluster 2: R$ 1950 (n=906)
+  Cluster 3: R$ 0 (n=653)
+  ...
 ```
 
 Os limites exibidos já passaram pela pós-otimização definida pelo parceiro:
@@ -357,33 +379,35 @@ O algoritmo detectou corretamente a existência de múltiplas soluções e retor
 
 ### Teste 4: Execução completa com base de clientes calibrada
 
-**Entrada:** `clientes_calibrado.csv` com `parametros.json` padrão.
+**Entrada:** `clientes_m1_calibrado.csv` com `parametros.json` padrão (K=800 clusters).
 
 **Saída obtida:**
 
 ```
 Status: otimo
-Valor ótimo (z): 81240312.34
+Valor otimo (z): 36183592.28
 
-Limites ótimos por cluster:
-  Cluster 0: R$ 250 (n=281831)
-  Cluster 1: R$ 0 (n=256336)
-  Cluster 2: R$ 0 (n=355880)
-  Cluster 3: R$ 0 (n=259746)
-  Cluster 4: R$ 18500 (n=84120)
-  Cluster 5: R$ 1600 (n=444876)
-  Cluster 6: R$ 0 (n=153296)
+Limites otimos por cluster:
+  Cluster 0: R$ 250 (n=891)
+  Cluster 1: R$ 250 (n=855)
+  Cluster 2: R$ 1950 (n=906)
+  Cluster 3: R$ 0 (n=653)
+  Cluster 4: R$ 1150 (n=630)
+  ...
+  Cluster 387: R$ 3600 (n=11202)
+  ...
+  Cluster 720: R$ 4300 (n=3403)
+  ...
 ```
 
-O algoritmo convergiu para o ótimo. Os clusters que receberam limite zero apresentam $c_k \leq 0$, ou seja, para esses perfis a perda esperada por inadimplência supera a receita esperada de interchange - o modelo corretamente indica que não devem receber oferta. Os clusters com limite positivo concentram os perfis com melhor relação risco-retorno.
+O algoritmo convergiu para o ótimo com 800 clusters e 1.836.085 clientes elegíveis. Clusters com limite zero apresentam perfil de alto risco onde a perda esperada por inadimplência supera a receita de interchange dado o teto de inadimplência financeira da carteira (R1). Os clusters com limite positivo concentram os perfis com melhor relação risco-retorno compatível com as restrições do modelo.
 
 ## Conclusões
 
-O algoritmo Simplex foi implementado do zero, sem uso de bibliotecas de otimização, e validado contra problemas com solução analítica conhecida. O pipeline completo, desde a leitura dos dados até a exibição dos limites otimizados por cluster, está funcional e documentado.
+O algoritmo Simplex foi implementado do zero, sem uso de bibliotecas de otimização, e validado contra problemas com solução analítica conhecida. O pipeline completo — calibração da PD, clusterização por CART com K=800, montagem do LP e execução do Simplex — está funcional e documentado para a base completa de elegíveis.
 
 Os próximos passos previstos são:
 
-- Revisão e calibração dos parâmetros do modelo com o parceiro
-- Expansão do número de clusters para pelo menos 100, conforme requisito da entrega final
-- Substituição do K-Means por um algoritmo de clusterização que determine o número de clusters automaticamente
+- Alinhamento com o parceiro sobre a formulação de R1, dado que a correlação positiva observada entre `pd_calibrada` e `pi` na base faz com que a restrição de inadimplência financeira exclua clusters de alta propensão
 - Incorporação das restrições adicionais mapeadas no TAPI, como teto de inadimplência física, metas de produção mínima e rentabilidade mínima da carteira
+- Execução e comparação dos resultados para as safras M2 e M3
