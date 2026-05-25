@@ -99,6 +99,34 @@ A Tabela 2 resume os principais parâmetros utilizados na formulação, incluind
 | $\alpha$  | Concentração máxima de exposição em um único cluster | $[0,1]$ | Constante (ex.: 5%) para as restrições | Política/prudencial |
 | $V^{min}$  | Piso de produção (volume total de limite ofertado) | R\$ | Constante para as restrições | Meta comercial |
 
+
+#### Função objetivo
+
+O objetivo do modelo é maximizar o retorno líquido esperado da carteira no horizonte $T$, definido como a diferença entre (i) a receita esperada de _interchange_ gerada pelo uso do cartão e (ii) a perda esperada por inadimplência, ambas condicionadas à contratação do produto. Considerando a modelagem por _clusters_, em que todos os $n_k$ clientes do cluster $k$ recebem o mesmo limite $L_k$, a função objetivo é dada por:
+
+$$
+\max \sum_{k=1}^{K} n_k \cdot
+\left[
+\underbrace{\pi_k \cdot T \cdot \bar{u} \cdot t \cdot L_k}_{\text{Receita esperada em }T\text{ meses}}
+\;-\;
+\underbrace{\pi_k \cdot PD_k^{cal} \cdot \mathrm{LGD} \cdot L_k}_{\text{Perda esperada por inadimplência}}
+\right].
+$$
+
+No primeiro termo, $\pi_k$ representa a probabilidade de contratação (ou propensão à conversão) do cluster $k$; $\bar{u}$ é a fração média esperada do limite efetivamente utilizada; $t$ é a taxa de _interchange_ aplicada sobre o volume transacionado; e $T$ acumula a receita ao longo do horizonte considerado. Assim, $T\cdot\bar{u}\cdot t\cdot L_k$ aproxima a receita total de _interchange_ por cliente (condicional ao cliente utilizar o produto), enquanto o fator $\pi_k$ pondera essa receita pela chance de contratação.
+
+No segundo termo, $PD_k^{cal}$ é a probabilidade calibrada de inadimplência associada ao cluster $k$ (obtida a partir do $PD_k$ e do fator $\gamma_{d(k)}$, quando aplicável), e $\mathrm{LGD}$ é a perda dada a inadimplência. A expressão $PD_k^{cal}\cdot \mathrm{LGD}\cdot L_k$ representa a perda esperada por cliente, e novamente é ponderada por $\pi_k$, refletindo que a perda só se materializa no subconjunto que efetivamente contrata o produto.
+
+Agrupando os termos constantes, pode-se reescrever a função objetivo como:
+
+$$
+\max \sum_{k=1}^{K} n_k \cdot c_k \cdot L_k,
+\quad \text{onde}\quad
+c_k = \pi_k\cdot\left(T\cdot \bar{u}\cdot t - PD_k^{cal}\cdot \mathrm{LGD}\right).
+$$
+
+O coeficiente $c_k$ pode ser interpretado como o retorno líquido marginal esperado por unidade monetária de limite ofertado ao cluster $k$. Como todos os fatores em $c_k$ são parâmetros, a função objetivo é linear em $L_k$, caracterizando um problema de Programação Linear (LP).
+
 ### 2.4 Implementação do algoritmo
 
 [Descrição do algoritmo implementado e suas etapas.]
