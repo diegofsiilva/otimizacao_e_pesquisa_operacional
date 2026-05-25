@@ -47,7 +47,6 @@ var KPI_CARDS = [
 
 var Dashboard = function(props) {
   var setPage = props.setPage;
-  var hasData = props.hasData;
   var s1 = React.useState(''); var search = s1[0]; var setSearch = s1[1];
   var s2 = React.useState(1);  var page   = s2[0]; var setPageNum = s2[1];
 
@@ -62,35 +61,6 @@ var Dashboard = function(props) {
     var a = document.createElement('a'); a.href = url; a.download = 'clientes.csv';
     document.body.appendChild(a); a.click();
     document.body.removeChild(a); URL.revokeObjectURL(url);
-  }
-
-  if (!hasData) {
-    return (
-      <div className="space-y-6">
-        <div>
-          <h1 className="text-xl font-bold text-slate-800">Dashboard</h1>
-          <p className="mt-1 text-xs text-slate-500">Nenhuma base carregada</p>
-          <div className="mt-1 h-0.5 w-10 bg-[#102C26]" />
-        </div>
-        <div className="bg-[#F7E7CE] border border-slate-200 shadow-sm flex flex-col items-center justify-center py-20 px-6 text-center gap-5">
-          <div className="w-14 h-14 bg-[#D4EDE8] flex items-center justify-center">
-            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#102C26" strokeWidth="1.5">
-              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/>
-              <polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/>
-            </svg>
-          </div>
-          <div>
-            <p className="text-sm font-semibold text-slate-800 mb-1">Nenhuma base carregada</p>
-            <p className="text-xs text-slate-500 max-w-xs">Faça o upload de um arquivo CSV ou XLSX em <strong>Gerar Limites</strong> e execute o Simplex para visualizar o dashboard.</p>
-          </div>
-          <button onClick={function(){ if (setPage) setPage('gerar'); }}
-            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-[#102C26] text-white hover:bg-[#1a4a3f] transition-colors shadow-sm">
-            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-            Ir para Gerar Limites
-          </button>
-        </div>
-      </div>
-    );
   }
 
   var filtered = CLIENTS.filter(function(c) {
@@ -166,6 +136,7 @@ var Dashboard = function(props) {
             ].map(function(b) {
               return (
                 <button key={b.label}
+                  onClick={b.action || undefined}
                   className={'flex items-center gap-1.5 px-3 py-1.5  text-xs font-medium border transition-colors '
                     + (b.primary ? 'bg-[#102C26] text-white border-[#102C26] hover:bg-[#1a4a3f]' : 'bg-[#F7E7CE] text-slate-600 border-slate-200 hover:bg-slate-50')}>
                   {b.icon}{b.label}

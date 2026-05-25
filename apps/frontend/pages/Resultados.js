@@ -144,7 +144,54 @@ var DonutChart = function(props) {
 };
 
 /* ── Resultados ──────────────────────────────────────────────── */
-var Resultados = function() {
+var Resultados = function(props) {
+  var hasData = props.hasData;
+  var setPage = props.setPage;
+
+  if (!hasData) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800">Resultados da Simulação</h1>
+          <p className="mt-1 text-xs text-slate-500">Nenhuma simulação executada</p>
+          <div className="mt-1 h-0.5 w-10 bg-[#102C26]" />
+        </div>
+        <div className="bg-[#F7E7CE] border border-slate-200 shadow-sm flex flex-col items-center justify-center py-20 px-6 text-center gap-5">
+          <div className="w-14 h-14 bg-[#D4EDE8] flex items-center justify-center">
+            <svg width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="#102C26" strokeWidth="1.5">
+              <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/>
+            </svg>
+          </div>
+          <div>
+            <p className="text-sm font-semibold text-slate-800 mb-1">Nenhuma simulação executada</p>
+            <p className="text-xs text-slate-500 max-w-xs">Carregue uma base e execute o Simplex em <strong>Gerar Limites</strong> para visualizar os resultados aqui.</p>
+          </div>
+          <button onClick={function(){ if (setPage) setPage('gerar'); }}
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-[#102C26] text-white hover:bg-[#1a4a3f] transition-colors shadow-sm">
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+            Ir para Gerar Limites
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  function exportarLimites() {
+    var sc = SOLVER_COMPARISON;
+    var header = ['Cluster', 'Simplex (R$)', 'PuLP/CBC (R$)', 'Match'];
+    var rows = sc.simplex.clusters.map(function(cs, i) {
+      var cp = sc.pulp.clusters[i];
+      var match = cs.limite === cp.limite ? 'Sim' : 'Não';
+      return [cs.id, cs.limite || 0, cp.limite || 0, match];
+    });
+    var csv = [header].concat(rows).map(function(r){ return r.join(';'); }).join('\n');
+    var blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' });
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a'); a.href = url; a.download = 'limites_clusters.csv';
+    document.body.appendChild(a); a.click();
+    document.body.removeChild(a); URL.revokeObjectURL(url);
+  }
+
   var KPIs = [
     { label: 'Total de Clusters',     value: '10',       sub: '↑ 2 novos clusters',      highlight: false },
     { label: 'Limite Total Aprovado', value: 'R$ 15,7M', sub: '↑ 8.5% vs mês anterior',  highlight: true  },
@@ -160,10 +207,17 @@ var Resultados = function() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-xl font-bold text-slate-800">Resultados da Simulação</h1>
-        <p className="mt-1 text-xs text-slate-500">Output do algoritmo Simplex · simulação executada em Jun/2024</p>
-        <div className="mt-1 h-0.5 w-10 bg-[#102C26]" />
+      <div className="flex items-start justify-between">
+        <div>
+          <h1 className="text-xl font-bold text-slate-800">Resultados da Simulação</h1>
+          <p className="mt-1 text-xs text-slate-500">Output do algoritmo Simplex · simulação executada em Jun/2024</p>
+          <div className="mt-1 h-0.5 w-10 bg-[#102C26]" />
+        </div>
+        <button onClick={exportarLimites}
+          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-slate-200 bg-[#F7E7CE] text-slate-600 hover:bg-slate-50 transition-colors shadow-sm">
+          <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Exportar CSV
+        </button>
       </div>
 
       {/* Banner */}

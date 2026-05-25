@@ -80,7 +80,7 @@
       var hasData = s3[0]; var setHasData = s3[1];
 
       function renderPage(p) {
-        if (p === 'dashboard')  return <Dashboard setPage={setPage} hasData={hasData} />;
+        if (p === 'dashboard')  return <Dashboard setPage={setPage} />;
         if (p === 'gerar')      return <GerarLimites setPage={setPage} setHasData={setHasData} />;
         if (p === 'resultados') return <Resultados hasData={hasData} setPage={setPage} />;
         return null;
