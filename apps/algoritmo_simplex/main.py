@@ -2,8 +2,8 @@
 apps/algoritmo_simplex/main.py
 
 Entrada de dados e execução do modelo de otimização de limites de crédito.
-Suporta execução via terminal (CLI) e chamadas dinâmicas pelo Back-end.
-Inclui logs de iteração e parametrização dinâmica de limites superiores (L_max).
+Suporta execução via terminal (CLI) e chamadas dinâmicas pelo Back-end (APIs).
+Inclui logs de iteração, parametrização de L_max e interface para FastAPI/Flask.
 """
 
 import sys
@@ -14,17 +14,23 @@ from models import Problema
 from simplex import simplex
 
 
-def carregar_dados(arquivo_csv: Path, arquivo_json: Path) -> tuple[pd.DataFrame, dict]:
+def executar_otimizacao_via_api(dados_clusters_lista: list[dict], parametros_json: dict, pd_fin_atual: float = 0.0175) -> dict:
     """
-    Carrega o CSV de clientes (já clusterizados) e o JSON de parâmetros do modelo.
+    FUNÇÃO DE CONVENIÊNCIA PARA O BACK-END.
+    Recebe os dados agregados dos clusters e as configurações diretamente em memória 
+    (sem ler arquivos do disco) e retorna o resultado estruturado pronto para virar JSON.
+    
+    :param dados_clusters_lista: Lista de dicionários contendo os dados de cada cluster.
+                                 Ex: [{'cluster_id': 0, 'n_k': 100, 'pi_k': 0.15, 'PD_k': 0.02, 'm_k': 1.2, 'CP_k': 2500.0}]
+    :param parametros_json: Dicionário com os parâmetros macro (t, LGD, u_bar, L_max).
+    :param pd_fin_atual: Taxa de inadimplência alvo global (default: 1.75%).
+    :return: Dicionário estruturado com o status da otimização, Z ótimo e limites finais.
     """
-    df = pd.read_csv(arquivo_csv)
-    print(f"Dados carregados: {len(df)} linhas, {len(df.columns)} colunas")
-
-    with open(arquivo_json) as f:
-        params = json.load(f)
-
-    return df, params
+    # Converte a lista de dicionários recebida da API em um DataFrame temporário em memória
+    df_clusters = pd.DataFrame(dados_clusters_lista)
+    
+    # Executa a pipeline de otimização existente
+    return executar_pipeline_otimizacao(df_clusters, parametros_json, pd_fin_atual)
 
 
 def executar_pipeline_otimizacao(df_clusters: pd.DataFrame, params: dict, pd_fin_atual: float) -> dict:
@@ -36,8 +42,7 @@ def executar_pipeline_otimizacao(df_clusters: pd.DataFrame, params: dict, pd_fin
     LGD = params["LGD"]
     u_bar = params["u_bar"]
     
-    # PARAMETRIZAÇÃO DINÂMICA DO L_MAX:
-    # Obtém o parâmetro L_max. Pode ser um número único (global) ou um dicionário mapeando por cluster_id.
+    # Parametrização dinâmica do L_max (Aceita valor global ou dicionário por cluster)
     l_max_config = params.get("L_max", 5000.0) 
 
     c = []
@@ -65,15 +70,13 @@ def executar_pipeline_otimizacao(df_clusters: pd.DataFrame, params: dict, pd_fin
         A.append(linha_r2)
         b.append(float(row["m_k"] * row["CP_k"]))
 
-    # 4. Restrições R3: PARAMETRIZAÇÃO DINÂMICA DO TETO MÁXIMO POR CLUSTER
+    # 4. Restrições R3: Teto máximo por cluster (Mapeamento Dinâmico)
     for i, row in df_clusters.iterrows():
         cluster_id = str(int(row["cluster_id"]))
         linha_r3 = [0.0] * total_clusters
         linha_r3[i] = 1.0
         A.append(linha_r3)
         
-        # Se L_max no JSON for um dicionário, busca pelo ID do cluster em formato string.
-        # Caso contrário, assume que é um valor numérico global único para todos os clusters.
         if isinstance(l_max_config, dict):
             teto_cluster = l_max_config.get(cluster_id, l_max_config.get("default", 5000.0))
         else:
@@ -107,9 +110,23 @@ def executar_pipeline_otimizacao(df_clusters: pd.DataFrame, params: dict, pd_fin
     }
 
 
+def carregar_dados(arquivo_csv: Path, arquivo_json: Path) -> tuple[pd.DataFrame, dict]:
+    """
+    Carrega o CSV de clientes (já clusterizados) e o JSON de parâmetros do modelo.
+    Usado apenas na execução local via terminal (CLI).
+    """
+    df = pd.read_csv(arquivo_csv)
+    print(f"Dados carregados via CLI: {len(df)} linhas")
+
+    with open(arquivo_json) as f:
+        params = json.load(f)
+
+    return df, params
+
+
 def exibir_resultado(x: list[float], z: float, status: str, clusters: pd.DataFrame):
     """
-    Exibe os resultados formatados no terminal (usado na execução manual).
+    Exibe os resultados formatados no terminal (usado na execução manual via CLI).
     """
     print(f"\nStatus Final do Modelo: {status.upper()}")
     print(f"Valor ótimo da Carteira (Z): R$ {z:.2f}")
@@ -122,40 +139,28 @@ def exibir_resultado(x: list[float], z: float, status: str, clusters: pd.DataFra
         )
 
 
-# Bloco executável caso você rode "python main.py ..." pelo terminal
 if __name__ == "__main__":
     if len(sys.argv) < 3:
         print("Uso:")
         print("    python main.py <arquivo_clientes.csv> <parametros.json>")
-        print("Exemplo:")
-        print("    python main.py clientes.csv parametros.json")
         sys.exit(1)
 
-    # Define os caminhos baseados na estrutura de pastas recomendada
     raiz_projeto = Path(__file__).resolve().parent.parent
     arquivo_csv_origem = raiz_projeto / "data" / "csv" / sys.argv[1]
     arquivo_json = raiz_projeto / "algoritmo_simplex" / "input" / sys.argv[2]
 
-    # Deriva o nome do arquivo de clusters gerado pelo clustering.py
     stem = arquivo_csv_origem.stem
     arquivo_clusters = arquivo_csv_origem.parent / f"{stem}_clusters.csv"
 
-    if not arquivo_clusters.exists():
-        print(f"Erro: Arquivo de clusters agrupados {arquivo_clusters.name} não encontrado.")
-        print("Certifique-se de rodar o clustering.py primeiro.")
+    if not arquivo_clusters.exists() or not arquivo_json.exists():
+        print("Erro: Arquivos de entrada não encontrados nos caminhos padrões.")
         sys.exit(1)
 
-    if not arquivo_json.exists():
-        print(f"Erro: Arquivo JSON de parâmetros {arquivo_json.name} não encontrado.")
-        sys.exit(1)
-
-    # 1. Carrega os dados dos clusters agregados
     df_c, parametros = carregar_dados(arquivo_clusters, arquivo_json)
     
-    # 2. Chama a pipeline dinâmica
+    # Testando o pipeline localmente
     resposta = executar_pipeline_otimizacao(df_c, parametros, pd_fin_atual=0.0175)
     
-    # 3. Extrai e exibe o resultado formatado no terminal para conferência
     vetor_x_puro = [
         next(c["limite_otimizado"] for c in resposta["resultados_por_cluster"] if c["cluster_id"] == idx)
         for idx in df_c["cluster_id"]
