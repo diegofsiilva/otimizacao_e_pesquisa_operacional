@@ -49,20 +49,20 @@ var GerarLimites = function (props) {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-xl font-bold text-[#101010]">
+        <h1 className="text-xl font-bold text-[#0D1B2A]">
           Carregar Base &amp; Gerar Limites
         </h1>
-        <div className="mt-1 h-0.5 w-10 bg-[#07B2FD]" />
+        <div className="mt-1 h-0.5 w-10 bg-[#2E6DA4]" />
       </div>
 
-      <div className="bg-white border border-[#ECECEC] shadow-sm rounded-xl p-5">
+      <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
         <div className="flex items-center gap-2 mb-4">
           <svg
             width="15"
             height="15"
             fill="none"
             viewBox="0 0 24 24"
-            stroke="#07B2FD"
+            stroke="#2E6DA4"
             strokeWidth="2"
           >
             <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
@@ -71,15 +71,15 @@ var GerarLimites = function (props) {
             <line x1="16" y1="17" x2="8" y2="17" />
             <polyline points="10 9 9 9 8 9" />
           </svg>
-          <span className="text-sm font-semibold text-[#101010]">
+          <span className="text-sm font-semibold text-[#0D1B2A]">
             Estrutura esperada do CSV
           </span>
         </div>
 
-        <div className="overflow-x-auto border border-[#ECECEC] rounded-lg mb-4">
+        <div className="overflow-x-auto border border-[#E8EFF7] mb-4">
           <table className="w-full text-xs">
             <thead>
-              <tr className="bg-[#093495]">
+              <tr className="bg-[#0D1B2A]">
                 {["Coluna", "Tipo", "Descrição", "Exemplo"].map(function (h) {
                   return (
                     <th
@@ -147,11 +147,11 @@ var GerarLimites = function (props) {
                   <tr
                     key={r.col}
                     className={
-                      "border-t border-[#ECECEC] " +
-                      (i % 2 === 0 ? "" : "bg-[#F3F4F9]/60")
+                      "border-t border-[#E8EFF7] " +
+                      (i % 2 === 0 ? "" : "bg-[#E2EAF4]/60")
                     }
                   >
-                    <td className="px-3 py-2 font-mono font-semibold text-[#07B2FD] whitespace-nowrap">
+                    <td className="px-3 py-2 font-mono font-semibold text-[#2E6DA4] whitespace-nowrap">
                       {r.col}
                     </td>
                     <td className="px-3 py-2 text-[#9C9C9F] whitespace-nowrap">
@@ -179,17 +179,17 @@ var GerarLimites = function (props) {
 
       {/* Dropzone */}
       <div>
-        <p className="text-sm font-semibold text-[#101010] mb-3">
+        <p className="text-sm font-semibold text-[#0D1B2A] mb-3">
           Fazer Upload
         </p>
         <div
           className={
-            "upload-zone flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed py-14 px-6 cursor-pointer " +
+            "upload-zone flex flex-col items-center justify-center gap-3 border-2 border-dashed py-14 px-6 cursor-pointer " +
             (drag
-              ? "border-[#07B2FD] bg-[#EBF8FF]"
+              ? "border-[#2E6DA4] bg-[#D6E8F5]"
               : file
-                ? "border-[#07B2FD] bg-[#EBF8FF]/50"
-                : "border-[#CACBCF] bg-white hover:border-[#07B2FD] hover:bg-[#EBF8FF]/40")
+                ? "border-[#2E6DA4] bg-[#D6E8F5]/50"
+                : "border-[#B8D4EC] bg-white hover:border-[#2E6DA4] hover:bg-[#D6E8F5]/40")
           }
           onDragOver={function (e) {
             e.preventDefault();
@@ -212,13 +212,13 @@ var GerarLimites = function (props) {
               handleFile(e.target.files[0]);
             }}
           />
-          <div className="w-12 h-12 bg-[#EBF8FF] rounded-xl flex items-center justify-center">
+          <div className="w-12 h-12 bg-[#D6E8F5] flex items-center justify-center">
             <svg
               width="22"
               height="22"
               fill="none"
               viewBox="0 0 24 24"
-              stroke="#07B2FD"
+              stroke="#2E6DA4"
               strokeWidth="2"
             >
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -228,7 +228,7 @@ var GerarLimites = function (props) {
           </div>
           {file ? (
             <>
-              <p className="text-sm font-semibold text-[#101010]">
+              <p className="text-sm font-semibold text-[#0D1B2A]">
                 Arquivo carregado: {file.name}
               </p>
               <p className="text-xs text-[#9C9C9F]">
@@ -237,7 +237,7 @@ var GerarLimites = function (props) {
             </>
           ) : (
             <>
-              <p className="text-sm font-semibold text-[#101010]">
+              <p className="text-sm font-semibold text-[#0D1B2A]">
                 Arraste seu arquivo aqui ou clique para selecionar
               </p>
               <p className="text-xs text-[#9C9C9F]">
@@ -255,10 +255,10 @@ var GerarLimites = function (props) {
             onClick={handleExecutar}
             disabled={running}
             className={
-              "flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold transition-colors shadow-sm " +
+              "flex items-center gap-2 px-5 py-2.5 text-sm font-semibold transition-colors shadow-sm " +
               (running
-                ? "bg-[#0B8AA5] text-white cursor-not-allowed"
-                : "bg-[#07B2FD] text-white hover:bg-[#005AEA]")
+                ? "bg-[#2E6DA4] text-white cursor-not-allowed"
+                : "bg-[#2E6DA4] text-white hover:bg-[#1B3A5C]")
             }
           >
             {running ? (
@@ -299,13 +299,13 @@ var GerarLimites = function (props) {
       {/* Resultado */}
       {ran && (
         <div className="space-y-4">
-          <div className="flex items-center gap-2 text-base font-semibold text-[#101010]">
+          <div className="flex items-center gap-2 text-base font-semibold text-[#0D1B2A]">
             <svg
               width="16"
               height="16"
               fill="none"
               viewBox="0 0 24 24"
-              stroke="#07B2FD"
+              stroke="#2E6DA4"
               strokeWidth="2.5"
             >
               <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
@@ -316,19 +316,19 @@ var GerarLimites = function (props) {
 
           {/* Mini cards */}
           <div className="grid grid-cols-3 gap-4">
-            <div className="bg-white border border-[#ECECEC] shadow-sm rounded-xl p-5">
+            <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
               <div className="text-xs font-medium text-[#9C9C9F] mb-1">
                 Total de Clusters
               </div>
-              <div className="text-3xl font-bold text-[#101010]">{total}</div>
+              <div className="text-3xl font-bold text-[#0D1B2A]">{total}</div>
             </div>
-            <div className="bg-white border border-[#67DE98]/50 shadow-sm rounded-xl p-5">
-              <div className="text-xs font-medium text-[#0B8AA5] mb-1">
+            <div className="bg-white border border-[#67DE98]/50 shadow-sm p-5">
+              <div className="text-xs font-medium text-[#2E6DA4] mb-1">
                 Com Solução Viável
               </div>
-              <div className="text-3xl font-bold text-[#0B8AA5]">{viavel}</div>
+              <div className="text-3xl font-bold text-[#2E6DA4]">{viavel}</div>
             </div>
-            <div className="bg-white border border-[#FAE95D]/60 shadow-sm rounded-xl p-5">
+            <div className="bg-white border border-[#FAE95D]/60 shadow-sm p-5">
               <div className="text-xs font-medium text-[#3B4049] mb-1">
                 Sem Solução
               </div>
@@ -336,10 +336,10 @@ var GerarLimites = function (props) {
             </div>
           </div>
 
-          <div className="bg-white border border-[#ECECEC] shadow-sm rounded-xl overflow-hidden">
+          <div className="bg-white border border-[#E8EFF7] shadow-sm overflow-hidden">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-[#093495]">
+                <tr className="bg-[#0D1B2A]">
                   {["Cluster ID", "Limite Sugerido", "Status"].map(
                     function (h) {
                       return (
@@ -359,17 +359,17 @@ var GerarLimites = function (props) {
                   return (
                     <tr
                       key={c.id}
-                      className="border-b border-[#F3F4F9] hover:bg-[#F3F4F9] transition-colors"
+                      className="border-b border-[#E2EAF4] hover:bg-[#E2EAF4] transition-colors"
                     >
-                      <td className="px-4 py-3 font-semibold text-[#07B2FD]">
+                      <td className="px-4 py-3 font-semibold text-[#2E6DA4]">
                         {c.id}
                       </td>
-                      <td className="px-4 py-3 font-medium text-[#101010]">
+                      <td className="px-4 py-3 font-medium text-[#0D1B2A]">
                         {c.limite ? fmt(c.limite) + ",00" : "\u2014"}
                       </td>
                       <td className="px-4 py-3">
                         {c.status === "viavel" ? (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#67DE98]/20 text-[#0B8AA5] border border-[#67DE98]/50">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold bg-[#67DE98]/20 text-[#2E6DA4] border border-[#67DE98]/50">
                             <svg
                               width="11"
                               height="11"
@@ -384,7 +384,7 @@ var GerarLimites = function (props) {
                             Solução Viável
                           </span>
                         ) : (
-                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-[#FF5D5C]/20 text-[#DC2F37] border border-[#FF5D5C]/40">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold bg-[#FF5D5C]/20 text-[#DC2F37] border border-[#FF5D5C]/40">
                             <svg
                               width="11"
                               height="11"
@@ -414,7 +414,7 @@ var GerarLimites = function (props) {
               onClick={function () {
                 if (setPage) setPage("resultados");
               }}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold text-[#07B2FD] border border-[#07B2FD]/40 bg-[#EBF8FF] hover:bg-[#D5F0FF] transition-colors"
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold text-[#2E6DA4] border border-[#2E6DA4]/40 bg-[#D6E8F5] hover:bg-[#B8D4EC] transition-colors"
             >
               Ver análise completa em Resultados
               <svg

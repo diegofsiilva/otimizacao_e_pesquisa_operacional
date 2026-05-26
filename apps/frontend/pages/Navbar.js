@@ -102,13 +102,13 @@ var Navbar = function (props) {
       style={{
         transition:
           "top .35s ease, width .35s ease, padding .35s ease, box-shadow .35s ease",
-        background: "linear-gradient(90deg, #07B2FD 0%, #005AEA 100%)",
+        background: "linear-gradient(90deg, #2E6DA4 0%, #1B3A5C 100%)",
       }}
       className={[
         "fixed left-1/2 -translate-x-1/2 z-40 flex items-center border-white/10",
         scrolled
-          ? "top-3 w-[calc(100%-4rem)] max-w-7xl px-6 h-12 shadow-2xl rounded-2xl"
-          : "top-5 w-[calc(100%-4rem)] max-w-7xl px-8 h-16 shadow-xl rounded-2xl",
+          ? "top-3 w-[calc(100%-4rem)] max-w-7xl px-6 h-12 shadow-2xl"
+          : "top-5 w-[calc(100%-4rem)] max-w-7xl px-8 h-16 shadow-xl",
       ].join(" ")}
     >
       {/* Logo + nome -- clicavel, navega para o dashboard */}
@@ -164,10 +164,10 @@ var Navbar = function (props) {
                 l.isConfig ? onConfig() : setPage(l.key);
               }}
               className={[
-                "flex items-center gap-2 font-medium transition-all rounded-lg",
+                "flex items-center gap-2 font-medium transition-all",
                 scrolled ? "px-3 py-1.5 text-xs" : "px-3.5 py-2 text-sm",
                 active
-                  ? "bg-white text-[#07B2FD] shadow-sm font-semibold"
+                  ? "bg-white text-[#2E6DA4] shadow-sm font-semibold"
                   : "text-white/90 hover:bg-white/15",
               ].join(" ")}
             >

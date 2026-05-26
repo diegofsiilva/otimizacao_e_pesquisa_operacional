@@ -2,7 +2,7 @@
 // Deps globais: CLUSTER_LIMITES, STATUS_PIE, EVOLUCAO, SCORE_DIST, SOLVER_COMPARISON, fmt, fmtZ
 //
 // Regras aplicadas conforme brandbook PAN (gráficos):
-// - Azul PAN (#07B2FD) como cor principal em todos os gráficos
+// - Azul PAN (#2E6DA4) como cor principal em todos os gráficos
 // - Rótulos de dados incluídos para garantir legibilidade
 // - Sem gradientes, bordas decorativas ou efeitos visuais nos gráficos
 // - Barras verticais para comparações, linha para evolução temporal, setor para proporções
@@ -48,7 +48,7 @@ var BarChartSVG = function (props) {
               x2={pad.left + cw}
               y1={y}
               y2={y}
-              stroke="#ECECEC"
+              stroke="#E8EFF7"
               strokeWidth="1"
             />
             <text
@@ -79,7 +79,7 @@ var BarChartSVG = function (props) {
               y={y}
               width={bw}
               height={bh}
-              fill={d.value > 0 ? "#07B2FD" : "#ECECEC"}
+              fill={d.value > 0 ? "#2E6DA4" : "#E8EFF7"}
             />
             {label && (
               <text
@@ -171,7 +171,7 @@ var LineChartSVG = function (props) {
               x2={pad.left + cw}
               y1={y}
               y2={y}
-              stroke="#ECECEC"
+              stroke="#E8EFF7"
               strokeWidth="1"
             />
             <text
@@ -186,11 +186,11 @@ var LineChartSVG = function (props) {
           </g>
         );
       })}
-      <path d={area} fill="#07B2FD" fillOpacity="0.08" />
+      <path d={area} fill="#2E6DA4" fillOpacity="0.08" />
       <polyline
         points={polyline}
         fill="none"
-        stroke="#07B2FD"
+        stroke="#2E6DA4"
         strokeWidth="2.5"
         strokeLinejoin="round"
       />
@@ -203,7 +203,7 @@ var LineChartSVG = function (props) {
               cx={p[0]}
               cy={p[1]}
               r="4"
-              fill="#07B2FD"
+              fill="#2E6DA4"
               stroke="#fff"
               strokeWidth="2"
             />
@@ -265,7 +265,7 @@ var AreaChartSVG = function (props) {
               x2={pad.left + cw}
               y1={y}
               y2={y}
-              stroke="#ECECEC"
+              stroke="#E8EFF7"
               strokeWidth="1"
             />
             <text
@@ -291,7 +291,7 @@ var AreaChartSVG = function (props) {
               y={y}
               width={bw}
               height={bh}
-              fill="#07B2FD"
+              fill="#2E6DA4"
               fillOpacity="0.85"
             />
             <text
@@ -400,22 +400,22 @@ var Resultados = function (props) {
     return (
       <div className="space-y-6">
         <div>
-          <h1 className="text-xl font-bold text-[#101010]">
+          <h1 className="text-xl font-bold text-[#0D1B2A]">
             Resultados da Simulação
           </h1>
           <p className="mt-1 text-xs text-[#9C9C9F]">
             Nenhuma simulação executada
           </p>
-          <div className="mt-1 h-0.5 w-10 bg-[#07B2FD]" />
+          <div className="mt-1 h-0.5 w-10 bg-[#2E6DA4]" />
         </div>
-        <div className="bg-white border border-[#ECECEC] shadow-sm rounded-xl flex flex-col items-center justify-center py-20 px-6 text-center gap-5">
-          <div className="w-14 h-14 bg-[#EBF8FF] rounded-2xl flex items-center justify-center">
+        <div className="bg-white border border-[#E8EFF7] shadow-sm flex flex-col items-center justify-center py-20 px-6 text-center gap-5">
+          <div className="w-14 h-14 bg-[#D6E8F5] flex items-center justify-center">
             <svg
               width="24"
               height="24"
               fill="none"
               viewBox="0 0 24 24"
-              stroke="#07B2FD"
+              stroke="#2E6DA4"
               strokeWidth="1.5"
             >
               <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
@@ -423,12 +423,12 @@ var Resultados = function (props) {
             </svg>
           </div>
           <div>
-            <p className="text-sm font-semibold text-[#101010] mb-1">
+            <p className="text-sm font-semibold text-[#0D1B2A] mb-1">
               Nenhuma simulação executada
             </p>
             <p className="text-xs text-[#9C9C9F] max-w-xs">
               Carregue uma base e execute o Simplex em{" "}
-              <strong className="text-[#101010]">Gerar Limites</strong> para
+              <strong className="text-[#0D1B2A]">Gerar Limites</strong> para
               visualizar os resultados aqui.
             </p>
           </div>
@@ -436,7 +436,7 @@ var Resultados = function (props) {
             onClick={function () {
               if (setPage) setPage("gerar");
             }}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold bg-[#07B2FD] text-white hover:bg-[#005AEA] transition-colors shadow-sm"
+            className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-[#2E6DA4] text-white hover:bg-[#1B3A5C] transition-colors shadow-sm"
           >
             <svg
               width="14"
@@ -522,17 +522,17 @@ var Resultados = function (props) {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-[#101010]">
+          <h1 className="text-xl font-bold text-[#0D1B2A]">
             Resultados da Simulação
           </h1>
           <p className="mt-1 text-xs text-[#9C9C9F]">
             Output do algoritmo Simplex · simulação executada em Jun/2024
           </p>
-          <div className="mt-1 h-0.5 w-10 bg-[#07B2FD]" />
+          <div className="mt-1 h-0.5 w-10 bg-[#2E6DA4]" />
         </div>
         <button
           onClick={exportarLimites}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold border border-[#ECECEC] bg-white text-[#3B4049] hover:bg-[#F3F4F9] transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-[#E8EFF7] bg-white text-[#3B4049] hover:bg-[#E2EAF4] transition-colors shadow-sm"
         >
           <svg
             width="13"
@@ -550,7 +550,7 @@ var Resultados = function (props) {
         </button>
       </div>
 
-      <div className="flex items-center gap-3 px-4 py-3 rounded-xl bg-[#EBF8FF] border border-[#07B2FD]/30 text-sm text-[#005AEA]">
+      <div className="flex items-center gap-3 px-4 py-3 bg-[#D6E8F5] border border-[#2E6DA4]/30 text-sm text-[#1B3A5C]">
         <svg
           width="16"
           height="16"
@@ -579,8 +579,8 @@ var Resultados = function (props) {
               className={
                 "rounded-xl border shadow-sm p-5 " +
                 (k.highlight
-                  ? "border-[#07B2FD]/40 bg-[#EBF8FF]"
-                  : "bg-white border-[#ECECEC]")
+                  ? "border-[#2E6DA4]/40 bg-[#D6E8F5]"
+                  : "bg-white border-[#E8EFF7]")
               }
             >
               <div className="text-xs font-medium text-[#9C9C9F] mb-2">
@@ -589,7 +589,7 @@ var Resultados = function (props) {
               <div
                 className={
                   "text-2xl font-bold mb-1 " +
-                  (k.highlight ? "text-[#07B2FD]" : "text-[#101010]")
+                  (k.highlight ? "text-[#2E6DA4]" : "text-[#0D1B2A]")
                 }
               >
                 {k.value}
@@ -602,8 +602,8 @@ var Resultados = function (props) {
 
       {/* Gráficos linha 1 */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white border border-[#ECECEC] shadow-sm rounded-xl p-5">
-          <div className="text-sm font-semibold text-[#101010] mb-1">
+        <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+          <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
             Limites por Cluster
           </div>
           <div className="text-xs text-[#9C9C9F] mb-4">
@@ -612,8 +612,8 @@ var Resultados = function (props) {
           <BarChartSVG data={barData} />
         </div>
 
-        <div className="bg-white border border-[#ECECEC] shadow-sm rounded-xl p-5">
-          <div className="text-sm font-semibold text-[#101010] mb-1">
+        <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+          <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
             Distribuição por Status
           </div>
           <div className="text-xs text-[#9C9C9F] mb-4">
@@ -626,13 +626,13 @@ var Resultados = function (props) {
                 return (
                   <div key={d.name} className="flex items-center gap-2 text-sm">
                     <div
-                      className="w-2.5 h-2.5 flex-shrink-0 rounded-full"
+                      className="w-2.5 h-2.5 flex-shrink-0"
                       style={{ background: d.color }}
                     />
                     <span className="font-medium text-[#3B4049] flex-1">
                       {d.name}
                     </span>
-                    <span className="font-semibold text-[#101010]">
+                    <span className="font-semibold text-[#0D1B2A]">
                       {d.value}%
                     </span>
                   </div>
@@ -643,8 +643,8 @@ var Resultados = function (props) {
         </div>
       </div>
 
-      <div className="bg-white border border-[#ECECEC] shadow-sm rounded-xl p-5">
-        <div className="mb-1 text-sm font-semibold text-[#101010]">
+      <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+        <div className="mb-1 text-sm font-semibold text-[#0D1B2A]">
           Comparação de Solvers: Simplex vs PuLP
         </div>
         <div className="text-xs text-[#9C9C9F] mb-5">
@@ -656,17 +656,17 @@ var Resultados = function (props) {
             return (
               <div
                 key={s.label}
-                className="rounded-xl border border-[#ECECEC] bg-[#F3F4F9] p-4"
+                className="rounded-xl border border-[#E8EFF7] bg-[#E2EAF4] p-4"
               >
                 <div className="flex items-center justify-between mb-3">
                   <span className="text-xs font-semibold text-[#3B4049]">
                     {s.label}
                   </span>
-                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#67DE98]/20 text-[#0B8AA5] border border-[#67DE98]/50">
+                  <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-medium bg-[#67DE98]/20 text-[#2E6DA4] border border-[#67DE98]/50">
                     {s.status}
                   </span>
                 </div>
-                <div className="text-2xl font-bold text-[#07B2FD] mb-1">
+                <div className="text-2xl font-bold text-[#2E6DA4] mb-1">
                   {fmtZ(s.z)}
                 </div>
                 <div className="text-xs text-[#9C9C9F]">Valor objetivo (z)</div>
@@ -691,10 +691,10 @@ var Resultados = function (props) {
           })}
         </div>
 
-        <div className="overflow-x-auto rounded-xl border border-[#ECECEC]">
+        <div className="overflow-x-auto border border-[#E8EFF7]">
           <table className="w-full text-xs">
             <thead>
-              <tr className="bg-[#093495]">
+              <tr className="bg-[#0D1B2A]">
                 {["Cluster", "Simplex (R$)", "PuLP / CBC (R$)", "Match"].map(
                   function (h) {
                     return (
@@ -717,11 +717,11 @@ var Resultados = function (props) {
                   <tr
                     key={cs.id}
                     className={
-                      "border-t border-[#ECECEC] " +
-                      (i % 2 === 0 ? "" : "bg-[#F3F4F9]/60")
+                      "border-t border-[#E8EFF7] " +
+                      (i % 2 === 0 ? "" : "bg-[#E2EAF4]/60")
                     }
                   >
-                    <td className="px-3 py-2 font-mono font-semibold text-[#07B2FD]">
+                    <td className="px-3 py-2 font-mono font-semibold text-[#2E6DA4]">
                       {cs.id}
                     </td>
                     <td className="px-3 py-2 text-[#3B4049]">
@@ -732,7 +732,7 @@ var Resultados = function (props) {
                     </td>
                     <td className="px-3 py-2">
                       {match ? (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#67DE98]/20 text-[#0B8AA5] border border-[#67DE98]/50">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium bg-[#67DE98]/20 text-[#2E6DA4] border border-[#67DE98]/50">
                           <svg
                             width="10"
                             height="10"
@@ -746,7 +746,7 @@ var Resultados = function (props) {
                           Idêntico
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-medium bg-[#FAE95D]/30 text-[#3B4049] border border-[#FAE95D]/70">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium bg-[#FAE95D]/30 text-[#3B4049] border border-[#FAE95D]/70">
                           <svg
                             width="10"
                             height="10"
@@ -783,8 +783,8 @@ var Resultados = function (props) {
 
       {/* Gráficos linha 2 */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-white border border-[#ECECEC] shadow-sm rounded-xl p-5">
-          <div className="text-sm font-semibold text-[#101010] mb-1">
+        <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+          <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
             Evolução do Limite Total
           </div>
           <div className="text-xs text-[#9C9C9F] mb-4">
@@ -793,8 +793,8 @@ var Resultados = function (props) {
           <LineChartSVG data={lineData} />
         </div>
 
-        <div className="bg-white border border-[#ECECEC] shadow-sm rounded-xl p-5">
-          <div className="text-sm font-semibold text-[#101010] mb-1">
+        <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+          <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
             Distribuição de Score
           </div>
           <div className="text-xs text-[#9C9C9F] mb-4">
