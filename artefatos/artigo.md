@@ -30,6 +30,12 @@ A escolha dessa abordagem se justifica por três motivos. Primeiro, a segmentaç
 
 Esta seção descreve o _pipeline_ metodologico adotado no estudo, desde a caracterização dos dados de entrada até a definição do modelo de otimização e sua resolução. O fluxo seguido inclui a preparação e transformação dos dados, a segmentação dos clientes em perfis homogêneos, a formulação do problema de programação linear e a implementação do algoritmo de solução. Por fim, são detalhadas as ferramentas e tecnologias utilizadas para garantir a reprodutibilidade do processo.
 
+**Figura 1 — Fluxo do pipeline metodológico**
+
+![Figura 1 — Fluxo do pipeline metodológico](assets/diagrama.png)
+
+*Fonte: Elaboração própria (2026).*
+
 ### 2.1 Dados utilizados
 
 Os dados foram fornecidos pelo parceiro de projeto em três tabelas correspondentes a safras temporais (M1, M2, e M3), contendo clientes correntistas com variáveis de perfil, risco capacidade de pagamento e comportamento. A base total tem cerca de 15 milhões de clientes por safra, das quais uma fração é elegível ao produto e segue para a etapa de otimização. A Tabela 1 resume as variáveis utilizadas diretamente no modelo e seu papel na formulação; as demais colunas são usadas apenas para controle a análises descritivas. As restrições e o papel na função associadas a essas variáveis são detalhadas na Seção 2.3.
@@ -256,12 +262,6 @@ A solução foi desenvolvida com foco em reprodutibilidade e execução em ambie
 **Formatos de dados e artefatos.** Para interoperabilidade e auditoria, as entradas e saídas operacionais do pipeline são mantidas em formatos abertos (CSV para bases processadas e tabelas intermediárias; JSON para parametrização). Os dados brutos podem ser fornecidos em Parquet e convertidos no processo de preparação.
 
 **Integração operacional.** Além da execução local via CLI, foi implementado um serviço de backend em **Python** utilizando **FastAPI** para disponibilizar o pipeline por meio de um endpoint HTTP. Nesse formato, a requisição recebe os parâmetros do produto e a referência aos dados de entrada, e a resposta retorna o status da execução, métricas-resumo (por exemplo, $Z^*$ e restrições ativas) e a recomendação de limites por cluster (ou por cliente, após o mapeamento), viabilizando integração com sistemas internos e automação do processo decisório.
-
----
-> 💡 **Sugestão de "ir além" — Materiais e Métodos**   
->
-> Adicione um diagrama de fluxo do pipeline completo (pré-processamento → clusterização → resolução do LP → pós-otimização). Pode ser feito em Mermaid, draw.io ou mesmo uma figura exportada. Artigos técnicos reais sempre incluem esse tipo de figura porque facilita a reprodutibilidade e deixa o leitor entender o método sem precisar ler todo o texto. É um dos elementos mais valorizados por revisores.
----
 
 ## 3. TRABALHOS RELACIONADOS
 
