@@ -196,11 +196,11 @@ A clusterização é feita usando **CART** (Classification and Regression Trees)
 
 ### Motivação da escolha do CART
 
-O K-Means, usado em versões anteriores, minimiza distância euclidiana no espaço das features — métrica sem relação direta com o objetivo do LP. O CART particiona o espaço de features minimizando a variância de uma variável guia escolhida, que neste caso é o score composto:
+O K-Means, usado em versões anteriores, minimiza distância euclidiana no espaço das features - métrica sem relação direta com o objetivo do LP. O CART particiona o espaço de features minimizando a variância de uma variável guia escolhida, que neste caso é o score composto:
 
 $$c_k = \pi \cdot (\bar{u} \cdot t \cdot T - PD_{calib} \cdot \text{LGD})$$
 
-Esse é exatamente o coeficiente da função objetivo do LP (sem o fator $n_k$, que só existe após a clusterização). Ao usar $c_k$ como variável guia, o CART garante que cada cluster seja internamente homogêneo na dimensão que o LP otimiza — e não em distância euclidiana, que não tem significado econômico aqui.
+Esse é exatamente o coeficiente da função objetivo do LP (sem o fator $n_k$, que só existe após a clusterização). Ao usar $c_k$ como variável guia, o CART garante que cada cluster seja internamente homogêneo na dimensão que o LP otimiza - e não em distância euclidiana, que não tem significado econômico aqui.
 
 Além disso, uma análise empírica com HDBSCAN confirmou que os dados não possuem estrutura de densidade natural suficiente para produzir 100 ou mais clusters: o algoritmo encontrou no máximo 22 clusters independente do parâmetro `min_cluster_size`. A segmentação precisa ser guiada pelo objetivo do LP, não por densidade geométrica dos dados.
 
@@ -208,7 +208,7 @@ Além disso, uma análise empírica com HDBSCAN confirmou que os dados não poss
 
 O número de clusters foi definido por varredura empírica. Para cada valor de $K$ de 50 a 2000, o pipeline completo (clustering + Simplex) foi executado e o valor ótimo $z$ da função objetivo registrado. O resultado mostrou que a partir de $K = 800$, cada incremento adicional de clusters aumenta $z$ em menos de 0,5%. $K = 800$ captura 98,4% do retorno máximo encontrado com $K = 2000$.
 
-A justificativa para o banco: a partir de $K = 800$, clusters adicionais não aumentam o retorno esperado da carteira de forma relevante — o ganho marginal cai abaixo de 0,5% por incremento de 50 clusters.
+A justificativa para o banco: a partir de $K = 800$, clusters adicionais não aumentam o retorno esperado da carteira de forma relevante - o ganho marginal cai abaixo de 0,5% por incremento de 50 clusters.
 
 ### População considerada
 
@@ -248,7 +248,7 @@ A calibração segue dois passos:
 1. Os decis são definidos pelos percentis de `pd_produto` da **população elegível completa** (6,7 milhões de clientes das 3 safras combinadas), garantindo que cada decil contenha ~10% dos elegíveis.
 2. O gamma empírico de cada decil é estimado a partir das observações de `over30mob3` que caem naquele decil, usando a razão entre defaults observados e PD esperada.
 
-Os decis D1-D4 possuem estimativas empíricas robustas (2.200 a 6.500 observações cada). D5 tem 103 observações com IC95 mais largo. D6-D10 têm menos de 16 observações cada e recebem gamma por extrapolação linear — limitação estrutural dos dados, pois clientes de alto risco raramente foram aprovados historicamente.
+Os decis D1-D4 possuem estimativas empíricas robustas (2.200 a 6.500 observações cada). D5 tem 103 observações com IC95 mais largo. D6-D10 têm menos de 16 observações cada e recebem gamma por extrapolação linear - limitação estrutural dos dados, pois clientes de alto risco raramente foram aprovados historicamente.
 
 ## Dependências
 
@@ -377,37 +377,99 @@ status: multiplas_solucoes
 
 O algoritmo detectou corretamente a existência de múltiplas soluções e retornou uma delas.
 
-### Teste 4: Execução completa com base de clientes calibrada
+### Teste 4: Execução com base M1, parâmetros padrão
 
-**Entrada:** `clientes_m1_calibrado.csv` com `parametros.json` padrão (K=800 clusters).
+**Entrada:** `clientes_m1_calibrado.csv` com parâmetros `t=0.0175`, `LGD=0.8`, `u_bar=0.75`, `T=22`, `L_max=25000`.
 
 **Saída obtida:**
 
 ```
 Status: otimo
 Valor otimo (z): 36183592.28
-
-Limites otimos por cluster:
-  Cluster 0: R$ 250 (n=891)
-  Cluster 1: R$ 250 (n=855)
-  Cluster 2: R$ 1950 (n=906)
-  Cluster 3: R$ 0 (n=653)
-  Cluster 4: R$ 1150 (n=630)
-  ...
-  Cluster 387: R$ 3600 (n=11202)
-  ...
-  Cluster 720: R$ 4300 (n=3403)
-  ...
 ```
 
-O algoritmo convergiu para o ótimo com 800 clusters e 1.836.085 clientes elegíveis. Clusters com limite zero apresentam perfil de alto risco onde a perda esperada por inadimplência supera a receita de interchange dado o teto de inadimplência financeira da carteira (R1). Os clusters com limite positivo concentram os perfis com melhor relação risco-retorno compatível com as restrições do modelo.
+Estatísticas dos clusters com oferta (L > 0):
+
+| Métrica | Limite ofertado | Clientes por cluster |
+| ------- | --------------- | -------------------- |
+| Mínimo  | R$ 200          | 502                  |
+| Máximo  | R$ 4.300        | 11.202               |
+| Média   | R$ 844          | 2.295                |
+| Mediana | R$ 400          | 1.826                |
+
+382 clusters receberam oferta, totalizando 876.520 clientes (47,7% dos 1.836.085 elegíveis). O cluster com maior número de clientes (n=11.202) recebeu limite de R$3.600. Clusters com limite zero apresentam perfil de alto risco onde a perda esperada por inadimplência supera a receita de interchange dado o teto de inadimplência financeira da carteira (R1).
+
+### Teste 5: Sensibilidade a parâmetros - M1 com parâmetros alternativos
+
+**Entrada:** `clientes_m1_calibrado.csv` com parâmetros `t=0.018`, `LGD=0.7`, `u_bar=0.8`, `T=22`, `L_max=25000`.
+
+**Saída obtida:**
+
+```
+Status: otimo
+Valor otimo (z): 43003817.89
+```
+
+Estatísticas dos clusters com oferta (L > 0):
+
+| Métrica | Limite ofertado | Clientes por cluster |
+| ------- | --------------- | -------------------- |
+| Mínimo  | R$ 200          | 502                  |
+| Máximo  | R$ 4.300        | 11.202               |
+| Média   | R$ 840          | 2.289                |
+| Mediana | R$ 400          | 1.821                |
+
+385 clusters receberam oferta, totalizando 881.147 clientes (48,0% dos elegíveis). O aumento de $t$ e a redução de LGD tornaram a carteira mais rentável (+18,9% em z), com distribuição de limites praticamente idêntica à do Teste 4, confirmando a robustez da clusterização a variações de parâmetros.
+
+### Teste 6: Execução com base M2, parâmetros padrão
+
+**Entrada:** `clientes_m2_calibrado.csv` com parâmetros `t=0.0175`, `LGD=0.8`, `u_bar=0.75`, `T=22`, `L_max=25000`.
+
+**Saída obtida:**
+
+```
+Status: otimo
+Valor otimo (z): 36925407.73
+```
+
+Estatísticas dos clusters com oferta (L > 0):
+
+| Métrica | Limite ofertado | Clientes por cluster |
+| ------- | --------------- | -------------------- |
+| Mínimo  | R$ 200          | 507                  |
+| Máximo  | R$ 4.050        | 10.581               |
+| Média   | R$ 920          | 2.343                |
+| Mediana | R$ 450          | 1.844                |
+
+356 clusters receberam oferta, totalizando 834.225 clientes (46,2% dos 1.805.274 elegíveis de M2). O valor ótimo de M2 (R$36,9M) é comparável ao de M1 (R$36,2M), indicando consistência do modelo entre safras. O limite médio levemente maior em M2 (R$920 vs R$844) reflete diferenças na composição de risco da safra.
+
+### Teste 7: Execução com base M3, parâmetros padrão
+
+**Entrada:** `clientes_m3_calibrado.csv` com parâmetros `t=0.0175`, `LGD=0.8`, `u_bar=0.75`, `T=22`, `L_max=25000`.
+
+**Saída obtida:**
+
+```
+Status: otimo
+Valor otimo (z): 60765092.37
+```
+
+Estatísticas dos clusters com oferta (L > 0):
+
+| Métrica | Limite ofertado | Clientes por cluster |
+| ------- | --------------- | -------------------- |
+| Mínimo  | R$ 200          | 503                  |
+| Máximo  | R$ 3.700        | 14.240               |
+| Média   | R$ 727          | 4.012                |
+| Mediana | R$ 550          | 3.646                |
+
+437 clusters receberam oferta, totalizando 1.753.121 clientes (55,9% dos 3.137.258 elegíveis de M3). O valor ótimo de M3 (R$60,8M) é significativamente maior que o de M1 e M2 porque a safra M3 possui quase o dobro de clientes elegíveis. A `PD_fin_atual` de M3 (0,2094) é ligeiramente mais alta que as demais safras, o que relaxa a restrição R1 e permite que o modelo aprove uma proporção maior dos elegíveis. O maior cluster ofertado (n=14.240) recebeu limite de R$350, refletindo um perfil de risco moderado com alta capacidade de pagamento.
 
 ## Conclusões
 
-O algoritmo Simplex foi implementado do zero, sem uso de bibliotecas de otimização, e validado contra problemas com solução analítica conhecida. O pipeline completo — calibração da PD, clusterização por CART com K=800, montagem do LP e execução do Simplex — está funcional e documentado para a base completa de elegíveis.
+O algoritmo Simplex foi implementado do zero, sem uso de bibliotecas de otimização, e validado contra problemas com solução analítica conhecida. O pipeline completo - calibração da PD, clusterização por CART com K=800, montagem do LP e execução do Simplex - está funcional e documentado para as safras M1 e M2 da base completa de elegíveis.
 
 Os próximos passos previstos são:
 
 - Alinhamento com o parceiro sobre a formulação de R1, dado que a correlação positiva observada entre `pd_calibrada` e `pi` na base faz com que a restrição de inadimplência financeira exclua clusters de alta propensão
 - Incorporação das restrições adicionais mapeadas no TAPI, como teto de inadimplência física, metas de produção mínima e rentabilidade mínima da carteira
-- Execução e comparação dos resultados para as safras M2 e M3
