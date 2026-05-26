@@ -67,8 +67,8 @@ var KPI_CARDS = [
   {
     label: "Total de Clientes",
     period: "na base carregada",
-    value: "1.247",
-    badge: "+12",
+    value: "48.320",
+    badge: "+847",
     trend: "up",
     iconBg: "#D6E8F5",
     iconColor: "#2E6DA4",
@@ -90,7 +90,7 @@ var KPI_CARDS = [
   {
     label: "Clusters Identificados",
     period: "segmentação atual",
-    value: "10",
+    value: "73",
     badge: "=",
     trend: "neutral",
     iconBg: "#D6E8F5",
@@ -113,8 +113,8 @@ var KPI_CARDS = [
   {
     label: "Score Médio",
     period: "média da carteira",
-    value: "682",
-    badge: "+8",
+    value: "694",
+    badge: "+11",
     trend: "up",
     iconBg: "#D6E8F5",
     iconColor: "#0D1B2A",
@@ -135,8 +135,8 @@ var KPI_CARDS = [
   {
     label: "Clientes Elegíveis",
     period: "aptos à otimização",
-    value: "1.089",
-    badge: "87.3%",
+    value: "42.184",
+    badge: "87,3%",
     trend: "up",
     iconBg: "#FFFCE6",
     iconColor: "#3B4049",
@@ -203,7 +203,7 @@ var Dashboard = function (props) {
         <div>
           <h1 className="text-xl font-bold text-[#0D1B2A]">Dashboard</h1>
           <p className="mt-1 text-xs text-[#9C9C9F]">
-            Visão geral da carteira base · base carregada em Jun/2024
+            Visão geral da carteira base · base carregada em Mai/2025
           </p>
           <div className="mt-1 h-0.5 w-10 bg-[#2E6DA4]" />
         </div>

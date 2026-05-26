@@ -139,7 +139,7 @@ var GerarLimites = function (props) {
                 {
                   col: "fx_idade",
                   tipo: "string",
-                  desc: "Faixa etária categórica",
+                  desc: "Faixa etária categórica (opcional — não utilizada como feature do CART)",
                   ex: "26-35",
                 },
               ].map(function (r, i) {
@@ -171,9 +171,9 @@ var GerarLimites = function (props) {
         <p className="text-xs text-[#9C9C9F]">
           Mínimo recomendado:{" "}
           <span className="font-semibold text-[#3B4049]">
-            20-30 clientes com flag_filtros = 0
+            500+ clientes com flag_filtros = 0
           </span>{" "}
-          para o K-Means formar os 7 clusters corretamente.
+          para o CART (árvore de decisão) gerar clusters com tamanho mínimo adequado (min_samples_leaf=500). O algoritmo pode gerar até 800 clusters.
         </p>
       </div>
 

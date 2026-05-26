@@ -483,25 +483,25 @@ var Resultados = function (props) {
   var KPIs = [
     {
       label: "Total de Clusters",
-      value: "10",
-      sub: "\u2191 2 novos clusters",
+      value: "73",
+      sub: "\u2191 5 novos clusters",
       highlight: false,
     },
     {
       label: "Limite Total Aprovado",
-      value: "R$ 15,7M",
+      value: "R$ 127,4M",
       sub: "\u2191 8,5% vs mês anterior",
       highlight: true,
     },
     {
       label: "Clientes Ativos",
-      value: "1.247",
+      value: "48.320",
       sub: "\u2191 12 novos este mês",
       highlight: false,
     },
     {
       label: "Taxa de Aprovação",
-      value: "87,5%",
+      value: "87,3%",
       sub: "\u2191 2,3% vs ano anterior",
       highlight: false,
     },
@@ -526,7 +526,7 @@ var Resultados = function (props) {
             Resultados da Simulação
           </h1>
           <p className="mt-1 text-xs text-[#9C9C9F]">
-            Output do algoritmo Simplex · simulação executada em Jun/2024
+            Output do algoritmo Simplex · simulação executada em Mai/2025
           </p>
           <div className="mt-1 h-0.5 w-10 bg-[#2E6DA4]" />
         </div>
@@ -673,16 +673,6 @@ var Resultados = function (props) {
                 <div className="text-xs text-[#9C9C9F] mt-1">
                   Tempo:{" "}
                   <span className="font-medium text-[#3B4049]">
-                    {s.tempo_ms} ms
-                  </span>
-                </div>
-                <div className="text-2xl font-bold text-slate-800 mb-1">
-                  {fmtZ(s.z)}
-                </div>
-                <div className="text-xs text-slate-500">Valor objetivo (z)</div>
-                <div className="text-xs text-slate-500 mt-1">
-                  Tempo:{" "}
-                  <span className="font-medium text-slate-700">
                     {s.tempo_ms} ms
                   </span>
                 </div>
