@@ -18,19 +18,13 @@
 
 ## 1. INTRODUÇÃO
 
-[Parágrafo 1 — Contextualização do problema: descreva o cenário em que o problema está inserido.]
+Definir limites de crédito pré-aprovados é uma das decisões mais importantes para instituições financeiras, pois afeta ao mesmo tempo o quanto o cliente consegue usar o produto, o retorno esperado e a exposição ao risco. Quando essa decisão precisa ser tomada para milhões de clientes, ela deixa de ser apenas uma escolha pontual e passa a exigir um processo consistente, rastreável e alinhado a regras prudenciais e operacionais, como teto de risco agregado, limite máximo ofertado e alavancagem em relação à capacidade de pagamento.
 
-[Parágrafo 2 — Relevância do problema: explique por que o tema é importante, usando dados, estatísticas ou referências que justifiquem o interesse.]
+No contexto brasileiro, indicadores públicos mostram que a inadimplência segue sendo um tema relevante no mercado de crédito, o que reforça a necessidade de métodos quantitativos para apoiar políticas de concessão. Por exemplo, a inadimplência da carteira de crédito do Sistema Financeiro Nacional (medida como o percentual de operações com atraso superior a 90 dias) foi de 4,33% em março de 2026 (BANCO CENTRAL DO BRASIL, 2026). Esse cenário sustenta a motivação para abordagens que conectem, de forma objetiva, retorno e risco, evitando que a definição de limites dependa apenas de regras fixas ou decisões pouco padronizadas.
 
-[Parágrafo 3 — Objetivo do trabalho: apresente claramente o que este trabalho se propõe a fazer.]
+Este trabalho propõe um pipeline reprodutível para definição de limites de crédito pré-aprovados a partir de dados históricos. Nele, clientes elegíveis são segmentados em perfis relativamente homogêneos e, em seguida, formula-se um problema de Programação Linear para maximizar o retorno líquido esperado, sujeito a restrições de risco, capacidade de pagamento e limites operacionais. O problema é resolvido por uma implementação própria do método Simplex e os resultados podem ser disponibilizados tanto via execução local quanto por meio de um backend em Python (FastAPI), viabilizando integração com sistemas internos.
 
-[Parágrafo 4 — Justificativa: explique a motivação com base no contexto do projeto, sem mencionar explicitamente o nome da empresa parceira.]
-
----
-> 💡 **Sugestão de "ir além" — Introdução**
->
-> Inclua um dado quantitativo real e citado do contexto brasileiro logo no segundo parágrafo — por exemplo, a taxa de inadimplência de cartão de crédito divulgada pelo Banco Central do Brasil (disponível em dadosabertos.bcb.gov.br). Isso ancora o problema em escala real e demonstra que a motivação não é hipotética. Artigos publicados em conferências e periódicos da área quase sempre abrem com um dado desse tipo antes de apresentar o objetivo.
----
+A escolha dessa abordagem se justifica por três motivos. Primeiro, a segmentação por perfis reduz a heterogeneidade e torna o problema tratável em larga escala, mantendo parâmetros econômicos interpretáveis por grupo. Segundo, a Programação Linear explicita de maneira transparente as premissas, a função objetivo e as restrições de negócio, o que facilita governança e auditoria. Por fim, a disponibilização operacional do pipeline aproxima o método do uso recorrente, permitindo monitoramento e ajustes conforme novas safras e parâmetros do produto se tornam disponíveis.
 
 ## 2. MATERIAIS E MÉTODOS
 
@@ -38,7 +32,7 @@ Esta seção descreve o _pipeline_ metodologico adotado no estudo, desde a carac
 
 ### 2.1 Dados utilizados
 
-Os dados foram fornecidos pelo **Banco Pan** em três tabelas correspondentes a safras temporais (M1, M2, e M3), contendo clientes correntistas com variáveis de perfil, risco capacidade de pagamento e comportamento. A base total tem cerca de 15 milhões de clientes por safra, das quais uma fração é elegível ao produto e segue para a etapa de otimização. A Tabela 1 resume as variáveis utilizadas diretamente no modelo e seu papel na formulação; as demais colunas são usadas apenas para controle a análises descritivas. As restrições e o papel na função associadas a essas variáveis são detalhadas na Seção 2.3.
+Os dados foram fornecidos pelo parceiro de projeto em três tabelas correspondentes a safras temporais (M1, M2, e M3), contendo clientes correntistas com variáveis de perfil, risco capacidade de pagamento e comportamento. A base total tem cerca de 15 milhões de clientes por safra, das quais uma fração é elegível ao produto e segue para a etapa de otimização. A Tabela 1 resume as variáveis utilizadas diretamente no modelo e seu papel na formulação; as demais colunas são usadas apenas para controle a análises descritivas. As restrições e o papel na função associadas a essas variáveis são detalhadas na Seção 2.3.
 
 **Tabela 1 — Variáveis fornecidas pelo parceiro (estatísticas da safra M1)**
 
@@ -264,7 +258,7 @@ A solução foi desenvolvida com foco em reprodutibilidade e execução em ambie
 **Integração operacional.** Além da execução local via CLI, foi implementado um serviço de backend em **Python** utilizando **FastAPI** para disponibilizar o pipeline por meio de um endpoint HTTP. Nesse formato, a requisição recebe os parâmetros do produto e a referência aos dados de entrada, e a resposta retorna o status da execução, métricas-resumo (por exemplo, $Z^*$ e restrições ativas) e a recomendação de limites por cluster (ou por cliente, após o mapeamento), viabilizando integração com sistemas internos e automação do processo decisório.
 
 ---
-> 💡 **Sugestão de "ir além" — Materiais e Métodos**
+> 💡 **Sugestão de "ir além" — Materiais e Métodos**   
 >
 > Adicione um diagrama de fluxo do pipeline completo (pré-processamento → clusterização → resolução do LP → pós-otimização). Pode ser feito em Mermaid, draw.io ou mesmo uma figura exportada. Artigos técnicos reais sempre incluem esse tipo de figura porque facilita a reprodutibilidade e deixa o leitor entender o método sem precisar ler todo o texto. É um dos elementos mais valorizados por revisores.
 ---
@@ -427,6 +421,8 @@ De forma geral, Li, Tao e Li (2022) contribuem como referência para a etapa de 
 
 AL-MUSBAHU, Abdulrahim; TETE, Ahmed Rufai; MANYISA, Yisa Emmanuel; MOHAMMED, Jibrin. Application of Linear Programming for Optimal Net Revenue on Bank Loan. **Kontagora Journal of Mathematics**, v. 1, n. 1, p. 214-230, 2025. DOI: 10.5281/zenodo.17401383.
 // https://fuekjournals.org/index.php/KJM/article/view/166
+
+BANCO CENTRAL DO BRASIL. Inadimplência da carteira de crédito – Total (SGS 21082). Sistema Gerenciador de Séries Temporais (SGS). Disponível em: <https://www3.bcb.gov.br/sgspub/consultarvalores/consultarValoresSeries.do?method=consultarGraficoPorId&hdOidSeriesSelecionadas=21082>. Acesso em: 26 maio 2026.
 
 KWAPONG, Samuel Darkwa. Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd. 2013. Dissertação (MSc in Industrial Mathematics) — Kwame Nkrumah University of Science and Technology, Institute of Distance Learning, Kumasi, 2013. Disponível em: <https://ir.knust.edu.gh/handle/123456789/5841>. Acesso em: 20 maio 2026.
 // https://ir.knust.edu.gh/items/ffdc0243-2ecc-4937-8aa1-6a752e613d93
