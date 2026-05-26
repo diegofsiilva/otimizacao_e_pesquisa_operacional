@@ -176,7 +176,32 @@ Quando $V^{min}=0$, a restrição é inativa; valores positivos representam meta
 
 ### 2.4 Implementação do algoritmo
 
-[Descrição do algoritmo implementado e suas etapas.]
+A implementação foi desenvolvida em Python e organizada como um _pipeline_ executável para: (i) ler uma base de clientes e parâmetros do produto, (ii) segmentar clientes elegíveis em grupos relativamente homogêneos, (iii) montar um Problema de Programação Linear (PL) para definição de limites por grupo e (iv) resolver o PL via algoritmo Simplex. Os resultados são persistidos em formato tabular para auditoria e reprodutibilidade.
+
+**Entrada e parâmetros.** O pipeline recebe (i) um arquivo CSV com registros de clientes e (ii) um arquivo JSON contendo constantes operacionais do produto (por exemplo, taxa de _interchange_ $t$, horizonte $T$, utilização média $\bar{u}$, $\mathrm{LGD}$ e teto $L^{max}$). A partir da base elegível, calcula-se também o benchmark de risco agregado $\overline{PD}_{fin}^{atual}$, utilizado na restrição de risco da carteira.
+
+**Etapa 1 — Preparação dos dados (visão geral).** As etapas de limpeza, transformação e criação de variáveis derivadas (como a propensão normalizada $\pi$ e a proxy de capacidade de pagamento) seguem o pré-processamento descrito na Seção 2.2. Nesta subseção, o foco é a integração dessas saídas na etapa prescritiva (otimização).
+
+**Etapa 2 — Segmentação em clusters (CART).** Os clientes elegíveis são particionados em $K$ clusters por meio de uma árvore de decisão do tipo CART, de forma a produzir grupos homogêneos nas variáveis relevantes ao PL. Em termos operacionais:
+1. Filtram-se apenas clientes elegíveis.
+2. Constrói-se a variável de propensão $\pi$ a partir de normalização min–max do score de propensão (com truncamento para $[0,1]$).
+3. Constrói-se uma proxy de capacidade de pagamento (por exemplo, usando a capacidade observada quando disponível e uma regra de proxy quando ausente).
+4. Treina-se o CART com limite de folhas configurado para gerar aproximadamente $K$ clusters (adotado no projeto como $K=800$, definido por varredura empírica de ganho marginal).
+5. Para cada cluster $k$, agregam-se os parâmetros necessários ao PL: tamanho $n_k$, risco $PD_k$ (média de PD calibrada), propensão $\pi_k$ (média), capacidade $CP_k$ (percentil 5 da proxy) e fator de alavancagem $m_k$ (derivado por faixas do score de crédito).
+
+Como saída, obtém-se uma tabela agregada por cluster que concentra todos os parâmetros usados na formulação do PL.
+
+**Etapa 3 — Montagem do problema de Programação Linear.** Com os parâmetros por cluster, monta-se o PL na forma padrão (matriz de restrições e vetor de coeficientes), em que cada variável de decisão $L_k$ representa o limite ofertado ao cluster $k$. O coeficiente objetivo por cluster segue a estrutura:
+$$
+c_k = n_k \cdot \pi_k \cdot \left(\bar{u}\cdot t \cdot T - PD_k \cdot \mathrm{LGD}\right),
+$$
+e as restrições incluem, em particular: (i) teto de risco financeiro agregado (comparado ao benchmark $\overline{PD}_{fin}^{atual}$), (ii) limite por capacidade de pagamento com alavancagem $L_k \le m_k\cdot CP_k$ e (iii) teto operacional $L_k \le L^{max}$.
+
+**Etapa 4 — Resolução via Simplex.** O PL é resolvido por uma implementação própria do método Simplex. O algoritmo constrói o tableau inicial com variáveis de folga, itera selecionando variável entrante e sainte (com regra de Bland para evitar ciclagem), realiza pivoteamentos e encerra quando não há melhoria na função objetivo ou quando identifica casos especiais (como problema ilimitado). Ao final, retorna o vetor ótimo $L_k^*$, o valor ótimo $Z^*$ e o status da solução.
+
+**Pós-otimização e saída.** Para aderência operacional, os limites contínuos retornados são pós-processados (por exemplo, aplicação de piso mínimo para “oferta ativa” e arredondamento para múltiplos predefinidos). O resultado final é reportado por cluster e pode ser propagado para o nível individual via mapeamento do cliente ao seu cluster.
+
+**Acesso operacional (CLI e endpoint).** Além da execução via linha de comando para fins de reprodutibilidade, o mesmo pipeline pode ser encapsulado em um serviço de backend e disponibilizado por meio de um endpoint HTTP. Nesse formato, uma requisição informa a referência aos dados e os parâmetros do produto, e a resposta retorna o status da otimização, métricas-resumo (por exemplo, $Z^*$ e restrições ativas) e a recomendação de limites por cluster (ou por cliente, após o mapeamento), viabilizando integração com sistemas internos e automação do processo decisório.
 
 ### 2.5 Ferramentas e Tecnologias
 
