@@ -1,26 +1,12 @@
 // pages/Navbar.js
-// Navbar fixa com gradiente PAN (Azul PAN -> Azul Royal, 90deg).
-// Encolhe ao rolar. Link ativo em branco com texto azul.
-// Logo e nome do banco funcionam como link para o dashboard.
+// Navbar fixa full-width, colada no topo. Altura fixa 56px. Sem border-radius. Sem animação de scroll.
+// Gradiente PAN original (Azul PAN #07B2FD -> Azul Royal #005AEA, 90deg).
+// Link ativo em branco com texto azul PAN. Logo e nome navegam para o dashboard.
 
 var Navbar = function (props) {
   var page = props.page;
   var setPage = props.setPage;
   var onConfig = props.onConfig;
-
-  var s1 = React.useState(false);
-  var scrolled = s1[0];
-  var setScrolled = s1[1];
-
-  React.useEffect(function () {
-    function onScroll() {
-      setScrolled(window.scrollY > 40);
-    }
-    window.addEventListener("scroll", onScroll);
-    return function () {
-      window.removeEventListener("scroll", onScroll);
-    };
-  }, []);
 
   var links = [
     {
@@ -35,10 +21,10 @@ var Navbar = function (props) {
           stroke="currentColor"
           strokeWidth="2"
         >
-          <rect x="3" y="3" width="7" height="7" rx="1" />
-          <rect x="14" y="3" width="7" height="7" rx="1" />
-          <rect x="3" y="14" width="7" height="7" rx="1" />
-          <rect x="14" y="14" width="7" height="7" rx="1" />
+          <rect x="3" y="3" width="7" height="7" rx="0" />
+          <rect x="14" y="3" width="7" height="7" rx="0" />
+          <rect x="3" y="14" width="7" height="7" rx="0" />
+          <rect x="14" y="14" width="7" height="7" rx="0" />
         </svg>
       ),
     },
@@ -100,21 +86,14 @@ var Navbar = function (props) {
   return (
     <header
       style={{
-        transition:
-          "top .35s ease, width .35s ease, padding .35s ease, box-shadow .35s ease",
-        background: "linear-gradient(90deg, #2E6DA4 0%, #1B3A5C 100%)",
+        background: "linear-gradient(90deg, #07B2FD 0%, #005AEA 100%)",
+        borderRadius: 0,
       }}
-      className={[
-        "fixed left-1/2 -translate-x-1/2 z-40 flex items-center border-white/10",
-        scrolled
-          ? "top-3 w-[calc(100%-4rem)] max-w-7xl px-6 h-12 shadow-2xl"
-          : "top-5 w-[calc(100%-4rem)] max-w-7xl px-8 h-16 shadow-xl",
-      ].join(" ")}
+      className="fixed top-0 left-0 w-full z-40 flex items-center h-14 px-8 shadow-xl border-b border-white/10"
     >
       {/* Logo + nome -- clicavel, navega para o dashboard */}
       <div
         className="flex items-center gap-2.5 mr-6 flex-shrink-0 cursor-pointer"
-        style={{ transition: "gap .35s ease" }}
         onClick={function () {
           setPage("dashboard");
         }}
@@ -122,32 +101,15 @@ var Navbar = function (props) {
         <img
           src="assets/Logo_PAN.jpg"
           alt="Banco PAN"
-          style={{ transition: "height .35s ease" }}
-          className={[
-            "w-auto object-contain flex-shrink-0",
-            scrolled ? "h-6" : "h-8",
-          ].join(" ")}
+          className="h-8 w-auto object-contain flex-shrink-0"
         />
-        <div
-          style={{
-            transition: "opacity .35s ease",
-            opacity: scrolled ? 0.9 : 1,
-          }}
-        >
-          <div
-            className={[
-              "font-bold text-white leading-tight",
-              scrolled ? "text-xs" : "text-sm",
-            ].join(" ")}
-            style={{ transition: "font-size .35s ease" }}
-          >
+        <div>
+          <div className="text-sm font-bold text-white leading-tight">
             Banco PAN
           </div>
-          {!scrolled && (
-            <div className="text-[10px] text-white/70 leading-tight">
-              Otimizador de Limites
-            </div>
-          )}
+          <div className="text-[10px] text-white/70 leading-tight">
+            Otimizador de Limites
+          </div>
         </div>
       </div>
 
@@ -163,11 +125,11 @@ var Navbar = function (props) {
               onClick={function () {
                 l.isConfig ? onConfig() : setPage(l.key);
               }}
+              style={{ borderRadius: 0 }}
               className={[
-                "flex items-center gap-2 font-medium transition-all",
-                scrolled ? "px-3 py-1.5 text-xs" : "px-3.5 py-2 text-sm",
+                "flex items-center gap-2 px-3.5 py-2 text-sm font-medium transition-colors",
                 active
-                  ? "bg-white text-[#2E6DA4] shadow-sm font-semibold"
+                  ? "bg-white text-[#005AEA] shadow-sm font-semibold"
                   : "text-white/90 hover:bg-white/15",
               ].join(" ")}
             >
