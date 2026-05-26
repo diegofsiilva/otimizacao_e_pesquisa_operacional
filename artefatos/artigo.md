@@ -66,7 +66,46 @@ Além das variáveis das três safras, alguns parâmetros necessários à formul
 
 ### 2.2 Pré-processamento
 
-[Etapas de limpeza, transformação e preparação dos dados.]
+O pré-processamento tem como objetivo transformar as variáveis de entrada em parâmetros consistentes e robustos para as etapas subsequentes de segmentação e otimização. Em particular, esta etapa: (i) restringe a população à base elegível ao produto, (ii) calibra a probabilidade de inadimplência para corrigir vieses observados nos dados históricos, (iii) constrói variáveis derivadas diretamente consumidas pelo modelo (propensão à contratação e proxy de capacidade de pagamento) e (iv) trata valores ausentes de forma a permitir a execução reprodutível do pipeline.
+
+**Filtragem de elegibilidade e validações.** Antes de qualquer transformação, a base é filtrada para incluir apenas clientes elegíveis, conforme o indicador `flag_filtros = 0`. Essa decisão reflete o escopo operacional do problema: a otimização define limites apenas para a população passível de receber oferta. Variáveis essenciais ao pipeline (por exemplo, `pd_produto`, `score_propensao_contrato`, `score_credito_cross`, `capacidade_pagamento` e `renda_estimada`) são então verificadas quanto a tipo e presença, e as regras de _fallback_ descritas a seguir são aplicadas quando há ausência de informação.
+
+**Calibração da probabilidade de inadimplência.** Observou-se que a razão entre inadimplência observada e inadimplência esperada não é constante ao longo do espectro de risco, o que pode levar a subestimação de risco em faixas mais arriscadas. Para mitigar esse efeito, a probabilidade bruta de inadimplência do produto (`pd_produto`) é calibrada por decis de risco.
+
+A calibração segue o procedimento:
+1. Define-se o decil $d(i)\in\{1,\dots,10\}$ de cada cliente $i$ a partir da distribuição de `pd_produto` na população elegível (cortes percentílicos de 10%).
+2. Para cada decil $d$, estima-se um fator multiplicativo $\gamma_d$ comparando inadimplência observada e esperada no histórico, usando `over30mob3` como proxy de evento de default (considerando apenas registros com observação válida de `over30mob3`). Uma forma equivalente de escrever essa calibração é:
+   $$
+   \gamma_d \;=\; \frac{\sum_{i\in d} y_i}{\sum_{i\in d} PD_i},
+   $$
+   onde $y_i \in \{0,1\}$ indica evento observado e $PD_i$ é a `pd_produto` do cliente.
+3. Em decis com baixa amostra de observações (tipicamente os decis de maior risco, devido a viés de seleção na aprovação histórica), $\gamma_d$ é obtido por extrapolação conservadora a partir do padrão estimado nos decis com evidência empírica suficiente, com truncamento para evitar valores extremos.
+
+Por fim, a PD calibrada no nível do cliente é definida por:
+$$
+PD_i^{cal} \;=\; PD_i \cdot \gamma_{d(i)},
+$$
+e armazenada como `pd_calibrada`. Essa variável é utilizada como parâmetro de risco tanto na função objetivo quanto nas restrições de risco do modelo.
+
+**Propensão à contratação.** A propensão à contratação é derivada de `score_propensao_contrato` e normalizada para o intervalo $[0,1]$, gerando a variável $\pi_i$. Foi aplicada normalização do tipo min–max com truncamento:
+$$
+\pi_i \;=\; \mathrm{clip}\!\left(\frac{s_i - s_{\min}}{s_{\max}-s_{\min}},\,0,\,1\right),
+$$
+onde $s_i$ é o score do cliente e $s_{\min}$ e $s_{\max}$ são limites observados/assumidos para o score na base. A normalização garante comparabilidade entre safras e evita que valores fora do intervalo dominem a etapa de segmentação.
+
+**Proxy de capacidade de pagamento.** A capacidade de pagamento é utilizada para impor restrições prudenciais de alavancagem. Como a variável `capacidade_pagamento` apresenta proporção elevada de valores ausentes em determinadas safras, foi construída uma proxy no nível do cliente:
+$$
+CP_i \;=\;
+\begin{cases}
+\texttt{capacidade\_pagamento}_i, & \text{se não nula} \\
+0{,}30 \cdot \texttt{renda\_estimada}_i, & \text{caso contrário.}
+\end{cases}
+$$
+A constante 0,30 reflete uma regra conservadora de comprometimento de renda (fração da renda destinada ao pagamento), permitindo que a restrição de capacidade permaneça ativa mesmo quando a medida direta é ausente.
+
+**Tratamento de valores ausentes e preparação para segmentação.** Após a criação de `pd_calibrada`, $\pi_i$ e $CP_i$, valores ausentes residuais nas variáveis numéricas de segmentação são imputados por estatísticas robustas (por exemplo, mediana), reduzindo sensibilidade a caudas e outliers. Como a etapa de segmentação foi desenhada para produzir clusters homogêneos nas variáveis consumidas pelo PL, o pré-processamento evita transformações que distorçam interpretação econômica. Em particular, quando a segmentação utiliza modelos baseados em árvore (CART), não é necessária padronização das variáveis; já em abordagens baseadas em distância (como K-Means, usadas em protótipos anteriores), aplica-se padronização (z-score) e codificação apropriada de variáveis categóricas (por exemplo, `fx_idade`).
+
+Como resultado do pré-processamento, a base elegível passa a conter as variáveis derivadas necessárias para as etapas seguintes (`pd_calibrada`, $\pi_i$ e $CP_i$), além das variáveis de controle utilizadas para mapeamentos de política (por exemplo, `score_credito_cross` para definição do fator de alavancagem por cluster).
 
 ### 2.3 Modelagem matemática
 
