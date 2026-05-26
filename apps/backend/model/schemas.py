@@ -18,8 +18,8 @@ class Cluster(BaseModel):
 
 
 class DashboardKPIs(BaseModel):
-    total_clientes: int
-    clientes_ativos: int
+    total_clusters: int
+    clusters_ativos: int
     limite_total: float
     taxa_aprovacao: float
 
@@ -42,7 +42,7 @@ class LimiteCluster(BaseModel):
     cluster_id: str
     limite_sugerido: float | None
     status: SolutionStatus
-    clientes: int = 0
+    clusters: int = 0
 
 
 class GeracaoResumo(BaseModel):
@@ -60,7 +60,7 @@ class GeracaoLimitesResponse(BaseModel):
 class ResultadosKPIs(BaseModel):
     total_clusters: int
     limite_total_aprovado: float
-    clientes_ativos: int
+    clusters_ativos: int
     taxa_aprovacao: float
 
 

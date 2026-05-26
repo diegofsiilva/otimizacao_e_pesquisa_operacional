@@ -1,6 +1,6 @@
-# Backend (FastAPI) + Supabase
+# Backend (FastAPI) - Servidor local
 
-Este backend expõe uma API para as telas de Dashboard, Gerar Limites e Resultados.
+Este backend expoe uma API para as telas de Dashboard, Gerar Limites e Resultados.
 
 ## Rodar local
 
@@ -9,16 +9,28 @@ cd apps/backend
 python -m venv .venv
 .\.venv\Scripts\activate
 pip install -r requirements.txt
-uvicorn main:app --reload --port 8000
+python run_server.py
 ```
 
 Docs: `http://localhost:8000/docs`
 
-## Supabase
+## Onde configurar o servidor
 
-1. Crie a tabela `app_kv` no Supabase executando `apps/backend/db/schema.sql` no SQL editor.
-2. Configure as variaveis no ambiente (use `apps/backend/.env.example` como base):
-   - `SUPABASE_URL`
-   - `SUPABASE_SERVICE_ROLE_KEY` (recomendado no backend) ou `SUPABASE_ANON_KEY`
+Copie `apps/backend/.env.example` para `apps/backend/.env` e preencha:
 
-Checagem rapida: `GET /api/supabase/health`.
+- `APP_HOST`: host do backend local, por exemplo `127.0.0.1`.
+- `APP_PORT`: porta do backend local, por exemplo `8000`.
+- `FRONTEND_ORIGINS`: URLs do frontend que podem acessar a API, separadas por virgula.
+- `LOCAL_DATA_DIR`: pasta onde ficam os JSONs locais do backend.
+- `UPLOAD_DIR`: pasta onde ficam os arquivos enviados por upload.
+- `STATE_PATH`: arquivo JSON de estado da aplicacao.
+- `PARAMS_PATH`: arquivo JSON de parametros do modelo.
+
+Sem `.env`, o backend usa os valores padrao do `apps/backend/config.py`.
+
+## Persistencia local
+
+O backend nao usa Supabase. Ele salva dados em arquivos JSON no servidor local:
+
+- `state.json`: estado da aplicacao, clusters e ultimo resultado.
+- `params.json`: parametros do modelo.

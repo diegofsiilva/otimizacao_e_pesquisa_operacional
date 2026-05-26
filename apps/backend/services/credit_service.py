@@ -83,8 +83,8 @@ def _score_to_m(score_cross_mean: float, s_low: float = 300.0, s_high: float = 9
     return 0.3 + x * (1.8 - 0.3)
 
 
-def _client_id(row: pd.Series, index: int) -> str:
-    for column in ["cliente_id", "id_cliente", "token"]:
+def _cluster_id(row: pd.Series, index: int) -> str:
+    for column in ["cluster_id", "id_cluster", "token"]:
         if column in row and pd.notna(row[column]):
             return str(row[column])
     return f"CLI-{index + 1:03d}"
@@ -108,16 +108,16 @@ def _validate_columns(df: pd.DataFrame) -> None:
         raise ValueError(f"Base sem colunas obrigatorias: {', '.join(missing)}")
 
 
-def _clientes_from_df(df: pd.DataFrame, limit: int = 50) -> list[Cluster]:
-    clientes: list[Cluster] = []
+def _clusters_from_df(df: pd.DataFrame, limit: int = 50) -> list[Cluster]:
+    clusters: list[Cluster] = []
     for position, (_, row) in enumerate(df.head(limit).iterrows()):
         cluster = row.get("cluster_id", row.get("cluster", None))
         limite = row.get("limite_sugerido", row.get("limite", None))
         cadastro = row.get("cadastro", None)
         score = row.get("score_credito_cross", row.get("score", None))
-        clientes.append(
+        clusters.append(
             Cluster(
-                id_=_client_id(row, position),
+                id_=_cluster_id(row, position),
                 cluster=f"CLU-{int(cluster) + 1:03d}" if pd.notna(cluster) else None,
                 score=float(score) if pd.notna(score) else None,
                 status=_status_from_row(row),
@@ -125,7 +125,7 @@ def _clientes_from_df(df: pd.DataFrame, limit: int = 50) -> list[Cluster]:
                 cadastro=pd.to_datetime(cadastro).date() if pd.notna(cadastro) else _date_from_index(position),
             )
         )
-    return clientes
+    return clusters
 
 
 def _build_clusters(df: pd.DataFrame, n_clusters: int) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -137,7 +137,7 @@ def _build_clusters(df: pd.DataFrame, n_clusters: int) -> tuple[pd.DataFrame, pd
 
     eligible = df[df["flag_filtros"] == 0].copy()
     if eligible.empty:
-        raise ValueError("A base nao possui clientes elegiveis para gerar limites.")
+        raise ValueError("A base nao possui clusters elegiveis para gerar limites.")
 
     n_clusters = min(n_clusters, len(eligible))
     eligible["pi"] = _normalize_propensao(eligible["score_propensao_contrato"])
@@ -262,7 +262,7 @@ def gerar_limites(path: Path, n_clusters: int | None = None) -> GeracaoLimitesRe
                 cluster_id=f"CLU-{cluster_id + 1:03d}",
                 limite_sugerido=final_limit,
                 status="Solucao Viavel" if viable else "Sem Solucao",
-                clientes=int(row["n_k"]),
+                clusters=int(row["n_k"]),
             )
         )
 
@@ -277,7 +277,7 @@ def gerar_limites(path: Path, n_clusters: int | None = None) -> GeracaoLimitesRe
     state = load_state()
     state["last_upload"] = str(path)
     state["last_result"] = _dump_model(result)
-    state["clusters"] = [_dump_model(item) for item in _clientes_from_df(eligible, limit=100)]
+    state["clusters"] = [_dump_model(item) for item in _clusters_from_df(eligible, limit=100)]
     state["n_clusters"] = params.n_clusters
     save_state(state)
     return result
@@ -285,60 +285,60 @@ def gerar_limites(path: Path, n_clusters: int | None = None) -> GeracaoLimitesRe
 
 def get_dashboard() -> DashboardResponse:
     state = load_state()
-    clientes = [Cluster(**item) for item in state.get("clusters", [])]
-    if not clientes:
-        clientes = _sample_clientes()
-    ativos = sum(1 for item in clientes if item.status == "Ativo")
-    limite_total = sum(item.limite or 0 for item in clientes)
-    aprovados = sum(1 for item in clientes if (item.limite or 0) > 0)
-    taxa = (aprovados / len(clientes) * 100) if clientes else 0
+    clusters = [Cluster(**item) for item in state.get("clusters", [])]
+    if not clusters:
+        clusters = _sample_clusters()
+    ativos = sum(1 for item in clusters if item.status == "Ativo")
+    limite_total = sum(item.limite or 0 for item in clusters)
+    aprovados = sum(1 for item in clusters if (item.limite or 0) > 0)
+    taxa = (aprovados / len(clusters) * 100) if clusters else 0
     return DashboardResponse(
         kpis=DashboardKPIs(
-            total_clientes=len(clientes),
-            clientes_ativos=ativos,
+            total_clusters=len(clusters),
+            clusters_ativos=ativos,
             limite_total=_money(limite_total) or 0,
             taxa_aprovacao=round(taxa, 2),
         ),
-        clusters=clientes,
+        clusters=clusters,
     )
 
 
-def list_clientes(q: str | None = None, status: str | None = None) -> list[Cluster]:
-    clientes = get_dashboard().clusters
+def list_cluster(q: str | None = None, status: str | None = None) -> list[Cluster]:
+    clusters = get_dashboard().clusters
     if q:
         normalized = q.lower()
-        clientes = [
+        clusters = [
             item
-            for item in clientes
+            for item in clusters
             if normalized in item.id_.lower()
             or (item.cluster is not None and normalized in item.cluster.lower())
         ]
     if status:
-        clientes = [item for item in clientes if item.status == status]
-    return clientes
+        clusters = [item for item in clusters if item.status == status]
+    return clusters
 
 
-def upsert_cliente(payload: Cluster) -> Cluster:
+def upsert_cluster(payload: Cluster) -> Cluster:
     state = load_state()
-    clientes = [Cluster(**item) for item in state.get("clusters", [])]
+    clusters = [Cluster(**item) for item in state.get("clusters", [])]
     found = False
-    for index, cliente in enumerate(clientes):
-        if cliente.id_ == payload.id_:
-            clientes[index] = payload
+    for index, cluster in enumerate(clusters):
+        if cluster.id_ == payload.id_:
+            clusters[index] = payload
             found = True
             break
     if not found:
-        clientes.append(payload)
-    state["clusters"] = [_dump_model(item) for item in clientes]
+        clusters.append(payload)
+    state["clusters"] = [_dump_model(item) for item in clusters]
     save_state(state)
     return payload
 
 
-def delete_cliente(cliente_id: str) -> bool:
+def delete_cluster(cluster_id: str) -> bool:
     state = load_state()
-    clientes = [Cluster(**item) for item in state.get("clusters", [])]
-    remaining = [item for item in clientes if item.id_ != cliente_id]
-    if len(remaining) == len(clientes):
+    clusters = [Cluster(**item) for item in state.get("clusters", [])]
+    remaining = [item for item in clusters if item.id_ != cluster_id]
+    if len(remaining) == len(clusters):
         return False
     state["clusters"] = [_dump_model(item) for item in remaining]
     save_state(state)
@@ -350,22 +350,22 @@ def get_resultados() -> ResultadosResponse:
     last_result: dict[str, Any] | None = state.get("last_result")
     limites = [LimiteCluster(**item) for item in last_result["limites"]] if last_result else _sample_limites()
 
-    clientes_viaveis = sum(item.clientes for item in limites if item.status == "Solucao Viavel")
-    total_clientes = sum(item.clientes for item in limites) or 1
-    limite_total = sum((item.limite_sugerido or 0) * item.clientes for item in limites)
-    taxa = clientes_viaveis / total_clientes * 100
+    clusters_viaveis = sum(item.clusters for item in limites if item.status == "Solucao Viavel")
+    total_clusters = sum(item.clusters for item in limites) or 1
+    limite_total = sum((item.limite_sugerido or 0) * item.clusters for item in limites)
+    taxa = clusters_viaveis / total_clusters * 100
 
     return ResultadosResponse(
         kpis=ResultadosKPIs(
             total_clusters=len(limites),
             limite_total_aprovado=_money(limite_total) or 0,
-            clientes_ativos=clientes_viaveis,
+            clusters_ativos=clusters_viaveis,
             taxa_aprovacao=round(taxa, 2),
         ),
         limites_por_cluster=limites,
         distribuicao_status=[
-            StatusDistribuicao(status="Ativo", quantidade=clientes_viaveis),
-            StatusDistribuicao(status="Em Analise", quantidade=max(total_clientes - clientes_viaveis, 0)),
+            StatusDistribuicao(status="Ativo", quantidade=clusters_viaveis),
+            StatusDistribuicao(status="Em Analise", quantidade=max(total_clusters - clusters_viaveis, 0)),
             StatusDistribuicao(status="Inativo", quantidade=0),
         ],
         evolucao_temporal_limites=[
@@ -391,13 +391,13 @@ def _sample_limites() -> list[LimiteCluster]:
             cluster_id=f"CLU-{index + 1:03d}",
             limite_sugerido=_money(value),
             status="Solucao Viavel" if value else "Sem Solucao",
-            clientes=120 + index * 17,
+            clusters=120 + index * 17,
         )
         for index, value in enumerate(values)
     ]
 
 
-def _sample_clientes() -> list[Cluster]:
+def _sample_clusters() -> list[Cluster]:
     limites = [5000, 9800, None, 18200, 8800, None, 15000, 4900]
     scores = [850, 720, 620, 910, 780, 450, 990, 680]
     statuses = ["Ativo", "Ativo", "Em Analise", "Ativo", "Ativo", "Inativo", "Ativo", "Ativo"]

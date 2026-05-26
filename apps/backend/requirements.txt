@@ -6,4 +6,3 @@ openpyxl
 pyarrow
 scikit-learn
 numpy
-supabase
