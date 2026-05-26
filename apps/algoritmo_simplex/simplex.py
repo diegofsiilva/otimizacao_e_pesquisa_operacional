@@ -32,9 +32,10 @@ def construir_tableau_inicial(problema: Problema) -> Tableau:
     n = len(problema.c)  # número de variáveis de decisão
     m = len(problema.b)  # número de restrições
 
-    logger.info(f"Iniciando Simplex. Variáveis de decisão (N): {n} | Restrições (M): {m}")
-
-    valores_iniciais = problema.b
+    # cópia de problema.b para que o simplex não mute a entrada in-place
+    # (sem isso, a coluna Value compartilha a mesma lista que problema.b
+    #  e cada pivotamento destrói o problema original)
+    valores_iniciais = list(problema.b)
     indices_variaveis_folga = list(range(n, n + m))
     contribuicao_variaveis_folga = [0.0] * m
 

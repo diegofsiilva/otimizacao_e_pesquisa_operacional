@@ -1,0 +1,108 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema de Credito - Banco PAN</title>
+
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { theme: { extend: {} } };
+    </script>
+
+    <!-- React 18 + Babel via CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="bg-[#E2EAF4] text-[#0D1B2A] antialiased">
+    <div id="root"></div>
+
+    <!-- dados globais (JS puro) -->
+    <script src="data.js"></script>
+
+    <!-- paginas (JSX via Babel) -->
+    <script type="text/babel" src="pages/Navbar.js"></script>
+    <script type="text/babel" src="pages/Dashboard.js"></script>
+    <script type="text/babel" src="pages/GerarLimites.js"></script>
+    <script type="text/babel" src="pages/Resultados.js"></script>
+    <script type="text/babel" src="pages/ConfigModal.js"></script>
+
+    <!-- App raiz -->
+    <script type="text/babel">
+      class ErrorBoundary extends React.Component {
+        constructor(props) {
+          super(props);
+          this.state = { error: null };
+        }
+        static getDerivedStateFromError(e) {
+          return { error: e };
+        }
+        render() {
+          if (this.state.error) {
+            return (
+              <div className="bg-red-50 border border-red-300 p-6 text-sm text-red-700">
+                <p className="font-bold mb-2">Erro ao renderizar a pagina:</p>
+                <pre className="whitespace-pre-wrap text-xs">
+                  {String(this.state.error)}
+                </pre>
+              </div>
+            );
+          }
+          return this.props.children;
+        }
+      }
+
+      var App = function () {
+        var s1 = React.useState("dashboard");
+        var page = s1[0];
+        var setPage = s1[1];
+        var s2 = React.useState(false);
+        var cfgOpen = s2[0];
+        var setCfgOpen = s2[1];
+        var s3 = React.useState(false);
+        var hasData = s3[0];
+        var setHasData = s3[1];
+
+        function renderPage(p) {
+          if (p === "dashboard") return <Dashboard setPage={setPage} />;
+          if (p === "gerar")
+            return <GerarLimites setPage={setPage} setHasData={setHasData} />;
+          if (p === "resultados")
+            return <Resultados hasData={hasData} setPage={setPage} />;
+          return null;
+        }
+
+        return (
+          <div className="min-h-screen bg-[#E2EAF4]">
+            <Navbar
+              page={page}
+              setPage={setPage}
+              onConfig={function () {
+                setCfgOpen(true);
+              }}
+            />
+            <main className="pt-14">
+              <div className="max-w-7xl mx-auto px-8 py-8">
+                <ErrorBoundary key={page}>{renderPage(page)}</ErrorBoundary>
+              </div>
+            </main>
+            {cfgOpen && (
+              <ConfigModal
+                onClose={function () {
+                  setCfgOpen(false);
+                }}
+              />
+            )}
+          </div>
+        );
+      };
+
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
+</html>
