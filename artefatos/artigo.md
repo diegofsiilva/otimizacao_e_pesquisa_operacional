@@ -221,7 +221,7 @@ A implementação foi desenvolvida em Python e organizada como um _pipeline_ exe
 
 **Etapa 1 — Preparação dos dados (visão geral).** As etapas de limpeza, transformação e criação de variáveis derivadas (como a propensão normalizada $\pi$ e a proxy de capacidade de pagamento) seguem o pré-processamento descrito na Seção 2.2. Nesta subseção, o foco é a integração dessas saídas na etapa prescritiva (otimização).
 
-**Etapa 2 — Segmentação em clusters (CART).** Os clientes elegíveis são particionados em $K$ clusters por meio de uma árvore de decisão do tipo CART, de forma a produzir grupos homogêneos nas variáveis relevantes ao PL. Em termos operacionais:
+**Etapa 2 — Segmentação em clusters (CART).** Os clientes elegíveis são particionados em $K$ clusters por meio de uma árvore de decisão do tipo CART, de forma a produzir grupos homogêneos nas variáveis relevantes ao PL. Em termos operacionais: 
 1. Filtram-se apenas clientes elegíveis.
 2. Constrói-se a variável de propensão $\pi$ a partir de normalização min–max do score de propensão (com truncamento para $[0,1]$).
 3. Constrói-se uma proxy de capacidade de pagamento (por exemplo, usando a capacidade observada quando disponível e uma regra de proxy quando ausente).
@@ -244,7 +244,24 @@ e as restrições incluem, em particular: (i) teto de risco financeiro agregado 
 
 ### 2.5 Ferramentas e Tecnologias
 
-[Linguagens, bibliotecas e ambientes utilizados.]
+A solução foi desenvolvida com foco em reprodutibilidade e execução em ambiente local, utilizando uma implementação própria do algoritmo Simplex e bibliotecas consolidadas do ecossistema Python para manipulação de dados e segmentação de clientes.
+
+**Linguagem e ambiente.** A implementação é inteiramente em Python, executável via linha de comando. A configuração de parâmetros operacionais do produto (por exemplo, $t$, $\bar{u}$, $T$, $\mathrm{LGD}$ e $L^{max}$) é externalizada em arquivo JSON, permitindo reproduzir cenários sem alteração de código.
+
+**Bibliotecas principais (pipeline de otimização).**
+- **pandas:** leitura/escrita de dados tabulares (CSV) e agregações por cluster para obtenção de $n_k$, $PD_k$, $\pi_k$ e $CP_k$.
+- **NumPy:** operações numéricas e estatísticas (por exemplo, percentis e truncamentos) usadas em variáveis derivadas e agregações.
+- **scikit-learn:** modelos e rotinas de pré-processamento utilizados na etapa de segmentação (por exemplo, clusterização e transformações como imputação, padronização e codificação _one-hot_ quando aplicável).
+
+**Implementação do Simplex.** O resolvedor do PL foi implementado do zero em Python (sem bibliotecas externas de otimização), permitindo maior transparência sobre as regras de entrada/saída da base, pivoteamento e critérios de parada, além de facilitar auditoria do processo de decisão.
+
+**Ferramentas auxiliares (análises e preparação de dados).**
+- **PyArrow:** leitura eficiente de dados em formato Parquet em scripts de análise e preparação.
+- **Matplotlib:** geração de gráficos e figuras utilizadas na etapa exploratória e na documentação de resultados.
+
+**Formatos de dados e artefatos.** Para interoperabilidade e auditoria, as entradas e saídas operacionais do pipeline são mantidas em formatos abertos (CSV para bases processadas e tabelas intermediárias; JSON para parametrização). Os dados brutos podem ser fornecidos em Parquet e convertidos no processo de preparação.
+
+**Integração operacional.** Além da execução local via CLI, foi implementado um serviço de backend em **Python** utilizando **FastAPI** para disponibilizar o pipeline por meio de um endpoint HTTP. Nesse formato, a requisição recebe os parâmetros do produto e a referência aos dados de entrada, e a resposta retorna o status da execução, métricas-resumo (por exemplo, $Z^*$ e restrições ativas) e a recomendação de limites por cluster (ou por cliente, após o mapeamento), viabilizando integração com sistemas internos e automação do processo decisório.
 
 ---
 > 💡 **Sugestão de "ir além" — Materiais e Métodos**
