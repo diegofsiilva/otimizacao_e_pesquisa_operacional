@@ -2,9 +2,21 @@
 algoritmo_simplex/simplex.py
 Implementação do algoritmo Simplex para problemas de programação linear.
 """
-
+import logging
 from models import Problema, Tableau
 
+EPSILON = 1e-9
+
+# Configuração padrão do logger para o módulo do otimizador
+logger = logging.getLogger("otimizador_simplex")
+logger.setLevel(logging.INFO)
+
+# Formato limpo e profissional para os logs do terminal/back-end
+if not logger.handlers:
+    handler = logging.StreamHandler()
+    formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] [Simplex] %(message)s", "%H:%M:%S")
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
 def construir_tableau_inicial(problema: Problema) -> Tableau:
     """
@@ -75,130 +87,130 @@ def calcular_cj_zj(coluna: list[float], cj: float, contributions: list[float]) -
 
 def simplex(problema: Problema) -> tuple[list[float], float, str]:
     """
-    Resolve um problema de programação linear pelo método Simplex.
-
-    Parâmetros:
-        problema: instância de Problema contendo c, A e b
-
-    Retorna:
-        x      : lista com o valor ótimo de cada variável de decisão (tamanho n)
-        z      : valor ótimo da função objetivo
-        status : "otimo", "multiplas_solucoes" ou "ilimitado"
-
-    Raises:
-        ValueError: se o problema for ilimitado
+    Executa o algoritmo Simplex clássico exato com captura de logs por iteração.
     """
-    n = len(problema.c)  # número de variáveis de decisão
-    m = len(problema.b)  # número de restrições
+    n = len(problema.c)
+    m = len(problema.b)
 
+    logger.info(f"Iniciando Simplex. Variáveis de decisão (N): {n} | Restrições (M): {m}")
+    
     tableau = construir_tableau_inicial(problema)
+    
+    # CORREÇÃO AQUI: Iniciamos em 1 e controlamos o incremento com segurança
+    iteracao = 1
 
     while True:
-        cj_zj_x = []
+        # 1. Calcula Z_j e C_j - Z_j
+        todos_cj_zj = []
+
+        # Para variáveis de decisão x
         for j in range(n):
-            cj_zj_x.append(
-                calcular_cj_zj(tableau.x[j], problema.c[j], tableau.contributions)
-            )
+            zj = sum(tableau.contributions[i] * tableau.x[j][i] for i in range(m))
+            todos_cj_zj.append(problema.c[j] - zj)
 
-        cj_zj_s = []
+        # Para variáveis de folga s
         for j in range(m):
-            cj_zj_s.append(calcular_cj_zj(tableau.s[j], 0.0, tableau.contributions))
+            zj = sum(tableau.contributions[i] * tableau.s[j][i] for i in range(m))
+            todos_cj_zj.append(0.0 - zj)
 
-        todos_cj_zj = cj_zj_x + cj_zj_s
-
-        # se todos os valores forem não-positivos, não há mais ponto de melhoria
-        todos_nao_positivos = True
-        for valor in todos_cj_zj:
-            if valor > 0:
-                todos_nao_positivos = False
-                break
-
-        if todos_nao_positivos:
-            # verifica se há múltiplas soluções: alguma variável fora da base tem cj_zj == 0
-            status = "otimo"
-            for j in range(len(todos_cj_zj)):
-                if j not in tableau.base and todos_cj_zj[j] == 0.0:
-                    status = "multiplas_solucoes"
-                    break
-            break
-
-        # regra de Bland: escolhe o menor índice com cj_zj positivo (evita ciclagem por degeneração)
+        # Calcula o valor atual de Z para o log de progresso
+        # Encontra o valor atual de cada x se ele estiver na base, caso contrário 0
+        z_atual = 0.0
+        for j in range(n):
+            if j in tableau.base:
+                idx_base = tableau.base.index(j)
+                z_atual += problema.c[j] * tableau.values[idx_base]
+        
+        # 2. Verifica critério de parada (Regra de Bland com EPSILON)
         indice_entra = -1
         for j in range(len(todos_cj_zj)):
-            if todos_cj_zj[j] > 0:
+            if todos_cj_zj[j] > EPSILON:
                 indice_entra = j
                 break
 
-        # pega a coluna da variável que entra
-        if indice_entra < n:
-            # Se indice_entra < n, é um x
-            coluna_entra = tableau.x[indice_entra]
+        # LOG DA ITERAÇÃO CORRENTE
+        nome_variavel_entra = f"x{indice_entra + 1}" if indice_entra < n else f"s{indice_entra - n + 1}"
+        if indice_entra != -1:
+            logger.info(f"Iteração {iteracao:03d} | Z Atual = {z_atual:12.2f} | Candidata a entrar: {nome_variavel_entra} (C_j - Z_j = {todos_cj_zj[indice_entra]:.4f})")
         else:
-            # Se indice_entra >= n, é um s
-            coluna_entra = tableau.s[indice_entra - n]
+            logger.info(f"Iteração {iteracao:03d} | Z Atual = {z_atual:12.2f} | Nenhuma variável candidata a entrar. Condição de otimalidade atingida.")
+            status = "otimo"
+            break
 
-        # teste da razão mínima
-        # encontra a linha da variável que sai
+        # 3. Determina a variável que sai da base (Razão Mínima)
         indice_sai = -1
-        menor_razao = -1.0
+        menor_razao = float("inf")
 
         for i in range(m):
-            if coluna_entra[i] > 0:
-                razao = tableau.values[i] / coluna_entra[i]
-                if indice_sai == -1 or razao < menor_razao:
+            if indice_entra < n:
+                coeficiente = tableau.x[indice_entra][i]
+            else:
+                coeficiente = tableau.s[indice_entra - n][i]
+
+            if coeficiente > EPSILON:
+                razao = tableau.values[i] / coeficiente
+                if razao < menor_razao:
                     menor_razao = razao
                     indice_sai = i
 
-        # se nenhuma linha foi escolhida, o problema é ilimitado
         if indice_sai == -1:
-            raise ValueError("O problema é ilimitado.")
+            logger.warning(f"Iteração {iteracao:03d} | Erro: Coeficientes da coluna {nome_variavel_entra} são todos <= 0. O problema é ilimitado.")
+            status = "ilimitado"
+            break
 
-        # elemento pivô (coeficiente da variável que entra na linha que sai)
-        elemento_pivo = coluna_entra[indice_sai]
+        # Identifica o nome da variável que está saindo da base para o log
+        id_variavel_sai = tableau.base[indice_sai]
+        nome_variavel_sai = f"x{id_variavel_sai + 1}" if id_variavel_sai < n else f"s{id_variavel_sai - n + 1}"
+        logger.info(f"             └──> Pivotagem: {nome_variavel_entra} entra na base no lugar de {nome_variavel_sai} (Razão Mínima = {menor_razao:.4f})")
 
-        # normaliza a linha pivô dividindo tudo pelo elemento pivô
+        # 4. Operações de Pivoteamento (Eliminação Gaussiana Dinâmica)
+        if indice_entra < n:
+            elemento_pivo = tableau.x[indice_entra][indice_sai]
+        else:
+            elemento_pivo = tableau.s[indice_entra - n][indice_sai]
+
+        # Divide a linha do pivô pelo elemento pivô
         tableau.values[indice_sai] /= elemento_pivo
-
         for j in range(n):
             tableau.x[j][indice_sai] /= elemento_pivo
-
         for j in range(m):
             tableau.s[j][indice_sai] /= elemento_pivo
 
-        # zera a coluna pivô em todas as outras linhas
+        # Zera os elements acima e abaixo do pivô nas outras linhas
         for i in range(m):
-            if i == indice_sai:
-                continue
+            if i != indice_sai:
+                if indice_entra < n:
+                    fator = tableau.x[indice_entra][i]
+                else:
+                    fator = tableau.s[indice_entra - n][i]
 
-            fator = coluna_entra[i]
+                tableau.values[i] -= fator * tableau.values[indice_sai]
+                for j in range(n):
+                    tableau.x[j][i] -= fator * tableau.x[j][indice_sai]
+                for j in range(m):
+                    tableau.s[j][i] -= fator * tableau.s[j][indice_sai]
 
-            tableau.values[i] -= fator * tableau.values[indice_sai]
-
-            for j in range(n):
-                tableau.x[j][i] -= fator * tableau.x[j][indice_sai]
-
-            for j in range(m):
-                tableau.s[j][i] -= fator * tableau.s[j][indice_sai]
-
-        # atualiza a base e a contribution da linha que mudou
+        # Atualiza as estruturas da base
         tableau.base[indice_sai] = indice_entra
         tableau.contributions[indice_sai] = (
             problema.c[indice_entra] if indice_entra < n else 0.0
         )
+        
+        # Incrementa o número da iteração para o próximo ciclo
+        iteracao += 1
 
-    # monta o vetor de solução
-    # variáveis que não estão na base valem 0
-    x = [0.0] * n
+    # Monta o vetor de solução final
+    x_final = [0.0] * n
     for i in range(m):
-        if tableau.base[i] < n:  # se a variável da base é uma variável de decisão
-            x[tableau.base[i]] = tableau.values[i]
+        if tableau.base[i] < n:
+            x_final[tableau.base[i]] = max(0.0, tableau.values[i])
 
-    # calcula o valor ótimo da função objetivo
-    z = 0.0
-    for j in range(n):
-        z += problema.c[j] * x[j]
+    # Calcula o valor ótimo final de Z
+    z_otimo = sum(problema.c[j] * x_final[j] for j in range(n))
+    
+    logger.info(f"Simplex finalizado com status: '{status.upper()}'. Total de iterações: {iteracao}. Z Ótimo = {z_otimo:.2f}")
 
-    return x, z, status
+    return x_final, z_otimo, status
 
 
 if __name__ == "__main__":
