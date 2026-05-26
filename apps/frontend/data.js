@@ -61,15 +61,18 @@ var CLIENTS = [
   },
 ];
 
-// Limites por cluster para o gráfico de barras
+// Limites por cluster para o gráfico de barras (amostra representativa dos 73 clusters)
 var CLUSTER_LIMITES = [
-  { name: "CLU-1", limite: 250 },
-  { name: "CLU-2", limite: 0 },
-  { name: "CLU-3", limite: 0 },
-  { name: "CLU-4", limite: 0 },
-  { name: "CLU-5", limite: 18500 },
-  { name: "CLU-6", limite: 1600 },
-  { name: "CLU-7", limite: 0 },
+  { name: "CLU-07", limite: 4500 },
+  { name: "CLU-14", limite: 8200 },
+  { name: "CLU-19", limite: 0 },
+  { name: "CLU-23", limite: 12500 },
+  { name: "CLU-31", limite: 1800 },
+  { name: "CLU-38", limite: 0 },
+  { name: "CLU-44", limite: 6000 },
+  { name: "CLU-55", limite: 17500 },
+  { name: "CLU-61", limite: 3200 },
+  { name: "CLU-70", limite: 0 },
 ];
 
 // Distribuição de status para o gráfico de setor (donut)
@@ -102,38 +105,45 @@ var SCORE_DIST = [
 ];
 
 // Comparação entre o solver próprio (Simplex) e o PuLP/CBC
+// Amostra de 10 clusters representativos (de 73 no total)
 var SOLVER_COMPARISON = {
   simplex: {
     label: "Simplex (próprio)",
-    z: 81240312.34,
+    z: 34182456.78,
     status: "Ótimo",
-    tempo_ms: 142,
+    tempo_ms: 1840,
     clusters: [
-      { id: "CLU-1", limite: 250 },
-      { id: "CLU-2", limite: 0 },
-      { id: "CLU-3", limite: 0 },
-      { id: "CLU-4", limite: 0 },
-      { id: "CLU-5", limite: 18500 },
-      { id: "CLU-6", limite: 1600 },
-      { id: "CLU-7", limite: 0 },
+      { id: "CLU-07", limite: 4500 },
+      { id: "CLU-14", limite: 8200 },
+      { id: "CLU-19", limite: 0 },
+      { id: "CLU-23", limite: 12500 },
+      { id: "CLU-31", limite: 1800 },
+      { id: "CLU-38", limite: 0 },
+      { id: "CLU-44", limite: 6000 },
+      { id: "CLU-55", limite: 17500 },
+      { id: "CLU-61", limite: 3200 },
+      { id: "CLU-70", limite: 0 },
     ],
   },
   pulp: {
     label: "PuLP / CBC",
-    z: 81240312.7,
+    z: 34182521.04,
     status: "Ótimo",
-    tempo_ms: 310,
+    tempo_ms: 3210,
     clusters: [
-      { id: "CLU-1", limite: 250 },
-      { id: "CLU-2", limite: 0 },
-      { id: "CLU-3", limite: 0 },
-      { id: "CLU-4", limite: 0 },
-      { id: "CLU-5", limite: 18500 },
-      { id: "CLU-6", limite: 1600 },
-      { id: "CLU-7", limite: 0 },
+      { id: "CLU-07", limite: 4500 },
+      { id: "CLU-14", limite: 8200 },
+      { id: "CLU-19", limite: 0 },
+      { id: "CLU-23", limite: 12500 },
+      { id: "CLU-31", limite: 1800 },
+      { id: "CLU-38", limite: 0 },
+      { id: "CLU-44", limite: 6000 },
+      { id: "CLU-55", limite: 17500 },
+      { id: "CLU-61", limite: 3200 },
+      { id: "CLU-70", limite: 0 },
     ],
   },
-  delta_z_pct: 0.0,
+  delta_z_pct: 0.00019,
   pd_fin_atual: 0.1375,
 };
 
@@ -150,7 +160,7 @@ var PARAMS_EDITAVEIS = [
   {
     key: "LGD",
     label: "Loss Given Default (LGD)",
-    value: 0.6,
+    value: 0.8,
     min: 0.3,
     max: 1.0,
     step: 0.01,
@@ -179,22 +189,28 @@ var PARAMS_NAO_EDITAVEIS = [
   { label: "Custo de funding (Kd)", value: "11,50%" },
   { label: "Taxa de recuperação (RR)", value: "30%" },
   { label: "Exposição padrão (EAD)", value: "Limite" },
-  { label: "LGD", value: "70%" },
+  { label: "LGD", value: "80%" },
   { label: "PD financeiro atual", value: "13,75%" },
 ];
 
 // Resultado simulado após upload de CSV (GerarLimites)
+// Amostra de 15 clusters (de 73 gerados pelo CART)
 var CLUSTERS_UPLOAD = [
-  { id: "CLU-001", limite: 1500, status: "viavel" },
-  { id: "CLU-002", limite: 3200, status: "viavel" },
-  { id: "CLU-003", limite: null, status: "sem" },
-  { id: "CLU-004", limite: 800, status: "viavel" },
-  { id: "CLU-005", limite: null, status: "sem" },
-  { id: "CLU-006", limite: 5000, status: "viavel" },
-  { id: "CLU-007", limite: 2100, status: "viavel" },
-  { id: "CLU-008", limite: null, status: "sem" },
-  { id: "CLU-009", limite: 4400, status: "viavel" },
-  { id: "CLU-010", limite: 900, status: "viavel" },
+  { id: "CLU-003", limite: 2800, status: "viavel" },
+  { id: "CLU-007", limite: 4500, status: "viavel" },
+  { id: "CLU-011", limite: null, status: "sem" },
+  { id: "CLU-014", limite: 8200, status: "viavel" },
+  { id: "CLU-019", limite: null, status: "sem" },
+  { id: "CLU-023", limite: 12500, status: "viavel" },
+  { id: "CLU-028", limite: 650, status: "viavel" },
+  { id: "CLU-031", limite: 1800, status: "viavel" },
+  { id: "CLU-036", limite: null, status: "sem" },
+  { id: "CLU-038", limite: null, status: "sem" },
+  { id: "CLU-044", limite: 6000, status: "viavel" },
+  { id: "CLU-051", limite: 9750, status: "viavel" },
+  { id: "CLU-055", limite: 17500, status: "viavel" },
+  { id: "CLU-061", limite: 3200, status: "viavel" },
+  { id: "CLU-070", limite: null, status: "sem" },
 ];
 
 // Formata valor monetário simples

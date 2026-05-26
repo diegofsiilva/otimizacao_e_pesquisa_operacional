@@ -9,10 +9,10 @@ var ScoreBar = function (props) {
   var color = score >= 750 ? "#67DE98" : score >= 550 ? "#FAE95D" : "#FF5D5C";
   return (
     <div className="flex items-center gap-2">
-      <div className="w-20 h-1.5 bg-[#ECECEC] rounded-full overflow-hidden">
+      <div className="w-20 h-1.5 bg-[#E8EFF7] overflow-hidden">
         <div
           style={{ width: pct + "%", background: color }}
-          className="h-full rounded-full"
+          className="h-full"
         />
       </div>
       <span className="text-xs font-medium text-[#3B4049]">{score}</span>
@@ -25,14 +25,14 @@ var StatusBadge = function (props) {
   var s = props.status;
   var cls =
     s === "Ativo"
-      ? "bg-[#67DE98]/20 text-[#0B8AA5] border border-[#67DE98]/60"
+      ? "bg-[#67DE98]/20 text-[#2E6DA4] border border-[#67DE98]/60"
       : s === "Pendente"
         ? "bg-[#FAE95D]/30 text-[#3B4049] border border-[#FAE95D]/80"
         : "bg-[#FF5D5C]/20 text-[#DC2F37] border border-[#FF5D5C]/50";
   return (
     <span
       className={
-        "inline-flex items-center px-2.5 py-0.5 text-xs font-semibold rounded-full " +
+        "inline-flex items-center px-2.5 py-0.5 text-xs font-semibold " +
         cls
       }
     >
@@ -44,7 +44,7 @@ var StatusBadge = function (props) {
 // Botão de ações da linha da tabela
 var DotsMenu = function () {
   return (
-    <button className="p-1 hover:bg-[#F3F4F9] rounded text-[#9C9C9F] transition-colors">
+    <button className="p-1 hover:bg-[#E2EAF4] text-[#9C9C9F] transition-colors">
       <svg
         width="15"
         height="15"
@@ -67,11 +67,11 @@ var KPI_CARDS = [
   {
     label: "Total de Clientes",
     period: "na base carregada",
-    value: "1.247",
-    badge: "+12",
+    value: "48.320",
+    badge: "+847",
     trend: "up",
-    iconBg: "#EBF8FF",
-    iconColor: "#07B2FD",
+    iconBg: "#D6E8F5",
+    iconColor: "#2E6DA4",
     icon: (
       <svg
         width="18"
@@ -90,11 +90,11 @@ var KPI_CARDS = [
   {
     label: "Clusters Identificados",
     period: "segmentação atual",
-    value: "10",
+    value: "73",
     badge: "=",
     trend: "neutral",
-    iconBg: "#E6EFFF",
-    iconColor: "#005AEA",
+    iconBg: "#D6E8F5",
+    iconColor: "#1B3A5C",
     icon: (
       <svg
         width="18"
@@ -113,11 +113,11 @@ var KPI_CARDS = [
   {
     label: "Score Médio",
     period: "média da carteira",
-    value: "682",
-    badge: "+8",
+    value: "694",
+    badge: "+11",
     trend: "up",
-    iconBg: "#E4EEFF",
-    iconColor: "#093495",
+    iconBg: "#D6E8F5",
+    iconColor: "#0D1B2A",
     icon: (
       <svg
         width="18"
@@ -135,8 +135,8 @@ var KPI_CARDS = [
   {
     label: "Clientes Elegíveis",
     period: "aptos à otimização",
-    value: "1.089",
-    badge: "87.3%",
+    value: "42.184",
+    badge: "87,3%",
     trend: "up",
     iconBg: "#FFFCE6",
     iconColor: "#3B4049",
@@ -201,17 +201,17 @@ var Dashboard = function (props) {
     <div className="space-y-6">
       <div className="flex items-start justify-between">
         <div>
-          <h1 className="text-xl font-bold text-[#101010]">Dashboard</h1>
+          <h1 className="text-xl font-bold text-[#0D1B2A]">Dashboard</h1>
           <p className="mt-1 text-xs text-[#9C9C9F]">
-            Visão geral da carteira base · base carregada em Jun/2024
+            Visão geral da carteira base · base carregada em Mai/2025
           </p>
-          <div className="mt-1 h-0.5 w-10 bg-[#07B2FD]" />
+          <div className="mt-1 h-0.5 w-10 bg-[#2E6DA4]" />
         </div>
         <button
           onClick={function () {
             if (setPage) setPage("gerar");
           }}
-          className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-[#07B2FD] text-white hover:bg-[#005AEA] transition-colors shadow-sm"
+          className="flex items-center gap-2 px-4 py-2 text-sm font-semibold bg-[#2E6DA4] text-white hover:bg-[#1B3A5C] transition-colors shadow-sm"
         >
           <svg
             width="14"
@@ -232,10 +232,10 @@ var Dashboard = function (props) {
         {KPI_CARDS.map(function (k) {
           var badgeCls =
             k.trend === "up"
-              ? "bg-[#67DE98]/20 text-[#0B8AA5]"
+              ? "bg-[#67DE98]/20 text-[#2E6DA4]"
               : k.trend === "down"
                 ? "bg-[#FF5D5C]/20 text-[#DC2F37]"
-                : "bg-[#CACBCF]/40 text-[#3B4049]";
+                : "bg-[#B8D4EC]/40 text-[#3B4049]";
           var arrow =
             k.trend === "up" ? (
               <svg
@@ -264,17 +264,17 @@ var Dashboard = function (props) {
           return (
             <div
               key={k.label}
-              className="bg-white border border-[#ECECEC] shadow-sm p-5 flex flex-col gap-3 rounded-xl"
+              className="bg-white border border-[#E8EFF7] shadow-sm p-5 flex flex-col gap-3"
             >
               <div className="flex items-center gap-3">
                 <div
-                  className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
+                  className="w-10 h-10 flex items-center justify-center flex-shrink-0"
                   style={{ background: k.iconBg, color: k.iconColor }}
                 >
                   {k.icon}
                 </div>
                 <div>
-                  <div className="text-sm font-semibold text-[#101010] leading-tight">
+                  <div className="text-sm font-semibold text-[#0D1B2A] leading-tight">
                     {k.label}
                   </div>
                   <div className="text-[11px] text-[#9C9C9F] leading-tight">
@@ -284,12 +284,12 @@ var Dashboard = function (props) {
               </div>
               {/* Valor + badge */}
               <div className="flex items-end justify-between">
-                <div className="text-2xl font-bold text-[#101010] leading-none">
+                <div className="text-2xl font-bold text-[#0D1B2A] leading-none">
                   {k.value}
                 </div>
                 <span
                   className={
-                    "inline-flex items-center gap-0.5 px-2 py-0.5 text-[11px] font-semibold rounded-full " +
+                    "inline-flex items-center gap-0.5 px-2 py-0.5 text-[11px] font-semibold " +
                     badgeCls
                   }
                 >
@@ -302,9 +302,9 @@ var Dashboard = function (props) {
         })}
       </div>
 
-      <div className="bg-white border border-[#ECECEC] shadow-sm rounded-xl overflow-hidden">
-        <div className="flex items-center justify-between px-5 py-4 border-b border-[#ECECEC]">
-          <div className="flex items-center gap-2 text-sm font-semibold text-[#101010]">
+      <div className="bg-white border border-[#E8EFF7] shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8EFF7]">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#0D1B2A]">
             <svg
               width="15"
               height="15"
@@ -380,10 +380,10 @@ var Dashboard = function (props) {
                   key={b.label}
                   onClick={b.action || undefined}
                   className={
-                    "flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors " +
+                    "flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border transition-colors " +
                     (b.primary
-                      ? "bg-[#07B2FD] text-white border-[#07B2FD] hover:bg-[#005AEA]"
-                      : "bg-white text-[#3B4049] border-[#ECECEC] hover:bg-[#F3F4F9]")
+                      ? "bg-[#2E6DA4] text-white border-[#2E6DA4] hover:bg-[#1B3A5C]"
+                      : "bg-white text-[#3B4049] border-[#E8EFF7] hover:bg-[#E2EAF4]")
                   }
                 >
                   {b.icon}
@@ -394,7 +394,7 @@ var Dashboard = function (props) {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 px-5 py-3 border-b border-[#ECECEC]">
+        <div className="flex items-center gap-2 px-5 py-3 border-b border-[#E8EFF7]">
           <div className="relative flex-1">
             <svg
               className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[#9C9C9F]"
@@ -409,7 +409,7 @@ var Dashboard = function (props) {
               <path d="m21 21-4.35-4.35" />
             </svg>
             <input
-              className="w-full pl-8 pr-3 py-1.5 text-sm border border-[#ECECEC] rounded-lg bg-[#F3F4F9] focus:outline-none focus:border-[#07B2FD] focus:ring-1 focus:ring-[#07B2FD]"
+              className="w-full pl-8 pr-3 py-1.5 text-sm border border-[#E8EFF7] bg-[#E2EAF4] focus:outline-none focus:border-[#2E6DA4] focus:ring-1 focus:ring-[#2E6DA4]"
               placeholder="Buscar cliente..."
               value={search}
               onChange={function (e) {
@@ -417,7 +417,7 @@ var Dashboard = function (props) {
               }}
             />
           </div>
-          <button className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium border border-[#ECECEC] bg-white text-[#3B4049] hover:bg-[#F3F4F9] transition-colors">
+          <button className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-[#E8EFF7] bg-white text-[#3B4049] hover:bg-[#E2EAF4] transition-colors">
             <svg
               width="12"
               height="12"
@@ -435,7 +435,7 @@ var Dashboard = function (props) {
         <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
-              <tr className="bg-[#093495]">
+              <tr className="bg-[#0D1B2A]">
                 {[
                   "Cluster",
                   "Score",
@@ -460,9 +460,9 @@ var Dashboard = function (props) {
                 return (
                   <tr
                     key={c.id}
-                    className="border-b border-[#F3F4F9] hover:bg-[#F3F4F9] transition-colors"
+                    className="border-b border-[#E2EAF4] hover:bg-[#E2EAF4] transition-colors"
                   >
-                    <td className="px-4 py-3 text-sm font-semibold text-[#07B2FD]">
+                    <td className="px-4 py-3 text-sm font-semibold text-[#2E6DA4]">
                       {c.id}
                     </td>
                     <td className="px-4 py-3">
@@ -471,7 +471,7 @@ var Dashboard = function (props) {
                     <td className="px-4 py-3">
                       <StatusBadge status={c.status} />
                     </td>
-                    <td className="px-4 py-3 text-sm font-medium text-[#101010]">
+                    <td className="px-4 py-3 text-sm font-medium text-[#0D1B2A]">
                       {c.limite ? fmt(c.limite) : "\u2014"}
                     </td>
                     <td className="px-4 py-3 text-sm text-[#9C9C9F]">
@@ -487,12 +487,12 @@ var Dashboard = function (props) {
           </table>
         </div>
 
-        <div className="flex items-center justify-between px-5 py-3 border-t border-[#ECECEC]">
+        <div className="flex items-center justify-between px-5 py-3 border-t border-[#E8EFF7]">
           <span className="text-xs text-[#9C9C9F]">
             Mostrando 1-{filtered.length} de {filtered.length}
           </span>
           <div className="flex items-center gap-1">
-            <button className="px-3 h-7 text-xs text-[#9C9C9F] hover:bg-[#F3F4F9] rounded transition-colors">
+            <button className="px-3 h-7 text-xs text-[#9C9C9F] hover:bg-[#E2EAF4] transition-colors">
               Anterior
             </button>
             {[1, 2, 3].map(function (n) {
@@ -503,17 +503,17 @@ var Dashboard = function (props) {
                     setPageNum(n);
                   }}
                   className={
-                    "w-7 h-7 text-xs font-medium transition-colors rounded " +
+                    "w-7 h-7 text-xs font-medium transition-colors " +
                     (pageNum === n
-                      ? "bg-[#07B2FD] text-white"
-                      : "text-[#3B4049] hover:bg-[#F3F4F9]")
+                      ? "bg-[#2E6DA4] text-white"
+                      : "text-[#3B4049] hover:bg-[#E2EAF4]")
                   }
                 >
                   {n}
                 </button>
               );
             })}
-            <button className="px-3 h-7 text-xs text-[#9C9C9F] hover:bg-[#F3F4F9] rounded transition-colors">
+            <button className="px-3 h-7 text-xs text-[#9C9C9F] hover:bg-[#E2EAF4] transition-colors">
               Próximo
             </button>
           </div>

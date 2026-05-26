@@ -53,31 +53,31 @@ var ConfigModal = function (props) {
       onClick={handleOverlay}
     >
       <div
-        className="bg-white shadow-2xl rounded-2xl w-full max-w-lg modal-enter border border-[#ECECEC]"
+        className="bg-white shadow-2xl w-full max-w-lg modal-enter border border-[#E8EFF7]"
         onClick={function (e) {
           e.stopPropagation();
         }}
       >
-        <div className="flex items-center gap-3 px-6 py-4 border-b border-[#ECECEC]">
-          <div className="w-8 h-8 rounded-lg bg-[#EBF8FF] flex items-center justify-center">
+        <div className="flex items-center gap-3 px-6 py-4 border-b border-[#E8EFF7]">
+          <div className="w-8 h-8 bg-[#D6E8F5] flex items-center justify-center">
             <svg
               width="16"
               height="16"
               fill="none"
               viewBox="0 0 24 24"
-              stroke="#07B2FD"
+              stroke="#2E6DA4"
               strokeWidth="2"
             >
               <path d="M12 15a3 3 0 100-6 3 3 0 000 6z" />
               <path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" />
             </svg>
           </div>
-          <span className="text-base font-semibold text-[#101010]">
+          <span className="text-base font-semibold text-[#0D1B2A]">
             Configurações
           </span>
           <button
             onClick={onClose}
-            className="ml-auto p-1.5 rounded-lg text-[#9C9C9F] hover:text-[#3B4049] hover:bg-[#F3F4F9] transition-colors"
+            className="ml-auto p-1.5 text-[#9C9C9F] hover:text-[#3B4049] hover:bg-[#E2EAF4] transition-colors"
           >
             <svg
               width="16"
@@ -107,14 +107,14 @@ var ConfigModal = function (props) {
                 return (
                   <div
                     key={p.key}
-                    className="rounded-xl border border-[#ECECEC] bg-[#F3F4F9] p-4"
+                    className="rounded-xl border border-[#E8EFF7] bg-[#E2EAF4] p-4"
                   >
                     <div className="flex items-center justify-between">
                       <div>
                         <div className="text-xs font-medium text-[#9C9C9F]">
                           {p.label}
                         </div>
-                        <div className="text-lg font-bold text-[#101010] mt-0.5">
+                        <div className="text-lg font-bold text-[#0D1B2A] mt-0.5">
                           {formatVal(p.key, params[p.key])}
                         </div>
                       </div>
@@ -123,7 +123,7 @@ var ConfigModal = function (props) {
                           onClick={function () {
                             setEditing(p.key);
                           }}
-                          className="p-2 rounded-lg hover:bg-[#ECECEC] text-[#9C9C9F] transition-colors"
+                          className="p-2 hover:bg-[#E8EFF7] text-[#9C9C9F] transition-colors"
                         >
                           <svg
                             width="14"
@@ -144,7 +144,7 @@ var ConfigModal = function (props) {
                       <div className="mt-4 space-y-3">
                         <div className="flex justify-between text-xs text-[#9C9C9F]">
                           <span>{p.label}</span>
-                          <span className="font-semibold text-[#07B2FD]">
+                          <span className="font-semibold text-[#2E6DA4]">
                             {formatVal(p.key, params[p.key])}
                           </span>
                         </div>
@@ -168,7 +168,7 @@ var ConfigModal = function (props) {
                             onClick={function () {
                               setEditing(null);
                             }}
-                            className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[#07B2FD] text-white hover:bg-[#005AEA] transition-colors"
+                            className="flex-1 py-1.5 text-xs font-semibold bg-[#2E6DA4] text-white hover:bg-[#1B3A5C] transition-colors"
                           >
                             Salvar
                           </button>
@@ -176,7 +176,7 @@ var ConfigModal = function (props) {
                             onClick={function () {
                               handleCancel(p.key);
                             }}
-                            className="flex-1 py-1.5 rounded-lg text-xs font-semibold bg-[#ECECEC] text-[#3B4049] hover:bg-[#CACBCF] transition-colors"
+                            className="flex-1 py-1.5 text-xs font-semibold bg-[#E8EFF7] text-[#3B4049] hover:bg-[#B8D4EC] transition-colors"
                           >
                             Cancelar
                           </button>
@@ -199,7 +199,7 @@ var ConfigModal = function (props) {
                 return (
                   <div
                     key={i}
-                    className="rounded-lg bg-[#F3F4F9] border border-[#ECECEC] px-4 py-3"
+                    className="rounded-lg bg-[#E2EAF4] border border-[#E8EFF7] px-4 py-3"
                   >
                     <div className="text-[10px] text-[#9C9C9F] font-medium">
                       {p.label}
