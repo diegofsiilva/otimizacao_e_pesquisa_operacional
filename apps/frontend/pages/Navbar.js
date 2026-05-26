@@ -105,7 +105,7 @@ var Navbar = function (props) {
         background: "linear-gradient(90deg, #07B2FD 0%, #005AEA 100%)",
       }}
       className={[
-        "fixed left-1/2 -translate-x-1/2 z-40 flex items-center border border-white/10",
+        "fixed left-1/2 -translate-x-1/2 z-40 flex items-center border-white/10",
         scrolled
           ? "top-3 w-[calc(100%-4rem)] max-w-7xl px-6 h-12 shadow-2xl rounded-2xl"
           : "top-5 w-[calc(100%-4rem)] max-w-7xl px-8 h-16 shadow-xl rounded-2xl",
