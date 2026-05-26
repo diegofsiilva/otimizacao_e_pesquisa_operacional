@@ -43,11 +43,9 @@ def load_params() -> dict[str, Any]:
     default = {"t": 0.0175, "LGD": 0.8, "u_bar": 0.75, "L_max": 25000.0, "alpha": 0.05}
     return _read_json(PARAMS_PATH, default)
 
-
 def save_params(params: dict[str, Any]) -> None:
     ensure_dirs()
     _write_json(PARAMS_PATH, params)
-
 
 def read_dataframe(path: Path) -> pd.DataFrame:
     suffix = path.suffix.lower()

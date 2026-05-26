@@ -64,7 +64,6 @@ async def upload_e_gerar_limites(
 def resultados() -> ResultadosResponse:
     return get_resultados()
 
-
 @router.get("/resultados/export")
 def exportar_resultados() -> Response:
     csv = export_resultados_csv()
