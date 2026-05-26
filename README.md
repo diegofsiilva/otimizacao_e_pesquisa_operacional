@@ -70,13 +70,16 @@ g04/
 │       ├── main.py             # orquestração do pipeline completo
 │       ├── models.py           # estruturas de dados (Problema, Tableau)
 │       ├── simplex.py          # implementação do algoritmo Simplex
+│       ├── simplex_pulp.py     # solver de referência usando PuLP/CBC
+│       ├── comparar.py         # script de comparação Simplex × PuLP
 │       ├── requirements.txt    # dependências Python
 │       └── input/              # arquivos de configuração JSON
 ├── artefatos/                  # documentação técnica de cada sprint
 │   ├── entendimento_negocio.md
 │   ├── entendimento_ux.md
 │   ├── modelagem_matematica.md
-│   └── algoritmo_simplex.md
+│   ├── algoritmo_simplex.md
+│   └── comparacao_simplex.md   # validação cruzada com a biblioteca PuLP
 ├── apresentacoes/              # apresentações de cada sprint
 ├── data/                       # dados do projeto (não versionados)
 │   ├── parquet/                # arquivos de entrada no formato Parquet (fornecidos pelo parceiro)
