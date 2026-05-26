@@ -98,7 +98,7 @@ Ressalta-se que esta revisão de literatura constitui uma base inicial, compatí
 
 **Resumo do trabalho:** 
 
-O trabalho aborda a aplicação da Programação Linear no contexto de otimizar a receita total no quesito de empréstimos bancários. A otimização de portfólios se trata de um pilar importante no setor de finanças e da Teoria de Investimentos, tendo implicações tanto para investidores quanto gestores, que precisam alocar recursos para múltiplas categorias de ativos (AL-MUSBAHU et al., 2025).
+O trabalho aborda a aplicação da Programação Linear no contexto de otimizar a receita total no quesito de empréstimos bancários. A otimização de portfólios se trata de um pilar importante no setor de finanças e da Teoria de Investimentos, tendo implicações tanto para investidores quanto gestores, que precisam alocar recursos para múltiplas categorias de ativos (AL-MUSBAHU et al., 2025). Embora publicado em um periódico de circulação recente, o trabalho foi selecionado por ser o estudo mais atual identificado que aplica programação linear diretamente a portfólios de empréstimos bancários com dados reais de 2025, tornando-o relevante para a validação da abordagem adotada neste projeto.
 
 Dessa forma, a Programação Linear apresenta-se como uma maneira para otimizar a alocação de empréstimos bancários em diferentes áreas (como empréstimos de crédito e para o financiamento de carros, por exemplo), considerando que as relações entre as variáveis mantenham-se lineares. Por esse caminho, uma função matemática linear pode ser mapeada, levando em consideração as relações da concessão de risco-retorno, segundo Konno e Yamazaki (1991, *apud* AL-MUSBAHU et al., 2025).
 
@@ -118,7 +118,7 @@ Por outro lado, um aspecto que ambos também tratam é da aplicação direta da 
 
 Conforme mencionado anteriormente, um aspecto que pode ser considerado negativo no trabalho de Al-Musbahu (2025) em relação a este trabalho se trata do tema proposto. Apesar de ambos estarem localizados no ambiente financeiro, eles abordam categorias essencialmente diferentes, que são a oferta de empréstimos e definição de limites de crédito. 
 
-Essa divergência não está limitada a apenas o objetivo da função matemática, mas também nos parâmetros que são levados em consideração. A função utilizada no presente trabalho aborda variáveis que não estão presentes no artigo de Al-Mushabu (2025) e vice-versa, fator que pode limitar a comparação direta entre os dois casos.
+Essa diferença não está limitada a apenas o objetivo da função matemática, mas também nos parâmetros que são levados em consideração. A função utilizada no presente trabalho aborda variáveis que não estão presentes no artigo de Al-Mushabu (2025) e vice-versa, fator que pode limitar a comparação direta entre os dois casos.
 
 Outro ponto que deve ser levado em consideração é em relação a amostragem de dados. O artigo de Al-Musbahu leva em consideração as informações coletadas por apenas uma filial do banco durante um único período, fator que pode limitar a robustez de seu modelo e da definição das variáveis do modelo, afetando o resultado direto da função matemática.
 
@@ -141,7 +141,7 @@ Outro ponto que deve ser levado em consideração é em relação a amostragem d
 
 **Resumo do trabalho:** Kwapong (2013) formula e resolve um modelo de programação linear para maximizar o retorno líquido da carteira de crédito do Akuapem Rural Bank Ltd., banco rural de Gana com portfólio total de GH¢ 15 milhões. O banco opera com cinco modalidades de empréstimo (Indústria Artesanal, Transporte, Agricultura, Salário e Microfinanças), cada uma com taxa de juros e probabilidade de inadimplência distintas: o empréstimo de Transporte, por exemplo, opera a 32% com 5% de inadimplência, enquanto o Salário apresenta 30% de taxa e apenas 1% de inadimplência. A função objetivo maximiza a receita líquida de cada modalidade, descontando a perda esperada por inadimplência, formulada como $Z = \sum_j I_j(1 - P_j)x_j$. O modelo é resolvido sob quatro restrições principais: teto total de fundos, alocação mínima de 40% para Salário e Microfinanças, mínimo de 60% para os demais segmentos e teto de inadimplência agregada de 3% (KWAPONG, 2013).
 
-Para testar a robustez da solução, o autor analisa sete cenários variando o número de restrições e as taxas de juros. No cenário base, a solução ótima aloca GH¢ 7 milhões a Transporte, GH¢ 2 milhões a Agricultura e GH¢ 6 milhões a Salário, com retorno de GH¢ 4,48 milhões, descartando Indústria Artesanal e Microfinanças por baixa atratividade líquida. O trabalho conclui que há relação positiva entre risco e retorno e que o aumento das taxas de juros melhora o resultado, desde que o risco seja controlado (KWAPONG, 2013).
+Para testar a robustez da solução, o autor analisa sete cenários variando o número de restrições e as taxas de juros. No cenário base, a solução ótima aloca GH¢ 7 milhões a Transporte, GH¢ 2 milhões a Agricultura e GH¢ 6 milhões a Salário, com retorno de GH¢ 4,48 milhões, descartando Indústria Artesanal e Microfinanças por baixa atratividade líquida. O trabalho conclui que há relação positiva entre risco e retorno e que o aumento das taxas de juros melhora o resultado, desde que o risco seja controlado (KWAPONG, 2013). Apesar de publicado em 2013, trata-se do antecedente metodológico mais próximo identificado na literatura para a função objetivo adotada neste projeto, razão pela qual foi incluído na análise comparativa.
 
 **Pontos positivos:** A estrutura da função objetivo de Kwapong (2013) guarda relação estrutural direta com o presente trabalho: ambas maximizam a receita líquida descontando a perda esperada por inadimplência, com a forma $Z = \sum_j I_j(1 - P_j)x_j$ mapeando explicitamente o trade-off risco-retorno de cada categoria de crédito. Essa equivalência valida que a programação linear é um instrumento adequado para problemas de portfólio de crédito com controle simultâneo de risco. Vale destacar também a análise de sensibilidade conduzida nos sete cenários: ao variar o número de restrições e as taxas de juros, o autor identifica quais restrições são de fato limitantes por meio dos preços duais, como o valor negativo de -0,013 associado à restrição de alocação setorial, que sinaliza um efeito desfavorável sobre o retorno. Essa prática de análise de sensibilidade é metodologicamente sólida e diretamente replicável no pipeline do presente projeto.
 
@@ -183,7 +183,15 @@ A distribuição dos trabalhos nesses dois eixos é reveladora. Al-Musbahu et al
 | **Controle de risco** | Taxa de inadimplência por categoria de empréstimo | Teto de PD agregada (3%) + PD por modalidade | Concentração de eventos ST no cluster de risco | PD financeira ponderada (R1), alavancagem diferenciada por score (R2), concentração por cluster (R5) |
 | **Domínio de aplicação** | Empréstimos bancários — Nigéria | Crédito rural — Gana | Risco corporativo — China | Cartão de crédito PF — Brasil (~1,8M elegíveis/safra) |
 
-A tabela confirma uma observação que emerge das análises anteriores: o trabalho que mais se aproxima estruturalmente deste é Kwapong (2013), não pelo contexto geográfico nem pela escala, mas pela forma da função objetivo. A expressão $Z = \sum_j I_j(1 - P_j)x_j$ utilizada por Kwapong corresponde diretamente ao coeficiente $c_k = \pi_k \cdot (T\bar{u}t - PD_k \cdot \gamma_{d(k)} \cdot \text{LGD})$ adotado aqui: nos dois casos, o retorno por unidade alocada é calculado como a diferença entre a receita esperada e a perda esperada por inadimplência. A distinção está no nível de operação: Kwapong (2013) resolve o problema para cinco modalidades predefinidas pelo banco; este trabalho resolve para aproximadamente 800 clusters derivados dos próprios dados via CART.
+A tabela confirma uma observação que emerge das análises anteriores: o trabalho que mais se aproxima estruturalmente deste é Kwapong (2013), não pelo contexto geográfico nem pela escala, mas pela forma da função objetivo. A expressão utilizada por Kwapong,
+
+$$Z = \sum_j I_j(1 - P_j)x_j$$
+
+corresponde diretamente ao coeficiente adotado aqui:
+
+$$c_k = \pi_k \cdot (T\bar{u}t - PD_k \cdot \gamma_{d(k)} \cdot \text{LGD})$$
+
+Nos dois casos, o retorno por unidade alocada é calculado como a diferença entre a receita esperada e a perda esperada por inadimplência. A distinção está no nível de operação: Kwapong (2013) resolve o problema para cinco modalidades predefinidas pelo banco; este trabalho resolve para aproximadamente 800 clusters derivados dos próprios dados via CART.
 
 Já a contribuição de Li, Tao e Li (2022) é de outra natureza: o artigo não propõe uma formulação de otimização, mas demonstra que variáveis financeiras conseguem separar perfis de risco com objetividade, o que sustenta a premissa da Etapa 1 do pipeline proposto. O que essa leitura implica em termos de lacuna de pesquisa é o tema da seção seguinte.
 
@@ -197,7 +205,7 @@ A primeira diz respeito à granularidade da variável de decisão. Kwapong (2013
 
 A segunda lacuna está na desconexão entre segmentação e decisão. Li, Tao e Li (2022) demonstram que variáveis financeiras permitem separar perfis de risco de forma objetiva e reprodutível, mas encerram o trabalho nessa etapa: os grupos identificados não alimentam nenhuma decisão operacional. A clusterização é o produto final, não uma entrada para um problema de otimização.
 
-A terceira lacuna está na ausência de um pipeline que integre as duas etapas em decisões de crédito ao consumidor em escala real. Scarpel e Milioni (2002) avançam nessa direção ao combinar um modelo Logit com Programação Inteira para decisões de concessão de crédito no contexto brasileiro, validando o paradigma de estimar e depois otimizar. O trabalho, contudo, trata a concessão como uma decisão binária sobre crédito corporativo, sem atribuição contínua de limite a pessoas físicas em escala de portfólio. Por essa razão, optou-se por não incluí-lo nas análises comparativas detalhadas: o contexto e a natureza da variável de decisão diferem o suficiente para que uma comparação direta fosse de profundidade limitada. O trabalho é referenciado, ainda assim, como validação metodológica do pipeline adotado.
+A terceira lacuna está na ausência de um pipeline que integre as duas etapas em decisões de crédito ao consumidor em escala real. Scarpel e Milioni (2002) avançam nessa direção ao combinar um modelo Logit com Programação Inteira para decisões de concessão de crédito no contexto brasileiro, validando o paradigma de estimar e depois otimizar. Trata-se de uma referência metodologicamente consolidada que, apesar de sua data de publicação, representa o único trabalho identificado que integra modelagem preditiva e otimização prescritiva em concessão de crédito no contexto brasileiro. O trabalho, contudo, trata a concessão como uma decisão binária sobre crédito corporativo, sem atribuição contínua de limite a pessoas físicas em escala de portfólio. Por essa razão, optou-se por não incluí-lo nas análises comparativas detalhadas: o contexto e a natureza da variável de decisão diferem o suficiente para que uma comparação direta fosse de profundidade limitada. O trabalho é referenciado, ainda assim, como validação metodológica do pipeline adotado.
 
 Reconhece-se que a abordagem proposta tem limitações próprias: a qualidade da otimização depende da estabilidade dos clusters gerados, e o modelo requer revalidação periódica conforme o comportamento de crédito da base evolui, aspectos que ficam fora do escopo deste trabalho e apontam para direções de pesquisa futura. O presente trabalho busca endereçar as três dimensões identificadas ao propor um pipeline que combina segmentação via CART com otimização contínua de limite via programação linear, aplicado a um portfólio de crédito ao consumidor em escala real.
 
@@ -223,14 +231,12 @@ Reconhece-se que a abordagem proposta tem limitações próprias: a qualidade da
 
 ## REFERÊNCIAS BIBLIOGRÁFICAS
 
+*Nota: os links disponibilizados nas referências direcionam para a página do artigo na base de origem. O acesso ao texto completo pode exigir clicar em botão de visualização ou download de PDF disponível na própria página.*
+
 AL-MUSBAHU, Abdulrahim; TETE, Ahmed Rufai; MANYISA, Yisa Emmanuel; MOHAMMED, Jibrin. Application of Linear Programming for Optimal Net Revenue on Bank Loan. **Kontagora Journal of Mathematics**, v. 1, n. 1, p. 214-230, 2025. DOI: 10.5281/zenodo.17401383.
-// https://fuekjournals.org/index.php/KJM/article/view/166
 
 KWAPONG, Samuel Darkwa. Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd. 2013. Dissertação (MSc in Industrial Mathematics) — Kwame Nkrumah University of Science and Technology, Institute of Distance Learning, Kumasi, 2013. Disponível em: <https://ir.knust.edu.gh/handle/123456789/5841>. Acesso em: 20 maio 2026.
-// https://ir.knust.edu.gh/items/ffdc0243-2ecc-4937-8aa1-6a752e613d93
 
 LI, Bingxiang; TAO, Rui; LI, Meng. Identification of Enterprise Financial Risk Based on Clustering Algorithm. **Computational Intelligence and Neuroscience**, v. 2022, art. 1086945, 2022. DOI: 10.1155/2022/1086945.
-// https://www.researchgate.net/publication/359925373_Identification_of_Enterprise_Financial_Risk_Based_on_Clustering_Algorithm
 
-SCARPEL, R. A.; MILIONI, A. Z. Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito. **Pesquisa Operacional**, v. 22, n. 1, p. 61-72, 2002. DOI: 10.1590/S0101-74382002000100004. Disponível em: <https://www.scielo.br/j/pope/a/3DkFSwbgRxdtDDG6MSPBDLM/>. Acesso em: 20 maio 2026.
-// https://www.scielo.br/j/pope/a/3DkFSwbgRxdtDDG6MSPBDLM/
+SCARPEL, R. A.; MILIONI, A. Z. Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito. **Pesquisa Operacional**, v. 22, n. 1, p. 61-72, 2002. DOI: 10.1590/S0101-74382002000100004.
