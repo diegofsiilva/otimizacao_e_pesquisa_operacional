@@ -134,6 +134,19 @@ def montar_problema(
         A.append(linha)
         b.append(L_max)
 
+    # # R5: concentração máxima por cluster
+    # alpha = params["alpha"]
+
+    # for _, row_k in clusters.iterrows():
+    #     linha = []
+    #     for _, row_j in clusters.iterrows():
+    #         if row_j["cluster_id"] == row_k["cluster_id"]:
+    #             linha.append(row_j["n_k"] * (1 - alpha))
+    #         else:
+    #             linha.append(-row_j["n_k"] * alpha)
+    #     A.append(linha)
+    #     b.append(0.0)
+
     return Problema(c=c, A=A, b=b)
 
 
@@ -159,18 +172,27 @@ def exibir_resultado(
         )
 
 
-if __name__ == "__main__":
-    if len(sys.argv) < 3:
-        print("Uso:")
-        print("    python main.py <arquivo_clientes.csv> <parametros.json>")
-        print("Exemplo:")
-        print("    python main.py clientes_calibrado.csv parametros.json")
-        sys.exit(1)
+if len(sys.argv) < 3:
+    print("Uso:")
+    print("    python main.py <arquivo_clientes.csv> <parametros.json>")
+    print("Exemplo:")
+    print("    python main.py clientes_calibrado.csv parametros.json")
+    sys.exit(1)
 
-    arquivo_csv = (
-        Path(__file__).resolve().parent.parent.parent / "data" / "csv" / sys.argv[1]
+arquivo_csv = (
+    Path(__file__).resolve().parent.parent.parent / "data" / "csv" / sys.argv[1]
+)
+arquivo_json = Path(__file__).resolve().parent / "input" / sys.argv[2]
+
+if not arquivo_csv.exists():
+    print(f"Erro: arquivo CSV {sys.argv[1]} não encontrado em data/csv/")
+    sys.exit(1)
+
+if not arquivo_json.exists():
+    print(
+        f"Erro: arquivo JSON {sys.argv[2]} não encontrado em algoritmo_simplex/input/"
     )
-    arquivo_json = Path(__file__).resolve().parent / "input" / sys.argv[2]
+    sys.exit(1)
 
 # executa o pipeline completo
 df, params = carregar_dados(arquivo_csv, arquivo_json)
