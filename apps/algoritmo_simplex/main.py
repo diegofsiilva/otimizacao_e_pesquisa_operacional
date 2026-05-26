@@ -19,6 +19,7 @@ from pathlib import Path
 import pandas as pd
 from models import Problema
 from simplex import simplex
+from comparar_pulp import comparar as comparar_pulp
 
 
 def carregar_dados(arquivo_csv: Path, arquivo_json: Path) -> tuple[pd.DataFrame, dict]:
@@ -198,3 +199,6 @@ clusters = garantir_clusters(sys.argv[1])
 problema = montar_problema(clusters, params, pd_fin_atual)
 x, z, status = simplex(problema)
 exibir_resultado(x, z, status, clusters)
+
+# valida com PuLP / CBC e exibe comparação lado a lado
+comparar_pulp(problema, x, z)

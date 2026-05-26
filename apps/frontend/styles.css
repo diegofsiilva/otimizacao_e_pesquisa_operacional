@@ -1,0 +1,108 @@
+/*
+  styles.css - design tokens, tipografia e utilidades globais
+*/
+
+/* Circular typeface (Lineto) -- Book e Medium conforme brandbook */
+@font-face {
+  font-family: "Circular";
+  src: url("assets/fonts/lineto-circular-book.ttf") format("truetype");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Circular";
+  src: url("assets/fonts/lineto-circular-medium.ttf") format("truetype");
+  font-weight: 500 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Design tokens */
+:root {
+  --pan-blue: #07b2fd;
+  --pan-royal: #005aea;
+  --pan-deep: #093495;
+  --pan-dark: #101010;
+  --pan-mid: #3b4049;
+  --pan-muted: #9c9c9f;
+  --pan-light: #cacbcf;
+  --pan-border: #ececec;
+  --pan-bg: #f3f4f9;
+  --pan-yellow: #fae95d;
+  --pan-green: #67de98;
+  --pan-teal: #0b8aa5;
+  --pan-red: #ff5d5c;
+  --pan-crimson: #dc2f37;
+}
+
+body {
+  font-family: "Circular", Arial, sans-serif;
+}
+
+/* Input range */
+.slider-range {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: var(--pan-border);
+  border-radius: 3px;
+  outline: none;
+}
+.slider-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--pan-blue);
+  border: 2px solid #fff;
+  box-shadow: 0 0 0 1px var(--pan-blue);
+  cursor: pointer;
+}
+.slider-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--pan-blue);
+  border: 2px solid #fff;
+  cursor: pointer;
+}
+
+/* Upload zone */
+.upload-zone {
+  transition: all 0.2s;
+}
+
+/* Modal */
+.modal-enter {
+  animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--pan-bg);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--pan-light);
+  border-radius: 3px;
+}
+
+/* PAN horizontal gradient (Azul PAN -> Azul Royal, 90deg) */
+.pan-gradient {
+  background: linear-gradient(90deg, #07b2fd 0%, #005aea 100%);
+}
