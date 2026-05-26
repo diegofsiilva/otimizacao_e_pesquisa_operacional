@@ -19,7 +19,6 @@ from pathlib import Path
 import pandas as pd
 from models import Problema
 from simplex import simplex
-from comparar_pulp import comparar as comparar_pulp
 
 
 def carregar_dados(arquivo_csv: Path, arquivo_json: Path) -> tuple[pd.DataFrame, dict]:
@@ -28,7 +27,7 @@ def carregar_dados(arquivo_csv: Path, arquivo_json: Path) -> tuple[pd.DataFrame,
 
     Retorna:
         df     : DataFrame com os dados dos clientes
-        params : dicionário com os parâmetros do modelo (t, LGD, u_bar, L_max)
+        params : dicionário com os parâmetros do modelo (t, LGD, u_bar, L_max, T)
     """
     df = pd.read_csv(arquivo_csv)
     print(f"Dados carregados: {len(df)} linhas, {len(df.columns)} colunas")
@@ -40,8 +39,9 @@ def carregar_dados(arquivo_csv: Path, arquivo_json: Path) -> tuple[pd.DataFrame,
     LGD = params["LGD"]
     u_bar = params["u_bar"]
     L_max = params["L_max"]
+    T = params["T"]
 
-    print(f"t={t}, LGD={LGD}, u_bar={u_bar}, L_max={L_max}")
+    print(f"t={t}, LGD={LGD}, u_bar={u_bar}, L_max={L_max}, T={T}")
 
     return df, params
 
@@ -56,9 +56,10 @@ def calcular_pd_fin_atual(df: pd.DataFrame) -> float:
     return pd_fin_atual
 
 
-def garantir_clusters(arquivo_csv_nome: str) -> pd.DataFrame:
+def garantir_clusters(arquivo_csv_nome: str, params_json_nome: str) -> pd.DataFrame:
     """
     Verifica se o arquivo clusterizado já existe. Se não existir, roda o clustering.
+    Passa o parametros.json para o clustering para garantir que T seja consistente.
 
     Retorna:
         clusters : DataFrame com os parâmetros agregados por cluster
@@ -75,7 +76,7 @@ def garantir_clusters(arquivo_csv_nome: str) -> pd.DataFrame:
         print(f"Gerando clusters para {arquivo_clusters.name}...")
         from clustering import main as clustering_main
 
-        clustering_main(arquivo_csv_nome)
+        clustering_main(arquivo_csv_nome, params_json_nome)
         print("Clustering concluído.")
     else:
         print(f"Arquivo {arquivo_clusters.name} encontrado. Pulando clustering.")
@@ -100,11 +101,12 @@ def montar_problema(
     LGD = params["LGD"]
     u_bar = params["u_bar"]
     L_max = params["L_max"]
+    T = params["T"]
 
     # monta o vetor de coeficientes da função objetivo (um por cluster)
     c = []
     for _, row in clusters.iterrows():
-        ck = row["n_k"] * row["pi_k"] * (u_bar * t * 22 - row["PD_k"] * LGD)
+        ck = row["n_k"] * row["pi_k"] * (u_bar * t * T - row["PD_k"] * LGD)
         c.append(ck)
 
     # monta a matriz de restrições A e o vetor b
@@ -195,10 +197,7 @@ if not arquivo_json.exists():
 # executa o pipeline completo
 df, params = carregar_dados(arquivo_csv, arquivo_json)
 pd_fin_atual = calcular_pd_fin_atual(df)
-clusters = garantir_clusters(sys.argv[1])
+clusters = garantir_clusters(sys.argv[1], sys.argv[2])
 problema = montar_problema(clusters, params, pd_fin_atual)
 x, z, status = simplex(problema)
 exibir_resultado(x, z, status, clusters)
-
-# valida com PuLP / CBC e exibe comparação lado a lado
-comparar_pulp(problema, x, z)
