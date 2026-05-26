@@ -1,108 +1,108 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Sistema de Credito - Banco PAN</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema de Credito - Banco PAN</title>
 
-  <!-- Tailwind CSS via CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = { theme: { extend: {} } }
-  </script>
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = { theme: { extend: {} } };
+    </script>
 
-  <!-- React 18 + Babel + Recharts via CDN -->
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- React 18 + Babel via CDN -->
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-  <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
-    body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; }
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body class="bg-[#F3F4F9] text-[#101010] antialiased">
+    <div id="root"></div>
 
-    /* Range slider cross-browser */
-    .slider-range { -webkit-appearance:none; appearance:none; width:100%; height:6px; background:#e2e8f0; border-radius:3px; outline:none; }
-    .slider-range::-webkit-slider-thumb { -webkit-appearance:none; width:18px; height:18px; border-radius:50%; background:#102C26; border:2px solid #fff; box-shadow:0 0 0 1px #102C26; cursor:pointer; }
-    .slider-range::-moz-range-thumb { width:18px; height:18px; border-radius:50%; background:#102C26; border:2px solid #fff; cursor:pointer; }
+    <!-- dados globais (JS puro) -->
+    <script src="data.js"></script>
 
-    /* Upload zone hover */
-    .upload-zone { transition: all .2s; }
+    <!-- paginas (JSX via Babel) -->
+    <script type="text/babel" src="pages/Navbar.js"></script>
+    <script type="text/babel" src="pages/Dashboard.js"></script>
+    <script type="text/babel" src="pages/GerarLimites.js"></script>
+    <script type="text/babel" src="pages/Resultados.js"></script>
+    <script type="text/babel" src="pages/ConfigModal.js"></script>
 
-    /* Modal animation */
-    .modal-enter { animation: fadeIn .15s ease; }
-    @keyframes fadeIn { from { opacity:0; transform:scale(.97) } to { opacity:1; transform:scale(1) } }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar { width:6px; }
-    ::-webkit-scrollbar-track { background:#f1f5f9; }
-    ::-webkit-scrollbar-thumb { background:#cbd5e1; border-radius:3px; }
-  </style>
-</head>
-<body class="bg-[#E8D5B0] text-slate-900 antialiased">
-
-  <div id="root"></div>
-
-  <!-- dados globais (JS puro) -->
-  <script src="data.js"></script>
-
-  <!-- paginas (JSX via Babel) -->
-  <script type="text/babel" src="pages/Navbar.js"></script>
-  <script type="text/babel" src="pages/Dashboard.js"></script>
-  <script type="text/babel" src="pages/GerarLimites.js"></script>
-  <script type="text/babel" src="pages/Resultados.js"></script>
-  <script type="text/babel" src="pages/ConfigModal.js"></script>
-
-  <!-- App raiz -->
-  <script type="text/babel">
-
-    class ErrorBoundary extends React.Component {
-      constructor(props) { super(props); this.state = { error: null }; }
-      static getDerivedStateFromError(e) { return { error: e }; }
-      render() {
-        if (this.state.error) {
-          return (
-            <div className="bg-red-50 border border-red-300  p-6 text-sm text-red-700">
-              <p className="font-bold mb-2">Erro ao renderizar a página:</p>
-              <pre className="whitespace-pre-wrap text-xs">{String(this.state.error)}</pre>
-            </div>
-          );
+    <!-- App raiz -->
+    <script type="text/babel">
+      class ErrorBoundary extends React.Component {
+        constructor(props) {
+          super(props);
+          this.state = { error: null };
         }
-        return this.props.children;
+        static getDerivedStateFromError(e) {
+          return { error: e };
+        }
+        render() {
+          if (this.state.error) {
+            return (
+              <div className="bg-red-50 border border-red-300 p-6 text-sm text-red-700">
+                <p className="font-bold mb-2">Erro ao renderizar a pagina:</p>
+                <pre className="whitespace-pre-wrap text-xs">
+                  {String(this.state.error)}
+                </pre>
+              </div>
+            );
+          }
+          return this.props.children;
+        }
       }
-    }
 
-    var App = function() {
-      var s1 = React.useState('dashboard');
-      var page = s1[0]; var setPage = s1[1];
-      var s2 = React.useState(false);
-      var cfgOpen = s2[0]; var setCfgOpen = s2[1];
-      var s3 = React.useState(false);
-      var hasData = s3[0]; var setHasData = s3[1];
+      var App = function () {
+        var s1 = React.useState("dashboard");
+        var page = s1[0];
+        var setPage = s1[1];
+        var s2 = React.useState(false);
+        var cfgOpen = s2[0];
+        var setCfgOpen = s2[1];
+        var s3 = React.useState(false);
+        var hasData = s3[0];
+        var setHasData = s3[1];
 
-      function renderPage(p) {
-        if (p === 'dashboard')  return <Dashboard setPage={setPage} />;
-        if (p === 'gerar')      return <GerarLimites setPage={setPage} setHasData={setHasData} />;
-        if (p === 'resultados') return <Resultados hasData={hasData} setPage={setPage} />;
-        return null;
-      }
+        function renderPage(p) {
+          if (p === "dashboard") return <Dashboard setPage={setPage} />;
+          if (p === "gerar")
+            return <GerarLimites setPage={setPage} setHasData={setHasData} />;
+          if (p === "resultados")
+            return <Resultados hasData={hasData} setPage={setPage} />;
+          return null;
+        }
 
-      return (
-        <div className="min-h-screen bg-[#E8D5B0]">
-          <Navbar page={page} setPage={setPage} onConfig={function(){ setCfgOpen(true); }} />
-          <main className="pt-24">
-            <div className="w-[calc(100%-4rem)] max-w-7xl mx-auto px-0 py-8">
-              <ErrorBoundary key={page}>
-                {renderPage(page)}
-              </ErrorBoundary>
-            </div>
-          </main>
-          {cfgOpen && <ConfigModal onClose={function(){ setCfgOpen(false); }} />}
-        </div>
-      );
-    };
+        return (
+          <div className="min-h-screen bg-[#F3F4F9]">
+            <Navbar
+              page={page}
+              setPage={setPage}
+              onConfig={function () {
+                setCfgOpen(true);
+              }}
+            />
+            <main className="pt-24">
+              <div className="w-[calc(100%-4rem)] max-w-7xl mx-auto px-0 py-8">
+                <ErrorBoundary key={page}>{renderPage(page)}</ErrorBoundary>
+              </div>
+            </main>
+            {cfgOpen && (
+              <ConfigModal
+                onClose={function () {
+                  setCfgOpen(false);
+                }}
+              />
+            )}
+          </div>
+        );
+      };
 
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-  </script>
-
-</body>
+      ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    </script>
+  </body>
 </html>
