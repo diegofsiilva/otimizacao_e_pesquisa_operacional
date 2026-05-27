@@ -16,6 +16,7 @@ Arquivos JSON devem estar em apps/algoritmo_simplex/input/
 import sys
 import json
 from pathlib import Path
+import numpy as np
 import pandas as pd
 from models import Problema
 from simplex import simplex
@@ -105,36 +106,27 @@ def montar_problema(clusters: pd.DataFrame, params: dict, df: pd.DataFrame) -> P
     L_max = params["L_max"]
     T = params["T"]
 
-    # monta o vetor de coeficientes da função objetivo (um por cluster)
-    c = []
-    for _, row in clusters.iterrows():
-        ck = row["n_k"] * row["pi_k"] * (u_bar * t * T - row["PD_k"] * LGD)
-        c.append(ck)
+    n_k = clusters["n_k"].to_numpy()
+    pi_k = clusters["pi_k"].to_numpy()
+    PD_k = clusters["PD_k"].to_numpy()
+    m_k = clusters["m_k"].to_numpy()
+    CP_k = clusters["CP_k"].to_numpy()
+    n = len(clusters)
 
-    # monta a matriz de restrições A e o vetor b
-    A = []
-    b = []
+    # vetor de coeficientes da função objetivo
+    c = (n_k * pi_k * (u_bar * t * T - PD_k * LGD)).tolist()
 
     # R1: teto de inadimplência financeira (uma restrição para a carteira inteira)
-    r1 = []
-    for _, row in clusters.iterrows():
-        r1.append(row["n_k"] * (row["PD_k"] - pd_fin_atual))
-    A.append(r1)
-    b.append(0.0)
+    r1 = (n_k * (PD_k - pd_fin_atual)).tolist()
 
     # R2: capacidade de pagamento com alavancagem (uma restrição por cluster)
-    for _, row in clusters.iterrows():
-        linha = [0.0] * len(clusters)
-        linha[int(row["cluster_id"])] = 1.0
-        A.append(linha)
-        b.append(row["m_k"] * row["CP_k"])
+    # cada linha é um vetor unitário na posição do cluster
+    A_r2 = np.eye(n).tolist()
+    b_r2 = (m_k * CP_k).tolist()
 
     # R3: teto máximo de limite (uma restrição por cluster)
-    for _, row in clusters.iterrows():
-        linha = [0.0] * len(clusters)
-        linha[int(row["cluster_id"])] = 1.0
-        A.append(linha)
-        b.append(L_max)
+    A_r3 = np.eye(n).tolist()
+    b_r3 = [float(L_max)] * n
 
     # # R5: concentração máxima por cluster
     # alpha = params["alpha"]
@@ -149,7 +141,11 @@ def montar_problema(clusters: pd.DataFrame, params: dict, df: pd.DataFrame) -> P
     #     A.append(linha)
     #     b.append(0.0)
 
-    return Problema(c=c, A=A, b=b)
+    return Problema(
+        c=c,
+        A=[r1] + A_r2 + A_r3,
+        b=[0.0] + b_r2 + b_r3,
+    )
 
 
 def exibir_resultado(
@@ -163,15 +159,18 @@ def exibir_resultado(
     print(f"Valor ótimo (z): {z:.2f}")
     print(f"\nLimites ótimos por cluster:")
 
-    for i, row in clusters.iterrows():
-        limite = x[i]
-        if limite >= 200:
-            limite_final = 50 * round(limite / 50)
-        else:
-            limite_final = 0
-        print(
-            f"  Cluster {int(row['cluster_id'])}: R$ {limite_final:.0f} (n={int(row['n_k'])})"
-        )
+    limites = np.where(
+        np.array(x) >= 200,
+        (np.array(x) / 50).round().astype(int) * 50,
+        0,
+    )
+
+    for cluster_id, n_clientes, limite in zip(
+        clusters["cluster_id"].astype(int),
+        clusters["n_k"].astype(int),
+        limites,
+    ):
+        print(f"  Cluster {cluster_id}: R$ {limite} (n={n_clientes})")
 
 
 def executar_pipeline(parquet_path: Path, params: dict) -> dict:
@@ -208,23 +207,23 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
     problema = montar_problema(clusters, params, df)
     x, z, status = simplex(problema)
 
-    resultado_clusters = []
-    for i, row in clusters.iterrows():
-        limite = x[i]
-        limite_final = 50 * round(limite / 50) if limite >= 200 else 0
-        resultado_clusters.append(
-            {
-                "cluster_id": int(row["cluster_id"]),
-                "n_clientes": int(row["n_k"]),
-                "pd_media": float(row["PD_k"]),
-                "pi_media": float(row["pi_k"]),
-                "cp_percentil5": float(row["CP_k"]),
-                "score_credito_cross_medio": float(row["score_cross_mean"]),
-                "ck_medio": float(row["ck_medio"]),
-                "fator_alavancagem": float(row["m_k"]),
-                "limite_otimizado": limite_final,
-            }
-        )
+    x_arr = np.array(x)
+    limites = np.where(x_arr >= 200, (x_arr / 50).round().astype(int) * 50, 0)
+
+    resultado_clusters = [
+        {
+            "cluster_id": int(clusters["cluster_id"].iloc[i]),
+            "n_clientes": int(clusters["n_k"].iloc[i]),
+            "pd_media": float(clusters["PD_k"].iloc[i]),
+            "pi_media": float(clusters["pi_k"].iloc[i]),
+            "cp_percentil5": float(clusters["CP_k"].iloc[i]),
+            "score_credito_cross_medio": float(clusters["score_cross_mean"].iloc[i]),
+            "ck_medio": float(clusters["ck_medio"].iloc[i]),
+            "fator_alavancagem": float(clusters["m_k"].iloc[i]),
+            "limite_otimizado": int(limites[i]),
+        }
+        for i in range(len(clusters))
+    ]
 
     cache_dir = Path(__file__).resolve().parent.parent.parent / "data" / "cache"
     stem = parquet_calibrado.stem
@@ -267,7 +266,8 @@ def main() -> None:
             params = json.load(f)
 
         print(
-            f"t={params['t']}, LGD={params['LGD']}, u_bar={params['u_bar']}, L_max={params['L_max']}, T={params['T']}"
+            f"t={params['t']}, LGD={params['LGD']}, u_bar={params['u_bar']}, "
+            f"L_max={params['L_max']}, T={params['T']}"
         )
 
         resultado = executar_pipeline(arquivo_parquet, params)
