@@ -395,6 +395,32 @@ var DonutChart = function (props) {
 var Resultados = function (props) {
   var hasData = props.hasData;
   var setPage = props.setPage;
+  var s1 = React.useState(null);
+  var resultData = s1[0];
+  var setResultData = s1[1];
+  var s2 = React.useState(null);
+  var apiError = s2[0];
+  var setApiError = s2[1];
+
+  React.useEffect(
+    function () {
+      if (!hasData) return;
+      var alive = true;
+      Api.getResultados()
+        .then(function (data) {
+          if (!alive) return;
+          setResultData(data);
+          setApiError(null);
+        })
+        .catch(function () {
+          if (alive) setApiError("Usando dados locais: backend indisponivel.");
+        });
+      return function () {
+        alive = false;
+      };
+    },
+    [hasData],
+  );
 
   if (!hasData) {
     return (
@@ -456,6 +482,24 @@ var Resultados = function (props) {
   }
 
   function exportarLimites() {
+    if (resultData) {
+      Api.exportResultados()
+        .then(function (blob) {
+          var url = URL.createObjectURL(blob);
+          var a = document.createElement("a");
+          a.href = url;
+          a.download = "limites_clusters.csv";
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        })
+        .catch(function () {
+          setApiError("Nao foi possivel exportar pelo backend; usando CSV local.");
+        });
+      return;
+    }
+
     var sc = SOLVER_COMPARISON;
     var header = ["Cluster", "Simplex (R$)", "PuLP/CBC (R$)", "Match"];
     var rows = sc.simplex.clusters.map(function (cs, i) {
@@ -480,41 +524,70 @@ var Resultados = function (props) {
     URL.revokeObjectURL(url);
   }
 
+  var backendKpis = resultData && resultData.kpis ? resultData.kpis : null;
   var KPIs = [
     {
       label: "Total de Clusters",
-      value: "73",
+      value: backendKpis ? String(backendKpis.total_clusters) : "73",
       sub: "\u2191 5 novos clusters",
       highlight: false,
     },
     {
       label: "Limite Total Aprovado",
-      value: "R$ 127,4M",
+      value: backendKpis ? fmt(backendKpis.limite_total_aprovado) : "R$ 127,4M",
       sub: "\u2191 8,5% vs mês anterior",
       highlight: true,
     },
     {
-      label: "Clientes Ativos",
-      value: "48.320",
+      label: "Clusters Ativos",
+      value: backendKpis ? String(backendKpis.clusters_ativos) : "48.320",
       sub: "\u2191 12 novos este mês",
       highlight: false,
     },
     {
       label: "Taxa de Aprovação",
-      value: "87,3%",
+      value: backendKpis ? backendKpis.taxa_aprovacao.toFixed(1) + "%" : "87,3%",
       sub: "\u2191 2,3% vs ano anterior",
       highlight: false,
     },
   ];
 
   var sc = SOLVER_COMPARISON;
-  var barData = CLUSTER_LIMITES.map(function (d) {
+  var limitesData = resultData && resultData.limites_por_cluster
+    ? resultData.limites_por_cluster.map(function (d) {
+        return { name: d.cluster_id, limite: d.limite_sugerido || 0 };
+      })
+    : CLUSTER_LIMITES;
+  var evolucaoData = resultData && resultData.evolucao_temporal_limites
+    ? resultData.evolucao_temporal_limites.map(function (d) {
+        return { mes: d.label, valor: d.valor / 1000000 };
+      })
+    : EVOLUCAO;
+  var scoreData = resultData && resultData.distribuicao_score
+    ? resultData.distribuicao_score.map(function (d) {
+        return { score: d.label, n: d.valor };
+      })
+    : SCORE_DIST;
+  var statusPie = resultData && resultData.distribuicao_status
+    ? resultData.distribuicao_status.map(function (d, i) {
+        var colors = ["#67DE98", "#FAE95D", "#FF5D5C"];
+        var totalStatus = resultData.distribuicao_status.reduce(function (sum, item) {
+          return sum + item.quantidade;
+        }, 0) || 1;
+        return {
+          name: d.status,
+          value: Math.round((d.quantidade / totalStatus) * 100),
+          color: colors[i] || "#B8D4EC",
+        };
+      })
+    : STATUS_PIE;
+  var barData = limitesData.map(function (d) {
     return { label: d.name, value: d.limite };
   });
-  var lineData = EVOLUCAO.map(function (d) {
+  var lineData = evolucaoData.map(function (d) {
     return { label: d.mes, value: d.valor };
   });
-  var areaData = SCORE_DIST.map(function (d) {
+  var areaData = scoreData.map(function (d) {
     return { label: d.score, value: d.n };
   });
 
@@ -620,9 +693,9 @@ var Resultados = function (props) {
             Proporção de clientes por situação na carteira
           </div>
           <div className="flex items-center gap-6">
-            <DonutChart data={STATUS_PIE} />
+            <DonutChart data={statusPie} />
             <div className="space-y-3 flex-1">
-              {STATUS_PIE.map(function (d) {
+              {statusPie.map(function (d) {
                 return (
                   <div key={d.name} className="flex items-center gap-2 text-sm">
                     <div

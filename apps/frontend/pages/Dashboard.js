@@ -26,7 +26,7 @@ var StatusBadge = function (props) {
   var cls =
     s === "Ativo"
       ? "bg-[#67DE98]/20 text-[#2E6DA4] border border-[#67DE98]/60"
-      : s === "Pendente"
+      : s === "Pendente" || s === "Em Analise"
         ? "bg-[#FAE95D]/30 text-[#3B4049] border border-[#FAE95D]/80"
         : "bg-[#FF5D5C]/20 text-[#DC2F37] border border-[#FF5D5C]/50";
   return (
@@ -164,10 +164,46 @@ var Dashboard = function (props) {
   var s2 = React.useState(1);
   var pageNum = s2[0];
   var setPageNum = s2[1];
+  var s3 = React.useState(CLIENTS);
+  var clustersData = s3[0];
+  var setClustersData = s3[1];
+  var s4 = React.useState(null);
+  var dashboardKpis = s4[0];
+  var setDashboardKpis = s4[1];
+  var s5 = React.useState(null);
+  var apiError = s5[0];
+  var setApiError = s5[1];
+
+  React.useEffect(function () {
+    var alive = true;
+    Api.getDashboard()
+      .then(function (data) {
+        if (!alive) return;
+        setDashboardKpis(data.kpis || null);
+        setClustersData(
+          (data.clusters || []).map(function (c) {
+            return {
+              id: c.id_ || c.id || c.cluster || "CLU",
+              score: c.score || 0,
+              status: c.status || "Ativo",
+              limite: c.limite,
+              cadastro: c.cadastro || "",
+            };
+          }),
+        );
+        setApiError(null);
+      })
+      .catch(function () {
+        if (alive) setApiError("Usando dados locais: backend indisponivel.");
+      });
+    return function () {
+      alive = false;
+    };
+  }, []);
 
   function exportarCSV() {
     var header = ["ID", "Score", "Status", "Limite", "Cadastro"];
-    var rows = CLIENTS.map(function (c) {
+    var rows = clustersData.map(function (c) {
       return [
         c.id,
         c.score,
@@ -186,15 +222,36 @@ var Dashboard = function (props) {
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
     a.href = url;
-    a.download = "clientes.csv";
+    a.download = "clusters.csv";
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   }
 
-  var filtered = CLIENTS.filter(function (c) {
+  var filtered = clustersData.filter(function (c) {
     return c.id.toLowerCase().indexOf(search.toLowerCase()) !== -1;
+  });
+  var kpiCards = KPI_CARDS.map(function (k, index) {
+    if (!dashboardKpis) return k;
+    if (index === 0) {
+      return Object.assign({}, k, {
+        label: "Total de Clusters",
+        value: String(dashboardKpis.total_clusters || filtered.length),
+      });
+    }
+    if (index === 1) {
+      return Object.assign({}, k, {
+        value: String(dashboardKpis.total_clusters || filtered.length),
+      });
+    }
+    if (index === 3) {
+      return Object.assign({}, k, {
+        label: "Clusters Ativos",
+        value: String(dashboardKpis.clusters_ativos || 0),
+      });
+    }
+    return k;
   });
 
   return (
@@ -229,7 +286,7 @@ var Dashboard = function (props) {
 
       {/* KPIs */}
       <div className="grid grid-cols-4 gap-4">
-        {KPI_CARDS.map(function (k) {
+        {kpiCards.map(function (k) {
           var badgeCls =
             k.trend === "up"
               ? "bg-[#67DE98]/20 text-[#2E6DA4]"
@@ -316,7 +373,7 @@ var Dashboard = function (props) {
               <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
               <circle cx="9" cy="7" r="4" />
             </svg>
-            Lista de Clientes
+            Lista de Clusters
           </div>
           <div className="flex items-center gap-2">
             {[
@@ -410,7 +467,7 @@ var Dashboard = function (props) {
             </svg>
             <input
               className="w-full pl-8 pr-3 py-1.5 text-sm border border-[#E8EFF7] bg-[#E2EAF4] focus:outline-none focus:border-[#2E6DA4] focus:ring-1 focus:ring-[#2E6DA4]"
-              placeholder="Buscar cliente..."
+              placeholder="Buscar cluster..."
               value={search}
               onChange={function (e) {
                 setSearch(e.target.value);

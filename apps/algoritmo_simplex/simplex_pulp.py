@@ -63,7 +63,7 @@ def _obter_solver() -> tuple[object, str]:
 
     tentativas = []
 
-    # 1. CBC com tmpDir sem espaços — funciona na maioria dos Windows com nome de usuário com espaço
+    # 1. CBC com tmpDir sem espaços - funciona na maioria dos Windows com nome de usuário com espaço
     def _tentar_cbc():
         return pulp.PULP_CBC_CMD(msg=0, keepFiles=False, tmpDir=tmpdir)
 
@@ -125,7 +125,7 @@ def simplex_pulp(problema: Problema) -> tuple[list[float], float, str]:
         x      : lista com o valor ótimo de cada variável de decisão (tamanho n)
         z      : valor ótimo da função objetivo
         status : "otimo", "ilimitado", "inviavel" ou "erro"
-                 (PuLP não diferencia "multiplas_solucoes" de "otimo" — quando
+                 (PuLP não diferencia "multiplas_solucoes" de "otimo" - quando
                  existem, retorna apenas uma das soluções ótimas com status "otimo")
     """
     n = len(problema.c)
@@ -136,8 +136,7 @@ def simplex_pulp(problema: Problema) -> tuple[list[float], float, str]:
 
     # variáveis de decisão x_j >= 0
     x_vars = [
-        pulp.LpVariable(f"x_{j}", lowBound=0.0, cat=pulp.LpContinuous)
-        for j in range(n)
+        pulp.LpVariable(f"x_{j}", lowBound=0.0, cat=pulp.LpContinuous) for j in range(n)
     ]
 
     # função objetivo
@@ -146,8 +145,7 @@ def simplex_pulp(problema: Problema) -> tuple[list[float], float, str]:
     # restrições do tipo <=
     for i in range(m):
         modelo += (
-            pulp.lpSum(problema.A[i][j] * x_vars[j] for j in range(n))
-            <= problema.b[i],
+            pulp.lpSum(problema.A[i][j] * x_vars[j] for j in range(n)) <= problema.b[i],
             f"R_{i}",
         )
 

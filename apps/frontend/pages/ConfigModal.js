@@ -8,6 +8,8 @@ var ConfigModal = function (props) {
     acc[p.key] = p.value;
     return acc;
   }, {});
+  initial.alpha = 0.05;
+  initial.n_clusters = 7;
 
   var s1 = React.useState(initial);
   var params = s1[0];
@@ -15,6 +17,30 @@ var ConfigModal = function (props) {
   var s2 = React.useState(null);
   var editing = s2[0];
   var setEditing = s2[1];
+  var s3 = React.useState(false);
+  var saving = s3[0];
+  var setSaving = s3[1];
+  var s4 = React.useState(null);
+  var apiError = s4[0];
+  var setApiError = s4[1];
+
+  React.useEffect(function () {
+    var alive = true;
+    Api.getConfig()
+      .then(function (data) {
+        if (!alive) return;
+        setParams(function (prev) {
+          return Object.assign({}, prev, data);
+        });
+        setApiError(null);
+      })
+      .catch(function () {
+        if (alive) setApiError("Usando parametros locais: backend indisponivel.");
+      });
+    return function () {
+      alive = false;
+    };
+  }, []);
 
   function formatVal(key, v) {
     if (key === "L_max") return "R$ " + Number(v).toLocaleString("pt-BR");
@@ -41,6 +67,24 @@ var ConfigModal = function (props) {
       return n;
     });
     setEditing(null);
+  }
+
+  function handleSave() {
+    setSaving(true);
+    setApiError(null);
+    Api.updateConfig(params)
+      .then(function (data) {
+        setParams(function (prev) {
+          return Object.assign({}, prev, data);
+        });
+        setEditing(null);
+      })
+      .catch(function (err) {
+        setApiError(err.message || "Erro ao salvar parametros.");
+      })
+      .finally(function () {
+        setSaving(false);
+      });
   }
 
   function handleOverlay(e) {
@@ -95,6 +139,11 @@ var ConfigModal = function (props) {
 
         {/* Body */}
         <div className="px-6 py-5 space-y-5 max-h-[70vh] overflow-y-auto">
+          {apiError && (
+            <div className="text-xs text-[#DC2F37] bg-[#FF5D5C]/10 border border-[#FF5D5C]/30 px-3 py-2">
+              {apiError}
+            </div>
+          )}
 
           {/* Editáveis */}
           <div>
@@ -165,12 +214,11 @@ var ConfigModal = function (props) {
                         </div>
                         <div className="flex gap-2">
                           <button
-                            onClick={function () {
-                              setEditing(null);
-                            }}
+                            onClick={handleSave}
+                            disabled={saving}
                             className="flex-1 py-1.5 text-xs font-semibold bg-[#2E6DA4] text-white hover:bg-[#1B3A5C] transition-colors"
                           >
-                            Salvar
+                            {saving ? "Salvando..." : "Salvar"}
                           </button>
                           <button
                             onClick={function () {

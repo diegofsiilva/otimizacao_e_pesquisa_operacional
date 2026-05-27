@@ -1,414 +1,649 @@
+"""
+services/credit_service.py
+Lógica de negócio da API. Funções chamadas pelas rotas.
+"""
+
 from __future__ import annotations
 
-import math
 import sys
-from datetime import date, timedelta
+import uuid
+from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from uuid import UUID
 
-import numpy as np
 import pandas as pd
+from fastapi import BackgroundTasks
 
-from db.storage import UPLOAD_DIR, ensure_dirs, load_params, load_state, read_dataframe, save_params, save_state
+from config import UPLOAD_DIR
+from db.storage import get_pool
 from model.schemas import (
-    Cluster,
-    DashboardKPIs,
-    DashboardResponse,
-    GeracaoLimitesResponse,
-    GeracaoResumo,
-    LimiteCluster,
+    ClienteHistoricoResponse,
+    ClienteResultadoResponse,
+    ClusterResultadoResponse,
+    ConsultaCreate,
+    ConsultaResponse,
     ParametrosModelo,
-    ResultadosKPIs,
-    ResultadosResponse,
-    SeriePonto,
-    StatusDistribuicao,
+    SafraResponse,
 )
 
 
-ALGORITMO_DIR = Path(__file__).resolve().parents[2] / "algoritmo_simplex"
-if str(ALGORITMO_DIR) not in sys.path:
-    sys.path.append(str(ALGORITMO_DIR))
-
-from models import Problema  # noqa: E402
-from simplex import simplex  # noqa: E402
+def _agora() -> str:
+    """Retorna o timestamp atual em UTC no formato ISO 8601."""
+    return datetime.now(timezone.utc).isoformat()
 
 
-REQUIRED_COLUMNS = {
-    "flag_filtros",
-    "pd_calibrada",
-    "score_propensao_contrato",
-    "capacidade_pagamento",
-    "renda_estimada",
-    "score_credito_cross",
-    "fx_idade",
-}
+def _row_para_parametros(row) -> ParametrosModelo:
+    """Converte um registro da tabela parametros_modelo em ParametrosModelo."""
+    return ParametrosModelo(
+        t=row["t"],
+        LGD=row["LGD"],
+        u_bar=row["u_bar"],
+        L_max=row["L_max"],
+        T=row["T"],
+    )
 
 
-def _dump_model(model: Any) -> dict[str, Any]:
-    if hasattr(model, "model_dump"):
-        return model.model_dump(mode="json")
-    return _jsonable(model.dict())
+def _row_para_consulta(row) -> ConsultaResponse:
+    """Converte um registro da tabela consultas em ConsultaResponse."""
+    return ConsultaResponse(
+        id=row["id"],
+        safra_id=row["safra_id"],
+        nome_arquivo_parquet=row["nome_arquivo_parquet"],
+        parametros=ParametrosModelo.model_validate_json(row["parametros"]),
+        status_consulta=row["status_consulta"],
+        status_lp=row["status_lp"],
+        z_otimo=row["z_otimo"],
+        n_clientes_total=row["n_clientes_total"],
+        n_clientes_elegiveis=row["n_clientes_elegiveis"],
+        n_clientes_ofertados=row["n_clientes_ofertados"],
+        n_clusters=row["n_clusters"],
+        criado_em=datetime.fromisoformat(row["criado_em"]),
+        iniciado_em=(
+            datetime.fromisoformat(row["iniciado_em"]) if row["iniciado_em"] else None
+        ),
+        concluido_em=(
+            datetime.fromisoformat(row["concluido_em"]) if row["concluido_em"] else None
+        ),
+        erro_etapa=row["erro_etapa"],
+        erro_mensagem=row["erro_mensagem"],
+    )
 
 
-def _jsonable(value: Any) -> Any:
-    if isinstance(value, date):
-        return value.isoformat()
-    if isinstance(value, list):
-        return [_jsonable(item) for item in value]
-    if isinstance(value, dict):
-        return {key: _jsonable(item) for key, item in value.items()}
-    return value
+def _row_para_cliente(row) -> ClienteResultadoResponse:
+    """Converte um registro da tabela clientes_resultado em ClienteResultadoResponse."""
+    return ClienteResultadoResponse(
+        token=row["token"],
+        consulta_id=row["consulta_id"],
+        safra_ref_uso=row["safra_ref_uso"],
+        score_interno=row["score_interno"],
+        pd_produto=row["pd_produto"],
+        score_generico_1=row["score_generico_1"],
+        score_generico_2=row["score_generico_2"],
+        capacidade_pagamento=row["capacidade_pagamento"],
+        delta_capacidade_pagamento=row["delta_capacidade_pagamento"],
+        score_propensao_contrato=row["score_propensao_contrato"],
+        score_credito_cross=row["score_credito_cross"],
+        renda_estimada=row["renda_estimada"],
+        fx_idade=row["fx_idade"],
+        limite_ofertado=row["limite_ofertado"],
+        flag_contrato=row["flag_contrato"],
+        flag_ativacao=row["flag_ativacao"],
+        over30mob3=row["over30mob3"],
+        pd_calibrada=row["pd_calibrada"],
+        pi_normalizado=row["pi_normalizado"],
+        cp_proxy=row["cp_proxy"],
+        cluster_id=row["cluster_id"],
+        limite_otimizado=row["limite_otimizado"],
+    )
 
 
-def _money(value: float | int | None) -> float | None:
-    if value is None or (isinstance(value, float) and math.isnan(value)):
+# ---------------------------------------------------------------------------
+# Pipeline em background
+# ---------------------------------------------------------------------------
+
+# importa executar_pipeline pelo path absoluto para evitar conflito de nomes
+# com o main.py do próprio backend
+import importlib.util as _importlib_util
+
+_OTIMIZADOR_MAIN = (
+    Path(__file__).resolve().parent.parent.parent.parent
+    / "apps"
+    / "algoritmo_simplex"
+    / "main.py"
+)
+_OTIMIZADOR_DIR = str(_OTIMIZADOR_MAIN.parent)
+if _OTIMIZADOR_DIR not in sys.path:
+    sys.path.append(_OTIMIZADOR_DIR)
+
+_spec = _importlib_util.spec_from_file_location(
+    "algoritmo_simplex_main", _OTIMIZADOR_MAIN
+)
+_mod = _importlib_util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)
+_executar_pipeline = _mod.executar_pipeline
+
+
+async def _pipeline_background(
+    consulta_id: str, parquet_path: Path, params: dict
+) -> None:
+    """
+    Executa o pipeline de otimização em background e persiste os resultados no banco.
+
+    Fluxo:
+        1. Marca a consulta como "executando"
+        2. Chama executar_pipeline do otimizador (bloqueante -- roda em thread pool)
+        3. Persiste clusters_resultado (insert normal -- 800 linhas)
+        4. Persiste clientes_resultado (bulk insert -- até 3M linhas)
+        5. Marca a consulta como "concluida" com todos os campos de resultado
+        6. Em caso de erro, marca como "erro" com etapa e mensagem
+    """
+    import asyncio
+    import pyarrow.parquet as pq
+
+    pool = get_pool()
+
+    # 1. marca como executando
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE consultas SET status_consulta = $1, iniciado_em = $2 WHERE id = $3",
+            "executando",
+            _agora(),
+            consulta_id,
+        )
+
+    try:
+        # lê o total de linhas do parquet raw sem carregar os dados em memória
+        n_total = pq.read_metadata(parquet_path).num_rows
+
+        # 2. executa o pipeline numa thread para não bloquear a event loop
+        loop = asyncio.get_event_loop()
+        resultado = await loop.run_in_executor(
+            None, _executar_pipeline, parquet_path, params
+        )
+
+        clusters = resultado["clusters"]
+        z = resultado["z"]
+        status_lp = resultado["status"]
+        parquet_cc = resultado["parquet_com_cluster"]
+
+        # 3. persiste clusters_resultado
+        async with pool.acquire() as conn:
+            await conn.executemany(
+                """
+                INSERT INTO clusters_resultado (
+                    consulta_id, cluster_id, n_clientes, pd_media, pi_media,
+                    cp_percentil5, score_credito_cross_medio, ck_medio,
+                    fator_alavancagem, limite_otimizado
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                """,
+                [
+                    (
+                        consulta_id,
+                        c["cluster_id"],
+                        c["n_clientes"],
+                        c["pd_media"],
+                        c["pi_media"],
+                        c["cp_percentil5"],
+                        c["score_credito_cross_medio"],
+                        c["ck_medio"],
+                        c["fator_alavancagem"],
+                        c["limite_otimizado"],
+                    )
+                    for c in clusters
+                ],
+            )
+
+        # 4. persiste clientes_resultado via bulk insert
+        df_cc = pd.read_parquet(parquet_cc)
+
+        # mapa de limite por cluster_id para desnormalizar em clientes_resultado
+        limite_por_cluster = {c["cluster_id"]: c["limite_otimizado"] for c in clusters}
+        df_cc["limite_otimizado"] = (
+            df_cc["cluster_id"].map(limite_por_cluster).fillna(0).astype(int)
+        )
+
+        # funções de conversão explícita para cada tipo esperado pelo asyncpg.
+        # evitam falhas com pandas nullable integers (Int32/Int64) e float NaN.
+        def _si(v):
+            return None if pd.isna(v) else int(v)  # nullable int
+
+        def _sf(v):
+            return None if pd.isna(v) else float(v)  # nullable float
+
+        def _ri(v):
+            return int(v)  # required int
+
+        def _rf(v):
+            return float(v)  # required float
+
+        registros = list(
+            zip(
+                [consulta_id] * len(df_cc),
+                [_ri(v) for v in df_cc["token"]],
+                [str(v) for v in df_cc["safra_ref_uso"]],
+                [_ri(v) for v in df_cc["score_interno"]],
+                [_rf(v) for v in df_cc["pd_produto"]],
+                [_si(v) for v in df_cc["score_generico_1"]],
+                [_si(v) for v in df_cc["score_generico_2"]],
+                [_sf(v) for v in df_cc["capacidade_pagamento"]],
+                [_sf(v) for v in df_cc["delta_capacidade_pagamento"]],
+                [_rf(v) for v in df_cc["score_propensao_contrato"]],
+                [_ri(v) for v in df_cc["score_credito_cross"]],
+                [_sf(v) for v in df_cc["renda_estimada"]],
+                [str(v) for v in df_cc["fx_idade"]],
+                [_sf(v) for v in df_cc["limite_ofertado"]],
+                [_ri(v) for v in df_cc["flag_contrato"]],
+                [_ri(v) for v in df_cc["flag_ativacao"]],
+                [_si(v) for v in df_cc["over30mob3"]],
+                [_rf(v) for v in df_cc["pd_calibrada"]],
+                [_rf(v) for v in df_cc["pi"]],
+                [_rf(v) for v in df_cc["cp_proxy"]],
+                [_ri(v) for v in df_cc["cluster_id"]],
+                [_ri(v) for v in df_cc["limite_otimizado"]],
+            )
+        )
+
+        async with pool.acquire() as conn:
+            await conn.copy_records_to_table(
+                "clientes_resultado",
+                records=registros,
+                columns=[
+                    "consulta_id",
+                    "token",
+                    "safra_ref_uso",
+                    "score_interno",
+                    "pd_produto",
+                    "score_generico_1",
+                    "score_generico_2",
+                    "capacidade_pagamento",
+                    "delta_capacidade_pagamento",
+                    "score_propensao_contrato",
+                    "score_credito_cross",
+                    "renda_estimada",
+                    "fx_idade",
+                    "limite_ofertado",
+                    "flag_contrato",
+                    "flag_ativacao",
+                    "over30mob3",
+                    "pd_calibrada",
+                    "pi_normalizado",
+                    "cp_proxy",
+                    "cluster_id",
+                    "limite_otimizado",
+                ],
+            )
+
+        # 5. atualiza a consulta como concluída
+        n_elegiveis = len(df_cc)
+        n_ofertados = int((df_cc["limite_otimizado"] > 0).sum())
+
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE consultas SET
+                    status_consulta      = $1,
+                    status_lp            = $2,
+                    z_otimo              = $3,
+                    n_clientes_total     = $4,
+                    n_clientes_elegiveis = $5,
+                    n_clientes_ofertados = $6,
+                    n_clusters           = $7,
+                    concluido_em         = $8
+                WHERE id = $9
+                """,
+                "concluido",
+                status_lp,
+                z,
+                n_total,
+                n_elegiveis,
+                n_ofertados,
+                len(clusters),
+                _agora(),
+                consulta_id,
+            )
+
+    except FileNotFoundError as exc:
+        # erro recuperável do pipeline -- etapa identificada pelo prefixo da mensagem
+        etapa = (
+            "calibracao"
+            if "[calibracao]" in str(exc)
+            else "clustering" if "[clustering]" in str(exc) else "otimizacao"
+        )
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE consultas SET
+                    status_consulta = $1, erro_etapa = $2,
+                    erro_mensagem = $3, concluido_em = $4
+                WHERE id = $5
+                """,
+                "erro",
+                etapa,
+                str(exc),
+                _agora(),
+                consulta_id,
+            )
+    except Exception as exc:
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE consultas SET
+                    status_consulta = $1, erro_etapa = $2,
+                    erro_mensagem = $3, concluido_em = $4
+                WHERE id = $5
+                """,
+                "erro",
+                "otimizacao",
+                str(exc),
+                _agora(),
+                consulta_id,
+            )
+
+
+# ---------------------------------------------------------------------------
+# Configuração
+# ---------------------------------------------------------------------------
+
+
+async def get_config() -> ParametrosModelo:
+    """Retorna os parâmetros padrão do modelo lidos da tabela parametros_modelo."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            'SELECT "t", "LGD", "u_bar", "L_max", "T" FROM parametros_modelo LIMIT 1'
+        )
+    return _row_para_parametros(row)
+
+
+async def update_config(payload: ParametrosModelo) -> ParametrosModelo:
+    """Atualiza os parâmetros padrão do modelo na tabela parametros_modelo."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        await conn.execute(
+            'UPDATE parametros_modelo SET "t" = $1, "LGD" = $2, "u_bar" = $3, "L_max" = $4, "T" = $5',
+            payload.t,
+            payload.LGD,
+            payload.u_bar,
+            payload.L_max,
+            payload.T,
+        )
+    return payload
+
+
+# ---------------------------------------------------------------------------
+# Safras
+# ---------------------------------------------------------------------------
+
+
+async def get_safras() -> list[SafraResponse]:
+    """Retorna todas as safras ordenadas pelo número."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT id, numero, nome, criado_em FROM safras ORDER BY numero ASC"
+        )
+    return [
+        SafraResponse(
+            id=row["id"],
+            numero=row["numero"],
+            nome=row["nome"],
+            criado_em=datetime.fromisoformat(row["criado_em"]),
+        )
+        for row in rows
+    ]
+
+
+async def _resolver_safra(conn, safra_numero: int | None, usar_existente: bool) -> str:
+    """
+    Resolve qual safra usar e retorna o safra_id.
+
+    Regras:
+        - safra_numero omitido: cria a próxima safra disponível (MAX + 1 ou M1)
+        - safra_numero informado e não existe: cria com esse número
+        - safra_numero informado e já existe com usar_existente=True: usa a existente
+        - safra_numero informado e já existe com usar_existente=False: lança ValueError
+    """
+    if safra_numero is None:
+        row = await conn.fetchrow("SELECT MAX(numero) AS max_num FROM safras")
+        proximo = (row["max_num"] or 0) + 1
+        return await _criar_safra(conn, proximo)
+
+    row = await conn.fetchrow("SELECT id FROM safras WHERE numero = $1", safra_numero)
+
+    if row is None:
+        return await _criar_safra(conn, safra_numero)
+
+    if usar_existente:
+        return row["id"]
+
+    raise ValueError(
+        f"Safra M{safra_numero} já existe. "
+        "Confirme se deseja usar a safra existente ou criar uma nova."
+    )
+
+
+async def _criar_safra(conn, numero: int) -> str:
+    """Insere uma nova safra no banco e retorna o id gerado."""
+    safra_id = str(uuid.uuid4())
+    await conn.execute(
+        "INSERT INTO safras (id, numero, nome, criado_em) VALUES ($1, $2, $3, $4)",
+        safra_id,
+        numero,
+        f"M{numero}",
+        _agora(),
+    )
+    return safra_id
+
+
+# ---------------------------------------------------------------------------
+# Consultas
+# ---------------------------------------------------------------------------
+
+
+async def get_consultas() -> list[ConsultaResponse]:
+    """Retorna todas as consultas ordenadas da mais recente para a mais antiga."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch("SELECT * FROM consultas ORDER BY criado_em DESC")
+    return [_row_para_consulta(row) for row in rows]
+
+
+async def get_consulta(consulta_id: UUID) -> ConsultaResponse | None:
+    """Retorna uma consulta pelo id, ou None se não encontrada."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT * FROM consultas WHERE id = $1", str(consulta_id)
+        )
+    if row is None:
         return None
-    return round(float(value), 2)
+    return _row_para_consulta(row)
 
 
-def _normalize_propensao(score: pd.Series) -> pd.Series:
-    pi = (score.astype(float) - 3.0) / 843.0
-    return pi.clip(0.0, 1.0)
+async def criar_consulta(
+    payload: ConsultaCreate,
+    conteudo: bytes,
+    background_tasks: BackgroundTasks,
+    usar_safra_existente: bool = False,
+) -> ConsultaResponse:
+    """
+    Salva o parquet, resolve a safra, insere a consulta no banco
+    e dispara o pipeline em background.
 
+    Lança ValueError se safra_numero já existir e usar_safra_existente for False.
+    """
+    # salva o parquet em disco
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    destino = UPLOAD_DIR / payload.nome_arquivo_parquet
+    destino.write_bytes(conteudo)
 
-def _build_cp_proxy(df: pd.DataFrame) -> pd.Series:
-    cp = df["capacidade_pagamento"]
-    renda = df["renda_estimada"]
-    return cp.where(cp.notna(), renda * 0.30)
+    pool = get_pool()
+    consulta_id = str(uuid.uuid4())
 
-
-def _score_to_m(score_cross_mean: float, s_low: float = 300.0, s_high: float = 900.0) -> float:
-    x = (score_cross_mean - s_low) / (s_high - s_low)
-    x = float(np.clip(x, 0.0, 1.0))
-    return 0.3 + x * (1.8 - 0.3)
-
-
-def _cluster_id(row: pd.Series, index: int) -> str:
-    for column in ["cluster_id", "id_cluster", "token"]:
-        if column in row and pd.notna(row[column]):
-            return str(row[column])
-    return f"CLI-{index + 1:03d}"
-
-
-def _status_from_row(row: pd.Series) -> str:
-    if "status" in row and pd.notna(row["status"]):
-        return str(row["status"])
-    if "flag_filtros" in row and pd.notna(row["flag_filtros"]):
-        return "Ativo" if int(row["flag_filtros"]) == 0 else "Inativo"
-    return "Ativo"
-
-
-def _date_from_index(index: int) -> date:
-    return date.today() - timedelta(days=index * 17)
-
-
-def _validate_columns(df: pd.DataFrame) -> None:
-    missing = sorted(REQUIRED_COLUMNS - set(df.columns))
-    if missing:
-        raise ValueError(f"Base sem colunas obrigatorias: {', '.join(missing)}")
-
-
-def _clusters_from_df(df: pd.DataFrame, limit: int = 50) -> list[Cluster]:
-    clusters: list[Cluster] = []
-    for position, (_, row) in enumerate(df.head(limit).iterrows()):
-        cluster = row.get("cluster_id", row.get("cluster", None))
-        limite = row.get("limite_sugerido", row.get("limite", None))
-        cadastro = row.get("cadastro", None)
-        score = row.get("score_credito_cross", row.get("score", None))
-        clusters.append(
-            Cluster(
-                id_=_cluster_id(row, position),
-                cluster=f"CLU-{int(cluster) + 1:03d}" if pd.notna(cluster) else None,
-                score=float(score) if pd.notna(score) else None,
-                status=_status_from_row(row),
-                limite=_money(limite),
-                cadastro=pd.to_datetime(cadastro).date() if pd.notna(cadastro) else _date_from_index(position),
-            )
-        )
-    return clusters
-
-
-def _build_clusters(df: pd.DataFrame, n_clusters: int) -> tuple[pd.DataFrame, pd.DataFrame]:
-    from sklearn.cluster import KMeans
-    from sklearn.compose import ColumnTransformer
-    from sklearn.impute import SimpleImputer
-    from sklearn.pipeline import Pipeline
-    from sklearn.preprocessing import OneHotEncoder, StandardScaler
-
-    eligible = df[df["flag_filtros"] == 0].copy()
-    if eligible.empty:
-        raise ValueError("A base nao possui clusters elegiveis para gerar limites.")
-
-    n_clusters = min(n_clusters, len(eligible))
-    eligible["pi"] = _normalize_propensao(eligible["score_propensao_contrato"])
-    eligible["cp_proxy"] = _build_cp_proxy(eligible)
-
-    pre = ColumnTransformer(
-        transformers=[
-            (
-                "num",
-                Pipeline(
-                    [
-                        ("imputer", SimpleImputer(strategy="median")),
-                        ("scaler", StandardScaler()),
-                    ]
-                ),
-                ["pd_calibrada", "cp_proxy", "score_credito_cross", "pi"],
-            ),
-            ("cat", OneHotEncoder(handle_unknown="ignore"), ["fx_idade"]),
-        ]
-    )
-    model = KMeans(n_clusters=n_clusters, random_state=42, n_init="auto")
-    pipe = Pipeline([("pre", pre), ("kmeans", model)])
-    eligible["cluster_id"] = pipe.fit_predict(eligible)
-
-    def p5(values: pd.Series) -> float:
-        return float(np.nanquantile(values.astype(float), 0.05))
-
-    clusters = eligible.groupby("cluster_id", as_index=False).agg(
-        n_k=("score_credito_cross", "count"),
-        PD_k=("pd_calibrada", "mean"),
-        pi_k=("pi", "mean"),
-        CP_k=("cp_proxy", p5),
-        score_cross_mean=("score_credito_cross", "mean"),
-    )
-    clusters["m_k"] = clusters["score_cross_mean"].apply(_score_to_m)
-    return eligible, clusters.sort_values("cluster_id").reset_index(drop=True)
-
-
-def _calcular_pd_fin_atual(df: pd.DataFrame) -> float:
-    return float(df[df["flag_filtros"] == 0]["pd_calibrada"].mean())
-
-
-def _montar_problema(clusters: pd.DataFrame, params: dict[str, Any], pd_fin_atual: float) -> Problema:
-    t = params["t"]
-    lgd = params["LGD"]
-    u_bar = params["u_bar"]
-    l_max = params["L_max"]
-
-    c = [
-        float(row["n_k"] * row["pi_k"] * (u_bar * t * 22 - row["PD_k"] * lgd))
-        for _, row in clusters.iterrows()
-    ]
-
-    matrix = [[float(row["n_k"] * (row["PD_k"] - pd_fin_atual)) for _, row in clusters.iterrows()]]
-    bounds = [0.0]
-
-    for index, row in clusters.iterrows():
-        line = [0.0] * len(clusters)
-        line[index] = 1.0
-        matrix.append(line)
-        bounds.append(float(row["m_k"] * row["CP_k"]))
-
-    for index, _ in clusters.iterrows():
-        line = [0.0] * len(clusters)
-        line[index] = 1.0
-        matrix.append(line)
-        bounds.append(float(l_max))
-
-    return Problema(c=c, A=matrix, b=bounds)
-
-
-def get_parametros() -> ParametrosModelo:
-    data = load_params()
-    state = load_state()
-    data["n_clusters"] = state.get("n_clusters", 7)
-    return ParametrosModelo(**data)
-
-
-def update_parametros(payload: ParametrosModelo) -> ParametrosModelo:
-    data = _dump_model(payload)
-    save_params({key: value for key, value in data.items() if key != "n_clusters"})
-    state = load_state()
-    state["n_clusters"] = payload.n_clusters
-    save_state(state)
-    return payload
-
-
-def save_upload(filename: str, content: bytes) -> Path:
-    ensure_dirs()
-    target = UPLOAD_DIR / Path(filename).name
-    target.write_bytes(content)
-    return target
-
-
-def gerar_limites(path: Path, n_clusters: int | None = None) -> GeracaoLimitesResponse:
-    df = read_dataframe(path)
-    _validate_columns(df)
-    params = get_parametros()
-    if n_clusters is not None:
-        params.n_clusters = n_clusters
-
-    eligible, clusters = _build_clusters(df, params.n_clusters)
-    params_data = _dump_model(params)
-    problema = _montar_problema(
-        clusters,
-        {key: value for key, value in params_data.items() if key != "n_clusters"},
-        _calcular_pd_fin_atual(df),
-    )
-    x, _, status = simplex(problema)
-
-    limites: list[LimiteCluster] = []
-    limit_by_cluster: dict[int, float | None] = {}
-    for index, row in clusters.iterrows():
-        raw_limit = x[index]
-        limite = 50 * round(raw_limit / 50) if raw_limit >= 200 else 0
-        viable = status in {"otimo", "multiplas_solucoes"} and limite > 0
-        final_limit = _money(limite) if viable else None
-        cluster_id = int(row["cluster_id"])
-        limit_by_cluster[cluster_id] = final_limit
-        limites.append(
-            LimiteCluster(
-                cluster_id=f"CLU-{cluster_id + 1:03d}",
-                limite_sugerido=final_limit,
-                status="Solucao Viavel" if viable else "Sem Solucao",
-                clusters=int(row["n_k"]),
-            )
+    async with pool.acquire() as conn:
+        safra_id = await _resolver_safra(
+            conn, payload.safra_numero, usar_safra_existente
         )
 
-    eligible["limite_sugerido"] = eligible["cluster_id"].map(limit_by_cluster)
-    resumo = GeracaoResumo(
-        total_clusters=len(limites),
-        com_solucao_viavel=sum(1 for item in limites if item.status == "Solucao Viavel"),
-        sem_solucao=sum(1 for item in limites if item.status == "Sem Solucao"),
-    )
-    result = GeracaoLimitesResponse(arquivo=path.name, resumo=resumo, limites=limites)
+        await conn.execute(
+            """
+            INSERT INTO consultas (
+                id, safra_id, nome_arquivo_parquet, parametros,
+                status_consulta, criado_em
+            ) VALUES ($1, $2, $3, $4, $5, $6)
+            """,
+            consulta_id,
+            safra_id,
+            payload.nome_arquivo_parquet,
+            payload.parametros.model_dump_json(),
+            "pendente",
+            _agora(),
+        )
 
-    state = load_state()
-    state["last_upload"] = str(path)
-    state["last_result"] = _dump_model(result)
-    state["clusters"] = [_dump_model(item) for item in _clusters_from_df(eligible, limit=100)]
-    state["n_clusters"] = params.n_clusters
-    save_state(state)
-    return result
-
-
-def get_dashboard() -> DashboardResponse:
-    state = load_state()
-    clusters = [Cluster(**item) for item in state.get("clusters", [])]
-    if not clusters:
-        clusters = _sample_clusters()
-    ativos = sum(1 for item in clusters if item.status == "Ativo")
-    limite_total = sum(item.limite or 0 for item in clusters)
-    aprovados = sum(1 for item in clusters if (item.limite or 0) > 0)
-    taxa = (aprovados / len(clusters) * 100) if clusters else 0
-    return DashboardResponse(
-        kpis=DashboardKPIs(
-            total_clusters=len(clusters),
-            clusters_ativos=ativos,
-            limite_total=_money(limite_total) or 0,
-            taxa_aprovacao=round(taxa, 2),
-        ),
-        clusters=clusters,
+    background_tasks.add_task(
+        _pipeline_background,
+        consulta_id,
+        destino,
+        payload.parametros.model_dump(),
     )
 
-
-def list_cluster(q: str | None = None, status: str | None = None) -> list[Cluster]:
-    clusters = get_dashboard().clusters
-    if q:
-        normalized = q.lower()
-        clusters = [
-            item
-            for item in clusters
-            if normalized in item.id_.lower()
-            or (item.cluster is not None and normalized in item.cluster.lower())
-        ]
-    if status:
-        clusters = [item for item in clusters if item.status == status]
-    return clusters
+    return await get_consulta(UUID(consulta_id))
 
 
-def upsert_cluster(payload: Cluster) -> Cluster:
-    state = load_state()
-    clusters = [Cluster(**item) for item in state.get("clusters", [])]
-    found = False
-    for index, cluster in enumerate(clusters):
-        if cluster.id_ == payload.id_:
-            clusters[index] = payload
-            found = True
-            break
-    if not found:
-        clusters.append(payload)
-    state["clusters"] = [_dump_model(item) for item in clusters]
-    save_state(state)
-    return payload
+# ---------------------------------------------------------------------------
+# Clusters
+# ---------------------------------------------------------------------------
 
 
-def delete_cluster(cluster_id: str) -> bool:
-    state = load_state()
-    clusters = [Cluster(**item) for item in state.get("clusters", [])]
-    remaining = [item for item in clusters if item.id_ != cluster_id]
-    if len(remaining) == len(clusters):
-        return False
-    state["clusters"] = [_dump_model(item) for item in remaining]
-    save_state(state)
-    return True
+async def get_clusters(consulta_id: UUID) -> list[ClusterResultadoResponse] | None:
+    """
+    Retorna os clusters de uma consulta ordenados pelo cluster_id.
+    Retorna None se a consulta não existir.
+    """
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        existe = await conn.fetchval(
+            "SELECT 1 FROM consultas WHERE id = $1", str(consulta_id)
+        )
+        if not existe:
+            return None
 
+        rows = await conn.fetch(
+            """
+            SELECT cluster_id, n_clientes, pd_media, pi_media, cp_percentil5,
+                   score_credito_cross_medio, ck_medio, fator_alavancagem, limite_otimizado
+            FROM clusters_resultado
+            WHERE consulta_id = $1
+            ORDER BY cluster_id ASC
+            """,
+            str(consulta_id),
+        )
 
-def get_resultados() -> ResultadosResponse:
-    state = load_state()
-    last_result: dict[str, Any] | None = state.get("last_result")
-    limites = [LimiteCluster(**item) for item in last_result["limites"]] if last_result else _sample_limites()
-
-    clusters_viaveis = sum(item.clusters for item in limites if item.status == "Solucao Viavel")
-    total_clusters = sum(item.clusters for item in limites) or 1
-    limite_total = sum((item.limite_sugerido or 0) * item.clusters for item in limites)
-    taxa = clusters_viaveis / total_clusters * 100
-
-    return ResultadosResponse(
-        kpis=ResultadosKPIs(
-            total_clusters=len(limites),
-            limite_total_aprovado=_money(limite_total) or 0,
-            clusters_ativos=clusters_viaveis,
-            taxa_aprovacao=round(taxa, 2),
-        ),
-        limites_por_cluster=limites,
-        distribuicao_status=[
-            StatusDistribuicao(status="Ativo", quantidade=clusters_viaveis),
-            StatusDistribuicao(status="Em Analise", quantidade=max(total_clusters - clusters_viaveis, 0)),
-            StatusDistribuicao(status="Inativo", quantidade=0),
-        ],
-        evolucao_temporal_limites=[
-            SeriePonto(label=f"M-{5 - index}", valor=round(limite_total * (0.72 + index * 0.07), 2))
-            for index in range(6)
-        ],
-        distribuicao_score=[
-            SeriePonto(label=label, valor=value)
-            for label, value in [("300-499", 120), ("500-599", 360), ("600-699", 720), ("700-799", 1040), ("800-900", 610)]
-        ],
-    )
-
-
-def export_resultados_csv() -> str:
-    rows = [_dump_model(item) for item in get_resultados().limites_por_cluster]
-    return pd.DataFrame(rows).to_csv(index=False)
-
-
-def _sample_limites() -> list[LimiteCluster]:
-    values = [1500, 5000, None, 200, 3600, 850, 12000]
     return [
-        LimiteCluster(
-            cluster_id=f"CLU-{index + 1:03d}",
-            limite_sugerido=_money(value),
-            status="Solucao Viavel" if value else "Sem Solucao",
-            clusters=120 + index * 17,
+        ClusterResultadoResponse(
+            cluster_id=row["cluster_id"],
+            n_clientes=row["n_clientes"],
+            pd_media=row["pd_media"],
+            pi_media=row["pi_media"],
+            cp_percentil5=row["cp_percentil5"],
+            score_credito_cross_medio=row["score_credito_cross_medio"],
+            ck_medio=row["ck_medio"],
+            fator_alavancagem=row["fator_alavancagem"],
+            limite_otimizado=row["limite_otimizado"],
         )
-        for index, value in enumerate(values)
+        for row in rows
     ]
 
 
-def _sample_clusters() -> list[Cluster]:
-    limites = [5000, 9800, None, 18200, 8800, None, 15000, 4900]
-    scores = [850, 720, 620, 910, 780, 450, 990, 680]
-    statuses = ["Ativo", "Ativo", "Em Analise", "Ativo", "Ativo", "Inativo", "Ativo", "Ativo"]
-    return [
-        Cluster(
-            id_=f"CLI-{index + 1:03d}",
-            cluster=f"CLU-{(index % 5) + 1:03d}",
-            score=scores[index],
-            status=statuses[index],
-            limite=_money(limites[index]),
-            cadastro=_date_from_index(index),
+# ---------------------------------------------------------------------------
+# Clientes
+# ---------------------------------------------------------------------------
+
+
+async def get_clientes(
+    consulta_id: UUID,
+    limit: int = 100,
+    offset: int = 0,
+) -> list[ClienteResultadoResponse] | None:
+    """
+    Retorna os clientes de uma consulta com paginação.
+    Retorna None se a consulta não existir.
+    """
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        existe = await conn.fetchval(
+            "SELECT 1 FROM consultas WHERE id = $1", str(consulta_id)
         )
-        for index in range(8)
-    ]
+        if not existe:
+            return None
+
+        rows = await conn.fetch(
+            """
+            SELECT *
+            FROM clientes_resultado
+            WHERE consulta_id = $1
+            ORDER BY token ASC
+            LIMIT $2 OFFSET $3
+            """,
+            str(consulta_id),
+            limit,
+            offset,
+        )
+
+    return [_row_para_cliente(row) for row in rows]
+
+
+async def exportar_clientes_csv(consulta_id: UUID) -> str | None:
+    """
+    Retorna todos os clientes de uma consulta serializados como CSV.
+    Retorna None se a consulta não existir.
+    """
+    import io
+    import csv
+
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        existe = await conn.fetchval(
+            "SELECT 1 FROM consultas WHERE id = $1", str(consulta_id)
+        )
+        if not existe:
+            return None
+
+        rows = await conn.fetch(
+            "SELECT * FROM clientes_resultado WHERE consulta_id = $1 ORDER BY token ASC",
+            str(consulta_id),
+        )
+
+    buffer = io.StringIO()
+    if rows:
+        writer = csv.DictWriter(buffer, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows([dict(row) for row in rows])
+
+    return buffer.getvalue()
+
+
+async def get_historico_cliente(token: int) -> ClienteHistoricoResponse | None:
+    """
+    Retorna o histórico de um cliente em todas as consultas em que apareceu.
+    Retorna None se o token não existir em nenhuma consulta.
+    """
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            """
+            SELECT *
+            FROM clientes_resultado
+            WHERE token = $1
+            ORDER BY consulta_id ASC
+            """,
+            token,
+        )
+
+    if not rows:
+        return None
+
+    return ClienteHistoricoResponse(
+        token=token,
+        historico=[_row_para_cliente(row) for row in rows],
+    )

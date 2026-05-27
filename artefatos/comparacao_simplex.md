@@ -4,7 +4,7 @@
 
 Validar a corretude da implementação do algoritmo Simplex feita do zero neste projeto (`apps/algoritmo_simplex/simplex.py`) comparando seus resultados com os de um solver consolidado de programação linear: a biblioteca **PuLP**, que usa por padrão o solver **CBC** (COIN-OR Branch and Cut).
 
-Essa comparação funciona como um *golden test*: se os dois solvers convergem para o mesmo valor ótimo da função objetivo, ganhamos confiança de que o nosso Simplex está correto. A biblioteca não substitui o algoritmo implementado; apenas serve como referência de validação cruzada.
+Essa comparação funciona como um _golden test_: se os dois solvers convergem para o mesmo valor ótimo da função objetivo, ganhamos confiança de que o nosso Simplex está correto. A biblioteca não substitui o algoritmo implementado; apenas serve como referência de validação cruzada.
 
 ## Por que PuLP
 
@@ -13,7 +13,7 @@ A escolha do PuLP em vez de outras alternativas se deu pelos seguintes motivos:
 - **API legível**: declarar variáveis, função objetivo e restrições como expressões algébricas torna o código de comparação fácil de auditar lado a lado com a formulação matemática do problema.
 - **Licença permissiva e instalação simples**: PuLP é open-source (MIT) e instalável via `pip` sem dependências nativas pesadas. O CBC vem embutido no pacote.
 - **Solver maduro**: o CBC é amplamente usado em produção e referência em livros-texto, o que dá robustez ao papel de "ground truth" da comparação.
-- **Mesma família de algoritmo**: o CBC usa o método Simplex (com refinamentos e Branch-and-Cut para casos inteiros, irrelevantes aqui pois nosso problema é puramente contínuo). Assim, a comparação é entre duas implementações do mesmo método, e não entre métodos diferentes.                                                                                    |
+- **Mesma família de algoritmo**: o CBC usa o método Simplex (com refinamentos e Branch-and-Cut para casos inteiros, irrelevantes aqui pois nosso problema é puramente contínuo). Assim, a comparação é entre duas implementações do mesmo método, e não entre métodos diferentes. |
 
 ## Metodologia
 
@@ -56,11 +56,11 @@ s.t. 2 x1 + 3 x2 ≤ 60
      x1, x2 ≥ 0
 ```
 
-| Solver | `x`            | `z`    | Status |
-| ------ | -------------- | ------ | ------ |
-| Nosso  | `[18.0, 8.0]`  | 1000.0 | otimo  |
-| PuLP   | `[18.0, 8.0]`  | 1000.0 | otimo  |
-| `|Δz|` | 0.00e+00       |        |        |
+| Solver | `x`           | `z`    | Status   |
+| ------ | ------------- | ------ | -------- | --- | --- |
+| Nosso  | `[18.0, 8.0]` | 1000.0 | otimo    |
+| PuLP   | `[18.0, 8.0]` | 1000.0 | otimo    |
+| `      | Δz            | `      | 0.00e+00 |     |     |
 
 Os dois solvers identificam o mesmo vértice ótimo, com ambas as restrições ativas (`2·18 + 3·8 = 60`, `4·18 + 3·8 = 96`). Resultados equivalentes.
 
@@ -75,9 +75,9 @@ s.t. − x1       ≤ 60
      x1, x2 ≥ 0
 ```
 
-| Solver | Comportamento                                  |
-| ------ | ---------------------------------------------- |
-| Nosso  | `raise ValueError("O problema é ilimitado.")`  |
+| Solver | Comportamento                                                                            |
+| ------ | ---------------------------------------------------------------------------------------- |
+| Nosso  | `raise ValueError("O problema é ilimitado.")`                                            |
 | PuLP   | Retorna status `Unbounded`; wrapper converte em `ValueError("O problema é ilimitado.")`. |
 
 Ambos detectam corretamente que a região viável é ilimitada e a função objetivo cresce sem limite. Resultados equivalentes.
@@ -95,23 +95,23 @@ s.t. x1 + 2 x2 ≤ 4
 
 A função objetivo é paralela ao gradiente da primeira restrição, portanto todos os pontos do segmento entre `(0, 2)` e `(2, 1)` são ótimos, com `z = 8`.
 
-| Solver | `x`           | `z`  | Status                                  |
-| ------ | ------------- | ---- | --------------------------------------- |
-| Nosso  | `[2.0, 1.0]`  | 8.0  | multiplas_solucoes                      |
-| PuLP   | `[0.0, 2.0]`  | 8.0  | otimo                                   |
-| `|Δz|` | 0.00e+00      |      |                                         |
+| Solver | `x`          | `z` | Status             |
+| ------ | ------------ | --- | ------------------ | --- | --- |
+| Nosso  | `[2.0, 1.0]` | 8.0 | multiplas_solucoes |
+| PuLP   | `[0.0, 2.0]` | 8.0 | otimo              |
+| `      | Δz           | `   | 0.00e+00           |     |     |
 
-Os dois solvers convergem para o mesmo `z` mas escolhem **vértices ótimos diferentes do mesmo segmento de ótimos** — comportamento esperado em programação linear com múltiplas soluções e que confirma que ambos chegaram ao ótimo global. A diferença qualitativa é que o **nosso Simplex sinaliza explicitamente** a existência de outras soluções ótimas (status `multiplas_solucoes`), enquanto o PuLP apenas retorna `Optimal` — informação que pode ser relevante quando o produto de negócio precisa decidir entre vértices ótimos diferentes.
+Os dois solvers convergem para o mesmo `z` mas escolhem **vértices ótimos diferentes do mesmo segmento de ótimos** - comportamento esperado em programação linear com múltiplas soluções e que confirma que ambos chegaram ao ótimo global. A diferença qualitativa é que o **nosso Simplex sinaliza explicitamente** a existência de outras soluções ótimas (status `multiplas_solucoes`), enquanto o PuLP apenas retorna `Optimal` - informação que pode ser relevante quando o produto de negócio precisa decidir entre vértices ótimos diferentes.
 
 ### Caso 4 - Caso real do projeto (clusters de clientes)
 
 Execução com `clientes_calibrado.csv` (14,57 milhões de clientes elegíveis, agrupados em 7 clusters) e `parametros.json` padrão.
 
-| Solver | `z` (R$)              | Status |
-| ------ | --------------------- | ------ |
-| Nosso  | 81 240 312,337700     | otimo  |
-| PuLP   | 81 240 312,337700     | otimo  |
-| `|Δz|` | 1,49 × 10⁻⁸           |        |
+| Solver | `z` (R$)          | Status |
+| ------ | ----------------- | ------ | ----------- | --- |
+| Nosso  | 81 240 312,337700 | otimo  |
+| PuLP   | 81 240 312,337700 | otimo  |
+| `      | Δz                | `      | 1,49 × 10⁻⁸ |     |
 
 Vetor de limites por cluster (idêntico nos dois solvers):
 
@@ -127,7 +127,7 @@ Esta comparação cruzada justificou seu papel de validação ao revelar **um bu
 
 A função `construir_tableau_inicial` atribuía `valores_iniciais = problema.b` sem copiar a lista. Como Python passa listas por referência, a coluna `Value` do tableau passava a compartilhar a mesma memória com `problema.b`. Cada operação de pivotamento (`tableau.values[i] /= elemento_pivo`, etc.) **mutava o vetor `b` original do problema**.
 
-O sintoma só apareceu no `comparar.py` porque ele invocava os dois solvers em sequência sobre o mesmo objeto `Problema`: o nosso simplex rodava primeiro e deixava `b` corrompido; o PuLP, em seguida, recebia um problema diferente do original e retornava o ótimo *desse problema corrompido*. Por exemplo, no Caso 1, ao final do nosso simplex `b` virava `[8, 18]` em vez de `[60, 96]`, e o ótimo desse problema modificado é exatamente o `(4, 0)` com `z = 160` que o PuLP devolveu inicialmente.
+O sintoma só apareceu no `comparar.py` porque ele invocava os dois solvers em sequência sobre o mesmo objeto `Problema`: o nosso simplex rodava primeiro e deixava `b` corrompido; o PuLP, em seguida, recebia um problema diferente do original e retornava o ótimo _desse problema corrompido_. Por exemplo, no Caso 1, ao final do nosso simplex `b` virava `[8, 18]` em vez de `[60, 96]`, e o ótimo desse problema modificado é exatamente o `(4, 0)` com `z = 160` que o PuLP devolveu inicialmente.
 
 ## Conclusão
 

@@ -6,3 +6,4 @@ openpyxl
 pyarrow
 scikit-learn
 numpy
+asyncpg
