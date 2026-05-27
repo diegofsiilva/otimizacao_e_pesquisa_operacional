@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
 
+import pandas as pd
 from fastapi import BackgroundTasks
 
 from config import UPLOAD_DIR
@@ -138,7 +139,6 @@ async def _pipeline_background(
     """
     import asyncio
     import pyarrow.parquet as pq
-    import pandas as pd
 
     pool = get_pool()
 
@@ -202,44 +202,44 @@ async def _pipeline_background(
             df_cc["cluster_id"].map(limite_por_cluster).fillna(0).astype(int)
         )
 
-        # converte colunas nullable para object antes de exportar para que
-        # valores NaN virem None (exigido pelo asyncpg)
-        colunas_nullable = [
-            "score_generico_1",
-            "score_generico_2",
-            "capacidade_pagamento",
-            "delta_capacidade_pagamento",
-            "renda_estimada",
-            "limite_ofertado",
-            "over30mob3",
-        ]
-        for col in colunas_nullable:
-            df_cc[col] = df_cc[col].where(df_cc[col].notna(), other=None)
+        # funções de conversão explícita para cada tipo esperado pelo asyncpg.
+        # evitam falhas com pandas nullable integers (Int32/Int64) e float NaN.
+        def _si(v):
+            return None if pd.isna(v) else int(v)  # nullable int
+
+        def _sf(v):
+            return None if pd.isna(v) else float(v)  # nullable float
+
+        def _ri(v):
+            return int(v)  # required int
+
+        def _rf(v):
+            return float(v)  # required float
 
         registros = list(
             zip(
                 [consulta_id] * len(df_cc),
-                df_cc["token"].astype(int).tolist(),
-                df_cc["safra_ref_uso"].astype(str).tolist(),
-                df_cc["score_interno"].astype(int).tolist(),
-                df_cc["pd_produto"].astype(float).tolist(),
-                df_cc["score_generico_1"].tolist(),
-                df_cc["score_generico_2"].tolist(),
-                df_cc["capacidade_pagamento"].tolist(),
-                df_cc["delta_capacidade_pagamento"].tolist(),
-                df_cc["score_propensao_contrato"].astype(float).tolist(),
-                df_cc["score_credito_cross"].astype(int).tolist(),
-                df_cc["renda_estimada"].tolist(),
-                df_cc["fx_idade"].astype(str).tolist(),
-                df_cc["limite_ofertado"].tolist(),
-                df_cc["flag_contrato"].astype(int).tolist(),
-                df_cc["flag_ativacao"].astype(int).tolist(),
-                df_cc["over30mob3"].tolist(),
-                df_cc["pd_calibrada"].astype(float).tolist(),
-                df_cc["pi"].astype(float).tolist(),
-                df_cc["cp_proxy"].astype(float).tolist(),
-                df_cc["cluster_id"].astype(int).tolist(),
-                df_cc["limite_otimizado"].astype(int).tolist(),
+                [_ri(v) for v in df_cc["token"]],
+                [str(v) for v in df_cc["safra_ref_uso"]],
+                [_ri(v) for v in df_cc["score_interno"]],
+                [_rf(v) for v in df_cc["pd_produto"]],
+                [_si(v) for v in df_cc["score_generico_1"]],
+                [_si(v) for v in df_cc["score_generico_2"]],
+                [_sf(v) for v in df_cc["capacidade_pagamento"]],
+                [_sf(v) for v in df_cc["delta_capacidade_pagamento"]],
+                [_rf(v) for v in df_cc["score_propensao_contrato"]],
+                [_ri(v) for v in df_cc["score_credito_cross"]],
+                [_sf(v) for v in df_cc["renda_estimada"]],
+                [str(v) for v in df_cc["fx_idade"]],
+                [_sf(v) for v in df_cc["limite_ofertado"]],
+                [_ri(v) for v in df_cc["flag_contrato"]],
+                [_ri(v) for v in df_cc["flag_ativacao"]],
+                [_si(v) for v in df_cc["over30mob3"]],
+                [_rf(v) for v in df_cc["pd_calibrada"]],
+                [_rf(v) for v in df_cc["pi"]],
+                [_rf(v) for v in df_cc["cp_proxy"]],
+                [_ri(v) for v in df_cc["cluster_id"]],
+                [_ri(v) for v in df_cc["limite_otimizado"]],
             )
         )
 
