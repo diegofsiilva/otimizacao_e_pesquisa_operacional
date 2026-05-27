@@ -4,6 +4,7 @@
 
 CREATE TABLE IF NOT EXISTS clusters_resultado (
     id                          INTEGER  GENERATED ALWAYS AS IDENTITY, -- ROWID / autoincrement
+    consulta_id                 TEXT        NOT NULL,
     cluster_id                  INTEGER     NOT NULL,   -- 0 a K-1
 
     -- parâmetros agregados do cluster (vindos de _clusters.parquet)
