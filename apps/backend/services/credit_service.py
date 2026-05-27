@@ -84,7 +84,7 @@ _OTIMIZADOR_MAIN = (
 )
 _OTIMIZADOR_DIR = str(_OTIMIZADOR_MAIN.parent)
 if _OTIMIZADOR_DIR not in sys.path:
-    sys.path.insert(0, _OTIMIZADOR_DIR)
+    sys.path.append(_OTIMIZADOR_DIR)
 
 _spec = _importlib_util.spec_from_file_location(
     "algoritmo_simplex_main", _OTIMIZADOR_MAIN
