@@ -1,5 +1,5 @@
 """
-scripts/analise_09_calibracao_final.py
+scripts/setup_tabela_gamma.py
 
 Calibracao da PD por decil usando a base completa de elegiveis.
 
@@ -7,8 +7,15 @@ Os decis sao definidos pelos percentis de pd_produto da populacao elegivel
 completa. O gamma empirico por decil e estimado usando os clientes com
 over30mob3 preenchido que caem em cada decil.
 
+Setup inicial: estima os fatores gamma de calibracao da PD por decil
+a partir das 3 safras historicas combinadas.
+
+Deve ser rodado uma unica vez (ou quando os dados historicos mudarem).
+O output tabela_gamma_decil.csv e versionado no repositorio e consumido
+pelo pipeline de calibracao em cada execucao.
+
 Uso:
-    python analise_09_calibracao_final.py
+    python setup_tabela_gamma.py
 
 Saidas:
     - data/csv/tabela_gamma_decil.csv
@@ -79,16 +86,16 @@ for safra in ["M1", "M2", "M3"]:
         L_arr = L_col.to_numpy(zero_copy_only=False).astype(np.float32)
         L_null = L_col.is_null().to_numpy(zero_copy_only=False)
 
-        # pd_produto de todos os elegiveis — define os edges dos decis
+        # pd_produto de todos os elegiveis - define os edges dos decis
         elig_pd_list.append(pd_v[elig])
 
-        # elegiveis com over30mob3 preenchido — estimam gamma empirico
+        # elegiveis com over30mob3 preenchido - estimam gamma empirico
         obs = elig & ~ov_null
         if obs.any():
             obs_pd_list.append(pd_v[obs])
             obs_ov_list.append(ov_arr[obs].astype(np.int8))
 
-        # aprovados com limite — backtesting economico
+        # aprovados com limite - backtesting economico
         ap = elig & (contrato == 1) & ~L_null
         if ap.any():
             apr_pd_list.append(pd_v[ap])
@@ -192,7 +199,7 @@ else:
     )
     n_extrap = (~ok).sum()
     print(
-        f"\n{n_extrap} decis sem observacoes suficientes — extrapolacao linear aplicada."
+        f"\n{n_extrap} decis sem observacoes suficientes - extrapolacao linear aplicada."
     )
     print(f"Ajuste linear: gamma = {a_fit:.4f} + {b_fit:.4f} * PD_media_decil")
 
