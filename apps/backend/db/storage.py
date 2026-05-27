@@ -1,58 +1,101 @@
+"""
+db/storage.py
+Gerenciamento da conexão com o PostgreSQL e execução das migrations.
+"""
+
 from __future__ import annotations
 
-import json
+import os
 from pathlib import Path
-from typing import Any
 
-import pandas as pd
+import asyncpg
 
-from config import LOCAL_DATA_DIR, PARAMS_PATH, STATE_PATH, UPLOAD_DIR
+from config import DB_DATABASE, DB_HOST, DB_PASSWORD, DB_PORT, DB_USER
 
+# diretório onde ficam os arquivos .sql de migration
+MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
 
-def ensure_dirs() -> None:
-    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-    LOCAL_DATA_DIR.mkdir(parents=True, exist_ok=True)
-
-
-def _read_json(path: Path, default: dict[str, Any]) -> dict[str, Any]:
-    if not path.exists():
-        return default.copy()
-    with path.open("r", encoding="utf-8") as file:
-        return json.load(file)
+# pool de conexões compartilhado pela aplicação — inicializado no lifespan
+_pool: asyncpg.Pool | None = None
 
 
-def _write_json(path: Path, data: dict[str, Any]) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    with path.open("w", encoding="utf-8") as file:
-        json.dump(data, file, indent=2, ensure_ascii=False)
+async def init_pool() -> None:
+    """
+    Cria o pool de conexões com o PostgreSQL e executa as migrations pendentes.
+    Deve ser chamado uma única vez na startup da aplicação.
+    """
+    global _pool
+
+    _pool = await asyncpg.create_pool(
+        host=DB_HOST,
+        port=DB_PORT,
+        database=DB_DATABASE,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        min_size=2,
+        max_size=10,
+    )
+
+    await _run_migrations()
 
 
-def load_state() -> dict[str, Any]:
-    default = {"last_upload": None, "last_result": None, "clusters": [], "n_clusters": 7}
-    state = _read_json(STATE_PATH, default)
+async def close_pool() -> None:
+    """
+    Fecha o pool de conexões.
+    Deve ser chamado na shutdown da aplicação.
+    """
+    global _pool
 
-    return state
+    if _pool is not None:
+        await _pool.close()
+        _pool = None
 
 
-def save_state(state: dict[str, Any]) -> None:
-    ensure_dirs()
-    _write_json(STATE_PATH, state)
+def get_pool() -> asyncpg.Pool:
+    """
+    Retorna o pool de conexões ativo.
+    Lança RuntimeError se chamado antes de init_pool().
+    """
+    if _pool is None:
+        raise RuntimeError(
+            "Pool de conexões não inicializado. Chame init_pool() primeiro."
+        )
+    return _pool
 
 
-def load_params() -> dict[str, Any]:
-    default = {"t": 0.0175, "LGD": 0.8, "u_bar": 0.75, "L_max": 25000.0, "alpha": 0.05}
-    return _read_json(PARAMS_PATH, default)
+async def _run_migrations() -> None:
+    """
+    Executa as migrations ainda não aplicadas, em ordem numérica.
+    Controla quais migrations já foram rodadas pela tabela schema_migrations.
+    """
+    pool = get_pool()
 
-def save_params(params: dict[str, Any]) -> None:
-    ensure_dirs()
-    _write_json(PARAMS_PATH, params)
+    async with pool.acquire() as conn:
+        # garante que a tabela de controle existe
+        await conn.execute("""
+            CREATE TABLE IF NOT EXISTS schema_migrations (
+                versao      TEXT    NOT NULL,
+                aplicado_em TEXT    NOT NULL,
+                CONSTRAINT pk_schema_migrations PRIMARY KEY (versao)
+            )
+        """)
 
-def read_dataframe(path: Path) -> pd.DataFrame:
-    suffix = path.suffix.lower()
-    if suffix == ".csv":
-        return pd.read_csv(path)
-    if suffix in {".xlsx", ".xls"}:
-        return pd.read_excel(path)
-    if suffix == ".parquet":
-        return pd.read_parquet(path)
-    raise ValueError("Formato nao suportado. Use CSV, XLSX, XLS ou parquet.")
+        # descobre quais migrations já foram aplicadas
+        registros = await conn.fetch("SELECT versao FROM schema_migrations")
+        aplicadas = {r["versao"] for r in registros}
+
+        # lê os arquivos .sql em ordem numérica
+        arquivos = sorted(MIGRATIONS_DIR.glob("*.sql"))
+
+        for arquivo in arquivos:
+            versao = arquivo.stem  # ex: "001_create_safras"
+
+            if versao in aplicadas:
+                continue
+
+            sql = arquivo.read_text(encoding="utf-8")
+            await conn.execute(sql)
+            await conn.execute(
+                "INSERT INTO schema_migrations (versao, aplicado_em) VALUES ($1, NOW()::text)",
+                versao,
+            )
