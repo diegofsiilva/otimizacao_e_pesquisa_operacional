@@ -32,7 +32,7 @@ def _agora() -> str:
 
 
 def _row_para_parametros(row) -> ParametrosModelo:
-    """Converte um registro da tabela config em ParametrosModelo."""
+    """Converte um registro da tabela parametros_modelo em ParametrosModelo."""
     return ParametrosModelo(
         t=row["t"],
         LGD=row["LGD"],
@@ -65,6 +65,34 @@ def _row_para_consulta(row) -> ConsultaResponse:
         ),
         erro_etapa=row["erro_etapa"],
         erro_mensagem=row["erro_mensagem"],
+    )
+
+
+def _row_para_cliente(row) -> ClienteResultadoResponse:
+    """Converte um registro da tabela clientes_resultado em ClienteResultadoResponse."""
+    return ClienteResultadoResponse(
+        token=row["token"],
+        consulta_id=row["consulta_id"],
+        safra_ref_uso=row["safra_ref_uso"],
+        score_interno=row["score_interno"],
+        pd_produto=row["pd_produto"],
+        score_generico_1=row["score_generico_1"],
+        score_generico_2=row["score_generico_2"],
+        capacidade_pagamento=row["capacidade_pagamento"],
+        delta_capacidade_pagamento=row["delta_capacidade_pagamento"],
+        score_propensao_contrato=row["score_propensao_contrato"],
+        score_credito_cross=row["score_credito_cross"],
+        renda_estimada=row["renda_estimada"],
+        fx_idade=row["fx_idade"],
+        limite_ofertado=row["limite_ofertado"],
+        flag_contrato=row["flag_contrato"],
+        flag_ativacao=row["flag_ativacao"],
+        over30mob3=row["over30mob3"],
+        pd_calibrada=row["pd_calibrada"],
+        pi_normalizado=row["pi_normalizado"],
+        cp_proxy=row["cp_proxy"],
+        cluster_id=row["cluster_id"],
+        limite_otimizado=row["limite_otimizado"],
     )
 
 
@@ -109,6 +137,8 @@ async def _pipeline_background(
         6. Em caso de erro, marca como "erro" com etapa e mensagem
     """
     import asyncio
+    import pyarrow.parquet as pq
+    import pandas as pd
 
     pool = get_pool()
 
@@ -122,6 +152,9 @@ async def _pipeline_background(
         )
 
     try:
+        # lê o total de linhas do parquet raw sem carregar os dados em memória
+        n_total = pq.read_metadata(parquet_path).num_rows
+
         # 2. executa o pipeline numa thread para não bloquear a event loop
         loop = asyncio.get_event_loop()
         resultado = await loop.run_in_executor(
@@ -161,8 +194,6 @@ async def _pipeline_background(
             )
 
         # 4. persiste clientes_resultado via bulk insert
-        import pandas as pd
-
         df_cc = pd.read_parquet(parquet_cc)
 
         # mapa de limite por cluster_id para desnormalizar em clientes_resultado
@@ -243,8 +274,6 @@ async def _pipeline_background(
             )
 
         # 5. atualiza a consulta como concluída
-        # n_clientes_total vem do resultado do pipeline (total antes do filtro flag_filtros)
-        n_total = resultado["n_clientes_total"]
         n_elegiveis = len(df_cc)
         n_ofertados = int((df_cc["limite_otimizado"] > 0).sum())
 
@@ -317,7 +346,7 @@ async def _pipeline_background(
 
 
 async def get_config() -> ParametrosModelo:
-    """Retorna os parâmetros padrão do modelo lidos da tabela config."""
+    """Retorna os parâmetros padrão do modelo lidos da tabela parametros_modelo."""
     pool = get_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
@@ -327,7 +356,7 @@ async def get_config() -> ParametrosModelo:
 
 
 async def update_config(payload: ParametrosModelo) -> ParametrosModelo:
-    """Atualiza os parâmetros padrão do modelo na tabela config."""
+    """Atualiza os parâmetros padrão do modelo na tabela parametros_modelo."""
     pool = get_pool()
     async with pool.acquire() as conn:
         await conn.execute(
@@ -481,174 +510,14 @@ async def criar_consulta(
     return await get_consulta(UUID(consulta_id))
 
 
+# ---------------------------------------------------------------------------
 # Clusters
+# ---------------------------------------------------------------------------
 
 
 async def get_clusters(consulta_id: UUID) -> list[ClusterResultadoResponse] | None:
     """
     Retorna os clusters de uma consulta ordenados pelo cluster_id.
-    Retorna None se a consulta não existir.
-    """
-    pool = get_pool()
-    async with pool.acquire() as conn:
-        existe = await conn.fetchval(
-            "SELECT 1 FROM consultas WHERE id = $1", str(consulta_id)
-        )
-        if not existe:
-            return None
-
-        rows = await conn.fetch(
-            """
-            SELECT cluster_id, n_clientes, pd_media, pi_media, cp_percentil5,
-                   score_credito_cross_medio, ck_medio, fator_alavancagem, limite_otimizado
-            FROM clusters_resultado
-            WHERE consulta_id = $1
-            ORDER BY cluster_id ASC
-            """,
-            str(consulta_id),
-        )
-
-    return [
-        ClusterResultadoResponse(
-            cluster_id=row["cluster_id"],
-            n_clientes=row["n_clientes"],
-            pd_media=row["pd_media"],
-            pi_media=row["pi_media"],
-            cp_percentil5=row["cp_percentil5"],
-            score_credito_cross_medio=row["score_credito_cross_medio"],
-            ck_medio=row["ck_medio"],
-            fator_alavancagem=row["fator_alavancagem"],
-            limite_otimizado=row["limite_otimizado"],
-        )
-        for row in rows
-    ]
-
-
-# Clientes
-
-
-async def get_clientes(
-    consulta_id: UUID,
-    limit: int = 100,
-    offset: int = 0,
-) -> list[ClienteResultadoResponse] | None:
-    """
-    Retorna os clientes de uma consulta com paginação.
-    Retorna None se a consulta não existir.
-    """
-    pool = get_pool()
-    async with pool.acquire() as conn:
-        existe = await conn.fetchval(
-            "SELECT 1 FROM consultas WHERE id = $1", str(consulta_id)
-        )
-        if not existe:
-            return None
-
-        rows = await conn.fetch(
-            """
-            SELECT *
-            FROM clientes_resultado
-            WHERE consulta_id = $1
-            ORDER BY token ASC
-            LIMIT $2 OFFSET $3
-            """,
-            str(consulta_id),
-            limit,
-            offset,
-        )
-
-    return [_row_para_cliente(row) for row in rows]
-
-
-async def exportar_clientes_csv(consulta_id: UUID) -> str | None:
-    """
-    Retorna todos os clientes de uma consulta como CSV.
-    Retorna None se a consulta não existir.
-    """
-    import io
-    import pandas as pd
-
-    pool = get_pool()
-    async with pool.acquire() as conn:
-        existe = await conn.fetchval(
-            "SELECT 1 FROM consultas WHERE id = $1", str(consulta_id)
-        )
-        if not existe:
-            return None
-
-        rows = await conn.fetch(
-            "SELECT * FROM clientes_resultado WHERE consulta_id = $1 ORDER BY token ASC",
-            str(consulta_id),
-        )
-
-    df = pd.DataFrame([dict(row) for row in rows])
-    buffer = io.StringIO()
-    df.to_csv(buffer, index=False)
-    return buffer.getvalue()
-
-
-async def get_historico_cliente(token: int) -> ClienteHistoricoResponse | None:
-    """
-    Retorna o histórico de um cliente em todas as consultas em que apareceu.
-    Retorna None se o token não existir em nenhuma consulta.
-    """
-    pool = get_pool()
-    async with pool.acquire() as conn:
-        rows = await conn.fetch(
-            """
-            SELECT *
-            FROM clientes_resultado
-            WHERE token = $1
-            ORDER BY consulta_id ASC
-            """,
-            token,
-        )
-
-    if not rows:
-        return None
-
-    return ClienteHistoricoResponse(
-        token=token,
-        historico=[_row_para_cliente(row) for row in rows],
-    )
-
-
-def _row_para_cliente(row) -> ClienteResultadoResponse:
-    """Converte um registro da tabela clientes_resultado em ClienteResultadoResponse."""
-    return ClienteResultadoResponse(
-        token=row["token"],
-        consulta_id=row["consulta_id"],
-        safra_ref_uso=row["safra_ref_uso"],
-        score_interno=row["score_interno"],
-        pd_produto=row["pd_produto"],
-        score_generico_1=row["score_generico_1"],
-        score_generico_2=row["score_generico_2"],
-        capacidade_pagamento=row["capacidade_pagamento"],
-        delta_capacidade_pagamento=row["delta_capacidade_pagamento"],
-        score_propensao_contrato=row["score_propensao_contrato"],
-        score_credito_cross=row["score_credito_cross"],
-        renda_estimada=row["renda_estimada"],
-        fx_idade=row["fx_idade"],
-        limite_ofertado=row["limite_ofertado"],
-        flag_contrato=row["flag_contrato"],
-        flag_ativacao=row["flag_ativacao"],
-        over30mob3=row["over30mob3"],
-        pd_calibrada=row["pd_calibrada"],
-        pi_normalizado=row["pi_normalizado"],
-        cp_proxy=row["cp_proxy"],
-        cluster_id=row["cluster_id"],
-        limite_otimizado=row["limite_otimizado"],
-    )
-
-
-# ---------------------------------------------------------------------------
-# Clusters
-# ---------------------------------------------------------------------------
-
-
-async def get_clusters(consulta_id: UUID) -> list[ClusterResultadoResponse] | None:
-    """
-    Retorna os clusters de uma consulta ordenados por cluster_id.
     Retorna None se a consulta não existir.
     """
     pool = get_pool()
@@ -729,6 +598,9 @@ async def exportar_clientes_csv(consulta_id: UUID) -> str | None:
     Retorna todos os clientes de uma consulta serializados como CSV.
     Retorna None se a consulta não existir.
     """
+    import io
+    import csv
+
     pool = get_pool()
     async with pool.acquire() as conn:
         existe = await conn.fetchval(
@@ -742,9 +614,6 @@ async def exportar_clientes_csv(consulta_id: UUID) -> str | None:
             str(consulta_id),
         )
 
-    import io
-    import csv
-
     buffer = io.StringIO()
     if rows:
         writer = csv.DictWriter(buffer, fieldnames=rows[0].keys())
@@ -756,7 +625,7 @@ async def exportar_clientes_csv(consulta_id: UUID) -> str | None:
 
 async def get_historico_cliente(token: int) -> ClienteHistoricoResponse | None:
     """
-    Retorna o histórico completo de um cliente em todas as consultas.
+    Retorna o histórico de um cliente em todas as consultas em que apareceu.
     Retorna None se o token não existir em nenhuma consulta.
     """
     pool = get_pool()
@@ -777,32 +646,4 @@ async def get_historico_cliente(token: int) -> ClienteHistoricoResponse | None:
     return ClienteHistoricoResponse(
         token=token,
         historico=[_row_para_cliente(row) for row in rows],
-    )
-
-
-def _row_para_cliente(row) -> ClienteResultadoResponse:
-    """Converte um registro da tabela clientes_resultado em ClienteResultadoResponse."""
-    return ClienteResultadoResponse(
-        token=row["token"],
-        consulta_id=row["consulta_id"],
-        safra_ref_uso=row["safra_ref_uso"],
-        score_interno=row["score_interno"],
-        pd_produto=row["pd_produto"],
-        score_generico_1=row["score_generico_1"],
-        score_generico_2=row["score_generico_2"],
-        capacidade_pagamento=row["capacidade_pagamento"],
-        delta_capacidade_pagamento=row["delta_capacidade_pagamento"],
-        score_propensao_contrato=row["score_propensao_contrato"],
-        score_credito_cross=row["score_credito_cross"],
-        renda_estimada=row["renda_estimada"],
-        fx_idade=row["fx_idade"],
-        limite_ofertado=row["limite_ofertado"],
-        flag_contrato=row["flag_contrato"],
-        flag_ativacao=row["flag_ativacao"],
-        over30mob3=row["over30mob3"],
-        pd_calibrada=row["pd_calibrada"],
-        pi_normalizado=row["pi_normalizado"],
-        cp_proxy=row["cp_proxy"],
-        cluster_id=row["cluster_id"],
-        limite_otimizado=row["limite_otimizado"],
     )
