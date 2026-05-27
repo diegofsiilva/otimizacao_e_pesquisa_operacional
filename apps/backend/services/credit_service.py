@@ -72,14 +72,26 @@ def _row_para_consulta(row) -> ConsultaResponse:
 # Pipeline em background
 # ---------------------------------------------------------------------------
 
-# path do otimizador -- adicionado uma única vez no nível do módulo
-_OTIMIZADOR_DIR = str(
-    Path(__file__).resolve().parent.parent.parent / "apps" / "algoritmo_simplex"
+# importa executar_pipeline pelo path absoluto para evitar conflito de nomes
+# com o main.py do próprio backend
+import importlib.util as _importlib_util
+
+_OTIMIZADOR_MAIN = (
+    Path(__file__).resolve().parent.parent.parent.parent
+    / "apps"
+    / "algoritmo_simplex"
+    / "main.py"
 )
+_OTIMIZADOR_DIR = str(_OTIMIZADOR_MAIN.parent)
 if _OTIMIZADOR_DIR not in sys.path:
     sys.path.insert(0, _OTIMIZADOR_DIR)
 
-from main import executar_pipeline as _executar_pipeline  # noqa: E402
+_spec = _importlib_util.spec_from_file_location(
+    "algoritmo_simplex_main", _OTIMIZADOR_MAIN
+)
+_mod = _importlib_util.module_from_spec(_spec)
+_spec.loader.exec_module(_mod)
+_executar_pipeline = _mod.executar_pipeline
 
 
 async def _pipeline_background(
@@ -792,4 +804,3 @@ def _row_para_cliente(row) -> ClienteResultadoResponse:
         cluster_id=row["cluster_id"],
         limite_otimizado=row["limite_otimizado"],
     )
-
