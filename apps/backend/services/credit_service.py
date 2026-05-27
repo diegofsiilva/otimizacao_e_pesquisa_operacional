@@ -5,10 +5,13 @@ Lógica de negócio da API. Funções chamadas pelas rotas.
 
 from __future__ import annotations
 
+import sys
 import uuid
 from datetime import datetime, timezone
 from pathlib import Path
 from uuid import UUID
+
+from fastapi import BackgroundTasks
 
 from config import UPLOAD_DIR
 from db.storage import get_pool
@@ -63,6 +66,237 @@ def _row_para_consulta(row) -> ConsultaResponse:
         erro_etapa=row["erro_etapa"],
         erro_mensagem=row["erro_mensagem"],
     )
+
+
+# ---------------------------------------------------------------------------
+# Pipeline em background
+# ---------------------------------------------------------------------------
+
+# path do otimizador -- adicionado uma única vez no nível do módulo
+_OTIMIZADOR_DIR = str(
+    Path(__file__).resolve().parent.parent.parent / "apps" / "algoritmo_simplex"
+)
+if _OTIMIZADOR_DIR not in sys.path:
+    sys.path.insert(0, _OTIMIZADOR_DIR)
+
+from main import executar_pipeline as _executar_pipeline  # noqa: E402
+
+
+async def _pipeline_background(
+    consulta_id: str, parquet_path: Path, params: dict
+) -> None:
+    """
+    Executa o pipeline de otimização em background e persiste os resultados no banco.
+
+    Fluxo:
+        1. Marca a consulta como "executando"
+        2. Chama executar_pipeline do otimizador (bloqueante -- roda em thread pool)
+        3. Persiste clusters_resultado (insert normal -- 800 linhas)
+        4. Persiste clientes_resultado (bulk insert -- até 3M linhas)
+        5. Marca a consulta como "concluida" com todos os campos de resultado
+        6. Em caso de erro, marca como "erro" com etapa e mensagem
+    """
+    import asyncio
+
+    pool = get_pool()
+
+    # 1. marca como executando
+    async with pool.acquire() as conn:
+        await conn.execute(
+            "UPDATE consultas SET status_consulta = $1, iniciado_em = $2 WHERE id = $3",
+            "executando",
+            _agora(),
+            consulta_id,
+        )
+
+    try:
+        # 2. executa o pipeline numa thread para não bloquear a event loop
+        loop = asyncio.get_event_loop()
+        resultado = await loop.run_in_executor(
+            None, _executar_pipeline, parquet_path, params
+        )
+
+        clusters = resultado["clusters"]
+        z = resultado["z"]
+        status_lp = resultado["status"]
+        parquet_cc = resultado["parquet_com_cluster"]
+
+        # 3. persiste clusters_resultado
+        async with pool.acquire() as conn:
+            await conn.executemany(
+                """
+                INSERT INTO clusters_resultado (
+                    consulta_id, cluster_id, n_clientes, pd_media, pi_media,
+                    cp_percentil5, score_credito_cross_medio, ck_medio,
+                    fator_alavancagem, limite_otimizado
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                """,
+                [
+                    (
+                        consulta_id,
+                        c["cluster_id"],
+                        c["n_clientes"],
+                        c["pd_media"],
+                        c["pi_media"],
+                        c["cp_percentil5"],
+                        c["score_credito_cross_medio"],
+                        c["ck_medio"],
+                        c["fator_alavancagem"],
+                        c["limite_otimizado"],
+                    )
+                    for c in clusters
+                ],
+            )
+
+        # 4. persiste clientes_resultado via bulk insert
+        import pandas as pd
+
+        df_cc = pd.read_parquet(parquet_cc)
+
+        # mapa de limite por cluster_id para desnormalizar em clientes_resultado
+        limite_por_cluster = {c["cluster_id"]: c["limite_otimizado"] for c in clusters}
+        df_cc["limite_otimizado"] = (
+            df_cc["cluster_id"].map(limite_por_cluster).fillna(0).astype(int)
+        )
+
+        # converte colunas nullable para object antes de exportar para que
+        # valores NaN virem None (exigido pelo asyncpg)
+        colunas_nullable = [
+            "score_generico_1",
+            "score_generico_2",
+            "capacidade_pagamento",
+            "delta_capacidade_pagamento",
+            "renda_estimada",
+            "limite_ofertado",
+            "over30mob3",
+        ]
+        for col in colunas_nullable:
+            df_cc[col] = df_cc[col].where(df_cc[col].notna(), other=None)
+
+        registros = list(
+            zip(
+                [consulta_id] * len(df_cc),
+                df_cc["token"].astype(int).tolist(),
+                df_cc["safra_ref_uso"].astype(str).tolist(),
+                df_cc["score_interno"].astype(int).tolist(),
+                df_cc["pd_produto"].astype(float).tolist(),
+                df_cc["score_generico_1"].tolist(),
+                df_cc["score_generico_2"].tolist(),
+                df_cc["capacidade_pagamento"].tolist(),
+                df_cc["delta_capacidade_pagamento"].tolist(),
+                df_cc["score_propensao_contrato"].astype(float).tolist(),
+                df_cc["score_credito_cross"].astype(int).tolist(),
+                df_cc["renda_estimada"].tolist(),
+                df_cc["fx_idade"].astype(str).tolist(),
+                df_cc["limite_ofertado"].tolist(),
+                df_cc["flag_contrato"].astype(int).tolist(),
+                df_cc["flag_ativacao"].astype(int).tolist(),
+                df_cc["over30mob3"].tolist(),
+                df_cc["pd_calibrada"].astype(float).tolist(),
+                df_cc["pi"].astype(float).tolist(),
+                df_cc["cp_proxy"].astype(float).tolist(),
+                df_cc["cluster_id"].astype(int).tolist(),
+                df_cc["limite_otimizado"].astype(int).tolist(),
+            )
+        )
+
+        async with pool.acquire() as conn:
+            await conn.copy_records_to_table(
+                "clientes_resultado",
+                records=registros,
+                columns=[
+                    "consulta_id",
+                    "token",
+                    "safra_ref_uso",
+                    "score_interno",
+                    "pd_produto",
+                    "score_generico_1",
+                    "score_generico_2",
+                    "capacidade_pagamento",
+                    "delta_capacidade_pagamento",
+                    "score_propensao_contrato",
+                    "score_credito_cross",
+                    "renda_estimada",
+                    "fx_idade",
+                    "limite_ofertado",
+                    "flag_contrato",
+                    "flag_ativacao",
+                    "over30mob3",
+                    "pd_calibrada",
+                    "pi_normalizado",
+                    "cp_proxy",
+                    "cluster_id",
+                    "limite_otimizado",
+                ],
+            )
+
+        # 5. atualiza a consulta como concluída
+        # n_clientes_total vem do resultado do pipeline (total antes do filtro flag_filtros)
+        n_total = resultado["n_clientes_total"]
+        n_elegiveis = len(df_cc)
+        n_ofertados = int((df_cc["limite_otimizado"] > 0).sum())
+
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE consultas SET
+                    status_consulta      = $1,
+                    status_lp            = $2,
+                    z_otimo              = $3,
+                    n_clientes_total     = $4,
+                    n_clientes_elegiveis = $5,
+                    n_clientes_ofertados = $6,
+                    n_clusters           = $7,
+                    concluido_em         = $8
+                WHERE id = $9
+                """,
+                "concluido",
+                status_lp,
+                z,
+                n_total,
+                n_elegiveis,
+                n_ofertados,
+                len(clusters),
+                _agora(),
+                consulta_id,
+            )
+
+    except FileNotFoundError as exc:
+        # erro recuperável do pipeline -- etapa identificada pelo prefixo da mensagem
+        etapa = (
+            "calibracao"
+            if "[calibracao]" in str(exc)
+            else "clustering" if "[clustering]" in str(exc) else "otimizacao"
+        )
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE consultas SET
+                    status_consulta = $1, erro_etapa = $2,
+                    erro_mensagem = $3, concluido_em = $4
+                WHERE id = $5
+                """,
+                "erro",
+                etapa,
+                str(exc),
+                _agora(),
+                consulta_id,
+            )
+    except Exception as exc:
+        async with pool.acquire() as conn:
+            await conn.execute(
+                """
+                UPDATE consultas SET
+                    status_consulta = $1, erro_etapa = $2,
+                    erro_mensagem = $3, concluido_em = $4
+                WHERE id = $5
+                """,
+                "erro",
+                "otimizacao",
+                str(exc),
+                _agora(),
+                consulta_id,
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -186,6 +420,7 @@ async def get_consulta(consulta_id: UUID) -> ConsultaResponse | None:
 async def criar_consulta(
     payload: ConsultaCreate,
     conteudo: bytes,
+    background_tasks: BackgroundTasks,
     usar_safra_existente: bool = False,
 ) -> ConsultaResponse:
     """
@@ -222,8 +457,12 @@ async def criar_consulta(
             _agora(),
         )
 
-    # TODO: disparar o pipeline em background
-    # background_tasks.add_task(executar_pipeline, consulta_id, destino, payload.parametros)
+    background_tasks.add_task(
+        _pipeline_background,
+        consulta_id,
+        destino,
+        payload.parametros.model_dump(),
+    )
 
     return await get_consulta(UUID(consulta_id))
 
@@ -554,4 +793,3 @@ def _row_para_cliente(row) -> ClienteResultadoResponse:
         limite_otimizado=row["limite_otimizado"],
     )
 
-# TODO: que falta é a função executar_pipeline que roda em background. É a mais complexa porque integra o pipeline do otimizador com o banco de dados.

@@ -7,7 +7,15 @@ from __future__ import annotations
 
 from uuid import UUID
 
-from fastapi import APIRouter, File, HTTPException, Query, Response, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    File,
+    HTTPException,
+    Query,
+    Response,
+    UploadFile,
+)
 
 from model.schemas import (
     ClienteHistoricoResponse,
@@ -62,6 +70,7 @@ async def listar_consultas() -> list[ConsultaResponse]:
 
 @router.post("/consultas", response_model=ConsultaResponse, status_code=201)
 async def upload_e_criar_consulta(
+    background_tasks: BackgroundTasks,
     file: UploadFile = File(...),
     safra_numero: int | None = Query(default=None, ge=1),
     usar_safra_existente: bool = Query(default=False),
@@ -103,7 +112,7 @@ async def upload_e_criar_consulta(
     )
 
     try:
-        return await criar_consulta(payload, conteudo)
+        return await criar_consulta(payload, conteudo, background_tasks)
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
