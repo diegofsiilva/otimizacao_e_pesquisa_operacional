@@ -38,19 +38,19 @@ def calcular_pd_fin_atual(df: pd.DataFrame) -> float:
     return pd_fin_atual
 
 
-def garantir_calibrado(parquet_nome: str) -> Path:
+def garantir_calibrado(parquet_path: Path) -> Path:
     """
     Verifica se o parquet calibrado existe em data/cache/.
     Se não existir, roda a calibração.
     Retorna o path do parquet calibrado.
     """
     cache_dir = Path(__file__).resolve().parent.parent.parent / "data" / "cache"
-    stem = Path(parquet_nome).stem
+    stem = parquet_path.stem
     arquivo_calibrado = cache_dir / f"{stem}_calibrado.parquet"
 
     if not arquivo_calibrado.exists():
-        print(f"Calibrando {parquet_nome}...")
-        _calibrar_pd(parquet_nome)
+        print(f"Calibrando {parquet_path.name}...")
+        _calibrar_pd(parquet_path)
         print("Calibração concluída.")
     else:
         print(f"{arquivo_calibrado.name} encontrado. Pulando calibração.")
@@ -120,7 +120,6 @@ def montar_problema(clusters: pd.DataFrame, params: dict, df: pd.DataFrame) -> P
     r1 = (n_k * (PD_k - pd_fin_atual)).tolist()
 
     # R2: capacidade de pagamento com alavancagem (uma restrição por cluster)
-    # cada linha é um vetor unitário na posição do cluster
     A_r2 = np.eye(n).tolist()
     b_r2 = (m_k * CP_k).tolist()
 
@@ -197,7 +196,7 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
         # escreve os parâmetros num JSON temporário para o clustering
         json_temp.write_text(json.dumps(params), encoding="utf-8")
 
-        parquet_calibrado = garantir_calibrado(parquet_path.name)
+        parquet_calibrado = garantir_calibrado(parquet_path)
         df = pd.read_parquet(parquet_calibrado)
         clusters = garantir_clusters(parquet_calibrado.name, json_temp.name)
     finally:

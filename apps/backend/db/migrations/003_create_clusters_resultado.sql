@@ -3,8 +3,7 @@
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS clusters_resultado (
-    id                          INTEGER     NOT NULL,   -- ROWID / autoincrement
-    consulta_id                 TEXT        NOT NULL,
+    id                          INTEGER  GENERATED ALWAYS AS IDENTITY, -- ROWID / autoincrement
     cluster_id                  INTEGER     NOT NULL,   -- 0 a K-1
 
     -- parâmetros agregados do cluster (vindos de _clusters.parquet)

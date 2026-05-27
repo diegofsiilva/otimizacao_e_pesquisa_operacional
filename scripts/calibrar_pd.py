@@ -29,19 +29,15 @@ INPUT_DIR = ROOT / "data" / "parquet"
 CACHE_DIR = ROOT / "data" / "cache"
 
 
-def calibrar(parquet_nome: str) -> Path:
+def calibrar(parquet_path: Path) -> Path:
     """
     Le o parquet de entrada, aplica gammas por decil e salva parquet calibrado em cache.
     Retorna o path do arquivo calibrado.
     """
     CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-    arquivo_entrada = INPUT_DIR / parquet_nome
-
-    if not arquivo_entrada.exists():
-        raise FileNotFoundError(
-            f"[calibracao] {parquet_nome} nao encontrado em data/parquet/"
-        )
+    if not parquet_path.exists():
+        raise FileNotFoundError(f"[calibracao] {parquet_path} nao encontrado")
 
     if not TABELA_GAMMA.exists():
         raise FileNotFoundError(
@@ -49,8 +45,8 @@ def calibrar(parquet_nome: str) -> Path:
             "Rode primeiro: python scripts/setup_tabela_gamma.py"
         )
 
-    print(f"[INFO] Lendo: {arquivo_entrada.name}")
-    df = pd.read_parquet(arquivo_entrada)
+    print(f"[INFO] Lendo: {parquet_path.name}")
+    df = pd.read_parquet(parquet_path)
     print(f"[INFO] {len(df):,} linhas carregadas")
 
     print(f"[INFO] Lendo tabela de gamma: {TABELA_GAMMA.name}")
@@ -80,7 +76,7 @@ def calibrar(parquet_nome: str) -> Path:
         barra = "#" * int(pct / 0.5)
         print(f"  D{d+1:>2}: {n:>8,} ({pct:>5.1f}%)  {barra}")
 
-    arquivo_saida = CACHE_DIR / (Path(parquet_nome).stem + "_calibrado.parquet")
+    arquivo_saida = CACHE_DIR / (parquet_path.stem + "_calibrado.parquet")
     df.to_parquet(arquivo_saida, index=False)
     print(f"\n[OK] Arquivo salvo em: {arquivo_saida.name}")
     return arquivo_saida
@@ -91,7 +87,7 @@ def main() -> None:
         print("Uso:")
         print("    python calibrar_pd.py <arquivo.parquet>")
         sys.exit(1)
-    calibrar(sys.argv[1])
+    calibrar(INPUT_DIR / sys.argv[1])
 
 
 if __name__ == "__main__":
