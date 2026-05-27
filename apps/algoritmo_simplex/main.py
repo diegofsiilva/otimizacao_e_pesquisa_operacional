@@ -86,9 +86,7 @@ def garantir_clusters(arquivo_csv_nome: str, params_json_nome: str) -> pd.DataFr
     return clusters
 
 
-def montar_problema(
-    clusters: pd.DataFrame, params: dict, pd_fin_atual: float
-) -> Problema:
+def montar_problema(clusters: pd.DataFrame, params: dict, df: pd.DataFrame) -> Problema:
     """
     Monta o problema de programação linear a partir dos parâmetros dos clusters.
 
@@ -97,6 +95,7 @@ def montar_problema(
         R2: capacidade de pagamento com alavancagem (uma restrição por cluster)
         R3: teto máximo de limite (uma restrição por cluster)
     """
+    pd_fin_atual = calcular_pd_fin_atual(df)
     t = params["t"]
     LGD = params["LGD"]
     u_bar = params["u_bar"]
@@ -172,32 +171,36 @@ def exibir_resultado(
         )
 
 
-if len(sys.argv) < 3:
-    print("Uso:")
-    print("    python main.py <arquivo_clientes.csv> <parametros.json>")
-    print("Exemplo:")
-    print("    python main.py clientes_calibrado.csv parametros.json")
-    sys.exit(1)
+def main() -> None:
+    if len(sys.argv) < 3:
+        print("Uso:")
+        print("    python main.py <arquivo_clientes.csv> <parametros.json>")
+        print("Exemplo:")
+        print("    python main.py clientes_calibrado.csv parametros.json")
+        sys.exit(1)
 
-arquivo_csv = (
-    Path(__file__).resolve().parent.parent.parent / "data" / "csv" / sys.argv[1]
-)
-arquivo_json = Path(__file__).resolve().parent / "input" / sys.argv[2]
-
-if not arquivo_csv.exists():
-    print(f"Erro: arquivo CSV {sys.argv[1]} não encontrado em data/csv/")
-    sys.exit(1)
-
-if not arquivo_json.exists():
-    print(
-        f"Erro: arquivo JSON {sys.argv[2]} não encontrado em algoritmo_simplex/input/"
+    arquivo_csv = (
+        Path(__file__).resolve().parent.parent.parent / "data" / "csv" / sys.argv[1]
     )
-    sys.exit(1)
+    arquivo_json = Path(__file__).resolve().parent / "input" / sys.argv[2]
 
-# executa o pipeline completo
-df, params = carregar_dados(arquivo_csv, arquivo_json)
-pd_fin_atual = calcular_pd_fin_atual(df)
-clusters = garantir_clusters(sys.argv[1], sys.argv[2])
-problema = montar_problema(clusters, params, pd_fin_atual)
-x, z, status = simplex(problema)
-exibir_resultado(x, z, status, clusters)
+    if not arquivo_csv.exists():
+        print(f"Erro: arquivo CSV {sys.argv[1]} não encontrado em data/csv/")
+        sys.exit(1)
+
+    if not arquivo_json.exists():
+        print(
+            f"Erro: arquivo JSON {sys.argv[2]} não encontrado em algoritmo_simplex/input/"
+        )
+        sys.exit(1)
+
+    # executa o pipeline completo
+    df, params = carregar_dados(arquivo_csv, arquivo_json)
+    clusters = garantir_clusters(sys.argv[1], sys.argv[2])
+    problema = montar_problema(clusters, params, df)
+    x, z, status = simplex(problema)
+    exibir_resultado(x, z, status, clusters)
+
+
+if __name__ == "__main__":
+    main()
