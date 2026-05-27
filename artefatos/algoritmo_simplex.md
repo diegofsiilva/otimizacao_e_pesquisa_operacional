@@ -190,54 +190,177 @@ Onde:
 - `L_max`: teto máximo absoluto de limite por cluster (R$25.000), definido pelo parceiro
 - `T`: horizonte de uso do limite em meses (22), definido pelo parceiro
 
-## Clusterização
+## Clusterização de Clientes Elegíveis
 
-A clusterização é feita usando **CART** (Classification and Regression Trees), agrupando clientes elegíveis em segmentos homogêneos na dimensão que o LP maximiza.
+### O problema: por que agrupar clientes?
 
-### Motivação da escolha do CART
+O modelo de otimização (LP) precisa decidir, para cada cliente elegível, qual limite de crédito oferecer, de forma a **maximizar o lucro esperado do banco**. Em teoria, poderíamos rodar o LP tratando cada cliente individualmente. Na prática, isso é inviável: com dezenas de milhares de clientes, o problema se tornaria grande demais para ser resolvido em tempo útil.
 
-O K-Means, usado em versões anteriores, minimiza distância euclidiana no espaço das features - métrica sem relação direta com o objetivo do LP. O CART particiona o espaço de features minimizando a variância de uma variável guia escolhida, que neste caso é o score composto:
+A solução é **clusterização**: agrupar clientes parecidos em segmentos e tratar cada segmento como uma única unidade representativa no LP. Em vez de otimizar 50.000 decisões individuais, o LP otimiza, por exemplo, 100 decisões (uma por cluster).
 
-$$c_k = \pi \cdot (\bar{u} \cdot t \cdot T - PD_{calib} \cdot \text{LGD})$$
+> **Analogia:** Podemos comparar com eleições. Em vez de contar a opinião de cada habitante de cada bairro individualmente, pesquisas agrupam a população em perfis representativos e trabalham com esses grupos. O resultado é uma boa aproximação com muito menos custo computacional.
 
-Esse é exatamente o coeficiente da função objetivo do LP (sem o fator $n_k$, que só existe após a clusterização). Ao usar $c_k$ como variável guia, o CART garante que cada cluster seja internamente homogêneo na dimensão que o LP otimiza - e não em distância euclidiana, que não tem significado econômico aqui.
+A chave para que essa aproximação seja boa é: **os clientes dentro de um mesmo cluster devem ser realmente parecidos naquilo que importa para o LP.** E o que importa para o LP não é necessariamente o que parece óbvio à primeira vista.
 
-Além disso, uma análise empírica com HDBSCAN confirmou que os dados não possuem estrutura de densidade natural suficiente para produzir 100 ou mais clusters: o algoritmo encontrou no máximo 22 clusters independente do parâmetro `min_cluster_size`. A segmentação precisa ser guiada pelo objetivo do LP, não por densidade geométrica dos dados.
+---
 
-### Escolha de K = 800
+### O que significa "parecido" no contexto do LP?
 
-O número de clusters foi definido por varredura empírica. Para cada valor de $K$ de 50 a 2000, o pipeline completo (clustering + Simplex) foi executado e o valor ótimo $z$ da função objetivo registrado. O resultado mostrou que a partir de $K = 800$, cada incremento adicional de clusters aumenta $z$ em menos de 0,5%. $K = 800$ captura 98,4% do retorno máximo encontrado com $K = 2000$.
+O LP não se importa com se dois clientes têm renda parecida ou idade parecida. Ele se importa com uma única coisa: **quanto valor econômico cada cliente representa para o banco?**
 
-A justificativa para o banco: a partir de $K = 800$, clusters adicionais não aumentam o retorno esperado da carteira de forma relevante - o ganho marginal cai abaixo de 0,5% por incremento de 50 clusters.
+Esse valor é capturado pelo **score composto** `c_k`, definido como:
 
-### População considerada
+```
+c_k = π · (ū · t · T − PD_calib · LGD)
+```
 
-A base é filtrada para incluir apenas clientes elegíveis (`flag_filtros == 0`) antes de qualquer processamento. Os clientes inelegíveis não participam da clusterização nem do LP.
+Decodificando cada termo:
 
-### Variáveis usadas na clusterização
+| Símbolo     | Significado                                                                                     |
+| ----------- | ----------------------------------------------------------------------------------------------- |
+| `π`         | Taxa de juros: o quanto o banco ganha se o cliente pagar normalmente                            |
+| `ū · t · T` | Valor esperado do crédito utilizado ao longo do tempo (quanto o cliente tende a usar do limite) |
+| `PD_calib`  | Probabilidade de Inadimplência calibrada: a chance do cliente não pagar                         |
+| `LGD`       | _Loss Given Default_: quanto o banco efetivamente perde quando o cliente não paga               |
 
-O CART é treinado usando as seguintes features de split:
+Em linguagem direta: **receita esperada menos perda esperada**. Um cliente com `c_k` alto é valioso: usa bastante o crédito e tem baixo risco. Um cliente com `c_k` baixo é arriscado ou pouco lucrativo.
 
-- `pd_calibrada`: probabilidade de inadimplência calibrada por decil de risco
-- `pi`: propensão normalizada, derivada de `score_propensao_contrato`
-- `cp_proxy`: proxy de capacidade de pagamento
-- `score_credito_cross`: score multiproduto, também usado para derivar $m_k$
+> `c_k` é exatamente o coeficiente que aparece na função objetivo do LP. É a "linguagem" que o LP usa para tomar decisões. Portanto, a clusterização só faz sentido se agrupar clientes que sejam parecidos em `c_k`, e não em renda, idade ou qualquer outra dimensão que o LP não usa diretamente.
 
-A variável `fx_idade` foi excluída porque não tem impacto direto nas variáveis que o LP consome ($PD_k$, $\pi_k$, $CP_k$, $m_k$).
+---
 
-### Pré-processamento
+### Por que não usamos K-Means?
 
-A variável `pi` é criada normalizando `score_propensao_contrato` para o intervalo [0, 1]. O `cp_proxy` utiliza `capacidade_pagamento` quando disponível; quando nula, usa `renda_estimada * 0,30` como fallback.
+O **K-Means** é o algoritmo de clusterização mais clássico. A versão original do modelo o utilizava, e ele tem um problema fundamental nesse contexto.
 
-Nulos residuais nas features de split são imputados pela mediana antes do treinamento. O CART não requer padronização (StandardScaler) nem codificação de variáveis categóricas (OneHotEncoder) porque seus critérios de split são baseados em limiares ordinais, invariantes a transformações monotônicas.
+#### Como o K-Means funciona
 
-### Parâmetros do CART
+O K-Means divide a população em `k` grupos minimizando a **distância euclidiana** entre os clientes e o centróide (ponto central) do seu cluster. Basicamente: clientes "próximos no espaço das variáveis" ficam no mesmo grupo.
 
-| Parâmetro          | Valor | Justificativa                                                                  |
-| ------------------ | ----- | ------------------------------------------------------------------------------ |
-| `max_leaf_nodes`   | 800   | K ótimo identificado empiricamente via varredura de z vs K                     |
-| `min_samples_leaf` | 500   | Garante que cada cluster tenha pelo menos 500 clientes para agregados estáveis |
-| `random_state`     | 42    | Reproducibilidade                                                              |
+#### O problema da versão original
+
+Na versão anterior do modelo, o K-Means rodava sobre as features brutas dos clientes: renda, PD, LGD, tempo de relacionamento, etc. Distância euclidiana nessas variáveis não tem nenhuma relação com `c_k`. Dois clientes podem ter renda e PD parecidas, mas `c_k` muito diferente, e mesmo assim o K-Means os jogaria no mesmo cluster.
+
+O resultado são clusters internamente heterogêneos em `c_k`, o que faz o LP tomar decisões "médias" ruins: restritivo demais para os clientes bons do cluster e leniente demais para os ruins.
+
+#### E se usássemos K-Means apenas sobre `c_k`?
+
+Essa é a pergunta certa. K-Means rodando em uma única dimensão (`c_k`) minimizaria a variância de `c_k` dentro dos clusters, que é o objetivo correto. A crítica conceitual ao K-Means cai nesse cenário.
+
+Porém, mesmo nesse caso, o K-Means apresenta problemas práticos relevantes:
+
+**1. Cortes artificialmente espaçados**
+
+O K-Means encontra centróides e define clusters como os clientes mais próximos de cada centróide. Em distribuições assimétricas (e a distribuição de `c_k` em carteiras de crédito tipicamente é assimétrica: muitos clientes mediocres, poucos excelentes), o K-Means tende a criar cortes igualmente espaçados no eixo de `c_k`, mesmo que não haja nenhum motivo para isso. O CART, por sua vez, **busca ativamente os pontos de corte que mais reduzem a variância interna**, encontrando onde "faz sentido" dividir em vez de dividir de forma uniforme.
+
+**2. Não produz regras interpretáveis nas features originais**
+
+O resultado do K-Means é um conjunto de centróides. Para classificar um cliente novo, você calcula a distância dele a cada centróide e o aloca no mais próximo: duas etapas, e o resultado não tem interpretação direta em termos das features do cliente.
+
+O CART produz uma **árvore de decisão**, que é essencialmente uma sequência de regras do tipo:
+
+```
+Se PD_calib < 0.03 e renda > 8.000 → Cluster A
+Se PD_calib < 0.03 e renda ≤ 8.000 → Cluster B
+Se PD_calib ≥ 0.03                  → Cluster C
+```
+
+Isso tem valor operacional real: qualquer sistema consegue classificar um cliente novo percorrendo a árvore com operações simples de comparação.
+
+**3. Sensibilidade a outliers**
+
+O K-Means é sensível a valores extremos: um cliente com `c_k` excepcionalmente alto puxa o centróide do seu cluster, distorcendo os limites de todos os grupos. O CART é mais robusto porque trabalha com partições binárias sucessivas, de modo que um outlier fica isolado numa folha da árvore sem afetar os demais cortes.
+
+---
+
+### Por que não usamos HDBSCAN?
+
+O **HDBSCAN** é um algoritmo de clusterização por densidade: ele identifica "nuvens naturais" nos dados sem que você precise definir o número de clusters de antemão. Em teoria, seria ideal: deixar os dados revelarem sua própria estrutura.
+
+Na prática, realizamos uma análise empírica com HDBSCAN sobre a base de clientes elegíveis. O resultado: independentemente do valor do parâmetro `min_cluster_size`, o algoritmo encontrou **no máximo 22 clusters**.
+
+O que isso significa? Os dados simplesmente não possuem estrutura de densidade natural suficiente para suportar 100 ou mais clusters. Forçar 100+ clusters com HDBSCAN produziria agrupamentos artificiais sem significado estatístico.
+
+Além disso, o HDBSCAN sofreria do mesmo problema conceitual do K-Means original: agrupa por densidade geométrica nos dados, não por homogeneidade em `c_k`. A segmentação precisa ser **guiada pelo objetivo do LP**, não pela estrutura geométrica dos dados.
+
+---
+
+### A solução: CART guiado por `c_k`
+
+#### O que é o CART
+
+**CART** (_Classification and Regression Trees_) é um algoritmo que constrói uma árvore de decisão dividindo recursivamente a população. Em cada etapa, ele escolhe uma variável e um ponto de corte que **minimiza a variância de uma variável-guia** nas duas metades resultantes.
+
+Diferente do K-Means (que minimiza distância euclidiana) e do HDBSCAN (que busca densidade geométrica), o CART permite que você **especifique explicitamente em qual dimensão quer homogeneidade**.
+
+#### Por que o CART com `c_k` como variável-guia resolve o problema
+
+Ao definir `c_k` como variável-guia do CART, cada divisão da árvore é escolhida para que os dois grupos resultantes sejam o mais homogêneos possível em `c_k`. Ao final do processo, cada folha da árvore (cada cluster) contém clientes com scores `c_k` muito parecidos entre si.
+
+Isso é exatamente o que o LP precisa: quando ele tomar uma decisão de limite para um cluster, essa decisão será uma boa aproximação para todos os clientes dentro dele, porque todos têm `c_k` semelhante.
+
+#### Como o CART constrói os clusters na prática
+
+O processo é recursivo e pode ser visualizado assim:
+
+```
+População completa (c_k varia de -200 a +800)
+│
+├── Corte 1: PD_calib < 0.05
+│   ├── [c_k alto] → subdividir mais...
+│   │   ├── Corte 2: renda > 5.000 → Cluster A (c_k ≈ 600–800)
+│   │   └── Corte 2: renda ≤ 5.000 → Cluster B (c_k ≈ 400–600)
+│   └── [c_k médio] → subdividir mais...
+│       └── ...
+│
+└── Corte 1: PD_calib ≥ 0.05
+    ├── [c_k baixo ou negativo] → subdividir mais...
+    │   └── ...
+    └── ...
+```
+
+Em cada nó, o CART testa todas as variáveis disponíveis e todos os pontos de corte possíveis, e escolhe a combinação que mais reduz a variância de `c_k`. O processo continua até atingir o número desejado de clusters (folhas da árvore).
+
+---
+
+### Quantos clusters usar? A escolha de K = 800
+
+Definido o algoritmo (CART com `c_k`), ainda resta uma pergunta: **quantos clusters criar?**
+
+Mais clusters significa maior fidelidade: cada grupo fica menor e mais homogêneo, e o LP aproxima melhor a realidade individual de cada cliente. Mas mais clusters também significam mais tempo de processamento, tanto na clusterização quanto na execução do Simplex.
+
+A escolha de K não tem resposta teórica direta. Por isso, adotamos uma **varredura empírica**: executamos o pipeline completo (clusterização + Simplex) para cada valor de K entre 50 e 2000, em incrementos de 50, e registramos o valor ótimo `z` da função objetivo em cada execução.
+
+O que observamos foi um padrão claro de **retorno marginal decrescente**:
+
+- Nos primeiros incrementos (K = 50 a ~400), cada bloco adicional de 50 clusters aumenta `z` de forma relevante.
+- A partir de K = 800, cada incremento adicional de 50 clusters aumenta `z` em menos de 0,5%.
+- K = 800 captura **98,4% do retorno máximo** encontrado com K = 2000.
+
+Em outras palavras: depois de 800 clusters, o pipeline continua melhorando, mas de forma cada vez mais marginal, enquanto o custo computacional continua crescendo linearmente. O ganho não justifica o custo.
+
+**K = 800 é o ponto onde o trade-off entre qualidade da solução e tempo de processamento é mais favorável.**
+
+### Comparativo final das abordagens
+
+| Critério                                 | K-Means (features brutas) | K-Means (`c_k`) |   HDBSCAN    | **CART (`c_k`)** |
+| ---------------------------------------- | :-----------------------: | :-------------: | :----------: | :--------------: |
+| Alinhado com o objetivo do LP            |            ❌             |       ✅        |      ❌      |        ✅        |
+| Encontra cortes naturais (não uniformes) |            ❌             |       ❌        |      ✅      |        ✅        |
+| Produz regras interpretáveis             |            ❌             |       ❌        |      ❌      |        ✅        |
+| Robusto a outliers                       |            ❌             |       ❌        |      ✅      |        ✅        |
+| Escala para 100+ clusters                |            ✅             |       ✅        |      ❌      |        ✅        |
+| Suportado empiricamente nos dados        |            N/A            |       N/A       | ❌ (máx. 22) |        ✅        |
+
+O CART com `c_k` como variável-guia é o único método que satisfaz todos os requisitos simultaneamente: alinhamento com o LP, cortes adaptativos não uniformes, interpretabilidade operacional, robustez a outliers e capacidade de gerar o número de clusters necessário.
+
+---
+
+### Resumo da clusterização
+
+A clusterização existe para tornar o LP computacionalmente viável, substituindo decisões individuais por decisões por grupo. Para que essa substituição introduza o mínimo de erro, os grupos precisam ser homogêneos exatamente na dimensão que o LP usa: o score `c_k` (valor econômico líquido esperado por cliente).
+
+O CART, usando `c_k` como variável-guia, é o algoritmo que garante essa homogeneidade. Ele supera o K-Means por encontrar cortes naturais e produzir regras interpretáveis, e supera o HDBSCAN por escalar para o número de clusters necessário e por ser guiado pelo objetivo do negócio, e não pela geometria dos dados.
 
 ## Calibração da PD
 
