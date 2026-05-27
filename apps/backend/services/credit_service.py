@@ -320,7 +320,9 @@ async def get_config() -> ParametrosModelo:
     """Retorna os parâmetros padrão do modelo lidos da tabela config."""
     pool = get_pool()
     async with pool.acquire() as conn:
-        row = await conn.fetchrow("SELECT t, LGD, u_bar, L_max, T FROM config LIMIT 1")
+        row = await conn.fetchrow(
+            'SELECT "t", "LGD", "u_bar", "L_max", "T" FROM parametros_modelo LIMIT 1'
+        )
     return _row_para_parametros(row)
 
 
@@ -329,7 +331,7 @@ async def update_config(payload: ParametrosModelo) -> ParametrosModelo:
     pool = get_pool()
     async with pool.acquire() as conn:
         await conn.execute(
-            "UPDATE config SET t = $1, LGD = $2, u_bar = $3, L_max = $4, T = $5",
+            'UPDATE parametros_modelo SET "t" = $1, "LGD" = $2, "u_bar" = $3, "L_max" = $4, "T" = $5',
             payload.t,
             payload.LGD,
             payload.u_bar,
