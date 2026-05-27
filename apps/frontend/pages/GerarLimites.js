@@ -139,7 +139,7 @@ var GerarLimites = function (props) {
                 {
                   col: "fx_idade",
                   tipo: "string",
-                  desc: "Faixa etária categórica (opcional — não utilizada como feature do CART)",
+                  desc: "Faixa etária categórica (opcional - não utilizada como feature do CART)",
                   ex: "26-35",
                 },
               ].map(function (r, i) {
@@ -173,7 +173,9 @@ var GerarLimites = function (props) {
           <span className="font-semibold text-[#3B4049]">
             500+ clientes com flag_filtros = 0
           </span>{" "}
-          para o CART (árvore de decisão) gerar clusters com tamanho mínimo adequado (min_samples_leaf=500). O algoritmo pode gerar até 800 clusters.
+          para o CART (árvore de decisão) gerar clusters com tamanho mínimo
+          adequado (min_samples_leaf=500). O algoritmo pode gerar até 800
+          clusters.
         </p>
       </div>
 
