@@ -39,11 +39,13 @@ def calibrar(parquet_nome: str) -> Path:
     arquivo_entrada = INPUT_DIR / parquet_nome
 
     if not arquivo_entrada.exists():
-        raise FileNotFoundError(f"{parquet_nome} nao encontrado em data/parquet/")
+        raise FileNotFoundError(
+            f"[calibracao] {parquet_nome} nao encontrado em data/parquet/"
+        )
 
     if not TABELA_GAMMA.exists():
         raise FileNotFoundError(
-            "tabela_gamma_decil.csv nao encontrada em data/csv/. "
+            "[calibracao] tabela_gamma_decil.csv nao encontrada em data/csv/. "
             "Rode primeiro: python scripts/setup_tabela_gamma.py"
         )
 

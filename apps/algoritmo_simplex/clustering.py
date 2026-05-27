@@ -95,11 +95,13 @@ def main(
     esperado da carteira. K=800 captura 98.4% do retorno maximo.
     """
     t_inicio = time.time()
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
 
     json_path = JSON_DIR / params_json_name
     if not json_path.exists():
-        print(f"Erro: {params_json_name} nao encontrado em {JSON_DIR}")
-        sys.exit(1)
+        raise FileNotFoundError(
+            f"[clustering] {params_json_name} nao encontrado em {JSON_DIR}"
+        )
 
     with open(json_path) as f:
         params = json.load(f)
@@ -111,12 +113,11 @@ def main(
 
     print(f"Parametros: t={t_param}, LGD={LGD}, u_bar={u_bar}, T={T}")
 
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-
     input_path = DATA_DIR / input_parquet_name
     if not input_path.exists():
-        print(f"Erro: {input_parquet_name} nao encontrado em {DATA_DIR}")
-        sys.exit(1)
+        raise FileNotFoundError(
+            f"[clustering] {input_parquet_name} nao encontrado em {DATA_DIR}"
+        )
 
     print(f"\nLendo {input_parquet_name}...")
     df = pd.read_parquet(input_path)

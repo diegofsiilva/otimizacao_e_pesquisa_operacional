@@ -20,6 +20,12 @@ import pandas as pd
 from models import Problema
 from simplex import simplex
 
+# calibrar_pd esta em scripts/ - adicionado ao path uma unica vez no nivel do modulo
+_SCRIPTS_DIR = str(Path(__file__).resolve().parent.parent.parent / "scripts")
+if _SCRIPTS_DIR not in sys.path:
+    sys.path.insert(0, _SCRIPTS_DIR)
+from calibrar_pd import calibrar as _calibrar_pd
+
 
 def carregar_dados(
     arquivo_parquet: Path, arquivo_json: Path
@@ -70,12 +76,7 @@ def garantir_calibrado(parquet_nome: str) -> Path:
 
     if not arquivo_calibrado.exists():
         print(f"Calibrando {parquet_nome}...")
-        scripts_dir = str(Path(__file__).resolve().parent.parent.parent / "scripts")
-        if scripts_dir not in sys.path:
-            sys.path.insert(0, scripts_dir)
-        from calibrar_pd import calibrar
-
-        calibrar(parquet_nome)
+        _calibrar_pd(parquet_nome)
         print("Calibracao concluida.")
     else:
         print(f"{arquivo_calibrado.name} encontrado. Pulando calibracao.")
@@ -224,12 +225,19 @@ def main() -> None:
         sys.exit(1)
 
     # executa o pipeline completo
-    parquet_calibrado = garantir_calibrado(sys.argv[1])
-    df, params = carregar_dados(parquet_calibrado, arquivo_json)
-    clusters = garantir_clusters(parquet_calibrado.name, sys.argv[2])
-    problema = montar_problema(clusters, params, df)
-    x, z, status = simplex(problema)
-    exibir_resultado(x, z, status, clusters)
+    try:
+        parquet_calibrado = garantir_calibrado(sys.argv[1])
+        df, params = carregar_dados(parquet_calibrado, arquivo_json)
+        clusters = garantir_clusters(parquet_calibrado.name, sys.argv[2])
+        problema = montar_problema(clusters, params, df)
+        x, z, status = simplex(problema)
+        exibir_resultado(x, z, status, clusters)
+    except FileNotFoundError as e:
+        print(f"Erro: {e}")
+        sys.exit(1)
+    except Exception as e:
+        print(f"Erro inesperado no pipeline: {e}")
+        sys.exit(1)
 
 
 if __name__ == "__main__":
