@@ -1,172 +1,340 @@
-# Entrega Parcial — Front-end da Aplicação
+# Front-end da Aplicação
 
-## 1. User Stories Priorizadas
+## 1. Visão Geral
 
-As User Stories abaixo foram priorizadas para esta primeira entrega com base no valor direto ao usuário final e na viabilidade de implementação sem integração ao back-end. A priorização seguiu a ordem de criticidade do fluxo principal: carregar dados → gerar limites → visualizar resultados → exportar.
+O front-end é uma SPA (Single Page Application) sem etapa de build, baseada em React 18 + Babel Standalone + Tailwind CSS, todos carregados via CDN. A identidade visual segue o brandbook do Banco PAN: paleta primária em tons de azul escuro (`#0D1B2A`, `#1B3A5C`, `#2E6DA4`), gradiente de navbar `#07B2FD -> #005AEA`, arestas retas sem `border-radius`, tipografia Circular (com fallback para Inter).
 
-| Prioridade | ID | Título | Persona |
-|---|---|---|---|
-| 1 | US01 | Carregar base de dados | Larissa (Data Science) |
-| 2 | US04 | Gerar limite por cluster | Rodinei (Estratégia de Crédito) |
-| 3 | US06 | Visualizar distribuição dos limites | Rodinei (Estratégia de Crédito) |
-| 4 | US07 | Exportar resultados | Larissa (Data Science) |
-| 5 | US02 | Ajustar clusterização | Larissa (Data Science) |
-| 6 | US03 | Configurar metas de produção | Rodinei (Estratégia de Crédito) |
-| 7 | US05 | Consultar restrições ativas | Rodinei (Estratégia de Crédito) |
+A aplicação é organizada em **três fluxos principais** acessíveis pela navbar fixa:
 
-### Implementação por User Story
+| Rota (estado `page`) | Componente | Responsabilidade |
+|---|---|---|
+| `dashboard` | `Dashboard.js` | Visão geral da última safra + tabela de clusters históricos |
+| `gerar` | `GerarLimites.js` | Upload de base CSV, execução do Simplex, resultados inline |
+| modal (overlay) | `ConfigModal.js` | Edição dos parâmetros do modelo |
 
-**US01 — Carregar base de dados**
-Implementada na página *Gerar Limites*. A interface apresenta uma dropzone com suporte a arrastar-e-soltar e seleção manual de arquivos `.csv` e `.xlsx`. Após o upload, o nome do arquivo é exibido com feedback visual na própria zona. A tabela de estrutura esperada do CSV orienta o usuário sobre as colunas obrigatórias antes do envio. A validação real das colunas será conectada ao back-end na próxima entrega.
-
-**US04 — Gerar limite por cluster**
-Após o upload, o botão *Executar Simplex* dispara a simulação (com delay de 1,2s simulando o processamento). O resultado exibe três mini-cards (Total de Clusters, Com Solução Viável, Sem Solução) e uma tabela com Cluster ID, Limite Sugerido e Status por cluster. Status "Solução Viável" aparece em verde com ícone de check; "Sem Solução" em vermelho com ícone X.
-
-**US06 — Visualizar distribuição dos limites**
-Implementada na página *Resultados*. Contém quatro visualizações em SVG puro: gráfico de barras (Limites por Cluster), gráfico de rosca (Distribuição por Status), gráfico de linha (Evolução Temporal de Limites) e gráfico de barras (Distribuição por Faixa de Score). O gráfico de evolução suporta comparação entre duas simulações via toggle "Comparar simulação anterior".
-
-**US07 — Exportar resultados**
-O botão *Exportar CSV* na página *Resultados* gera e baixa um arquivo `limites_clusters.csv` com as colunas `cluster_id`, `limite_simplex`, `limite_pulp`, `status`. O botão só aparece quando há dados gerados (`hasData = true`). No Dashboard, o botão *Exportar* gera `clientes.csv` com ID, Score, Status, Limite e Cadastro via `Blob` e `URL.createObjectURL`.
-
-**US02 / US03 — Ajustar clusterização e Configurar metas**
-Parcialmente implementadas via modal de *Configurações*. O modal exibe parâmetros editáveis (Taxa de Interchange, LGD, Utilização Esperada, Teto Máximo de Limite) com sliders interativos e campos numéricos. Salvar/cancelar estão funcionais no front-end; a persistência ao back-end é prevista para a próxima entrega.
-
-**US05 — Consultar restrições ativas**
-Não implementada nesta entrega. Prevista para integração com o back-end, que retornará as restrições ativas por cluster.
+> **Nota de roteamento:** A aplicação não usa React Router. O estado `page` em `App` (em `index.html`) controla qual componente é renderizado. A troca de tela é instantânea, sem recarregamento de página.
 
 ---
 
-## 2. Como Executar o Projeto
+## 2. Estrutura de Arquivos
 
-O front-end não possui dependências de build. Roda diretamente no browser via `file://` ou qualquer servidor HTTP estático.
-
-### Opção A — Abrir direto no browser
-
-```bash
-cd apps/frontend
-
-# Windows
-start index.html
-
-# macOS
-open index.html
-
-# Linux
-xdg-open index.html
+```
+apps/frontend/
+├── index.html              # Entry point + App root + ErrorBoundary
+├── data.js                 # Dados globais de referência
+├── styles.css              # Estilos globais, fonte Circular, animação upload-zone
+├── assets/
+│   ├── Logo_PAN.jpg
+│   └── fonts/
+│       ├── lineto-circular-bold.ttf
+│       ├── lineto-circular-book.ttf
+│       └── lineto-circular-medium.ttf
+└── pages/
+    ├── Navbar.js            # Navbar fixa, gradiente PAN, links de navegação
+    ├── Dashboard.js         # KPIs + tabela de clusters da última safra
+    ├── GerarLimites.js      # Upload + execução + resultados completos inline
+    ├── Resultados.js        # Componentes SVG de gráficos (globais) + página legada
+    └── ConfigModal.js       # Modal de configuração de parâmetros do modelo
 ```
 
-### Opção B — Servidor HTTP local (recomendado para evitar erros de CORS)
+---
 
-**Com Python:**
+## 3. Fluxo 1 — Home (Dashboard)
+
+### 3.1 Objetivo
+
+A Home é a tela de entrada da aplicação. Sua função é dar ao usuário (perfil Rodinei — Estratégia de Crédito) uma leitura rápida do estado atual da carteira e do histórico de simulações executadas.
+
+### 3.2 Composição da tela
+
+**Cabeçalho**
+
+Título "Home" com sublinhado azul PAN de 2 px e data da última safra carregada. Botão "Nova Simulação" no canto direito navega para `gerar`.
+
+**KPIs (4 cards)**
+
+| Card | Dado |
+|---|---|
+| Total de Clientes | Contagem total da base da safra |
+| Clusters Identificados | Número de clusters gerados pelo CART |
+| Score Médio | Média ponderada do `score_credito_cross` |
+| Clientes Elegíveis | Clientes com `flag_filtros = 0` |
+
+Cada card exibe valor principal, badge de variação (alta/queda/neutro) e ícone temático. As cores dos badges seguem a paleta terciária PAN: verde `#67DE98` para alta, vermelho `#FF5D5C` para queda, azul claro neutro para estável.
+
+**Tabela de Clusters Identificados**
+
+Exibe o resultado agregado da última execução do algoritmo. Colunas: **Cluster ID**, **Limite Sugerido** (formatado em R$) e **Status** (badge "Solução Viável" verde ou "Sem Solução" vermelho).
+
+- Campo de busca filtra por Cluster ID em tempo real (case-insensitive)
+- Botão **Exportar** gera `clusters.csv` com as colunas `cluster_id`, `limite_sugerido`, `status` via `Blob` + `URL.createObjectURL`, sem depender de servidor
+- Paginação visual (Anterior / 1 2 3 / Próximo)
+
+---
+
+## 4. Fluxo 2 — Gerar Limites + Resultados
+
+Este é o fluxo central da aplicação. O protótipo original tratava "Gerar Limites" e "Resultados" como duas telas separadas — o usuário fazia o upload em uma tela e navegava para outra para ver os gráficos. Na implementação final, as duas telas foram **fundidas em uma só página com dois estados visuais**.
+
+### 4.1 Estado inicial — Instruções e Upload
+
+Quando o usuário acessa "Gerar Limites" sem ter rodado uma simulação, a página exibe:
+
+**Tabela de estrutura esperada do CSV**
+
+Antes do campo de upload, há uma tabela de referência completa com as 8 colunas esperadas no arquivo:
+
+| Coluna | Tipo | Descrição |
+|---|---|---|
+| `token` | string | Identificador único do cliente |
+| `flag_filtros` | int | 0 = elegível / 1 = excluído da otimização |
+| `pd_calibrada` | float | Probabilidade de default calibrada |
+| `capacidade_pagamento` | float | Capacidade de pagamento em R$ |
+| `renda_estimada` | float | Renda estimada (proxy quando capacidade_pagamento é nulo) |
+| `score_credito_cross` | float | Score de crédito (escala 300-900) |
+| `score_propensao_contrato` | float | Score de propensão ao contrato (escala 3-846) |
+| `fx_idade` | string | Faixa etária categórica (opcional) |
+
+Uma nota abaixo da tabela informa o mínimo recomendado de **500+ clientes com `flag_filtros = 0`** para que o CART gere clusters com `min_samples_leaf = 500`.
+
+**Dropzone de upload**
+
+Área clicável com suporte a drag-and-drop. Aceita `.csv` e `.xlsx`. Estados visuais:
+- **Vazio:** borda tracejada cinza azulada, fundo branco
+- **Drag sobre:** borda azul PAN sólida, fundo `#D6E8F5`
+- **Arquivo carregado:** borda azul PAN, fundo `#D6E8F5/50`, nome do arquivo exibido
+
+Após selecionar um arquivo, aparece o botão **Executar Simplex** com feedback de loading (ícone giratório + texto "Executando...") durante o processamento.
+
+### 4.2 Estado pós-execução — Resultados inline
+
+Após `ran = true`, o título da página muda para "Resultados da Simulação" e os seguintes blocos aparecem:
+
+**Banner informativo**
+
+Barra azul claro com ícone de informação indicando que os dados são da última execução. Link "carregar um novo arquivo" reseta `ran = false` e `file = null`, voltando ao estado de upload sem precisar navegar.
+
+**KPIs de resultado (4 cards)**
+
+| Card | Destaque |
+|---|---|
+| Total de Clusters | Neutro |
+| Limite Total Aprovado | Destacado (fundo `#D6E8F5`, valor em azul PAN) |
+| Clientes Ativos | Neutro |
+| Taxa de Aprovação | Neutro |
+
+**Mini-cards de viabilidade + Tabela de clusters**
+
+Três cards horizontais: Total de Clusters, Com Solução Viável (borda verde), Sem Solução (borda amarela). Abaixo, a tabela completa com Cluster ID, Limite Sugerido e badge de status para cada cluster.
+
+**Gráficos (linha 1)**
+
+- **Limites por Cluster** — gráfico de barras verticais SVG. Barras azul PAN para clusters com limite; barras cinza `#E8EFF7` para clusters sem solução. Rótulos de valor acima de cada barra.
+- **Distribuição por Status** — gráfico de rosca (donut) SVG com legenda lateral. Cores: verde `#67DE98` (Ativo), vermelho `#FF5D5C` (Inativo), amarelo `#FAE95D` (Pendente).
+
+**Seção de comparação Simplex vs PuLP**
+
+Seção exclusiva desta implementação, sem equivalente no protótipo. Dois cards lado a lado exibem métricas agregadas de cada solver (valor objetivo `z`, tempo de execução em ms, status de otimização). Abaixo, tabela cluster-a-cluster com as colunas Cluster, Simplex (R$), PuLP/CBC (R$) e Match (badge "Idêntico" verde ou "Diverge" amarelo). Rodapé exibe o delta `z` percentual e o PD financeiro atual.
+
+**Gráficos (linha 2)**
+
+- **Evolução do Limite Total** — gráfico de linha SVG com área sombreada. Toggle "Comparar simulação anterior" sobrepõe segunda série em linha tracejada amarela, com legenda discriminando as duas execuções.
+- **Distribuição de Score** — histograma SVG de barras verticais por faixa de `score_credito_cross` (300-400, 400-500, ..., 900+).
+
+**Botão Exportar CSV**
+
+Posicionado no cabeçalho da seção de resultados. Gera `limites_clusters.csv` com as colunas Cluster, Simplex (R$), PuLP/CBC (R$), Match via `Blob` + `URL.createObjectURL`.
+
+### 4.3 Diagrama de estados do fluxo
+
+```
+[Abre /gerar]
+      |
+      v
+[Estado: upload]
+  +-------------------------+
+  |  Instruções CSV         |
+  |  Dropzone               |
+  +------------+------------+
+               | seleciona arquivo
+               v
+         [file != null]
+         Botao "Executar" aparece
+               | clica Executar
+               v
+         [running = true]
+         Processamento em execução
+               |
+               v
+         [ran = true]
+  +-------------------------+
+  |  Resultados inline      |
+  |  KPIs . Clusters        |
+  |  Graficos . Comparacao  |
+  |  Exportar CSV           |
+  +------------+------------+
+               | clica "carregar novo arquivo"
+               v
+         [ran=false, file=null]
+         volta ao estado upload
+```
+
+---
+
+## 5. Fluxo 3 — Alterar Parâmetros (ConfigModal)
+
+### 5.1 Acesso
+
+O modal é disparado pelo ícone de engrenagem na navbar (último item, identificado como `isConfig: true`). Não ocupa uma rota própria — é uma sobreposição sobre a página ativa com fundo semi-transparente `#0D1B2A/40`.
+
+### 5.2 Parâmetros editáveis
+
+Cada parâmetro é exibido como um controle composto: **slider** horizontal sincronizado com **campo numérico** editável. Mover o slider atualiza o campo e vice-versa em tempo real. Os limites de cada slider refletem os intervalos válidos do modelo:
+
+| Parâmetro | Chave | Faixa | Default |
+|---|---|---|---|
+| Taxa de interchange | `t` | 0 – 5% | 1,75% |
+| Loss Given Default (LGD) | `LGD` | 30% – 100% | 80% |
+| Utilização esperada do limite | `u_bar` | 30% – 100% | 75% |
+| Teto máximo de Limite (R$) | `L_max` | R$ 10.000 – R$ 50.000 | R$ 25.000 |
+
+### 5.3 Parâmetros não editáveis
+
+Exibidos em grid de 2 colunas como cards somente-leitura, com label e valor formatado. São parâmetros fixados pela equipe de modelagem ou pelo regulador:
+
+| Parâmetro | Valor |
+|---|---|
+| Custo de capital (Ke) | 14,25% |
+| Custo de funding (Kd) | 11,50% |
+| Taxa de recuperação (RR) | 30% |
+| Exposição padrão (EAD) | Limite |
+| LGD | 80% |
+| PD financeiro atual | 13,75% |
+
+### 5.4 Fluxo de interação
+
+```
+[Clica engrenagem na navbar]
+         |
+         v
+   Modal abre (overlay)
+   Parametros carregados no estado local
+         |
+         +-- [ajusta slider ou campo numerico]
+         |    +-- ambos se sincronizam em tempo real
+         |
+         +-- [clica Salvar]
+         |    +-- parametros persistidos
+         |    +-- modal fecha
+         |
+         +-- [clica Cancelar / clica fora / Esc]
+              +-- descarta alteracoes -> modal fecha
+```
+
+---
+
+## 6. Diferenças em Relação ao Protótipo Figma
+
+### 6.1 Navbar e identidade visual
+
+| Aspecto | Protótipo | Implementação |
+|---|---|---|
+| Marca | "Sistema de Crédito" (texto simples) | Logo `Logo_PAN.jpg` + "Banco PAN / Otimizador de Limites" |
+| Cor da navbar | Branco/cinza claro | Gradiente `#07B2FD -> #005AEA` (identidade PAN) |
+| Itens | Dashboard . Gerar Limites . Resultados | Home . Gerar Limites . Configurações |
+| Item "Resultados" | Rota independente | Removido — conteúdo fundido em Gerar Limites |
+| "Configurações" | Ícone de engrenagem flutuante (canto inferior esquerdo) | Item fixo na navbar, alinhado aos demais links |
+| Border-radius | Botões e cards arredondados | Sem arredondamento — bordas retas conforme brandbook PAN |
+
+### 6.2 Tela Home
+
+| Aspecto | Protótipo | Implementação |
+|---|---|---|
+| Título da tabela principal | "Lista de Clientes" | "Clusters Identificados" |
+| Colunas da tabela | Cluster . Score (barra) . Status . Limite . Cadastro . Ações | Cluster ID . Limite Sugerido . Status |
+| Botões da tabela | Importar . Exportar . Adicionar | Somente Exportar |
+| Status na tabela | Ativo / Em Análise / Inativo | Solução Viável / Sem Solução |
+| KPIs | Total de Clientes . Clusters Ativos . Limite Total . Taxa de Aprovação | Total de Clientes . Clusters Identificados . Score Médio . Clientes Elegíveis |
+| Score individual | Barra proporcional com cores verde/amarelo/vermelho | Não exibido (tabela é de clusters, não de clientes individuais) |
+
+A mudança da tabela de clientes para clusters reflete a decisão de modelagem: a unidade de otimização é o cluster, não o cliente individual — o que é exibido são os clusters consolidados resultantes da execução do CART + Simplex.
+
+### 6.3 Tela Gerar Limites
+
+| Aspecto | Protótipo | Implementação |
+|---|---|---|
+| Conteúdo pré-upload | Apenas dropzone | Tabela de estrutura do CSV com 8 colunas + nota de mínimo recomendado |
+| Pós-execução | Navega para tela "Resultados" separada | Resultados aparecem inline na mesma página |
+| Botão de navegação | "Ver análise completa em Resultados" (CTA) | Removido — não há navegação separada |
+| Reset | Navegar para outra tela | Link "carregar um novo arquivo" reseta o estado sem sair da página |
+
+### 6.4 Tela Resultados (fundida em Gerar Limites)
+
+| Aspecto | Protótipo | Implementação |
+|---|---|---|
+| Localização | Rota `/resultados` independente | Bloco condicional `{ran && ...}` dentro de `GerarLimites` |
+| Estado vazio | Não previsto | Banner com CTA para upload quando `ran = false` |
+| Seção Simplex vs PuLP | Não prevista | Cards de métricas agregadas + tabela cluster-a-cluster com delta `z` |
+| Comparação entre runs | Não prevista | Toggle "Comparar simulação anterior" sobrepõe série tracejada amarela no gráfico de evolução |
+| Exportação | Não prevista na tela | Botão "Exportar CSV" no cabeçalho dos resultados |
+
+### 6.5 ConfigModal
+
+| Aspecto | Protótipo | Implementação |
+|---|---|---|
+| Controle de edição | Ícone de lápis por parâmetro; expandia slider inline ao clicar | Todos os sliders visíveis simultaneamente |
+| Salvar/Cancelar | Por parâmetro (dentro de cada card expandido) | Global — único par de botões no rodapé do modal |
+| Tema | Branco com bordas arredondadas | Fundo `#E2EAF4` nos cards de parâmetros, bordas retas |
+
+---
+
+## 7. Visualizações de Dados
+
+Todos os gráficos são componentes SVG puros definidos em `Resultados.js` como variáveis globais (`var`), acessíveis por `GerarLimites.js` após o carregamento de todos os scripts.
+
+| Componente | Tipo | Dados exibidos |
+|---|---|---|
+| `BarChartSVG` | Barras verticais | Limite ótimo por cluster (R$) |
+| `DonutChart` | Rosca com buraco | Proporção de clientes por status |
+| `LineChartSVG` | Linha com área + série opcional | Evolução mensal do limite total (R$ milhões). Prop `data2` ativa série comparativa tracejada em amarelo |
+| `AreaChartSVG` | Histograma de frequência | Distribuição de clientes por faixa de score |
+
+Todas as visualizações usam exclusivamente as cores da paleta PAN: azul `#2E6DA4` como cor principal, `#E8EFF7` para linhas de grade e barras sem valor, paleta terciária (verde/amarelo/vermelho) para status. Sem bibliotecas externas de charting.
+
+---
+
+## 8. Como Executar
+
+O front-end não possui build. Funciona diretamente no browser via `file://` ou servidor HTTP estático.
+
 ```bash
+# Python (recomendado — evita restricoes de CORS no file://)
 cd apps/frontend
 python -m http.server 8080
 # Acesse: http://localhost:8080
-```
 
-**Com Node.js:**
-```bash
+# Node.js
 cd apps/frontend
 npx serve .
 ```
 
-**Com VS Code:** instale *Live Server*, clique com botão direito em `index.html` → *Open with Live Server*.
-
-### Dependências (todas via CDN, sem instalação)
+### Dependências (todas via CDN)
 
 | Biblioteca | Versão | Finalidade |
 |---|---|---|
 | React | 18 | UI reativa |
 | ReactDOM | 18 | Renderização no DOM |
-| Babel Standalone | latest | Transpilação de JSX |
+| Babel Standalone | latest | Transpilação de JSX no browser |
 | Tailwind CSS | CDN | Estilização utilitária |
-| Inter (Google Fonts) | — | Tipografia base |
 
-### Estrutura de arquivos
+### User Stories atendidas
 
-```
-apps/frontend/
-├── index.html              # Entry point
-├── data.js                 # Dados mock globais
-├── assets/
-│   └── Logo_PAN.jpg
-└── pages/
-    ├── Navbar.js            # Navbar fixa com scroll-shrink
-    ├── Dashboard.js         # Visão geral da carteira + tabela de clientes
-    ├── GerarLimites.js      # Upload de base + execução do Simplex
-    ├── Resultados.js        # Visualizações gráficas + comparação Simplex vs PuLP
-    └── ConfigModal.js       # Modal de configuração de parâmetros
-```
-
----
-
-## 3. Tela de Configurações — ConfigModal
-
-A tela de Configurações é implementada como modal sobreposição (`ConfigModal.js`), acessível pelo ícone de engrenagem na navbar. Atende parcialmente às US02 e US03.
-
-### Parâmetros Editáveis
-
-| Parâmetro | Controle | Faixa |
+| ID | Título | Status |
 |---|---|---|
-| Taxa de Interchange | Slider + campo numérico | 0% – 5% |
-| Loss Given Default (LGD) | Slider + campo numérico | 0% – 100% |
-| Utilização Esperada do Limite | Slider + campo numérico | 0% – 100% |
-| Teto Máximo de Limite (R$) | Slider + campo numérico | R$ 0 – R$ 50.000 |
-
-**Parâmetros Não Editáveis** — exibidos para consulta sem campo de edição (ex.: número de clusters fixado pelo modelo).
-
-### Fluxo de interação
-
-1. Clique no ícone de configurações na navbar → modal abre com animação `fadeIn`.
-2. Slider e campo numérico são sincronizados — mover um atualiza o outro em tempo real.
-3. **Salvar** aplica os valores ao estado local.
-4. **Cancelar** / clique fora / `Esc` fecha sem persistir alterações.
-
----
-
-## 4. Diferenças em Relação ao Protótipo (Wireframes)
-
-### 4.1 Melhorias implementadas
-
-**Botões de ação funcionais no Dashboard**
-O wireframe previa "Importar", "Adicionar" e "Filtrar" como elementos visuais. Na implementação todos são funcionais: Importar abre file picker e exibe toast de confirmação; Adicionar abre modal com formulário (ID, Score, Status, Limite, Cadastro) que insere o cliente na tabela; Filtrar expande painel com seleção de status (Todos / Ativo / Pendente / Inativo).
-
-**Comparação de simulações no gráfico de evolução**
-O wireframe previa apenas um gráfico de linha mostrando a evolução temporal. A implementação adiciona toggle "Comparar simulação anterior" que sobrepõe uma segunda série (linha tracejada em amarelo) representando o run anterior do algoritmo, com legenda discriminando as duas séries.
-
-**Seção de comparação Simplex vs PuLP**
-Não prevista no wireframe. A página Resultados inclui cards de métricas agregadas e tabela cluster-a-cluster comparando o solver próprio com PuLP/CBC.
-
-**Estado vazio em Resultados**
-Não previa estado inicial. Quando nenhuma simulação foi executada, a página exibe empty state com CTA para Gerar Limites.
-
-**Barra de score com cores semânticas no Dashboard**
-O wireframe exibia o score como valor numérico. A implementação usa `ScoreBar` com cor proporcional: verde (≥750), amarelo (550–749), vermelho (<550).
-
-**Exportação client-side**
-Exportação totalmente no browser via `Blob` + `URL.createObjectURL`, sem dependência de servidor.
-
-### 4.2 Funcionalidades do wireframe não implementadas nesta entrega
-
-| Funcionalidade | Motivo |
-|---|---|
-| Validação real das colunas do CSV | Requer back-end Python |
-| Execução real do algoritmo Simplex | Requer back-end Python |
-| Consulta de restrições ativas (US05) | Requer endpoint por cluster |
-| Persistência das configurações | Requer API de configuração |
-
----
-
-## 5. Visualizações de Dados Implementadas
-
-Todas em SVG puro, sem biblioteca externa de charting.
-
-| Componente | Tipo | Localização | Dados |
-|---|---|---|---|
-| `BarChartSVG` | Barras verticais | Resultados | Limite sugerido por cluster |
-| `DonutChart` | Rosca | Resultados | Distribuição por status |
-| `LineChartSVG` | Linha (+ linha comparativa) | Resultados | Evolução temporal de limites |
-| `AreaChartSVG` | Barras de frequência | Resultados | Distribuição por faixa de score |
-| `ScoreBar` | Barra de progresso inline | Dashboard | Score individual de cada cliente |
-
-O `LineChartSVG` aceita prop `data2` opcional — quando fornecido renderiza segunda série em linha tracejada amarela com pontos sobrepostos, permitindo comparação visual direta entre duas execuções do algoritmo.
+| US01 | Carregar base de dados | Implementado — dropzone com drag-and-drop, feedback visual |
+| US04 | Gerar limite por cluster | Implementado — upload de CSV + execução + resultados inline |
+| US06 | Visualizar distribuição dos limites | Implementado — 4 gráficos SVG + seção Simplex vs PuLP |
+| US07 | Exportar resultados | Implementado — CSV client-side em Dashboard e em Resultados |
+| US02 | Ajustar clusterização | Implementado — parâmetros editáveis no ConfigModal |
+| US03 | Configurar metas de produção | Implementado — modal funcional com sliders sincronizados |
+| US05 | Consultar restrições ativas | Implementado — parâmetros não editáveis exibidos no ConfigModal |
