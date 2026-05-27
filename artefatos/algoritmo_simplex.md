@@ -20,9 +20,9 @@ $$L_k \geq 0 \quad \text{(limite de crédito a ser ofertado ao cluster } k\text{
 
 O banco busca maximizar o retorno líquido total esperado da carteira:
 
-$$\max \sum_{k=1}^{K} n_k \cdot \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD}) \cdot L_k$$
+$$\max \sum_{k=1}^{K} n_k \cdot \pi_k \cdot (\bar{u} \cdot t \cdot T - PD_k \cdot \text{LGD}) \cdot L_k$$
 
-O coeficiente de cada cluster, $c_k = n_k \cdot \pi_k \cdot (\bar{u} \cdot t - PD_k \cdot \text{LGD})$, representa o retorno líquido unitário esperado por real alocado ao cluster $k$. Clusters com $c_k > 0$ são rentáveis; clusters com $c_k \leq 0$ destroem valor a cada real adicional de limite e recebem $L_k = 0$ como solução natural do modelo.
+O coeficiente de cada cluster, $c_k = n_k \cdot \pi_k \cdot (\bar{u} \cdot t \cdot T - PD_k \cdot \text{LGD})$, representa o retorno líquido unitário esperado por real alocado ao cluster $k$. Clusters com $c_k > 0$ são rentáveis; clusters com $c_k \leq 0$ destroem valor a cada real adicional de limite e recebem $L_k = 0$ como solução natural do modelo.
 
 Os parâmetros utilizados são:
 
@@ -32,8 +32,9 @@ Os parâmetros utilizados são:
 | $\pi_k$      | Propensão média de contratação do cluster $k$                           | calculado da base |
 | $\bar{u}$    | Fração esperada de utilização do limite pelo cliente                    | 0,75              |
 | $t$          | Taxa de interchange recebida pelo banco sobre o volume transacionado    | 1,75%             |
-| $PD_k$       | Probabilidade de inadimplência média do cluster $k$                     | calculado da base |
-| $\text{LGD}$ | Fração do saldo exposto perdida em caso de default (Loss Given Default) | 0,60              |
+| $T$          | Horizonte de uso do limite em meses, definido pelo parceiro             | 22                |
+| $PD_k$       | Probabilidade de inadimplência calibrada média do cluster $k$           | calculado da base |
+| $\text{LGD}$ | Fração do saldo exposto perdida em caso de default (Loss Given Default) | 0,80              |
 
 ### Restrições
 
@@ -41,7 +42,7 @@ Os parâmetros utilizados são:
 
 $$\sum_{k=1}^{K} n_k \cdot (PD_k - \overline{PD}_{fin}^{atual}) \cdot L_k \leq 0$$
 
-onde $\overline{PD}_{fin}^{atual}$ é calculado como a média de `pd_produto` dos clientes elegíveis da base.
+onde $\overline{PD}_{fin}^{atual}$ é calculado como a média de `pd_calibrada` dos clientes elegíveis da base.
 
 **R2 - Capacidade de pagamento com alavancagem diferenciada:** o limite de cada cluster é restrito pela capacidade de pagamento de seus membros, multiplicada por um fator de alavancagem $m_k$ que varia de 0,3 a 1,8 conforme o score de crédito médio do cluster. Clusters de menor risco recebem $m_k$ próximo de 1,8; clusters de maior risco recebem $m_k$ próximo de 0,3:
 
@@ -134,6 +135,10 @@ Define as estruturas de dados:
 
 Implementação pura do algoritmo Simplex, sem nenhuma dependência da lógica de negócio do projeto. Recebe um `Problema` e devolve a solução ótima, o valor da função objetivo e o status da solução.
 
+### `clustering.py`
+
+Agrupa os clientes elegíveis em $K$ clusters usando CART e calcula os parâmetros agregados necessários para o LP: $n_k$, $PD_k$, $\pi_k$, $CP_k$ e $m_k$. Detalhes na seção de Clusterização.
+
 ### `main.py`
 
 Orquestra o pipeline completo:
@@ -151,16 +156,15 @@ A solução recebe dois arquivos como entrada:
 
 ### CSV de clientes
 
-Arquivo com os dados individuais dos clientes elegíveis, localizado em `data/csv/`. As colunas utilizadas pelo modelo são:
+Arquivo com os dados individuais dos clientes calibrados, localizado em `data/csv/`. As colunas utilizadas pelo modelo são:
 
 | Coluna                     | Descrição                                                                              |
 | -------------------------- | -------------------------------------------------------------------------------------- |
 | `pd_produto`               | Probabilidade de inadimplência no produto                                              |
 | `pd_calibrada`             | PD corrigida pelos fatores gamma por decil de risco                                    |
 | `capacidade_pagamento`     | Estimativa de capacidade de pagamento do cliente                                       |
-| `score_credito_cross`      | Score de crédito multiproduto, usado para calcular $m_k$                               |
+| `score_credito_cross`      | Score de crédito multiproduto, usado para calcular $m_k$ e como feature de clustering  |
 | `score_propensao_contrato` | Score de propensão à contratação, normalizado para obter $\pi_k$                       |
-| `fx_idade`                 | Faixa etária do cliente                                                                |
 | `flag_filtros`             | Indicador de perfil restrito: apenas clientes com `flag_filtros == 0` são elegíveis    |
 | `renda_estimada`           | Usada como proxy de capacidade de pagamento quando `capacidade_pagamento` está ausente |
 
@@ -171,60 +175,203 @@ Arquivo de configuração localizado em `apps/algoritmo_simplex/input/`, que per
 ```json
 {
   "t": 0.0175,
-  "LGD": 0.6,
+  "LGD": 0.8,
   "u_bar": 0.75,
-  "L_max": 25000.0
+  "L_max": 25000.0,
+  "T": 22.0
 }
 ```
 
 Onde:
 
 - `t`: taxa de interchange (1,75%), fornecida pelo parceiro
-- `LGD`: fração da exposição perdida em caso de default (60%), padrão de modelos de risco de crédito
+- `LGD`: fração da exposição perdida em caso de default (80%)
 - `u_bar`: fração esperada de utilização do limite (75%)
 - `L_max`: teto máximo absoluto de limite por cluster (R$25.000), definido pelo parceiro
+- `T`: horizonte de uso do limite em meses (22), definido pelo parceiro
 
-## Simplificações realizadas
+## Clusterização de Clientes Elegíveis
 
-De acordo com os requisitos do parceiro, a solução final deve operar com pelo menos 100 clusters para a base completa de mais de um milhão de clientes. Nesta versão simplificada, foram adotadas as seguintes reduções de escopo:
+### O problema: por que agrupar clientes?
 
-**Número de clusters:** foram utilizados 7 clusters em vez dos pelo menos 100 exigidos na entrega final. Essa simplificação reduz a dimensão do problema de programação linear, tornando a validação do algoritmo mais direta.
+O modelo de otimização (LP) precisa decidir, para cada cliente elegível, qual limite de crédito oferecer, de forma a **maximizar o lucro esperado do banco**. Em teoria, poderíamos rodar o LP tratando cada cliente individualmente. Na prática, isso é inviável: com dezenas de milhares de clientes, o problema se tornaria grande demais para ser resolvido em tempo útil.
 
-**Tamanho da base:** nos casos de teste, a base foi reduzida para aproximadamente 10% dos clientes originais, mantendo a proporcionalidade das características da base completa.
+A solução é **clusterização**: agrupar clientes parecidos em segmentos e tratar cada segmento como uma única unidade representativa no LP. Em vez de otimizar 50.000 decisões individuais, o LP otimiza, por exemplo, 100 decisões (uma por cluster).
 
-As restrições do modelo e o algoritmo Simplex implementado são independentes dessas simplificações e funcionarão sem alterações quando o número de clusters for expandido.
+> **Analogia:** Podemos comparar com eleições. Em vez de contar a opinião de cada habitante de cada bairro individualmente, pesquisas agrupam a população em perfis representativos e trabalham com esses grupos. O resultado é uma boa aproximação com muito menos custo computacional.
 
-## Clusterização
+A chave para que essa aproximação seja boa é: **os clientes dentro de um mesmo cluster devem ser realmente parecidos naquilo que importa para o LP.** E o que importa para o LP não é necessariamente o que parece óbvio à primeira vista.
 
-A clusterização é feita de forma **não supervisionada**, utilizando **K-Means**, visando juntar clientes elegíveis e com perfis semelhantes de **risco, capacidade de pagamento e propensão**, buscando viabilizar a otimização no nível de cluster.
+---
 
-O K-Means foi escolhido nesta sprint por ser um algoritmo simples e bem compreendido, adequado para validar o pipeline completo e o algoritmo Simplex com um número controlado de clusters. No entanto, reconhecemos que ele **não é o algoritmo ideal para o problema real**: o K-Means exige que o número de clusters $K$ seja definido a priori, enquanto o ideal seria um algoritmo que determinasse o número de clusters de forma automática e adaptativa à estrutura dos dados - como DBSCAN ou modelos de mistura gaussiana. A substituição do algoritmo de clusterização está prevista para as próximas sprints, à medida que o modelo for calibrado e expandido para a base completa.
+### O que significa "parecido" no contexto do LP?
 
-### População considerada
+O LP não se importa com se dois clientes têm renda parecida ou idade parecida. Ele se importa com uma única coisa: **quanto valor econômico cada cliente representa para o banco?**
 
-Inicialmente, a base de dados é filtrada para incluir apenas clientes elegíveis (flag_filtros = 0). Além disso, apenas as 10% primeiras linhas da base de dados foram consideradas.
+Esse valor é capturado pelo **score composto** `c_k`, definido como:
 
-### Variáveis usadas na clusterização
+```
+c_k = π · (ū · t · T − PD_calib · LGD)
+```
 
-O K-Means é treinado usando:
+Decodificando cada termo:
 
-- pd_calibrada: (probabilidade de inadimplência calibrada por decil de risco)
+| Símbolo     | Significado                                                                                     |
+| ----------- | ----------------------------------------------------------------------------------------------- |
+| `π`         | Taxa de juros: o quanto o banco ganha se o cliente pagar normalmente                            |
+| `ū · t · T` | Valor esperado do crédito utilizado ao longo do tempo (quanto o cliente tende a usar do limite) |
+| `PD_calib`  | Probabilidade de Inadimplência calibrada: a chance do cliente não pagar                         |
+| `LGD`       | _Loss Given Default_: quanto o banco efetivamente perde quando o cliente não paga               |
 
-- cp_proxy: (proxy de capacidade de pagamento)
+Em linguagem direta: **receita esperada menos perda esperada**. Um cliente com `c_k` alto é valioso: usa bastante o crédito e tem baixo risco. Um cliente com `c_k` baixo é arriscado ou pouco lucrativo.
 
-- score_credito_cross: (score multiproduto, também usado para derivar alavancagem)
+> `c_k` é exatamente o coeficiente que aparece na função objetivo do LP. É a "linguagem" que o LP usa para tomar decisões. Portanto, a clusterização só faz sentido se agrupar clientes que sejam parecidos em `c_k`, e não em renda, idade ou qualquer outra dimensão que o LP não usa diretamente.
 
-- pi: (propensão normalizada)
+---
 
-- fx*idade (variável categórica, transformada com \_one-hot encoding*)
+### Por que não usamos K-Means?
 
-### Pré-processamento
+O **K-Means** é o algoritmo de clusterização mais clássico. A versão original do modelo o utilizava, e ele tem um problema fundamental nesse contexto.
 
-Antes do K-Means atuar em si, a variável pi é criada, na qual o score_propensao_contrato é normalizado para o intervalo [0, 1]. O cp_proxy também é definido, utilizando a capacidade_pagamento quando existente. No caso de estar nula, o valor é substituído por renda_estimada \* 0,3.
+#### Como o K-Means funciona
 
-### Tratamento das variáveis
+O K-Means divide a população em `k` grupos minimizando a **distância euclidiana** entre os clientes e o centróide (ponto central) do seu cluster. Basicamente: clientes "próximos no espaço das variáveis" ficam no mesmo grupo.
 
-Para as variáveis numéricas, é aplicada a imputação de valores faltantes pela mediana, e os valores são padronizados pelo StandardScaler (média 0, desvio padrão 1). Já para a variável categórica, o OneHotEncoder transforma os valores de forma binária, permitindo que os mesmos funcionem com o K-means.
+#### O problema da versão original
+
+Na versão anterior do modelo, o K-Means rodava sobre as features brutas dos clientes: renda, PD, LGD, tempo de relacionamento, etc. Distância euclidiana nessas variáveis não tem nenhuma relação com `c_k`. Dois clientes podem ter renda e PD parecidas, mas `c_k` muito diferente, e mesmo assim o K-Means os jogaria no mesmo cluster.
+
+O resultado são clusters internamente heterogêneos em `c_k`, o que faz o LP tomar decisões "médias" ruins: restritivo demais para os clientes bons do cluster e leniente demais para os ruins.
+
+#### E se usássemos K-Means apenas sobre `c_k`?
+
+Essa é a pergunta certa. K-Means rodando em uma única dimensão (`c_k`) minimizaria a variância de `c_k` dentro dos clusters, que é o objetivo correto. A crítica conceitual ao K-Means cai nesse cenário.
+
+Porém, mesmo nesse caso, o K-Means apresenta problemas práticos relevantes:
+
+**1. Cortes artificialmente espaçados**
+
+O K-Means encontra centróides e define clusters como os clientes mais próximos de cada centróide. Em distribuições assimétricas (e a distribuição de `c_k` em carteiras de crédito tipicamente é assimétrica: muitos clientes mediocres, poucos excelentes), o K-Means tende a criar cortes igualmente espaçados no eixo de `c_k`, mesmo que não haja nenhum motivo para isso. O CART, por sua vez, **busca ativamente os pontos de corte que mais reduzem a variância interna**, encontrando onde "faz sentido" dividir em vez de dividir de forma uniforme.
+
+**2. Não produz regras interpretáveis nas features originais**
+
+O resultado do K-Means é um conjunto de centróides. Para classificar um cliente novo, você calcula a distância dele a cada centróide e o aloca no mais próximo: duas etapas, e o resultado não tem interpretação direta em termos das features do cliente.
+
+O CART produz uma **árvore de decisão**, que é essencialmente uma sequência de regras do tipo:
+
+```
+Se PD_calib < 0.03 e renda > 8.000 → Cluster A
+Se PD_calib < 0.03 e renda ≤ 8.000 → Cluster B
+Se PD_calib ≥ 0.03                  → Cluster C
+```
+
+Isso tem valor operacional real: qualquer sistema consegue classificar um cliente novo percorrendo a árvore com operações simples de comparação.
+
+**3. Sensibilidade a outliers**
+
+O K-Means é sensível a valores extremos: um cliente com `c_k` excepcionalmente alto puxa o centróide do seu cluster, distorcendo os limites de todos os grupos. O CART é mais robusto porque trabalha com partições binárias sucessivas, de modo que um outlier fica isolado numa folha da árvore sem afetar os demais cortes.
+
+---
+
+### Por que não usamos HDBSCAN?
+
+O **HDBSCAN** é um algoritmo de clusterização por densidade: ele identifica "nuvens naturais" nos dados sem que você precise definir o número de clusters de antemão. Em teoria, seria ideal: deixar os dados revelarem sua própria estrutura.
+
+Na prática, realizamos uma análise empírica com HDBSCAN sobre a base de clientes elegíveis. O resultado: independentemente do valor do parâmetro `min_cluster_size`, o algoritmo encontrou **no máximo 22 clusters**.
+
+O que isso significa? Os dados simplesmente não possuem estrutura de densidade natural suficiente para suportar 100 ou mais clusters. Forçar 100+ clusters com HDBSCAN produziria agrupamentos artificiais sem significado estatístico.
+
+Além disso, o HDBSCAN sofreria do mesmo problema conceitual do K-Means original: agrupa por densidade geométrica nos dados, não por homogeneidade em `c_k`. A segmentação precisa ser **guiada pelo objetivo do LP**, não pela estrutura geométrica dos dados.
+
+---
+
+### A solução: CART guiado por `c_k`
+
+#### O que é o CART
+
+**CART** (_Classification and Regression Trees_) é um algoritmo que constrói uma árvore de decisão dividindo recursivamente a população. Em cada etapa, ele escolhe uma variável e um ponto de corte que **minimiza a variância de uma variável-guia** nas duas metades resultantes.
+
+Diferente do K-Means (que minimiza distância euclidiana) e do HDBSCAN (que busca densidade geométrica), o CART permite que você **especifique explicitamente em qual dimensão quer homogeneidade**.
+
+#### Por que o CART com `c_k` como variável-guia resolve o problema
+
+Ao definir `c_k` como variável-guia do CART, cada divisão da árvore é escolhida para que os dois grupos resultantes sejam o mais homogêneos possível em `c_k`. Ao final do processo, cada folha da árvore (cada cluster) contém clientes com scores `c_k` muito parecidos entre si.
+
+Isso é exatamente o que o LP precisa: quando ele tomar uma decisão de limite para um cluster, essa decisão será uma boa aproximação para todos os clientes dentro dele, porque todos têm `c_k` semelhante.
+
+#### Como o CART constrói os clusters na prática
+
+O processo é recursivo e pode ser visualizado assim:
+
+```
+População completa (c_k varia de -200 a +800)
+│
+├── Corte 1: PD_calib < 0.05
+│   ├── [c_k alto] → subdividir mais...
+│   │   ├── Corte 2: renda > 5.000 → Cluster A (c_k ≈ 600–800)
+│   │   └── Corte 2: renda ≤ 5.000 → Cluster B (c_k ≈ 400–600)
+│   └── [c_k médio] → subdividir mais...
+│       └── ...
+│
+└── Corte 1: PD_calib ≥ 0.05
+    ├── [c_k baixo ou negativo] → subdividir mais...
+    │   └── ...
+    └── ...
+```
+
+Em cada nó, o CART testa todas as variáveis disponíveis e todos os pontos de corte possíveis, e escolhe a combinação que mais reduz a variância de `c_k`. O processo continua até atingir o número desejado de clusters (folhas da árvore).
+
+---
+
+### Quantos clusters usar? A escolha de K = 800
+
+Definido o algoritmo (CART com `c_k`), ainda resta uma pergunta: **quantos clusters criar?**
+
+Mais clusters significa maior fidelidade: cada grupo fica menor e mais homogêneo, e o LP aproxima melhor a realidade individual de cada cliente. Mas mais clusters também significam mais tempo de processamento, tanto na clusterização quanto na execução do Simplex.
+
+A escolha de K não tem resposta teórica direta. Por isso, adotamos uma **varredura empírica**: executamos o pipeline completo (clusterização + Simplex) para cada valor de K entre 50 e 2000, em incrementos de 50, e registramos o valor ótimo `z` da função objetivo em cada execução.
+
+O que observamos foi um padrão claro de **retorno marginal decrescente**:
+
+- Nos primeiros incrementos (K = 50 a ~400), cada bloco adicional de 50 clusters aumenta `z` de forma relevante.
+- A partir de K = 800, cada incremento adicional de 50 clusters aumenta `z` em menos de 0,5%.
+- K = 800 captura **98,4% do retorno máximo** encontrado com K = 2000.
+
+Em outras palavras: depois de 800 clusters, o pipeline continua melhorando, mas de forma cada vez mais marginal, enquanto o custo computacional continua crescendo linearmente. O ganho não justifica o custo.
+
+**K = 800 é o ponto onde o trade-off entre qualidade da solução e tempo de processamento é mais favorável.**
+
+### Comparativo final das abordagens
+
+| Critério                                 | K-Means (features brutas) | K-Means (`c_k`) |   HDBSCAN    | **CART (`c_k`)** |
+| ---------------------------------------- | :-----------------------: | :-------------: | :----------: | :--------------: |
+| Alinhado com o objetivo do LP            |            ❌             |       ✅        |      ❌      |        ✅        |
+| Encontra cortes naturais (não uniformes) |            ❌             |       ❌        |      ✅      |        ✅        |
+| Produz regras interpretáveis             |            ❌             |       ❌        |      ❌      |        ✅        |
+| Robusto a outliers                       |            ❌             |       ❌        |      ✅      |        ✅        |
+| Escala para 100+ clusters                |            ✅             |       ✅        |      ❌      |        ✅        |
+| Suportado empiricamente nos dados        |            N/A            |       N/A       | ❌ (máx. 22) |        ✅        |
+
+O CART com `c_k` como variável-guia é o único método que satisfaz todos os requisitos simultaneamente: alinhamento com o LP, cortes adaptativos não uniformes, interpretabilidade operacional, robustez a outliers e capacidade de gerar o número de clusters necessário.
+
+---
+
+### Resumo da clusterização
+
+A clusterização existe para tornar o LP computacionalmente viável, substituindo decisões individuais por decisões por grupo. Para que essa substituição introduza o mínimo de erro, os grupos precisam ser homogêneos exatamente na dimensão que o LP usa: o score `c_k` (valor econômico líquido esperado por cliente).
+
+O CART, usando `c_k` como variável-guia, é o algoritmo que garante essa homogeneidade. Ele supera o K-Means por encontrar cortes naturais e produzir regras interpretáveis, e supera o HDBSCAN por escalar para o número de clusters necessário e por ser guiado pelo objetivo do negócio, e não pela geometria dos dados.
+
+## Calibração da PD
+
+Antes da clusterização, a `pd_produto` de cada cliente é calibrada pelo script `calibrar_pd.py`, que aplica fatores gamma por decil de risco calculados em `analise_09_calibracao_final.py`.
+
+A calibração segue dois passos:
+
+1. Os decis são definidos pelos percentis de `pd_produto` da **população elegível completa** (6,7 milhões de clientes das 3 safras combinadas), garantindo que cada decil contenha ~10% dos elegíveis.
+2. O gamma empírico de cada decil é estimado a partir das observações de `over30mob3` que caem naquele decil, usando a razão entre defaults observados e PD esperada.
+
+Os decis D1-D4 possuem estimativas empíricas robustas (2.200 a 6.500 observações cada). D5 tem 103 observações com IC95 mais largo. D6-D10 têm menos de 16 observações cada e recebem gamma por extrapolação linear - limitação estrutural dos dados, pois clientes de alto risco raramente foram aprovados historicamente.
 
 ## Dependências
 
@@ -236,11 +383,11 @@ pip install -r requirements.txt
 
 As bibliotecas utilizadas são:
 
-| Biblioteca     | Uso                                               |
-| -------------- | ------------------------------------------------- |
-| `pandas`       | Leitura e manipulação dos arquivos CSV            |
-| `scikit-learn` | Algoritmo K-Means para clusterização dos clientes |
-| `numpy`        | Cálculo de percentis na agregação dos clusters    |
+| Biblioteca     | Uso                                            |
+| -------------- | ---------------------------------------------- |
+| `pandas`       | Leitura e manipulação dos arquivos CSV         |
+| `scikit-learn` | Algoritmo CART para clusterização dos clientes |
+| `numpy`        | Cálculo de percentis na agregação dos clusters |
 
 O algoritmo Simplex em si não utiliza nenhuma biblioteca externa, foi implementado do zero com Python puro.
 
@@ -249,13 +396,13 @@ O algoritmo Simplex em si não utiliza nenhuma biblioteca externa, foi implement
 A partir do diretório raíz do projeto (`g04/`):
 
 ```bash
-python apps/algoritmo_simplex/main.py <arquivo_clientes.csv> <parametros.json>
+python apps/algoritmo_simplex/main.py <arquivo_clientes_calibrado.csv> <parametros.json>
 ```
 
 Exemplo:
 
 ```bash
-python apps/algoritmo_simplex/main.py clientes_calibrado.csv parametros.json
+python apps/algoritmo_simplex/main.py clientes_m1_calibrado.csv parametros.json
 ```
 
 Na primeira execução, a clusterização é gerada automaticamente e salva em `data/csv/<nome>_clusters.csv`. Nas execuções seguintes, o arquivo clusterizado é reutilizado, tornando a execução significativamente mais rápida.
@@ -266,16 +413,14 @@ Ao final da execução, o algoritmo exibe no console o status da solução, o va
 
 ```
 Status: otimo
-Valor ótimo (z): 1234567.89
+Valor ótimo (z): 36183592.28
 
 Limites ótimos por cluster:
-  Cluster 0: R$ 1500 (n=72426)
-  Cluster 1: R$ 800 (n=40096)
-  Cluster 2: R$ 2050 (n=10897)
-  Cluster 3: R$ 0 (n=40468)
-  Cluster 4: R$ 1200 (n=97178)
-  Cluster 5: R$ 650 (n=31288)
-  Cluster 6: R$ 3000 (n=59103)
+  Cluster 0: R$ 250 (n=891)
+  Cluster 1: R$ 250 (n=855)
+  Cluster 2: R$ 1950 (n=906)
+  Cluster 3: R$ 0 (n=653)
+  ...
 ```
 
 Os limites exibidos já passaram pela pós-otimização definida pelo parceiro:
@@ -355,35 +500,99 @@ status: multiplas_solucoes
 
 O algoritmo detectou corretamente a existência de múltiplas soluções e retornou uma delas.
 
-### Teste 4: Execução completa com base de clientes calibrada
+### Teste 4: Execução com base M1, parâmetros padrão
 
-**Entrada:** `clientes_calibrado.csv` com `parametros.json` padrão.
+**Entrada:** `clientes_m1_calibrado.csv` com parâmetros `t=0.0175`, `LGD=0.8`, `u_bar=0.75`, `T=22`, `L_max=25000`.
 
 **Saída obtida:**
 
 ```
 Status: otimo
-Valor ótimo (z): 81240312.34
-
-Limites ótimos por cluster:
-  Cluster 0: R$ 250 (n=281831)
-  Cluster 1: R$ 0 (n=256336)
-  Cluster 2: R$ 0 (n=355880)
-  Cluster 3: R$ 0 (n=259746)
-  Cluster 4: R$ 18500 (n=84120)
-  Cluster 5: R$ 1600 (n=444876)
-  Cluster 6: R$ 0 (n=153296)
+Valor otimo (z): 36183592.28
 ```
 
-O algoritmo convergiu para o ótimo. Os clusters que receberam limite zero apresentam $c_k \leq 0$, ou seja, para esses perfis a perda esperada por inadimplência supera a receita esperada de interchange - o modelo corretamente indica que não devem receber oferta. Os clusters com limite positivo concentram os perfis com melhor relação risco-retorno.
+Estatísticas dos clusters com oferta (L > 0):
+
+| Métrica | Limite ofertado | Clientes por cluster |
+| ------- | --------------- | -------------------- |
+| Mínimo  | R$ 200          | 502                  |
+| Máximo  | R$ 4.300        | 11.202               |
+| Média   | R$ 844          | 2.295                |
+| Mediana | R$ 400          | 1.826                |
+
+382 clusters receberam oferta, totalizando 876.520 clientes (47,7% dos 1.836.085 elegíveis). O cluster com maior número de clientes (n=11.202) recebeu limite de R$3.600. Clusters com limite zero apresentam perfil de alto risco onde a perda esperada por inadimplência supera a receita de interchange dado o teto de inadimplência financeira da carteira (R1).
+
+### Teste 5: Sensibilidade a parâmetros - M1 com parâmetros alternativos
+
+**Entrada:** `clientes_m1_calibrado.csv` com parâmetros `t=0.018`, `LGD=0.7`, `u_bar=0.8`, `T=22`, `L_max=25000`.
+
+**Saída obtida:**
+
+```
+Status: otimo
+Valor otimo (z): 43003817.89
+```
+
+Estatísticas dos clusters com oferta (L > 0):
+
+| Métrica | Limite ofertado | Clientes por cluster |
+| ------- | --------------- | -------------------- |
+| Mínimo  | R$ 200          | 502                  |
+| Máximo  | R$ 4.300        | 11.202               |
+| Média   | R$ 840          | 2.289                |
+| Mediana | R$ 400          | 1.821                |
+
+385 clusters receberam oferta, totalizando 881.147 clientes (48,0% dos elegíveis). O aumento de $t$ e a redução de LGD tornaram a carteira mais rentável (+18,9% em z), com distribuição de limites praticamente idêntica à do Teste 4, confirmando a robustez da clusterização a variações de parâmetros.
+
+### Teste 6: Execução com base M2, parâmetros padrão
+
+**Entrada:** `clientes_m2_calibrado.csv` com parâmetros `t=0.0175`, `LGD=0.8`, `u_bar=0.75`, `T=22`, `L_max=25000`.
+
+**Saída obtida:**
+
+```
+Status: otimo
+Valor otimo (z): 36925407.73
+```
+
+Estatísticas dos clusters com oferta (L > 0):
+
+| Métrica | Limite ofertado | Clientes por cluster |
+| ------- | --------------- | -------------------- |
+| Mínimo  | R$ 200          | 507                  |
+| Máximo  | R$ 4.050        | 10.581               |
+| Média   | R$ 920          | 2.343                |
+| Mediana | R$ 450          | 1.844                |
+
+356 clusters receberam oferta, totalizando 834.225 clientes (46,2% dos 1.805.274 elegíveis de M2). O valor ótimo de M2 (R$36,9M) é comparável ao de M1 (R$36,2M), indicando consistência do modelo entre safras. O limite médio levemente maior em M2 (R$920 vs R$844) reflete diferenças na composição de risco da safra.
+
+### Teste 7: Execução com base M3, parâmetros padrão
+
+**Entrada:** `clientes_m3_calibrado.csv` com parâmetros `t=0.0175`, `LGD=0.8`, `u_bar=0.75`, `T=22`, `L_max=25000`.
+
+**Saída obtida:**
+
+```
+Status: otimo
+Valor otimo (z): 60765092.37
+```
+
+Estatísticas dos clusters com oferta (L > 0):
+
+| Métrica | Limite ofertado | Clientes por cluster |
+| ------- | --------------- | -------------------- |
+| Mínimo  | R$ 200          | 503                  |
+| Máximo  | R$ 3.700        | 14.240               |
+| Média   | R$ 727          | 4.012                |
+| Mediana | R$ 550          | 3.646                |
+
+437 clusters receberam oferta, totalizando 1.753.121 clientes (55,9% dos 3.137.258 elegíveis de M3). O valor ótimo de M3 (R$60,8M) é significativamente maior que o de M1 e M2 porque a safra M3 possui quase o dobro de clientes elegíveis. A `PD_fin_atual` de M3 (0,2094) é ligeiramente mais alta que as demais safras, o que relaxa a restrição R1 e permite que o modelo aprove uma proporção maior dos elegíveis. O maior cluster ofertado (n=14.240) recebeu limite de R$350, refletindo um perfil de risco moderado com alta capacidade de pagamento.
 
 ## Conclusões
 
-O algoritmo Simplex foi implementado do zero, sem uso de bibliotecas de otimização, e validado contra problemas com solução analítica conhecida. O pipeline completo, desde a leitura dos dados até a exibição dos limites otimizados por cluster, está funcional e documentado.
+O algoritmo Simplex foi implementado do zero, sem uso de bibliotecas de otimização, e validado contra problemas com solução analítica conhecida. O pipeline completo - calibração da PD, clusterização por CART com K=800, montagem do LP e execução do Simplex - está funcional e documentado para as safras M1 e M2 da base completa de elegíveis.
 
 Os próximos passos previstos são:
 
-- Revisão e calibração dos parâmetros do modelo com o parceiro
-- Expansão do número de clusters para pelo menos 100, conforme requisito da entrega final
-- Substituição do K-Means por um algoritmo de clusterização que determine o número de clusters automaticamente
+- Alinhamento com o parceiro sobre a formulação de R1, dado que a correlação positiva observada entre `pd_calibrada` e `pi` na base faz com que a restrição de inadimplência financeira exclua clusters de alta propensão
 - Incorporação das restrições adicionais mapeadas no TAPI, como teto de inadimplência física, metas de produção mínima e rentabilidade mínima da carteira
