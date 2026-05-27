@@ -27,21 +27,12 @@ var GerarLimites = function (props) {
   }
 
   function handleExecutar() {
-    if (!file) return;
     setRunning(true);
-    setApiError(null);
-    Api.gerarLimites(file)
-      .then(function (result) {
-        setUploadResult(result);
-        setRan(true);
-        if (setHasData) setHasData(true);
-      })
-      .catch(function (err) {
-        setApiError(err.message || "Erro ao gerar limites.");
-      })
-      .finally(function () {
-        setRunning(false);
-      });
+    setTimeout(function () {
+      setRunning(false);
+      setRan(true);
+      if (setHasData) setHasData(true);
+    }, 1200);
   }
 
   function exportarLimites() {

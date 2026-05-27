@@ -127,28 +127,6 @@ var Dashboard = function (props) {
   var filtered = CLUSTERS_UPLOAD.filter(function (c) {
     return c.id.toLowerCase().indexOf(search.toLowerCase()) !== -1;
   });
-  var kpiCards = KPI_CARDS.map(function (k, index) {
-    if (!dashboardKpis) return k;
-    if (index === 0) {
-      return Object.assign({}, k, {
-        label: "Total de Clusters",
-        value: String(dashboardKpis.total_clusters || filtered.length),
-      });
-    }
-    if (index === 1) {
-      return Object.assign({}, k, {
-        value: String(dashboardKpis.total_clusters || filtered.length),
-      });
-    }
-    if (index === 3) {
-      return Object.assign({}, k, {
-        label: "Clusters Ativos",
-        value: String(dashboardKpis.clusters_ativos || 0),
-      });
-    }
-    return k;
-  });
-
   return (
     <div className="space-y-6">
       <div className="flex items-start justify-between">
@@ -172,7 +150,7 @@ var Dashboard = function (props) {
 
       {/* KPIs */}
       <div className="grid grid-cols-4 gap-4">
-        {kpiCards.map(function (k) {
+        {KPI_CARDS.map(function (k) {
           var badgeCls =
             k.trend === "up"
               ? "bg-[#67DE98]/20 text-[#2E6DA4]"
