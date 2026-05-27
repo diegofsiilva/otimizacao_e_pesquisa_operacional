@@ -33,7 +33,7 @@ def _path_env(name: str, default: Path) -> Path:
 
 APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
 APP_PORT = int(os.getenv("APP_PORT", "8000"))
-FRONTEND_ORIGINS = _csv_env("FRONTEND_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+FRONTEND_ORIGINS = _csv_env("FRONTEND_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,null")
 
 LOCAL_DATA_DIR = _path_env("LOCAL_DATA_DIR", BASE_DIR / "db" / "local_data")
 UPLOAD_DIR = _path_env("UPLOAD_DIR", BASE_DIR / "uploads")
