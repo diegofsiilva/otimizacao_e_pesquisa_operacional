@@ -163,7 +163,7 @@ A tela de Resultados é dedicada à visualização analítica dos limites gerado
 
 ### Configurações
 
-![Tela Configurações](/artefatos/assets/ux/tela-config.png)
+![Tela Configurações](/artefatos/assets/ux/config.png)
 
 Esta tela permite o gerenciamento dos parâmetros do sistema, atendendo às **US02 - Ajustar clusterização** e **US03 - Configurar metas de produção**.
 
