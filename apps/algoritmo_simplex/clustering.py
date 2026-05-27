@@ -5,19 +5,19 @@ Agrupa clientes elegiveis em clusters usando CART e calcula os parametros
 agregados necessarios para o modelo de otimizacao de limites de credito.
 
 Uso:
-    python clustering.py <arquivo_clientes.csv> [parametros.json]
+    python clustering.py <arquivo_calibrado.parquet> [parametros.json]
 
 Entrada:
-    - <nome>.csv       : base de clientes calibrada (com coluna pd_calibrada)
-    - parametros.json  : parametros do modelo (padrao: parametros.json)
+    - <nome>_calibrado.parquet : base de clientes calibrada em data/cache/
+    - parametros.json          : parametros do modelo (padrao: parametros.json)
 
 Saida:
-    - <nome>_com_cluster.csv : base original com a coluna cluster_id adicionada
-    - <nome>_clusters.csv    : tabela agregada no nivel do cluster com parametros para o LP
+    - <nome>_calibrado_com_cluster.parquet : base com cluster_id adicionada
+    - <nome>_calibrado_clusters.parquet    : tabela agregada por cluster para o LP
 
-Arquivos CSV devem estar em data/csv/
+Arquivos parquet de entrada devem estar em data/cache/
 Arquivos JSON devem estar em apps/algoritmo_simplex/input/
-Arquivos de saida serao gerados em data/csv/
+Arquivos parquet de saida serao gerados em data/cache/
 """
 
 import json
@@ -30,7 +30,7 @@ import pandas as pd
 from sklearn.tree import DecisionTreeRegressor
 
 ROOT = Path(__file__).resolve().parent.parent.parent
-DATA_DIR = ROOT / "data" / "csv"
+DATA_DIR = ROOT / "data" / "cache"
 JSON_DIR = Path(__file__).resolve().parent / "input"
 
 
@@ -81,7 +81,7 @@ def calcular_ck(
 
 
 def main(
-    input_csv_name: str,
+    input_parquet_name: str,
     params_json_name: str = "parametros.json",
     max_leaf_nodes: int = 800,
     min_samples_leaf: int = 500,
@@ -111,13 +111,15 @@ def main(
 
     print(f"Parametros: t={t_param}, LGD={LGD}, u_bar={u_bar}, T={T}")
 
-    input_path = DATA_DIR / input_csv_name
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    input_path = DATA_DIR / input_parquet_name
     if not input_path.exists():
-        print(f"Erro: {input_csv_name} nao encontrado em {DATA_DIR}")
+        print(f"Erro: {input_parquet_name} nao encontrado em {DATA_DIR}")
         sys.exit(1)
 
-    print(f"\nLendo {input_csv_name}...")
-    df = pd.read_csv(input_path)
+    print(f"\nLendo {input_parquet_name}...")
+    df = pd.read_parquet(input_path)
     total_linhas = len(df)
 
     df = df[df["flag_filtros"] == 0].copy()
@@ -205,18 +207,18 @@ def main(
     print(f"    ck_std medio (intra):      {ck_std_medio:>8.4f}")
     print(f"    reducao de variancia:      {reducao_var:>7.2f}%")
 
-    stem = Path(input_csv_name).stem
-    out_com_cluster = DATA_DIR / f"{stem}_com_cluster.csv"
-    out_clusters = DATA_DIR / f"{stem}_clusters.csv"
+    stem = Path(input_parquet_name).stem
+    out_com_cluster = DATA_DIR / f"{stem}_com_cluster.parquet"
+    out_clusters = DATA_DIR / f"{stem}_clusters.parquet"
 
     print(f"\nSalvando saidas...")
 
     df.drop(columns=["ck_guia"], inplace=True)
-    df.to_csv(out_com_cluster, index=False)
+    df.to_parquet(out_com_cluster, index=False)
     print(f"  {out_com_cluster.name}")
 
     clusters.drop(columns=["ck_std"], inplace=True)
-    clusters.to_csv(out_clusters, index=False)
+    clusters.to_parquet(out_clusters, index=False)
     print(f"  {out_clusters.name}")
 
     print(f"\nConcluido em {time.time() - t_inicio:.1f}s total")
@@ -225,7 +227,7 @@ def main(
 if __name__ == "__main__":
     if len(sys.argv) < 2:
         print("Uso:")
-        print("    python clustering.py <arquivo_clientes.csv> [parametros.json]")
+        print("    python clustering.py <arquivo_calibrado.parquet> [parametros.json]")
         sys.exit(1)
 
     params_json = sys.argv[2] if len(sys.argv) >= 3 else "parametros.json"
