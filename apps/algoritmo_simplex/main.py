@@ -20,7 +20,7 @@ import pandas as pd
 from models import Problema
 from simplex import simplex
 
-# calibrar_pd esta em scripts/ - adicionado ao path uma unica vez no nivel do modulo
+# calibrar_pd está em scripts/ - adicionado ao path uma única vez no nível do módulo
 _SCRIPTS_DIR = str(Path(__file__).resolve().parent.parent.parent / "scripts")
 if _SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, _SCRIPTS_DIR)
@@ -77,9 +77,9 @@ def garantir_calibrado(parquet_nome: str) -> Path:
     if not arquivo_calibrado.exists():
         print(f"Calibrando {parquet_nome}...")
         _calibrar_pd(parquet_nome)
-        print("Calibracao concluida.")
+        print("Calibração concluída.")
     else:
-        print(f"{arquivo_calibrado.name} encontrado. Pulando calibracao.")
+        print(f"{arquivo_calibrado.name} encontrado. Pulando calibração.")
 
     return arquivo_calibrado
 
@@ -107,7 +107,7 @@ def garantir_clusters(
         from clustering import main as clustering_main
 
         clustering_main(parquet_calibrado_nome, params_json_nome)
-        print("Clustering concluido.")
+        print("Clustering concluído.")
     else:
         print(f"Arquivo {arquivo_clusters.name} encontrado. Pulando clustering.")
 
@@ -201,6 +201,70 @@ def exibir_resultado(
         )
 
 
+def executar_pipeline(parquet_path: Path, params: dict) -> dict:
+    """
+    Executa o pipeline completo de otimização a partir de um parquet e um
+    dicionário de parâmetros. Retorna um dicionário estruturado com o resultado.
+
+    Usado pelo backend para chamar o otimizador sem depender de sys.argv
+    nem de arquivo JSON em disco.
+
+    Retorna:
+        status              : status do Simplex ("otimo" ou "multiplas_solucoes")
+        z                   : valor ótimo da função objetivo
+        clusters            : lista de dicts com os parâmetros de cada cluster
+                              e o limite otimizado
+        parquet_com_cluster : path do parquet _com_cluster gerado pelo clustering,
+                              usado pelo backend para persistir a atribuição de
+                              cada cliente ao seu cluster
+    """
+    json_dir = Path(__file__).resolve().parent / "input"
+    json_temp = json_dir / "_params_temp.json"
+
+    try:
+        # escreve os parâmetros num JSON temporário para o clustering
+        json_temp.write_text(json.dumps(params), encoding="utf-8")
+
+        parquet_calibrado = garantir_calibrado(parquet_path.name)
+        df = pd.read_parquet(parquet_calibrado)
+        clusters = garantir_clusters(parquet_calibrado.name, json_temp.name)
+    finally:
+        if json_temp.exists():
+            json_temp.unlink()
+
+    problema = montar_problema(clusters, params, df)
+    x, z, status = simplex(problema)
+
+    resultado_clusters = []
+    for i, row in clusters.iterrows():
+        limite = x[i]
+        limite_final = 50 * round(limite / 50) if limite >= 200 else 0
+        resultado_clusters.append(
+            {
+                "cluster_id": int(row["cluster_id"]),
+                "n_clientes": int(row["n_k"]),
+                "pd_media": float(row["PD_k"]),
+                "pi_media": float(row["pi_k"]),
+                "cp_percentil5": float(row["CP_k"]),
+                "score_credito_cross_medio": float(row["score_cross_mean"]),
+                "ck_medio": float(row["ck_medio"]),
+                "fator_alavancagem": float(row["m_k"]),
+                "limite_otimizado": limite_final,
+            }
+        )
+
+    cache_dir = Path(__file__).resolve().parent.parent.parent / "data" / "cache"
+    stem = parquet_calibrado.stem
+    parquet_com_cluster = cache_dir / f"{stem}_com_cluster.parquet"
+
+    return {
+        "status": status,
+        "z": z,
+        "clusters": resultado_clusters,
+        "parquet_com_cluster": parquet_com_cluster,
+    }
+
+
 def main() -> None:
     if len(sys.argv) < 3:
         print("Uso:")
@@ -215,23 +279,26 @@ def main() -> None:
     arquivo_json = Path(__file__).resolve().parent / "input" / sys.argv[2]
 
     if not arquivo_parquet.exists():
-        print(f"Erro: arquivo {sys.argv[1]} nao encontrado em data/parquet/")
+        print(f"Erro: arquivo {sys.argv[1]} não encontrado em data/parquet/")
         sys.exit(1)
 
     if not arquivo_json.exists():
         print(
-            f"Erro: arquivo JSON {sys.argv[2]} nao encontrado em algoritmo_simplex/input/"
+            f"Erro: arquivo JSON {sys.argv[2]} não encontrado em algoritmo_simplex/input/"
         )
         sys.exit(1)
 
     # executa o pipeline completo
     try:
-        parquet_calibrado = garantir_calibrado(sys.argv[1])
-        df, params = carregar_dados(parquet_calibrado, arquivo_json)
-        clusters = garantir_clusters(parquet_calibrado.name, sys.argv[2])
-        problema = montar_problema(clusters, params, df)
-        x, z, status = simplex(problema)
-        exibir_resultado(x, z, status, clusters)
+        _, params = carregar_dados(arquivo_parquet, arquivo_json)
+        resultado = executar_pipeline(arquivo_parquet, params)
+
+        # lê os clusters do cache para exibição no terminal
+        cache_dir = Path(__file__).resolve().parent.parent.parent / "data" / "cache"
+        stem = Path(sys.argv[1]).stem
+        clusters = pd.read_parquet(cache_dir / f"{stem}_calibrado_clusters.parquet")
+        x = [c["limite_otimizado"] for c in resultado["clusters"]]
+        exibir_resultado(x, resultado["z"], resultado["status"], clusters)
     except FileNotFoundError as e:
         print(f"Erro: {e}")
         sys.exit(1)
