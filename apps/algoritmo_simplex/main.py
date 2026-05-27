@@ -27,33 +27,6 @@ if _SCRIPTS_DIR not in sys.path:
 from calibrar_pd import calibrar as _calibrar_pd
 
 
-def carregar_dados(
-    arquivo_parquet: Path, arquivo_json: Path
-) -> tuple[pd.DataFrame, dict]:
-    """
-    Carrega o parquet calibrado de clientes e o JSON de parâmetros do modelo.
-
-    Retorna:
-        df     : DataFrame com os dados dos clientes
-        params : dicionário com os parâmetros do modelo (t, LGD, u_bar, L_max, T)
-    """
-    df = pd.read_parquet(arquivo_parquet)
-    print(f"Dados carregados: {len(df)} linhas, {len(df.columns)} colunas")
-
-    with open(arquivo_json) as f:
-        params = json.load(f)
-
-    t = params["t"]
-    LGD = params["LGD"]
-    u_bar = params["u_bar"]
-    L_max = params["L_max"]
-    T = params["T"]
-
-    print(f"t={t}, LGD={LGD}, u_bar={u_bar}, L_max={L_max}, T={T}")
-
-    return df, params
-
-
 def calcular_pd_fin_atual(df: pd.DataFrame) -> float:
     """
     Calcula a inadimplência financeira atual da carteira
@@ -290,7 +263,13 @@ def main() -> None:
 
     # executa o pipeline completo
     try:
-        _, params = carregar_dados(arquivo_parquet, arquivo_json)
+        with open(arquivo_json) as f:
+            params = json.load(f)
+
+        print(
+            f"t={params['t']}, LGD={params['LGD']}, u_bar={params['u_bar']}, L_max={params['L_max']}, T={params['T']}"
+        )
+
         resultado = executar_pipeline(arquivo_parquet, params)
 
         # lê os clusters do cache para exibição no terminal
