@@ -1,74 +1,182 @@
+"""
+api/routes.py
+Definição das rotas da API.
+"""
+
+from __future__ import annotations
+
+from uuid import UUID
+
 from fastapi import APIRouter, File, HTTPException, Query, Response, UploadFile
 
-from model.schemas import Cluster, DashboardResponse, GeracaoLimitesResponse, ParametrosModelo, ResultadosResponse
+from model.schemas import (
+    ClienteHistoricoResponse,
+    ClienteResultadoResponse,
+    ClusterResultadoResponse,
+    ConsultaCreate,
+    ConsultaResponse,
+    ParametrosModelo,
+    PaginacaoParams,
+    SafraResponse,
+)
 from services.credit_service import (
-    delete_cluster,
-    export_resultados_csv,
-    gerar_limites,
-    get_dashboard,
-    get_parametros,
-    get_resultados,
-    list_cluster,
-    save_upload,
-    update_parametros,
-    upsert_cluster,
+    criar_consulta,
+    exportar_clientes_csv,
+    get_clientes,
+    get_clusters,
+    get_config,
+    get_consulta,
+    get_consultas,
+    get_historico_cliente,
+    get_safras,
+    update_config,
 )
 
-
 router = APIRouter()
+
 
 @router.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
 
-@router.get("/dashboard", response_model=DashboardResponse)
-def dashboard() -> DashboardResponse:
-    return get_dashboard()
 
-@router.get("/cluster", response_model=list[Cluster])
-def clusters(q: str | None = None, status: str | None = None) -> list[Cluster]:
-    return list_cluster(q=q, status=status)
+# ---------------------------------------------------------------------------
+# Safras
+# ---------------------------------------------------------------------------
 
-@router.post("/cluster", response_model=Cluster, status_code=201)
-def criar_cluster(payload: Cluster) -> Cluster:
-    return upsert_cluster(payload)
 
-@router.delete("/cluster/{cluster_id}", status_code=204)
-def remover_cluster(cluster_id: str) -> Response:
-    deleted = delete_cluster(cluster_id)
-    if not deleted:
-        raise HTTPException(status_code=404, detail="Cluster nao encontrado.")
-    return Response(status_code=204)
+@router.get("/safras", response_model=list[SafraResponse])
+async def listar_safras() -> list[SafraResponse]:
+    return await get_safras()
 
-@router.get("/config", response_model=ParametrosModelo)
-def parametros() -> ParametrosModelo:
-    return get_parametros()
 
-@router.put("/config", response_model=ParametrosModelo)
-def atualizar_parametros(payload: ParametrosModelo) -> ParametrosModelo:
-    return update_parametros(payload)
+# ---------------------------------------------------------------------------
+# Consultas
+# ---------------------------------------------------------------------------
 
-@router.post("/limites/gerar", response_model=GeracaoLimitesResponse)
-async def upload_e_gerar_limites(
+
+@router.get("/consultas", response_model=list[ConsultaResponse])
+async def listar_consultas() -> list[ConsultaResponse]:
+    return await get_consultas()
+
+
+@router.post("/consultas", response_model=ConsultaResponse, status_code=201)
+async def upload_e_criar_consulta(
     file: UploadFile = File(...),
-    n_clusters: int | None = Query(default=None, ge=1, le=30),
-) -> GeracaoLimitesResponse:
+    safra_numero: int | None = Query(default=None, ge=1),
+    usar_safra_existente: bool = Query(default=False),
+    t: float | None = Query(default=None, gt=0),
+    LGD: float | None = Query(default=None, gt=0, le=1),
+    u_bar: float | None = Query(default=None, gt=0, le=1),
+    L_max: float | None = Query(default=None, gt=0),
+    T: float | None = Query(default=None, gt=0),
+) -> ConsultaResponse:
+    """
+    Faz upload do parquet, resolve a safra e dispara o pipeline em background.
+
+    Parâmetros de modelo são opcionais - se omitidos, os valores padrão
+    de ParametrosModelo são utilizados.
+
+    Retorna 409 se safra_numero informado já existir e usar_safra_existente
+    for False, indicando ao front que deve exibir o popup de confirmação.
+    """
+    conteudo = await file.read()
+    nome_arquivo = file.filename or "base.parquet"
+
+    # monta overrides de parâmetros - apenas os que foram informados
+    overrides = {
+        k: v
+        for k, v in {
+            "t": t,
+            "LGD": LGD,
+            "u_bar": u_bar,
+            "L_max": L_max,
+            "T": T,
+        }.items()
+        if v is not None
+    }
+
+    payload = ConsultaCreate(
+        nome_arquivo_parquet=nome_arquivo,
+        safra_numero=safra_numero,
+        parametros=ParametrosModelo(**{**ParametrosModelo().model_dump(), **overrides}),
+    )
+
     try:
-        path = save_upload(file.filename or "base.csv", await file.read())
-        return gerar_limites(path, n_clusters=n_clusters)
+        return await criar_consulta(payload, conteudo)
     except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
 
 
-@router.get("/resultados", response_model=ResultadosResponse)
-def resultados() -> ResultadosResponse:
-    return get_resultados()
+@router.get("/consultas/{consulta_id}", response_model=ConsultaResponse)
+async def detalhe_consulta(consulta_id: UUID) -> ConsultaResponse:
+    consulta = await get_consulta(consulta_id)
+    if consulta is None:
+        raise HTTPException(status_code=404, detail="Consulta não encontrada.")
+    return consulta
 
-@router.get("/resultados/export")
-def exportar_resultados() -> Response:
-    csv = export_resultados_csv()
+
+@router.get(
+    "/consultas/{consulta_id}/clusters", response_model=list[ClusterResultadoResponse]
+)
+async def listar_clusters(consulta_id: UUID) -> list[ClusterResultadoResponse]:
+    clusters = await get_clusters(consulta_id)
+    if clusters is None:
+        raise HTTPException(status_code=404, detail="Consulta não encontrada.")
+    return clusters
+
+
+@router.get(
+    "/consultas/{consulta_id}/clientes", response_model=list[ClienteResultadoResponse]
+)
+async def listar_clientes(
+    consulta_id: UUID,
+    limit: int = Query(default=100, ge=1, le=1000),
+    offset: int = Query(default=0, ge=0),
+) -> list[ClienteResultadoResponse]:
+    clientes = await get_clientes(consulta_id, limit=limit, offset=offset)
+    if clientes is None:
+        raise HTTPException(status_code=404, detail="Consulta não encontrada.")
+    return clientes
+
+
+@router.get("/consultas/{consulta_id}/clientes/export")
+async def exportar_clientes(consulta_id: UUID) -> Response:
+    csv = await exportar_clientes_csv(consulta_id)
+    if csv is None:
+        raise HTTPException(status_code=404, detail="Consulta não encontrada.")
     return Response(
         content=csv,
         media_type="text/csv",
-        headers={"Content-Disposition": 'attachment; filename="resultados_limites.csv"'},
+        headers={
+            "Content-Disposition": f'attachment; filename="clientes_{consulta_id}.csv"'
+        },
     )
+
+
+# ---------------------------------------------------------------------------
+# Clientes
+# ---------------------------------------------------------------------------
+
+
+@router.get("/clientes/{token}", response_model=ClienteHistoricoResponse)
+async def historico_cliente(token: int) -> ClienteHistoricoResponse:
+    historico = await get_historico_cliente(token)
+    if historico is None:
+        raise HTTPException(status_code=404, detail="Cliente não encontrado.")
+    return historico
+
+
+# ---------------------------------------------------------------------------
+# Configuração
+# ---------------------------------------------------------------------------
+
+
+@router.get("/config", response_model=ParametrosModelo)
+async def get_parametros() -> ParametrosModelo:
+    return await get_config()
+
+
+@router.put("/config", response_model=ParametrosModelo)
+async def atualizar_parametros(payload: ParametrosModelo) -> ParametrosModelo:
+    return await update_config(payload)
