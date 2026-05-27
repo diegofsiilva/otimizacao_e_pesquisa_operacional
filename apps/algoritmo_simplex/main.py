@@ -3,13 +3,13 @@ algoritmo_simplex/main.py
 Entrada de dados e execução do modelo de otimização de limites de crédito.
 
 Uso:
-    python main.py <arquivo_clientes.csv> <parametros.json>
+    python main.py <arquivo.parquet> <parametros.json>
 
     Exemplo:
-        python main.py clientes_calibrado.csv parametros_producao.json
-        python main.py clientes_calibrado.csv parametros_teste.json
+        python main.py base_ref_M1_v2.parquet parametros_producao.json
+        python main.py base_ref_M1_v2.parquet parametros_teste.json
 
-Arquivos CSV devem estar em data/csv/
+Arquivos parquet devem estar em data/parquet/
 Arquivos JSON devem estar em apps/algoritmo_simplex/input/
 """
 
@@ -21,15 +21,17 @@ from models import Problema
 from simplex import simplex
 
 
-def carregar_dados(arquivo_csv: Path, arquivo_json: Path) -> tuple[pd.DataFrame, dict]:
+def carregar_dados(
+    arquivo_parquet: Path, arquivo_json: Path
+) -> tuple[pd.DataFrame, dict]:
     """
-    Carrega o CSV de clientes e o JSON de parâmetros do modelo.
+    Carrega o parquet calibrado de clientes e o JSON de parâmetros do modelo.
 
     Retorna:
         df     : DataFrame com os dados dos clientes
         params : dicionário com os parâmetros do modelo (t, LGD, u_bar, L_max, T)
     """
-    df = pd.read_csv(arquivo_csv)
+    df = pd.read_parquet(arquivo_parquet)
     print(f"Dados carregados: {len(df)} linhas, {len(df.columns)} colunas")
 
     with open(arquivo_json) as f:
@@ -56,32 +58,59 @@ def calcular_pd_fin_atual(df: pd.DataFrame) -> float:
     return pd_fin_atual
 
 
-def garantir_clusters(arquivo_csv_nome: str, params_json_nome: str) -> pd.DataFrame:
+def garantir_calibrado(parquet_nome: str) -> Path:
     """
-    Verifica se o arquivo clusterizado já existe. Se não existir, roda o clustering.
+    Verifica se o parquet calibrado existe em data/cache/.
+    Se não existir, roda a calibração.
+    Retorna o path do parquet calibrado.
+    """
+    cache_dir = Path(__file__).resolve().parent.parent.parent / "data" / "cache"
+    stem = Path(parquet_nome).stem
+    arquivo_calibrado = cache_dir / f"{stem}_calibrado.parquet"
+
+    if not arquivo_calibrado.exists():
+        print(f"Calibrando {parquet_nome}...")
+        scripts_dir = str(Path(__file__).resolve().parent.parent.parent / "scripts")
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
+        from calibrar_pd import calibrar
+
+        calibrar(parquet_nome)
+        print("Calibracao concluida.")
+    else:
+        print(f"{arquivo_calibrado.name} encontrado. Pulando calibracao.")
+
+    return arquivo_calibrado
+
+
+def garantir_clusters(
+    parquet_calibrado_nome: str, params_json_nome: str
+) -> pd.DataFrame:
+    """
+    Verifica se o arquivo clusterizado já existe em data/cache/. Se não existir, roda o clustering.
     Passa o parametros.json para o clustering para garantir que T seja consistente.
 
     Retorna:
         clusters : DataFrame com os parâmetros agregados por cluster
     """
-    stem = Path(arquivo_csv_nome).stem
+    stem = Path(parquet_calibrado_nome).stem
     arquivo_clusters = (
         Path(__file__).resolve().parent.parent.parent
         / "data"
-        / "csv"
-        / f"{stem}_clusters.csv"
+        / "cache"
+        / f"{stem}_clusters.parquet"
     )
 
     if not arquivo_clusters.exists():
         print(f"Gerando clusters para {arquivo_clusters.name}...")
         from clustering import main as clustering_main
 
-        clustering_main(arquivo_csv_nome, params_json_nome)
-        print("Clustering concluído.")
+        clustering_main(parquet_calibrado_nome, params_json_nome)
+        print("Clustering concluido.")
     else:
         print(f"Arquivo {arquivo_clusters.name} encontrado. Pulando clustering.")
 
-    clusters = pd.read_csv(arquivo_clusters)
+    clusters = pd.read_parquet(arquivo_clusters)
     print(f"Clusters carregados: {len(clusters)} clusters")
     return clusters
 
@@ -174,29 +203,30 @@ def exibir_resultado(
 def main() -> None:
     if len(sys.argv) < 3:
         print("Uso:")
-        print("    python main.py <arquivo_clientes.csv> <parametros.json>")
+        print("    python main.py <arquivo.parquet> <parametros.json>")
         print("Exemplo:")
-        print("    python main.py clientes_calibrado.csv parametros.json")
+        print("    python main.py base_ref_M1_v2.parquet parametros.json")
         sys.exit(1)
 
-    arquivo_csv = (
-        Path(__file__).resolve().parent.parent.parent / "data" / "csv" / sys.argv[1]
+    arquivo_parquet = (
+        Path(__file__).resolve().parent.parent.parent / "data" / "parquet" / sys.argv[1]
     )
     arquivo_json = Path(__file__).resolve().parent / "input" / sys.argv[2]
 
-    if not arquivo_csv.exists():
-        print(f"Erro: arquivo CSV {sys.argv[1]} não encontrado em data/csv/")
+    if not arquivo_parquet.exists():
+        print(f"Erro: arquivo {sys.argv[1]} nao encontrado em data/parquet/")
         sys.exit(1)
 
     if not arquivo_json.exists():
         print(
-            f"Erro: arquivo JSON {sys.argv[2]} não encontrado em algoritmo_simplex/input/"
+            f"Erro: arquivo JSON {sys.argv[2]} nao encontrado em algoritmo_simplex/input/"
         )
         sys.exit(1)
 
     # executa o pipeline completo
-    df, params = carregar_dados(arquivo_csv, arquivo_json)
-    clusters = garantir_clusters(sys.argv[1], sys.argv[2])
+    parquet_calibrado = garantir_calibrado(sys.argv[1])
+    df, params = carregar_dados(parquet_calibrado, arquivo_json)
+    clusters = garantir_clusters(parquet_calibrado.name, sys.argv[2])
     problema = montar_problema(clusters, params, df)
     x, z, status = simplex(problema)
     exibir_resultado(x, z, status, clusters)
