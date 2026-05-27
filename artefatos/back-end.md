@@ -1,4 +1,4 @@
-# Algoritmo Simplex
+# Otimizador e Back-end
 
 ## Contextualização
 
@@ -7,6 +7,8 @@ O Banco Pan oferece cartões de crédito pré-aprovados a clientes correntistas.
 O objetivo deste projeto é substituir essa regra empírica por uma decisão matemática: encontrar, para cada grupo de clientes com perfil semelhante, o limite que **maximize o retorno líquido esperado do banco**, definido como a receita de interchange menos a perda esperada por inadimplência, respeitando restrições de risco e capacidade de pagamento definidas pelo parceiro.
 
 Para isso, o problema foi formulado como um **Problema de Programação Linear (PL)**, onde as variáveis de decisão são os limites de crédito a serem atribuídos a cada grupo de clientes. A solução desse PL é encontrada por meio do **algoritmo Simplex**, implementado neste artefato.
+
+---
 
 ## O problema de programação linear
 
@@ -53,6 +55,8 @@ onde $CP_k$ é o percentil 5 da capacidade de pagamento dos clientes do cluster 
 **R3 - Teto máximo de limite:** nenhum cluster pode receber um limite acima do teto absoluto definido pelo parceiro:
 
 $$L_k \leq L^{max}, \quad \forall k$$
+
+---
 
 ## O algoritmo Simplex
 
@@ -120,9 +124,41 @@ O pivotamento é a operação que reescreve o tableau para refletir a nova base.
 
 **Degeneração:** quando duas ou mais linhas empatam no teste da razão mínima, uma variável entra na base com valor zero. Sem tratamento, isso pode causar ciclagem infinita. A Regra de Bland, já mencionada no critério de entrada, resolve esse problema.
 
-## Estrutura da implementação
+---
 
-A implementação está organizada em três arquivos dentro de `apps/algoritmo_simplex/`:
+## Estrutura da implementação do otimizador
+
+Os arquivos do otimizador estão em `apps/algoritmo_simplex/`:
+
+```
+apps/algoritmo_simplex/
+├── models.py          # estruturas de dados (Problema, Tableau)
+├── simplex.py         # implementação do algoritmo Simplex
+├── clustering.py      # clusterização CART e agregação dos parâmetros por cluster
+├── main.py            # orquestração do pipeline completo
+└── input/
+    └── parametros.json    # parâmetros padrão do modelo
+```
+
+Os scripts de suporte estão em `scripts/`:
+
+```
+scripts/
+├── calibrar_pd.py         # aplica gammas por decil sobre o parquet bruto
+├── setup_tabela_gamma.py  # setup único: estima gammas das safras históricas
+└── utils/
+    └── convert_parquet_to_csv.py   # utilitário avulso de conversão
+```
+
+Os dados transitam pelas pastas:
+
+```
+data/
+├── parquet/     # parquets brutos das safras (entrada do pipeline)
+├── cache/       # parquets calibrados e clusterizados (gerados automaticamente)
+└── csv/
+    └── tabela_gamma_decil.csv   # artefato de modelo, versionado no repositório
+```
 
 ### `models.py`
 
@@ -137,26 +173,31 @@ Implementação pura do algoritmo Simplex, sem nenhuma dependência da lógica d
 
 ### `clustering.py`
 
-Agrupa os clientes elegíveis em $K$ clusters usando CART e calcula os parâmetros agregados necessários para o LP: $n_k$, $PD_k$, $\pi_k$, $CP_k$ e $m_k$. Detalhes na seção de Clusterização.
+Agrupa os clientes elegíveis em $K$ clusters usando CART e calcula os parâmetros agregados necessários para o LP: $n_k$, $PD_k$, $\pi_k$, $CP_k$ e $m_k$. Lê o parquet calibrado de `data/cache/` e salva os resultados de volta em `data/cache/`. Detalhes na seção de Clusterização.
 
 ### `main.py`
 
-Orquestra o pipeline completo:
+Orquestra o pipeline completo e expõe duas interfaces:
 
-1. Leitura do CSV de clientes e do JSON de parâmetros
-2. Cálculo de $\overline{PD}_{fin}^{atual}$
-3. Verificação de cache: se o arquivo clusterizado já existir, a clusterização é pulada
+- **CLI:** `python main.py <arquivo.parquet> <parametros.json>` - uso direto no terminal
+- **`executar_pipeline(parquet_path, params)`:** função pública chamada pelo back-end, recebe um `Path` e um dicionário de parâmetros, retorna um dicionário estruturado com o resultado
+
+O pipeline interno segue os passos:
+
+1. Verificação de cache da calibração: se o parquet calibrado não existir em `data/cache/`, chama `calibrar_pd.py` automaticamente
+2. Verificação de cache da clusterização: se o parquet clusterizado não existir, chama `clustering.py` automaticamente
+3. Cálculo de $\overline{PD}_{fin}^{atual}$
 4. Montagem do problema ($c$, $A$, $b$) a partir dos clusters - restrições R1, R2 e R3
 5. Execução do Simplex
-6. Pós-otimização e exibição dos resultados
+6. Pós-otimização e retorno dos resultados
+
+---
 
 ## Parâmetros de entrada
 
-A solução recebe dois arquivos como entrada:
+### Parquet de clientes
 
-### CSV de clientes
-
-Arquivo com os dados individuais dos clientes calibrados, localizado em `data/csv/`. As colunas utilizadas pelo modelo são:
+Arquivo com os dados individuais dos clientes, localizado em `data/parquet/` (uso via CLI) ou em `apps/backend/uploads/` (quando enviado pelo front-end). As colunas utilizadas pelo modelo são:
 
 | Coluna                     | Descrição                                                                              |
 | -------------------------- | -------------------------------------------------------------------------------------- |
@@ -189,6 +230,8 @@ Onde:
 - `u_bar`: fração esperada de utilização do limite (75%)
 - `L_max`: teto máximo absoluto de limite por cluster (R$25.000), definido pelo parceiro
 - `T`: horizonte de uso do limite em meses (22), definido pelo parceiro
+
+---
 
 ## Clusterização de Clientes Elegíveis
 
@@ -362,9 +405,11 @@ A clusterização existe para tornar o LP computacionalmente viável, substituin
 
 O CART, usando `c_k` como variável-guia, é o algoritmo que garante essa homogeneidade. Ele supera o K-Means por encontrar cortes naturais e produzir regras interpretáveis, e supera o HDBSCAN por escalar para o número de clusters necessário e por ser guiado pelo objetivo do negócio, e não pela geometria dos dados.
 
+---
+
 ## Calibração da PD
 
-Antes da clusterização, a `pd_produto` de cada cliente é calibrada pelo script `calibrar_pd.py`, que aplica fatores gamma por decil de risco calculados em `analise_09_calibracao_final.py`.
+Antes da clusterização, a `pd_produto` de cada cliente é calibrada pelo script `calibrar_pd.py`, que aplica fatores gamma por decil de risco calculados em `setup_tabela_gamma.py`.
 
 A calibração segue dois passos:
 
@@ -373,43 +418,42 @@ A calibração segue dois passos:
 
 Os decis D1-D4 possuem estimativas empíricas robustas (2.200 a 6.500 observações cada). D5 tem 103 observações com IC95 mais largo. D6-D10 têm menos de 16 observações cada e recebem gamma por extrapolação linear - limitação estrutural dos dados, pois clientes de alto risco raramente foram aprovados historicamente.
 
-## Dependências
+---
 
-As dependências do projeto estão listadas em `apps/algoritmo_simplex/requirements.txt`. Para instalá-las:
+## Execução do otimizador
+
+### Dependências
 
 ```bash
-pip install -r requirements.txt
+pip install -r apps/algoritmo_simplex/requirements.txt
 ```
-
-As bibliotecas utilizadas são:
 
 | Biblioteca     | Uso                                            |
 | -------------- | ---------------------------------------------- |
-| `pandas`       | Leitura e manipulação dos arquivos CSV         |
+| `pandas`       | Leitura e manipulação dos parquets             |
 | `scikit-learn` | Algoritmo CART para clusterização dos clientes |
 | `numpy`        | Cálculo de percentis na agregação dos clusters |
+| `pyarrow`      | Leitura e escrita de arquivos parquet          |
 
 O algoritmo Simplex em si não utiliza nenhuma biblioteca externa, foi implementado do zero com Python puro.
 
-## Execução
+### Executando via CLI
 
-A partir do diretório raíz do projeto (`g04/`):
+A partir do diretório raíz do projeto:
 
 ```bash
-python apps/algoritmo_simplex/main.py <arquivo_clientes_calibrado.csv> <parametros.json>
+python apps/algoritmo_simplex/main.py <arquivo.parquet> <parametros.json>
 ```
 
 Exemplo:
 
 ```bash
-python apps/algoritmo_simplex/main.py clientes_m1_calibrado.csv parametros.json
+python apps/algoritmo_simplex/main.py base_ref_M1_v2.parquet parametros.json
 ```
 
-Na primeira execução, a clusterização é gerada automaticamente e salva em `data/csv/<nome>_clusters.csv`. Nas execuções seguintes, o arquivo clusterizado é reutilizado, tornando a execução significativamente mais rápida.
+O parquet deve estar em `data/parquet/`. Na primeira execução, a calibração e a clusterização são geradas automaticamente e salvas em `data/cache/`. Nas execuções seguintes, os arquivos em cache são reutilizados, tornando a execução significativamente mais rápida.
 
-## Saída dos dados
-
-Ao final da execução, o algoritmo exibe no console o status da solução, o valor ótimo da função objetivo e o limite otimizado para cada cluster:
+### Saída
 
 ```
 Status: otimo
@@ -428,7 +472,9 @@ Os limites exibidos já passaram pela pós-otimização definida pelo parceiro:
 - Limites abaixo de R$200 são convertidos para R$0, indicando que o cluster não deve receber oferta
 - Limites acima de R$200 são arredondados para o múltiplo de R$50 mais próximo
 
-## Testes realizados
+---
+
+## Testes realizados no otimizador
 
 ### Teste 1: Validação do algoritmo com problema de solução conhecida
 
@@ -502,7 +548,7 @@ O algoritmo detectou corretamente a existência de múltiplas soluções e retor
 
 ### Teste 4: Execução com base M1, parâmetros padrão
 
-**Entrada:** `clientes_m1_calibrado.csv` com parâmetros `t=0.0175`, `LGD=0.8`, `u_bar=0.75`, `T=22`, `L_max=25000`.
+**Entrada:** `base_ref_M1_v2.parquet` com parâmetros `t=0.0175`, `LGD=0.8`, `u_bar=0.75`, `T=22`, `L_max=25000`.
 
 **Saída obtida:**
 
@@ -524,7 +570,7 @@ Estatísticas dos clusters com oferta (L > 0):
 
 ### Teste 5: Sensibilidade a parâmetros - M1 com parâmetros alternativos
 
-**Entrada:** `clientes_m1_calibrado.csv` com parâmetros `t=0.018`, `LGD=0.7`, `u_bar=0.8`, `T=22`, `L_max=25000`.
+**Entrada:** `base_ref_M1_v2.parquet` com parâmetros `t=0.018`, `LGD=0.7`, `u_bar=0.8`, `T=22`, `L_max=25000`.
 
 **Saída obtida:**
 
@@ -546,7 +592,7 @@ Estatísticas dos clusters com oferta (L > 0):
 
 ### Teste 6: Execução com base M2, parâmetros padrão
 
-**Entrada:** `clientes_m2_calibrado.csv` com parâmetros `t=0.0175`, `LGD=0.8`, `u_bar=0.75`, `T=22`, `L_max=25000`.
+**Entrada:** `base_ref_M2_v2.parquet` com parâmetros `t=0.0175`, `LGD=0.8`, `u_bar=0.75`, `T=22`, `L_max=25000`.
 
 **Saída obtida:**
 
@@ -564,11 +610,11 @@ Estatísticas dos clusters com oferta (L > 0):
 | Média   | R$ 920          | 2.343                |
 | Mediana | R$ 450          | 1.844                |
 
-356 clusters receberam oferta, totalizando 834.225 clientes (46,2% dos 1.805.274 elegíveis de M2). O valor ótimo de M2 (R$36,9M) é comparável ao de M1 (R$36,2M), indicando consistência do modelo entre safras. O limite médio levemente maior em M2 (R$920 vs R$844) reflete diferenças na composição de risco da safra.
+356 clusters receberam oferta, totalizando 834.225 clientes (46,2% dos 1.805.274 elegíveis de M2). O valor ótimo de M2 (R$36,9M) é comparável ao de M1 (R$36,2M), indicando consistência do modelo entre safras.
 
 ### Teste 7: Execução com base M3, parâmetros padrão
 
-**Entrada:** `clientes_m3_calibrado.csv` com parâmetros `t=0.0175`, `LGD=0.8`, `u_bar=0.75`, `T=22`, `L_max=25000`.
+**Entrada:** `base_ref_M3_v2.parquet` com parâmetros `t=0.0175`, `LGD=0.8`, `u_bar=0.75`, `T=22`, `L_max=25000`.
 
 **Saída obtida:**
 
@@ -586,11 +632,250 @@ Estatísticas dos clusters com oferta (L > 0):
 | Média   | R$ 727          | 4.012                |
 | Mediana | R$ 550          | 3.646                |
 
-437 clusters receberam oferta, totalizando 1.753.121 clientes (55,9% dos 3.137.258 elegíveis de M3). O valor ótimo de M3 (R$60,8M) é significativamente maior que o de M1 e M2 porque a safra M3 possui quase o dobro de clientes elegíveis. A `PD_fin_atual` de M3 (0,2094) é ligeiramente mais alta que as demais safras, o que relaxa a restrição R1 e permite que o modelo aprove uma proporção maior dos elegíveis. O maior cluster ofertado (n=14.240) recebeu limite de R$350, refletindo um perfil de risco moderado com alta capacidade de pagamento.
+437 clusters receberam oferta, totalizando 1.753.121 clientes (55,9% dos 3.137.258 elegíveis de M3). O valor ótimo de M3 (R$60,8M) é significativamente maior que o de M1 e M2 porque a safra M3 possui quase o dobro de clientes elegíveis.
+
+---
+
+## Back-end
+
+### Visão geral
+
+O back-end é uma API REST construída com **FastAPI** que expõe o pipeline de otimização ao front-end. Quando o usuário faz upload de um parquet, a API salva o arquivo, cria um registro de consulta no banco de dados e dispara o pipeline de otimização **de forma assíncrona** - o endpoint retorna imediatamente com o status `pendente`, sem bloquear a aplicação enquanto o Simplex executa.
+
+O front-end pode então consultar o status da execução a qualquer momento, e quando ela concluir, acessar os resultados por consulta, cluster ou cliente individual.
+
+### Estrutura de pastas
+
+```
+apps/backend/
+├── main.py              # ponto de entrada FastAPI, lifespan com pool asyncpg
+├── run_server.py        # script de inicialização via uvicorn
+├── config.py            # variáveis de ambiente
+├── requirements.txt     # dependências Python
+├── .env.example         # template de variáveis de ambiente
+├── api/
+│   └── routes.py        # definição de todos os endpoints
+├── db/
+│   ├── storage.py       # pool asyncpg, execução de migrations
+│   └── migrations/      # arquivos SQL de criação das tabelas
+│       ├── 001_create_safras.sql
+│       ├── 002_create_consultas.sql
+│       ├── 003_create_clusters_resultado.sql
+│       ├── 004_create_clientes_resultado.sql
+│       ├── 005_create_config.sql
+│       └── 006_seed_config.sql
+├── model/
+│   └── schemas.py       # schemas Pydantic de entrada e saída
+├── services/
+│   └── credit_service.py   # lógica de negócio e integração com o otimizador
+└── uploads/             # parquets recebidos via upload
+```
+
+### Banco de dados
+
+O back-end utiliza **PostgreSQL** com acesso via `asyncpg`. As migrations são executadas automaticamente na inicialização da aplicação. O esquema é composto por cinco tabelas:
+
+**`safras`** - cada safra representa um conjunto de clientes de um período (M1, M2, M3...). Ao fazer upload, o usuário pode informar um número de safra ou deixar o back-end atribuir automaticamente o próximo disponível.
+
+**`consultas`** - cada execução do pipeline é uma consulta. Registra os parâmetros utilizados, o status do processamento (`pendente`, `executando`, `concluido`, `erro`), o resultado da otimização (valor ótimo `z`, status do LP) e estatísticas da base processada.
+
+**`clusters_resultado`** - os 800 clusters gerados pelo CART, com todos os parâmetros agregados ($n_k$, $PD_k$, $\pi_k$, $CP_k$, $m_k$) e o limite otimizado pelo Simplex.
+
+**`clientes_resultado`** - todos os clientes elegíveis da base, com seus dados originais do parquet, os campos derivados pelo pipeline (`pd_calibrada`, `pi_normalizado`, `cp_proxy`) e a atribuição de cluster e limite. Permite buscar o histórico de um cliente específico por token ao longo de múltiplas consultas.
+
+**`parametros_modelo`** - tabela de configuração com uma única linha, contendo os parâmetros padrão do modelo. Pode ser atualizada via `PUT /api/config`.
+
+### Integração assíncrona com o otimizador
+
+A integração entre o back-end e o otimizador é realizada de forma assíncrona usando `BackgroundTasks` do FastAPI combinado com `asyncio.run_in_executor`. O pipeline do otimizador é bloqueante (execução do Simplex pode levar minutos), então ele é executado numa thread pool separada, sem bloquear a event loop do FastAPI. O fluxo é:
+
+1. `POST /api/consultas` recebe o parquet e retorna imediatamente com `status_consulta: "pendente"`
+2. A `BackgroundTask` inicia e atualiza o status para `"executando"`
+3. O pipeline roda em thread pool: calibração → clusterização → Simplex
+4. Os resultados são persistidos no banco via bulk insert (`copy_records_to_table`)
+5. O status é atualizado para `"concluido"` com todos os campos de resultado
+6. Em caso de erro, o status vai para `"erro"` com `erro_etapa` e `erro_mensagem`
+
+O front-end acompanha o progresso fazendo polling em `GET /api/consultas/{id}`.
+
+### Endpoints
+
+Todos os endpoints têm o prefixo `/api`.
+
+#### Saúde
+
+| Método | Rota      | Descrição                    |
+| ------ | --------- | ---------------------------- |
+| `GET`  | `/health` | Verifica se a API está no ar |
+
+#### Safras
+
+| Método | Rota      | Descrição                         |
+| ------ | --------- | --------------------------------- |
+| `GET`  | `/safras` | Lista todas as safras cadastradas |
+
+#### Consultas
+
+| Método | Rota                              | Descrição                                                                |
+| ------ | --------------------------------- | ------------------------------------------------------------------------ |
+| `GET`  | `/consultas`                      | Lista todas as consultas, da mais recente para a mais antiga             |
+| `POST` | `/consultas`                      | Upload do parquet e criação da consulta (dispara pipeline em background) |
+| `GET`  | `/consultas/{id}`                 | Status e resultado de uma consulta específica                            |
+| `GET`  | `/consultas/{id}/clusters`        | Clusters com parâmetros e limites otimizados                             |
+| `GET`  | `/consultas/{id}/clientes`        | Clientes da consulta, paginados (`limit` e `offset`)                     |
+| `GET`  | `/consultas/{id}/clientes/export` | Download dos clientes da consulta em CSV                                 |
+
+#### Clientes
+
+| Método | Rota                | Descrição                                              |
+| ------ | ------------------- | ------------------------------------------------------ |
+| `GET`  | `/clientes/{token}` | Histórico completo de um cliente em todas as consultas |
+
+#### Configuração
+
+| Método | Rota      | Descrição                               |
+| ------ | --------- | --------------------------------------- |
+| `GET`  | `/config` | Retorna os parâmetros padrão do modelo  |
+| `PUT`  | `/config` | Atualiza os parâmetros padrão do modelo |
+
+#### Parâmetros do `POST /consultas`
+
+Todos os campos são opcionais. Se omitidos, o back-end usa os valores padrão.
+
+| Parâmetro              | Tipo     | Descrição                                                                         |
+| ---------------------- | -------- | --------------------------------------------------------------------------------- |
+| `file`                 | arquivo  | Parquet da safra a ser processada (obrigatório)                                   |
+| `safra_numero`         | inteiro  | Número da safra (ex: 1 para M1). Se omitido, usa MAX+1 ou M1                      |
+| `usar_safra_existente` | booleano | Se `true` e o número já existir, vincula à safra existente em vez de retornar 409 |
+| `t`                    | número   | Override da taxa de interchange                                                   |
+| `LGD`                  | número   | Override do Loss Given Default                                                    |
+| `u_bar`                | número   | Override da fração de utilização                                                  |
+| `L_max`                | número   | Override do teto máximo de limite                                                 |
+| `T`                    | número   | Override do horizonte em meses                                                    |
+
+Quando `safra_numero` informado já existe e `usar_safra_existente` é `false`, a API retorna `409 Conflict`. O front-end deve exibir um popup perguntando se o usuário quer usar a safra existente ou criar uma nova, e reenviar a requisição com `usar_safra_existente=true` ou sem `safra_numero`.
+
+### Dependências
+
+```bash
+pip install -r apps/backend/requirements.txt
+```
+
+| Biblioteca          | Uso                                                |
+| ------------------- | -------------------------------------------------- |
+| `fastapi`           | Framework web assíncrono                           |
+| `uvicorn[standard]` | Servidor ASGI                                      |
+| `asyncpg`           | Driver PostgreSQL assíncrono                       |
+| `pandas`            | Leitura do parquet e construção do bulk insert     |
+| `pyarrow`           | Leitura de metadados do parquet sem carregar dados |
+| `python-multipart`  | Upload de arquivos via multipart/form-data         |
+| `numpy`             | Operações vetorizadas no pipeline                  |
+| `scikit-learn`      | CART para clusterização (chamado pelo otimizador)  |
+
+### Variáveis de ambiente
+
+Copie `.env.example` para `.env` e preencha os valores:
+
+```bash
+cp apps/backend/.env.example apps/backend/.env
+```
+
+| Variável           | Descrição                                      | Padrão                  |
+| ------------------ | ---------------------------------------------- | ----------------------- |
+| `APP_HOST`         | Endereço de bind do servidor                   | `127.0.0.1`             |
+| `APP_PORT`         | Porta do servidor                              | `8000`                  |
+| `FRONTEND_ORIGINS` | Origens CORS permitidas, separadas por vírgula | `http://localhost:3000` |
+| `UPLOAD_DIR`       | Pasta onde os parquets enviados são salvos     | `./uploads`             |
+| `DB_HOST`          | Endereço do servidor PostgreSQL                | -                       |
+| `DB_PORT`          | Porta do PostgreSQL                            | `5432`                  |
+| `DB_DATABASE`      | Nome do banco de dados                         | -                       |
+| `DB_USER`          | Usuário do banco                               | -                       |
+| `DB_PASSWORD`      | Senha do banco                                 | -                       |
+
+### Execução do back-end
+
+A partir do diretório `apps/backend/`:
+
+```bash
+python run_server.py
+```
+
+Na inicialização, o servidor:
+
+1. Cria o pool de conexões com o PostgreSQL
+2. Executa as migrations pendentes (cria as tabelas se não existirem)
+3. Inicia o servidor na porta configurada
+
+A documentação interativa dos endpoints fica disponível em `http://127.0.0.1:8000/docs`.
+
+### Testes realizados no back-end
+
+#### Teste 1: Upload e pipeline completo com M1
+
+**Requisição:**
+
+```bash
+curl -X POST "http://127.0.0.1:8000/api/consultas" \
+  -F "file=@apps/backend/uploads/base_ref_M1_v2.parquet"
+```
+
+**Resultado:**
+
+```json
+{
+  "id": "3cf613e8-6197-4213-841d-62f1d9e890af",
+  "status_consulta": "concluido",
+  "status_lp": "otimo",
+  "z_otimo": 34071836.0,
+  "n_clientes_total": 14569142,
+  "n_clientes_elegiveis": 1836085,
+  "n_clientes_ofertados": 876677,
+  "n_clusters": 150
+}
+```
+
+Pipeline completo executado com sucesso. Status transitou de `pendente` → `executando` → `concluido`.
+
+#### Teste 2: Listagem de clusters
+
+```bash
+curl "http://127.0.0.1:8000/api/consultas/3cf613e8-.../clusters"
+```
+
+Retornou 150 clusters com todos os campos (`cluster_id`, `n_clientes`, `pd_media`, `pi_media`, `cp_percentil5`, `score_credito_cross_medio`, `ck_medio`, `fator_alavancagem`, `limite_otimizado`).
+
+#### Teste 3: Listagem paginada de clientes
+
+```bash
+curl "http://127.0.0.1:8000/api/consultas/3cf613e8-.../clientes?limit=5"
+```
+
+Retornou 5 clientes com todos os campos do parquet original, campos derivados pelo pipeline e atribuição de cluster e limite.
+
+#### Teste 4: Histórico de cliente por token
+
+```bash
+curl "http://127.0.0.1:8000/api/clientes/3"
+```
+
+Retornou o histórico do token 3 com todos os dados da consulta em que apareceu.
+
+#### Teste 5: Consulta de token inexistente
+
+```bash
+curl "http://127.0.0.1:8000/api/clientes/0"
+```
+
+Retornou `404 Not Found` - token 0 é inelegível (`flag_filtros != 0`) e não foi persistido, comportamento correto.
+
+---
 
 ## Conclusões
 
-O algoritmo Simplex foi implementado do zero, sem uso de bibliotecas de otimização, e validado contra problemas com solução analítica conhecida. O pipeline completo - calibração da PD, clusterização por CART com K=800, montagem do LP e execução do Simplex - está funcional e documentado para as safras M1 e M2 da base completa de elegíveis.
+A escolha do Simplex como algoritmo de otimização é adequada à natureza do problema: o LP de limites de crédito tem estrutura totalmente linear, com variáveis contínuas e não-negatividade garantida pela formulação. Algoritmos exatos como o Simplex convergem para o ótimo global nessa classe de problemas, o que é essencial num contexto regulatório onde o banco precisa justificar as decisões de crédito.
+
+A clusterização via CART com K=800 e variável-guia c_k resolve um desafio prático central: tornar o LP viável computacionalmente sem comprometer a qualidade da solução. A escolha de K=800 não é arbitrária - decorre de uma varredura empírica sobre as três safras que identificou o ponto de retorno marginal decrescente, capturando 98,4% do retorno máximo teórico.
+Os testes com as safras M1, M2 e M3 mostram consistência do modelo entre períodos distintos: os valores ótimos são comparáveis entre M1 e M2 (R$36,2M e R$36,9M respectivamente) e o modelo se comporta de forma previsível ao variar os parâmetros, com o z aumentando 18,9% ao relaxar LGD e elevar t no Teste 5.
 
 Os próximos passos previstos são:
 
