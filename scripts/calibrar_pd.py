@@ -2,7 +2,7 @@
 scripts/calibrar_pd.py
 
 Calibra a pd_produto de cada cliente usando os fatores gamma por decil,
-calculados pelo script analise_09_calibracao_final.py.
+calculados pelo script setup_tabela_gamma.py.
 
 A pd_calibrada e calculada como:
     pd_calibrada(i) = pd_produto(i) * gamma(decil(i))
@@ -11,10 +11,10 @@ Os limites dos decis sao os percentis de pd_produto calculados sobre a
 populacao elegivel completa (flag_filtros == 0) nas 3 safras combinadas.
 
 Uso:
-    python calibrar_pd.py <arquivo_clientes.csv>
+    python calibrar_pd.py <arquivo.parquet>
 
-Arquivos CSV de entrada devem estar em data/csv/
-Arquivos CSV de saida serao salvos em data/csv/ com o sufixo _calibrado
+Arquivos parquet de entrada devem estar em data/parquet/
+Arquivos parquet de saida serao salvos em data/cache/ com o sufixo _calibrado
 """
 
 import sys
@@ -25,55 +25,72 @@ import pandas as pd
 
 ROOT = Path(__file__).resolve().parent.parent
 TABELA_GAMMA = ROOT / "data" / "csv" / "tabela_gamma_decil.csv"
-DATA_DIR = ROOT / "data" / "csv"
+INPUT_DIR = ROOT / "data" / "parquet"
+CACHE_DIR = ROOT / "data" / "cache"
 
-if len(sys.argv) != 2:
-    print("Uso:")
-    print("    python calibrar_pd.py <arquivo_clientes.csv>")
-    sys.exit(1)
 
-arquivo_entrada = DATA_DIR / sys.argv[1]
+def calibrar(parquet_nome: str) -> Path:
+    """
+    Le o parquet de entrada, aplica gammas por decil e salva parquet calibrado em cache.
+    Retorna o path do arquivo calibrado.
+    """
+    CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-if not arquivo_entrada.exists():
-    print(f"Erro: arquivo {sys.argv[1]} nao encontrado em data/csv/")
-    sys.exit(1)
+    arquivo_entrada = INPUT_DIR / parquet_nome
 
-if not TABELA_GAMMA.exists():
-    print(f"Erro: tabela_gamma_decil.csv nao encontrada em data/csv/")
-    print("Rode primeiro: python scripts/analise_09_calibracao_final.py")
-    sys.exit(1)
+    if not arquivo_entrada.exists():
+        raise FileNotFoundError(f"{parquet_nome} nao encontrado em data/parquet/")
 
-print(f"[INFO] Lendo clientes: {arquivo_entrada.name}")
-df = pd.read_csv(arquivo_entrada)
-print(f"[INFO] {len(df):,} linhas carregadas")
+    if not TABELA_GAMMA.exists():
+        raise FileNotFoundError(
+            "tabela_gamma_decil.csv nao encontrada em data/csv/. "
+            "Rode primeiro: python scripts/setup_tabela_gamma.py"
+        )
 
-print(f"[INFO] Lendo tabela de gamma: {TABELA_GAMMA.name}")
-gamma = pd.read_csv(TABELA_GAMMA)
+    print(f"[INFO] Lendo: {arquivo_entrada.name}")
+    df = pd.read_parquet(arquivo_entrada)
+    print(f"[INFO] {len(df):,} linhas carregadas")
 
-pd_min = gamma["pd_min"].values
-pd_max = gamma["pd_max"].values
-gamma_final = gamma["gamma_final"].values
+    print(f"[INFO] Lendo tabela de gamma: {TABELA_GAMMA.name}")
+    gamma = pd.read_csv(TABELA_GAMMA)
 
-edges = np.concatenate([pd_min, [pd_max[-1]]])
-indices = np.digitize(df["pd_produto"].values, edges[1:])
-indices = np.clip(indices, 0, 9)
+    pd_min = gamma["pd_min"].values
+    pd_max = gamma["pd_max"].values
+    gamma_final = gamma["gamma_final"].values
 
-df["pd_calibrada"] = df["pd_produto"].values * gamma_final[indices]
+    edges = np.concatenate([pd_min, [pd_max[-1]]])
+    indices = np.digitize(df["pd_produto"].values, edges[1:])
+    indices = np.clip(indices, 0, 9)
 
-# diagnostico apenas sobre elegiveis — os inelegiveis tem pd_produto mais alto
-# por definicao e cairiam desproporcionalmente nos decis altos, o que e esperado
-elegiveis = df["flag_filtros"] == 0
-n_elig = elegiveis.sum()
-indices_elig = indices[elegiveis.values]
+    df["pd_calibrada"] = df["pd_produto"].values * gamma_final[indices]
 
-print(f"\n[INFO] Distribuicao dos elegiveis por decil (esperado ~10% cada):")
-print(f"       Base: {n_elig:,} elegiveis (flag_filtros == 0)")
-for d in range(10):
-    n = (indices_elig == d).sum()
-    pct = 100 * n / n_elig
-    barra = "#" * int(pct / 0.5)
-    print(f"  D{d+1:>2}: {n:>8,} ({pct:>5.1f}%)  {barra}")
+    # diagnostico apenas sobre elegiveis - os inelegiveis tem pd_produto mais alto
+    # por definicao e cairiam desproporcionalmente nos decis altos, o que e esperado
+    elegiveis = df["flag_filtros"] == 0
+    n_elig = elegiveis.sum()
+    indices_elig = indices[elegiveis.values]
 
-arquivo_saida = DATA_DIR / (Path(sys.argv[1]).stem + "_calibrado.csv")
-df.to_csv(arquivo_saida, index=False)
-print(f"\n[OK] Arquivo salvo em: {arquivo_saida.name}")
+    print(f"\n[INFO] Distribuicao dos elegiveis por decil (esperado ~10% cada):")
+    print(f"       Base: {n_elig:,} elegiveis (flag_filtros == 0)")
+    for d in range(10):
+        n = (indices_elig == d).sum()
+        pct = 100 * n / n_elig
+        barra = "#" * int(pct / 0.5)
+        print(f"  D{d+1:>2}: {n:>8,} ({pct:>5.1f}%)  {barra}")
+
+    arquivo_saida = CACHE_DIR / (Path(parquet_nome).stem + "_calibrado.parquet")
+    df.to_parquet(arquivo_saida, index=False)
+    print(f"\n[OK] Arquivo salvo em: {arquivo_saida.name}")
+    return arquivo_saida
+
+
+def main() -> None:
+    if len(sys.argv) != 2:
+        print("Uso:")
+        print("    python calibrar_pd.py <arquivo.parquet>")
+        sys.exit(1)
+    calibrar(sys.argv[1])
+
+
+if __name__ == "__main__":
+    main()
