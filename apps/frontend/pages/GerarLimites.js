@@ -16,12 +16,20 @@ var GerarLimites = function (props) {
   var s4 = React.useState(false);
   var running = s4[0];
   var setRunning = s4[1];
+  var s5 = React.useState(null);
+  var uploadResult = s5[0];
+  var setUploadResult = s5[1];
+  var s6 = React.useState(null);
+  var apiError = s6[0];
+  var setApiError = s6[1];
   var inputRef = React.useRef(null);
 
   function handleFile(f) {
     if (f) {
       setFile(f);
       setRan(false);
+      setUploadResult(null);
+      setApiError(null);
     }
   }
   function onDrop(e) {
@@ -30,21 +38,38 @@ var GerarLimites = function (props) {
     handleFile(e.dataTransfer.files[0]);
   }
 
-  // Simula chamada ao backend (1.2s de delay)
   function handleExecutar() {
+    if (!file) return;
     setRunning(true);
-    setTimeout(function () {
-      setRunning(false);
-      setRan(true);
-      if (setHasData) setHasData(true);
-    }, 1200);
+    setApiError(null);
+    Api.gerarLimites(file)
+      .then(function (result) {
+        setUploadResult(result);
+        setRan(true);
+        if (setHasData) setHasData(true);
+      })
+      .catch(function (err) {
+        setApiError(err.message || "Erro ao gerar limites.");
+      })
+      .finally(function () {
+        setRunning(false);
+      });
   }
 
-  var total = CLUSTERS_UPLOAD.length;
-  var viavel = CLUSTERS_UPLOAD.filter(function (c) {
+  var uploadClusters = uploadResult
+    ? uploadResult.limites.map(function (c) {
+        return {
+          id: c.cluster_id,
+          limite: c.limite_sugerido,
+          status: c.status === "Solucao Viavel" ? "viavel" : "sem",
+        };
+      })
+    : CLUSTERS_UPLOAD;
+  var total = uploadResult ? uploadResult.resumo.total_clusters : uploadClusters.length;
+  var viavel = uploadResult ? uploadResult.resumo.com_solucao_viavel : uploadClusters.filter(function (c) {
     return c.status === "viavel";
   }).length;
-  var sem = total - viavel;
+  var sem = uploadResult ? uploadResult.resumo.sem_solucao : total - viavel;
 
   return (
     <div className="space-y-6">
@@ -208,7 +233,7 @@ var GerarLimites = function (props) {
           <input
             ref={inputRef}
             type="file"
-            accept=".csv,.xlsx"
+            accept=".csv,.xlsx,.parquet"
             className="hidden"
             onChange={function (e) {
               handleFile(e.target.files[0]);
@@ -243,7 +268,7 @@ var GerarLimites = function (props) {
                 Arraste seu arquivo aqui ou clique para selecionar
               </p>
               <p className="text-xs text-[#9C9C9F]">
-                Formatos suportados: CSV, XLSX
+                Formatos suportados: CSV, XLSX, Parquet
               </p>
             </>
           )}
@@ -295,6 +320,9 @@ var GerarLimites = function (props) {
             )}
           </button>
           <span className="text-xs text-[#9C9C9F]">Arquivo: {file.name}</span>
+          {apiError && (
+            <span className="text-xs text-[#DC2F37]">{apiError}</span>
+          )}
         </div>
       )}
 
@@ -357,7 +385,7 @@ var GerarLimites = function (props) {
                 </tr>
               </thead>
               <tbody>
-                {CLUSTERS_UPLOAD.map(function (c) {
+                {uploadClusters.map(function (c) {
                   return (
                     <tr
                       key={c.id}

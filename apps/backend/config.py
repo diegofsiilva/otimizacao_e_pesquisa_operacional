@@ -3,7 +3,6 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-
 BASE_DIR = Path(__file__).resolve().parent
 
 
@@ -31,11 +30,47 @@ def _path_env(name: str, default: Path) -> Path:
     return value if value.is_absolute() else BASE_DIR / value
 
 
+# ---------------------------------------------------------------------------
+# Servidor
+# ---------------------------------------------------------------------------
+
 APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
 APP_PORT = int(os.getenv("APP_PORT", "8000"))
-FRONTEND_ORIGINS = _csv_env("FRONTEND_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
+
+# ---------------------------------------------------------------------------
+# CORS — origens do frontend autorizadas a chamar a API
+# ---------------------------------------------------------------------------
+
+FRONTEND_ORIGINS = _csv_env(
+    "FRONTEND_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000,null",
+)
+
+# ---------------------------------------------------------------------------
+# Persistência local (uploads e estado temporário)
+# ---------------------------------------------------------------------------
 
 LOCAL_DATA_DIR = _path_env("LOCAL_DATA_DIR", BASE_DIR / "db" / "local_data")
 UPLOAD_DIR = _path_env("UPLOAD_DIR", BASE_DIR / "uploads")
 STATE_PATH = _path_env("STATE_PATH", LOCAL_DATA_DIR / "state.json")
 PARAMS_PATH = _path_env("PARAMS_PATH", LOCAL_DATA_DIR / "params.json")
+
+# ---------------------------------------------------------------------------
+# Banco de dados PostgreSQL (via asyncpg)
+# Todas as variáveis são obrigatórias em produção — configure no .env.
+# ---------------------------------------------------------------------------
+
+# Endereço do servidor PostgreSQL
+DB_HOST = os.getenv("DB_HOST", "localhost")
+
+# Porta do servidor PostgreSQL (padrão: 5432)
+DB_PORT = int(os.getenv("DB_PORT", "5432"))
+
+# Nome do banco de dados
+DB_DATABASE = os.getenv("DB_DATABASE", "")
+
+# Usuário de conexão
+DB_USER = os.getenv("DB_USER", "")
+
+# Senha de conexão — nunca versionar este valor, usar .env
+DB_PASSWORD = os.getenv("DB_PASSWORD", "")
