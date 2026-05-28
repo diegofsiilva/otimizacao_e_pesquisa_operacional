@@ -644,17 +644,20 @@ O back-end é uma API REST construída com **FastAPI** que expõe o pipeline de 
 
 O front-end pode então consultar o status da execução a qualquer momento, e quando ela concluir, acessar os resultados por consulta, cluster ou cliente individual.
 
+Para suportar arquivos grandes (acima de ~100MB), o upload é realizado em **chunks**: o front-end divide o arquivo em partes de 5MB e as envia sequencialmente.
+
 ### Estrutura de pastas
 
 ```
 apps/backend/
 ├── main.py              # ponto de entrada FastAPI, lifespan com pool asyncpg
-├── run_server.py        # script de inicialização via uvicorn
+├── run_server.py        # inicializa o backend e o servidor estático do frontend
 ├── config.py            # variáveis de ambiente
 ├── requirements.txt     # dependências Python
 ├── .env.example         # template de variáveis de ambiente
 ├── api/
-│   └── routes.py        # definição de todos os endpoints
+│   ├── routes.py        # endpoints principais da API
+│   └── upload_routes.py # endpoints de upload em chunks
 ├── db/
 │   ├── storage.py       # pool asyncpg, execução de migrations
 │   └── migrations/      # arquivos SQL de criação das tabelas
@@ -667,8 +670,10 @@ apps/backend/
 ├── model/
 │   └── schemas.py       # schemas Pydantic de entrada e saída
 ├── services/
-│   └── credit_service.py   # lógica de negócio e integração com o otimizador
+│   ├── credit_service.py   # lógica de negócio e integração com o otimizador
+│   └── upload_service.py   # gerenciamento de chunks em disco
 └── uploads/             # parquets recebidos via upload
+    └── _chunks/         # diretórios temporários de chunks (limpos após remontagem)
 ```
 
 ### Banco de dados
@@ -679,7 +684,7 @@ O back-end utiliza **PostgreSQL** com acesso via `asyncpg`. As migrations são e
 
 **`consultas`** - cada execução do pipeline é uma consulta. Registra os parâmetros utilizados, o status do processamento (`pendente`, `executando`, `concluido`, `erro`), o resultado da otimização (valor ótimo `z`, status do LP) e estatísticas da base processada.
 
-**`clusters_resultado`** - os 800 clusters gerados pelo CART, com todos os parâmetros agregados ($n_k$, $PD_k$, $\pi_k$, $CP_k$, $m_k$) e o limite otimizado pelo Simplex.
+**`clusters_resultado`** - os clusters gerados pelo CART, com todos os parâmetros agregados ($n_k$, $PD_k$, $\pi_k$, $CP_k$, $m_k$) e o limite otimizado pelo Simplex.
 
 **`clientes_resultado`** - todos os clientes elegíveis da base, com seus dados originais do parquet, os campos derivados pelo pipeline (`pd_calibrada`, `pi_normalizado`, `cp_proxy`) e a atribuição de cluster e limite. Permite buscar o histórico de um cliente específico por token ao longo de múltiplas consultas.
 
@@ -689,14 +694,14 @@ O back-end utiliza **PostgreSQL** com acesso via `asyncpg`. As migrations são e
 
 A integração entre o back-end e o otimizador é realizada de forma assíncrona usando `BackgroundTasks` do FastAPI combinado com `asyncio.run_in_executor`. O pipeline do otimizador é bloqueante (execução do Simplex pode levar minutos), então ele é executado numa thread pool separada, sem bloquear a event loop do FastAPI. O fluxo é:
 
-1. `POST /api/consultas` recebe o parquet e retorna imediatamente com `status_consulta: "pendente"`
+1. `POST /api/uploads/{id}/finalizar` remonta o arquivo a partir dos chunks e retorna imediatamente com `status_consulta: "pendente"`
 2. A `BackgroundTask` inicia e atualiza o status para `"executando"`
 3. O pipeline roda em thread pool: calibração → clusterização → Simplex
 4. Os resultados são persistidos no banco via bulk insert (`copy_records_to_table`)
 5. O status é atualizado para `"concluido"` com todos os campos de resultado
 6. Em caso de erro, o status vai para `"erro"` com `erro_etapa` e `erro_mensagem`
 
-O front-end acompanha o progresso fazendo polling em `GET /api/consultas/{id}`.
+O front-end acompanha o progresso fazendo polling em `GET /api/consultas/{id}` a cada 60 segundos.
 
 ### Endpoints
 
@@ -716,14 +721,50 @@ Todos os endpoints têm o prefixo `/api`.
 
 #### Consultas
 
-| Método | Rota                              | Descrição                                                                |
-| ------ | --------------------------------- | ------------------------------------------------------------------------ |
-| `GET`  | `/consultas`                      | Lista todas as consultas, da mais recente para a mais antiga             |
-| `POST` | `/consultas`                      | Upload do parquet e criação da consulta (dispara pipeline em background) |
-| `GET`  | `/consultas/{id}`                 | Status e resultado de uma consulta específica                            |
-| `GET`  | `/consultas/{id}/clusters`        | Clusters com parâmetros e limites otimizados                             |
-| `GET`  | `/consultas/{id}/clientes`        | Clientes da consulta, paginados (`limit` e `offset`)                     |
-| `GET`  | `/consultas/{id}/clientes/export` | Download dos clientes da consulta em CSV                                 |
+| Método | Rota                              | Descrição                                                    |
+| ------ | --------------------------------- | ------------------------------------------------------------ |
+| `GET`  | `/consultas`                      | Lista todas as consultas, da mais recente para a mais antiga |
+| `GET`  | `/consultas/{id}`                 | Status e resultado de uma consulta específica                |
+| `GET`  | `/consultas/{id}/clusters`        | Clusters com parâmetros e limites otimizados                 |
+| `GET`  | `/consultas/{id}/clientes`        | Clientes da consulta, paginados (`limit` e `offset`)         |
+| `GET`  | `/consultas/{id}/clientes/export` | Download dos clientes da consulta em CSV                     |
+
+#### Upload em chunks
+
+Para arquivos grandes, o upload é dividido em três etapas. O front-end realiza esse fluxo automaticamente com barra de progresso.
+
+| Método | Rota                      | Descrição                                                                     |
+| ------ | ------------------------- | ----------------------------------------------------------------------------- |
+| `POST` | `/uploads/iniciar`        | Cria uma sessão de upload, retorna `upload_id`                                |
+| `POST` | `/uploads/{id}/chunk`     | Recebe um chunk do arquivo (multipart). Parâmetro `index` identifica a ordem  |
+| `POST` | `/uploads/{id}/finalizar` | Remonta o arquivo e dispara o pipeline. Aceita os mesmos parâmetros de modelo |
+
+**Parâmetros do `POST /uploads/iniciar`:**
+
+| Parâmetro      | Tipo   | Descrição                          |
+| -------------- | ------ | ---------------------------------- |
+| `nome_arquivo` | string | Nome do arquivo `.parquet` (query) |
+
+**Parâmetros do `POST /uploads/{id}/chunk`:**
+
+| Parâmetro | Tipo    | Descrição                                          |
+| --------- | ------- | -------------------------------------------------- |
+| `index`   | inteiro | Índice sequencial do chunk, começando em 0 (query) |
+| `file`    | arquivo | Conteúdo binário do chunk (multipart)              |
+
+**Parâmetros do `POST /uploads/{id}/finalizar`:**
+
+| Parâmetro              | Tipo     | Descrição                                                                         |
+| ---------------------- | -------- | --------------------------------------------------------------------------------- |
+| `safra_numero`         | inteiro  | Número da safra (ex: 1 para M1). Se omitido, usa MAX+1                            |
+| `usar_safra_existente` | booleano | Se `true` e o número já existir, vincula à safra existente em vez de retornar 409 |
+| `t`                    | número   | Override da taxa de interchange                                                   |
+| `LGD`                  | número   | Override do Loss Given Default                                                    |
+| `u_bar`                | número   | Override da fração de utilização                                                  |
+| `L_max`                | número   | Override do teto máximo de limite                                                 |
+| `T`                    | número   | Override do horizonte em meses                                                    |
+
+Quando `safra_numero` informado já existe e `usar_safra_existente` é `false`, a API retorna `409 Conflict`. O front-end exibe um aviso perguntando se o usuário quer usar a safra existente, e reenvia com `usar_safra_existente=true`.
 
 #### Clientes
 
@@ -737,23 +778,6 @@ Todos os endpoints têm o prefixo `/api`.
 | ------ | --------- | --------------------------------------- |
 | `GET`  | `/config` | Retorna os parâmetros padrão do modelo  |
 | `PUT`  | `/config` | Atualiza os parâmetros padrão do modelo |
-
-#### Parâmetros do `POST /consultas`
-
-Todos os campos são opcionais. Se omitidos, o back-end usa os valores padrão.
-
-| Parâmetro              | Tipo     | Descrição                                                                         |
-| ---------------------- | -------- | --------------------------------------------------------------------------------- |
-| `file`                 | arquivo  | Parquet da safra a ser processada (obrigatório)                                   |
-| `safra_numero`         | inteiro  | Número da safra (ex: 1 para M1). Se omitido, usa MAX+1 ou M1                      |
-| `usar_safra_existente` | booleano | Se `true` e o número já existir, vincula à safra existente em vez de retornar 409 |
-| `t`                    | número   | Override da taxa de interchange                                                   |
-| `LGD`                  | número   | Override do Loss Given Default                                                    |
-| `u_bar`                | número   | Override da fração de utilização                                                  |
-| `L_max`                | número   | Override do teto máximo de limite                                                 |
-| `T`                    | número   | Override do horizonte em meses                                                    |
-
-Quando `safra_numero` informado já existe e `usar_safra_existente` é `false`, a API retorna `409 Conflict`. O front-end deve exibir um popup perguntando se o usuário quer usar a safra existente ou criar uma nova, e reenviar a requisição com `usar_safra_existente=true` ou sem `safra_numero`.
 
 ### Dependências
 
@@ -780,43 +804,54 @@ Copie `.env.example` para `.env` e preencha os valores:
 cp apps/backend/.env.example apps/backend/.env
 ```
 
-| Variável           | Descrição                                      | Padrão                  |
-| ------------------ | ---------------------------------------------- | ----------------------- |
-| `APP_HOST`         | Endereço de bind do servidor                   | `127.0.0.1`             |
-| `APP_PORT`         | Porta do servidor                              | `8000`                  |
-| `FRONTEND_ORIGINS` | Origens CORS permitidas, separadas por vírgula | `http://localhost:3000` |
-| `UPLOAD_DIR`       | Pasta onde os parquets enviados são salvos     | `./uploads`             |
-| `DB_HOST`          | Endereço do servidor PostgreSQL                | -                       |
-| `DB_PORT`          | Porta do PostgreSQL                            | `5432`                  |
-| `DB_DATABASE`      | Nome do banco de dados                         | -                       |
-| `DB_USER`          | Usuário do banco                               | -                       |
-| `DB_PASSWORD`      | Senha do banco                                 | -                       |
+| Variável           | Descrição                                                                                                                                                                            | Padrão             |
+| ------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------ |
+| `APP_HOST`         | URL base do backend com protocolo (ex: `http://127.0.0.1` ou `https://api.x`)                                                                                                        | `http://127.0.0.1` |
+| `APP_PORT`         | Porta do servidor backend                                                                                                                                                            | `8000`             |
+| `FRONTEND_PORT`    | Porta do servidor estático do frontend                                                                                                                                               | `5500`             |
+| `FRONTEND_ORIGINS` | Origens CORS autorizadas. Se omitido, derivado automaticamente de `APP_HOST` e `FRONTEND_PORT`. Em produção com domínio próprio, definir explicitamente (ex: `https://maiorais.com`) | derivado           |
+| `UPLOAD_DIR`       | Pasta onde os parquets enviados são salvos                                                                                                                                           | `./uploads`        |
+| `DB_HOST`          | Endereço do servidor PostgreSQL                                                                                                                                                      | -                  |
+| `DB_PORT`          | Porta do PostgreSQL                                                                                                                                                                  | `5432`             |
+| `DB_DATABASE`      | Nome do banco de dados                                                                                                                                                               | -                  |
+| `DB_USER`          | Usuário do banco                                                                                                                                                                     | -                  |
+| `DB_PASSWORD`      | Senha do banco                                                                                                                                                                       | -                  |
 
-### Execução do back-end
+### Execução
 
-A partir do diretório `apps/backend/`:
+O `run_server.py` inicializa o backend e o servidor estático do frontend juntos a partir de um único comando:
 
 ```bash
+cd apps/backend
 python run_server.py
 ```
 
 Na inicialização, o servidor:
 
-1. Cria o pool de conexões com o PostgreSQL
-2. Executa as migrations pendentes (cria as tabelas se não existirem)
-3. Inicia o servidor na porta configurada
+1. Sobe o servidor estático do frontend em `APP_HOST:FRONTEND_PORT` apontando para `apps/frontend/`
+2. Cria o pool de conexões com o PostgreSQL
+3. Executa as migrations pendentes (cria as tabelas se não existirem)
+4. Inicia o servidor backend em `APP_HOST:APP_PORT`
 
-A documentação interativa dos endpoints fica disponível em `http://127.0.0.1:8000/docs`.
+A documentação interativa dos endpoints fica disponível em `{APP_HOST}:{APP_PORT}/docs`.
 
 ### Testes realizados no back-end
 
-#### Teste 1: Upload e pipeline completo com M1
+#### Teste 1: Upload em chunks e pipeline completo com M1
 
-**Requisição:**
+**Fluxo:**
 
 ```bash
-curl -X POST "http://127.0.0.1:8000/api/consultas" \
-  -F "file=@apps/backend/uploads/base_ref_M1_v2.parquet"
+# 1. Iniciar 
+curl -X POST "http://127.0.0.1:8000/api/uploads/iniciar?nome_arquivo=base_ref_M1_v2.parquet"
+# -> {"upload_id": "abc123..."}
+
+# 2. Enviar chunks (repetido para cada parte de 5MB)
+curl -X POST "http://127.0.0.1:8000/api/uploads/abc123.../chunk?index=0" \
+  -F "file=@chunk_0.bin"
+
+# 3. Finalizar e disparar pipeline
+curl -X POST "http://127.0.0.1:8000/api/uploads/abc123.../finalizar"
 ```
 
 **Resultado:**
