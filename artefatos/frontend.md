@@ -281,12 +281,13 @@ python -m http.server 5500
 | Babel Standalone | latest | Transpilação de JSX no browser |
 | Tailwind CSS     | CDN    | Estilização utilitária         |
 
-## Diferenciais além do solicitado
+## Ir além
 
 Além dos requisitos mínimos da entrega parcial, o backend também foi preparado para execução em ambiente publicado.
 
 - A aplicação possui pipeline de CI/CD em `.gitlab-ci.yml`.
 - O stage de testes roda antes do deploy.
 - O deploy automático publica a aplicação no servidor do grupo a partir da branch `develop`.
+ https://maiorais.com/
 - O script `apps/backend/start.sh` é usado para inicialização do serviço no ambiente remoto.
 - O backend expõe documentação interativa via `/docs`, facilitando validação dos endpoints.
