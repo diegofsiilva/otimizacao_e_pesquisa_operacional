@@ -156,7 +156,7 @@ async def _pipeline_background(
         n_total = pq.read_metadata(parquet_path).num_rows
 
         # 2. executa o pipeline numa thread para não bloquear a event loop
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         resultado = await loop.run_in_executor(
             None, _executar_pipeline, parquet_path, params
         )
@@ -352,6 +352,8 @@ async def get_config() -> ParametrosModelo:
         row = await conn.fetchrow(
             'SELECT "t", "LGD", "u_bar", "L_max", "T" FROM parametros_modelo LIMIT 1'
         )
+    if row is None:
+        return ParametrosModelo()
     return _row_para_parametros(row)
 
 
@@ -359,7 +361,7 @@ async def update_config(payload: ParametrosModelo) -> ParametrosModelo:
     """Atualiza os parâmetros padrão do modelo na tabela parametros_modelo."""
     pool = get_pool()
     async with pool.acquire() as conn:
-        await conn.execute(
+        status = await conn.execute(
             'UPDATE parametros_modelo SET "t" = $1, "LGD" = $2, "u_bar" = $3, "L_max" = $4, "T" = $5',
             payload.t,
             payload.LGD,
@@ -367,6 +369,15 @@ async def update_config(payload: ParametrosModelo) -> ParametrosModelo:
             payload.L_max,
             payload.T,
         )
+        if status == "UPDATE 0":
+            await conn.execute(
+                'INSERT INTO parametros_modelo ("t", "LGD", "u_bar", "L_max", "T") VALUES ($1, $2, $3, $4, $5)',
+                payload.t,
+                payload.LGD,
+                payload.u_bar,
+                payload.L_max,
+                payload.T,
+            )
     return payload
 
 
@@ -472,6 +483,11 @@ async def criar_consulta(
 
     Lança ValueError se safra_numero já existir e usar_safra_existente for False.
     """
+    if Path(payload.nome_arquivo_parquet).name != payload.nome_arquivo_parquet:
+        raise ValueError("Nome de arquivo invalido.")
+    if not payload.nome_arquivo_parquet.lower().endswith(".parquet"):
+        raise ValueError("Formato invalido. Envie um arquivo .parquet.")
+
     # salva o parquet em disco
     UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
     destino = UPLOAD_DIR / payload.nome_arquivo_parquet
@@ -671,6 +687,9 @@ async def criar_consulta_de_path(
     Diferente de criar_consulta(), não recebe bytes nem grava o arquivo —
     assume que parquet_path já aponta para o arquivo final remontado.
     """
+    if not parquet_path.name.lower().endswith(".parquet"):
+        raise ValueError("Formato invalido. Envie um arquivo .parquet.")
+
     pool = get_pool()
     consulta_id = str(uuid.uuid4())
 

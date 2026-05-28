@@ -1,5 +1,32 @@
 # Otimizador e Back-end
 
+## Correcoes desta versao para a rubrica
+
+Esta versao foi ajustada para cobrir diretamente os quatro itens avaliados da entrega parcial:
+
+1. **Operacoes do front-end:** o backend expoe as rotas usadas pelo front-end para saude da API, safras, consultas, upload direto, upload em chunks, polling de status, clusters, clientes paginados, exportacao CSV, historico de cliente e configuracao dos parametros do modelo.
+2. **Operacoes documentadas e testadas:** foram adicionados testes automatizados em `apps/backend/tests/` e `apps/algoritmo_simplex/tests/`, cobrindo contratos das rotas, upload em chunks, validacao de arquivo e casos didaticos do Simplex.
+3. **Otimizador testavel:** o Simplex proprio pode ser executado isoladamente por `python apps/algoritmo_simplex/simplex.py` e tambem por `python -m unittest discover -s apps/algoritmo_simplex/tests`.
+4. **Execucao nao bloqueante:** a API registra a consulta e agenda o pipeline via `BackgroundTasks`; a execucao bloqueante do otimizador roda fora da event loop com `asyncio.get_running_loop().run_in_executor(...)`.
+
+Tambem foram corrigidos pontos de robustez:
+
+- O endpoint `POST /api/consultas` agora repassa corretamente `usar_safra_existente` para a camada de servico, mantendo o mesmo comportamento do fluxo de upload em chunks.
+- Uploads com extensao diferente de `.parquet` sao rejeitados no backend, mesmo que o front-end falhe em validar.
+- Nomes de arquivo com caminho relativo ou tentativa de path traversal sao rejeitados antes de gravar em disco.
+- `GET /api/config` devolve os parametros padrao caso a tabela esteja vazia; `PUT /api/config` faz `INSERT` se nao houver linha a atualizar.
+
+### Como testar rapidamente
+
+Na raiz do repositorio:
+
+```bash
+python -m unittest discover -s apps/algoritmo_simplex/tests -p "test_*.py"
+python -m unittest discover -s apps/backend/tests -p "test_*.py"
+```
+
+Os testes do backend nao exigem PostgreSQL; eles validam o contrato da API, o comportamento de upload em chunks e a integracao assincrona por inspecao do codigo. O teste completo com banco e pipeline real continua sendo feito executando a aplicacao e enviando um parquet pelo front-end ou por `curl`, conforme descrito na secao **Testes realizados no back-end**.
+
 ## Contextualização
 
 O Banco Pan oferece cartões de crédito pré-aprovados a clientes correntistas. A decisão de qual limite de crédito oferecer a cada cliente é hoje tomada com base em tabelas fixas, que não consideram a heterogeneidade entre perfis e não controlam o risco agregado da carteira.

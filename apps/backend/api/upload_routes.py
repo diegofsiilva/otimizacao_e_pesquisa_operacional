@@ -29,7 +29,10 @@ async def rota_iniciar_upload(
     Cria uma sessão de upload e retorna o upload_id.
     O cliente deve usar este ID em todas as chamadas subsequentes.
     """
-    return iniciar_upload(nome_arquivo)
+    try:
+        return iniciar_upload(nome_arquivo)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
 
 @router.post("/uploads/{upload_id}/chunk")
@@ -75,8 +78,10 @@ async def rota_finalizar_upload(
     """
     try:
         parquet_path = finalizar_upload(upload_id)
-    except (FileNotFoundError, ValueError) as exc:
+    except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
 
     overrides = {
         k: v

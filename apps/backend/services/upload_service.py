@@ -24,6 +24,11 @@ def iniciar_upload(nome_arquivo: str) -> dict:
     Cria um diretório temporário para receber os chunks.
     Retorna o upload_id que o cliente usará nas chamadas seguintes.
     """
+    if Path(nome_arquivo).name != nome_arquivo:
+        raise ValueError("Nome de arquivo invalido.")
+    if not nome_arquivo.lower().endswith(".parquet"):
+        raise ValueError("Formato invalido. Envie um arquivo .parquet.")
+
     upload_id = str(uuid.uuid4())
     chunk_dir = CHUNKS_DIR / upload_id
     chunk_dir.mkdir(parents=True, exist_ok=True)
@@ -53,6 +58,10 @@ def finalizar_upload(upload_id: str) -> Path:
         raise FileNotFoundError(f"Upload {upload_id} não encontrado.")
 
     nome = (chunk_dir / "_nome").read_text(encoding="utf-8")
+    if Path(nome).name != nome:
+        raise ValueError("Nome de arquivo invalido.")
+    if not nome.lower().endswith(".parquet"):
+        raise ValueError("Formato invalido. Envie um arquivo .parquet.")
 
     chunks = sorted(
         [f for f in chunk_dir.iterdir() if f.name != "_nome"],
