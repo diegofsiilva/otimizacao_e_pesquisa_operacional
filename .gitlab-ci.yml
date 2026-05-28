@@ -1,0 +1,13 @@
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  tags:
+    - g04-server
+  only:
+    - develop
+  script:
+    - cd /home/cc06-g4/g04
+    - git pull origin develop
+    - sudo systemctl restart g04
