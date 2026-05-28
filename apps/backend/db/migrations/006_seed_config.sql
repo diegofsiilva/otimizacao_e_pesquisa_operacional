@@ -1,7 +1,7 @@
 -- =============================================================================
 -- Migration 006: seed da tabela parametros_modelo
 -- Insere os valores padrão dos parâmetros do modelo de otimização.
--- Executado apenas uma vez — re-execuções não inserem duplicatas.
+-- Executado apenas uma vez - re-execuções não inserem duplicatas.
 -- =============================================================================
 
 INSERT INTO parametros_modelo ("t", "LGD", "u_bar", "L_max", "T")

@@ -15,7 +15,7 @@ from config import DB_DATABASE, DB_HOST, DB_PASSWORD, DB_PORT, DB_USER
 # diretório onde ficam os arquivos .sql de migration
 MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
 
-# pool de conexões compartilhado pela aplicação — inicializado no lifespan
+# pool de conexões compartilhado pela aplicação - inicializado no lifespan
 _pool: asyncpg.Pool | None = None
 
 

@@ -31,23 +31,33 @@ def _path_env(name: str, default: Path) -> Path:
 
 
 # ---------------------------------------------------------------------------
-# Servidor
+# Backend
 # ---------------------------------------------------------------------------
 
-APP_HOST = os.getenv("APP_HOST", "127.0.0.1")
+# URL base do backend, incluindo protocolo (ex: http://127.0.0.1)
+APP_HOST = os.getenv("APP_HOST", "http://127.0.0.1")
 APP_PORT = int(os.getenv("APP_PORT", "8000"))
 
-# ---------------------------------------------------------------------------
-# CORS — origens do frontend autorizadas a chamar a API
-# ---------------------------------------------------------------------------
-
-FRONTEND_ORIGINS = _csv_env(
-    "FRONTEND_ORIGINS",
-    "http://localhost:3000,http://127.0.0.1:3000,null",
-)
+# Hostname/IP extraido para o bind do uvicorn (sem protocolo nem porta)
+APP_HOST_BIND = APP_HOST.split("://", 1)[-1].split(":")[0]
 
 # ---------------------------------------------------------------------------
-# Persistência local (uploads e estado temporário)
+# Frontend
+# ---------------------------------------------------------------------------
+
+FRONTEND_PORT = int(os.getenv("FRONTEND_PORT", "5500"))
+
+# Origem CORS derivada automaticamente de APP_HOST e FRONTEND_PORT.
+# Portas padrao (80/443) sao omitidas da origem pois o browser nao as inclui.
+if FRONTEND_PORT in (80, 443):
+    _frontend_origin = APP_HOST
+else:
+    _frontend_origin = f"{APP_HOST}:{FRONTEND_PORT}"
+
+FRONTEND_ORIGINS = [_frontend_origin]
+
+# ---------------------------------------------------------------------------
+# Persistencia local
 # ---------------------------------------------------------------------------
 
 LOCAL_DATA_DIR = _path_env("LOCAL_DATA_DIR", BASE_DIR / "db" / "local_data")
@@ -56,21 +66,11 @@ STATE_PATH = _path_env("STATE_PATH", LOCAL_DATA_DIR / "state.json")
 PARAMS_PATH = _path_env("PARAMS_PATH", LOCAL_DATA_DIR / "params.json")
 
 # ---------------------------------------------------------------------------
-# Banco de dados PostgreSQL (via asyncpg)
-# Todas as variáveis são obrigatórias em produção — configure no .env.
+# PostgreSQL
 # ---------------------------------------------------------------------------
 
-# Endereço do servidor PostgreSQL
 DB_HOST = os.getenv("DB_HOST", "localhost")
-
-# Porta do servidor PostgreSQL (padrão: 5432)
 DB_PORT = int(os.getenv("DB_PORT", "5432"))
-
-# Nome do banco de dados
 DB_DATABASE = os.getenv("DB_DATABASE", "")
-
-# Usuário de conexão
 DB_USER = os.getenv("DB_USER", "")
-
-# Senha de conexão — nunca versionar este valor, usar .env
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
