@@ -1,4 +1,4 @@
-# Otimização de limites de crédito pré-aprovados via segmentação e Programação Linear
+# Alocação Ótima de Limites em Carteiras de Crédito Pré-Aprovado: Uma Abordagem por Programação Linear e Clusterização CART
 
 **Autores:** Diego Figueiredo Silva, Lucas Garcia Rodrigues Lopes, Luiz Gustavo Borges Oliveira, Maria Clara Oliveira Santos, Rebeca Namura Sbroglio, Richard Dias Alves e Teodoro Borges de Carvalho Neira
 
@@ -439,4 +439,20 @@ LI, Bingxiang; TAO, Rui; LI, Meng. Identification of Enterprise Financial Risk B
 
 SCARPEL, R. A.; MILIONI, A. Z. Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito. **Pesquisa Operacional**, v. 22, n. 1, p. 61-72, 2002. DOI: 10.1590/S0101-74382002000100004. Disponível em: <https://www.scielo.br/j/pope/a/3DkFSwbgRxdtDDG6MSPBDLM/>. Acesso em: 20 maio 2026.
 // https://www.scielo.br/j/pope/a/3DkFSwbgRxdtDDG6MSPBDLM/
+
+## REFERÊNCIAS BIBLIOGRÁFICAS
+
+*Nota: os links disponibilizados nas referências direcionam para a página do artigo na base de origem. O acesso ao texto completo pode exigir clicar em botão de visualização ou download de PDF disponível na própria página.*
+
+AL-MUSBAHU, Abdulrahim; TETE, Ahmed Rufai; MANYISA, Yisa Emmanuel; MOHAMMED, Jibrin. Application of Linear Programming for Optimal Net Revenue on Bank Loan. **Kontagora Journal of Mathematics**, v. 1, n. 1, p. 214-230, 2025. DOI: 10.5281/zenodo.17401383.
+
+BANCO CENTRAL DO BRASIL. Inadimplência da carteira de crédito – Total (SGS 21082). Sistema Gerenciador de Séries Temporais (SGS). Disponível em: <https://www3.bcb.gov.br/sgspub/consultarvalores/consultarValoresSeries.do?method=consultarGraficoPorId&hdOidSeriesSelecionadas=21082>. Acesso em: 26 maio 2026.
+
+BLAND, Robert G. New finite pivoting rules for the simplex method. Mathematics of Operations Research, v. 2, n. 2, p. 103-107, 1977. DOI: 10.1287/moor.2.2.103.
+
+KWAPONG, Samuel Darkwa. Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd. 2013. Dissertação (MSc in Industrial Mathematics) — Kwame Nkrumah University of Science and Technology, Institute of Distance Learning, Kumasi, 2013. Disponível em: <https://ir.knust.edu.gh/handle/123456789/5841>. Acesso em: 20 maio 2026.
+
+LI, Bingxiang; TAO, Rui; LI, Meng. Identification of Enterprise Financial Risk Based on Clustering Algorithm. **Computational Intelligence and Neuroscience**, v. 2022, art. 1086945, 2022. DOI: 10.1155/2022/1086945.
+
+SCARPEL, R. A.; MILIONI, A. Z. Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito. **Pesquisa Operacional**, v. 22, n. 1, p. 61-72, 2002. DOI: 10.1590/S0101-74382002000100004.
 
