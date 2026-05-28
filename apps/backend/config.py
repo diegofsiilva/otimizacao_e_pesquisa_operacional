@@ -47,14 +47,26 @@ APP_HOST_BIND = APP_HOST.split("://", 1)[-1].split(":")[0]
 
 FRONTEND_PORT = int(os.getenv("FRONTEND_PORT", "5500"))
 
-# Origem CORS derivada automaticamente de APP_HOST e FRONTEND_PORT.
-# Portas padrao (80/443) sao omitidas da origem pois o browser nao as inclui.
-if FRONTEND_PORT in (80, 443):
-    _frontend_origin = APP_HOST
-else:
-    _frontend_origin = f"{APP_HOST}:{FRONTEND_PORT}"
+# Origens CORS autorizadas a chamar a API.
+#
+# Em desenvolvimento local, derivadas automaticamente de APP_HOST e
+# FRONTEND_PORT (ex: http://127.0.0.1:5500).
+#
+# Em producao com tunel ou dominio proprio, defina FRONTEND_ORIGINS no .env
+# com a origem exata do frontend (ex: https://maiorais.com).
+# Multiplas origens separadas por virgula sao suportadas.
 
-FRONTEND_ORIGINS = [_frontend_origin]
+_origins_env = os.getenv("FRONTEND_ORIGINS", "")
+
+if _origins_env:
+    # Usa o valor explicito do .env quando disponivel
+    FRONTEND_ORIGINS = [o.strip() for o in _origins_env.split(",") if o.strip()]
+else:
+    # Fallback para desenvolvimento local
+    if FRONTEND_PORT in (80, 443):
+        FRONTEND_ORIGINS = [APP_HOST]
+    else:
+        FRONTEND_ORIGINS = [f"{APP_HOST}:{FRONTEND_PORT}"]
 
 # ---------------------------------------------------------------------------
 # Persistencia local
