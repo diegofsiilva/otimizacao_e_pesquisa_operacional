@@ -625,17 +625,19 @@ async def exportar_clientes_csv(consulta_id: UUID) -> str | None:
 
 async def get_historico_cliente(token: int) -> ClienteHistoricoResponse | None:
     """
-    Retorna o histórico de um cliente em todas as consultas em que apareceu.
+    Retorna o histórico de um cliente em todas as consultas em que apareceu,
+    ordenado cronologicamente pela data de criação da consulta.
     Retorna None se o token não existir em nenhuma consulta.
     """
     pool = get_pool()
     async with pool.acquire() as conn:
         rows = await conn.fetch(
             """
-            SELECT *
-            FROM clientes_resultado
-            WHERE token = $1
-            ORDER BY consulta_id ASC
+            SELECT cr.*
+            FROM clientes_resultado cr
+            JOIN consultas c ON c.id = cr.consulta_id
+            WHERE cr.token = $1
+            ORDER BY c.criado_em ASC
             """,
             token,
         )
@@ -647,6 +649,7 @@ async def get_historico_cliente(token: int) -> ClienteHistoricoResponse | None:
         token=token,
         historico=[_row_para_cliente(row) for row in rows],
     )
+
 
 """
 Esta função é uma variante de criar_consulta() que recebe um Path já
