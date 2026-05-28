@@ -647,3 +647,55 @@ async def get_historico_cliente(token: int) -> ClienteHistoricoResponse | None:
         token=token,
         historico=[_row_para_cliente(row) for row in rows],
     )
+
+"""
+Esta função é uma variante de criar_consulta() que recebe um Path já
+existente em disco em vez de bytes, evitando ler o arquivo remontado
+de volta para a memória após o upload em chunks.
+"""
+
+
+async def criar_consulta_de_path(
+    payload: ConsultaCreate,
+    parquet_path: Path,
+    background_tasks: BackgroundTasks,
+    usar_safra_existente: bool = False,
+) -> ConsultaResponse:
+    """
+    Registra uma consulta no banco e dispara o pipeline em background
+    a partir de um arquivo já presente em disco.
+
+    Diferente de criar_consulta(), não recebe bytes nem grava o arquivo —
+    assume que parquet_path já aponta para o arquivo final remontado.
+    """
+    pool = get_pool()
+    consulta_id = str(uuid.uuid4())
+
+    async with pool.acquire() as conn:
+        safra_id = await _resolver_safra(
+            conn, payload.safra_numero, usar_safra_existente
+        )
+
+        await conn.execute(
+            """
+            INSERT INTO consultas (
+                id, safra_id, nome_arquivo_parquet, parametros,
+                status_consulta, criado_em
+            ) VALUES ($1, $2, $3, $4, $5, $6)
+            """,
+            consulta_id,
+            safra_id,
+            parquet_path.name,
+            payload.parametros.model_dump_json(),
+            "pendente",
+            _agora(),
+        )
+
+    background_tasks.add_task(
+        _pipeline_background,
+        consulta_id,
+        parquet_path,
+        payload.parametros.model_dump(),
+    )
+
+    return await get_consulta(UUID(consulta_id))
