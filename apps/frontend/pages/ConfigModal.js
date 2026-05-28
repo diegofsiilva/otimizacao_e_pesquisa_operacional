@@ -1,29 +1,44 @@
 // pages/ConfigModal.js
-// Deps globais: PARAMS_EDITAVEIS, PARAMS_NAO_EDITAVEIS
+// Deps globais: Api (api.js), PARAMS_EDITAVEIS, PARAMS_NAO_EDITAVEIS (data.js)
 
 var ConfigModal = function (props) {
   var onClose = props.onClose;
 
+  // Estado inicial vem dos fallbacks de PARAMS_EDITAVEIS.
+  // O useEffect abaixo sobrescreve com os valores reais da API assim que ela
+  // responde. Apenas os campos que o backend conhece: { t, LGD, u_bar, L_max, T }.
   var initial = PARAMS_EDITAVEIS.reduce(function (acc, p) {
     acc[p.key] = p.value;
     return acc;
   }, {});
-  initial.alpha = 0.05;
-  initial.n_clusters = 7;
 
   var s1 = React.useState(initial);
   var params = s1[0];
   var setParams = s1[1];
+
+  // Guarda o snapshot vindo da API para o "Cancelar" restaurar o valor salvo,
+  // não o fallback local.
+  var s5 = React.useState(initial);
+  var savedParams = s5[0];
+  var setSavedParams = s5[1];
+
   var s2 = React.useState(null);
   var editing = s2[0];
   var setEditing = s2[1];
+
   var s3 = React.useState(false);
   var saving = s3[0];
   var setSaving = s3[1];
+
   var s4 = React.useState(null);
   var apiError = s4[0];
   var setApiError = s4[1];
 
+  var s6 = React.useState(false);
+  var resetting = s6[0];
+  var setResetting = s6[1];
+
+  // Carrega parâmetros reais do backend ao abrir o modal.
   React.useEffect(function () {
     var alive = true;
     Api.getConfig()
@@ -32,20 +47,26 @@ var ConfigModal = function (props) {
         setParams(function (prev) {
           return Object.assign({}, prev, data);
         });
+        setSavedParams(function (prev) {
+          return Object.assign({}, prev, data);
+        });
         setApiError(null);
       })
       .catch(function () {
-        if (alive) setApiError("Usando parametros locais: backend indisponivel.");
+        if (alive)
+          setApiError("Usando parâmetros locais: backend indisponível.");
       });
     return function () {
       alive = false;
     };
   }, []);
 
+  // Formata o valor exibido no card de cada parâmetro.
   function formatVal(key, v) {
     if (key === "L_max") return "R$ " + Number(v).toLocaleString("pt-BR");
     if (key === "t" || key === "LGD" || key === "u_bar")
-      return (Number(v) * 100).toFixed(0) + "%";
+      return (Number(v) * 100).toFixed(2) + "%";
+    if (key === "T") return Number(v) + " meses";
     return v;
   }
 
@@ -57,33 +78,79 @@ var ConfigModal = function (props) {
     });
   }
 
+  // Cancelar restaura o valor que veio da API (não o fallback de data.js).
   function handleCancel(key) {
-    var orig = PARAMS_EDITAVEIS.find(function (x) {
-      return x.key === key;
-    }).value;
     setParams(function (prev) {
       var n = Object.assign({}, prev);
-      n[key] = orig;
+      n[key] = savedParams[key];
       return n;
     });
     setEditing(null);
   }
 
+  // Salva todos os parâmetros de uma vez via PUT /api/config.
+  // O backend espera exatamente { t, LGD, u_bar, L_max, T }.
   function handleSave() {
     setSaving(true);
     setApiError(null);
-    Api.updateConfig(params)
+
+    var payload = {
+      t: params.t,
+      LGD: params.LGD,
+      u_bar: params.u_bar,
+      L_max: params.L_max,
+      T: params.T,
+    };
+
+    Api.updateConfig(payload)
       .then(function (data) {
         setParams(function (prev) {
+          return Object.assign({}, prev, data);
+        });
+        setSavedParams(function (prev) {
           return Object.assign({}, prev, data);
         });
         setEditing(null);
       })
       .catch(function (err) {
-        setApiError(err.message || "Erro ao salvar parametros.");
+        setApiError(err.message || "Erro ao salvar parâmetros.");
       })
       .finally(function () {
         setSaving(false);
+      });
+  }
+
+  // Restaura os valores de fábrica definidos em PARAMS_EDITAVEIS.value
+  // e persiste no banco via PUT /api/config.
+  function handleReset() {
+    if (
+      !window.confirm("Restaurar todos os parâmetros para os valores padrão?")
+    )
+      return;
+
+    var defaults = PARAMS_EDITAVEIS.reduce(function (acc, p) {
+      acc[p.key] = p.value;
+      return acc;
+    }, {});
+
+    setResetting(true);
+    setApiError(null);
+    setEditing(null);
+
+    Api.updateConfig(defaults)
+      .then(function (data) {
+        setParams(function (prev) {
+          return Object.assign({}, prev, data);
+        });
+        setSavedParams(function (prev) {
+          return Object.assign({}, prev, data);
+        });
+      })
+      .catch(function (err) {
+        setApiError(err.message || "Erro ao restaurar padrões.");
+      })
+      .finally(function () {
+        setResetting(false);
       });
   }
 
@@ -102,6 +169,7 @@ var ConfigModal = function (props) {
           e.stopPropagation();
         }}
       >
+        {/* Header */}
         <div className="flex items-center gap-3 px-6 py-4 border-b border-[#E8EFF7]">
           <div className="w-8 h-8 bg-[#D6E8F5] flex items-center justify-center">
             <svg
@@ -156,7 +224,7 @@ var ConfigModal = function (props) {
                 return (
                   <div
                     key={p.key}
-                    className="rounded-xl border border-[#E8EFF7] bg-[#E2EAF4] p-4"
+                    className="border border-[#E8EFF7] bg-[#E2EAF4] p-4"
                   >
                     <div className="flex items-center justify-between">
                       <div>
@@ -209,14 +277,14 @@ var ConfigModal = function (props) {
                           }}
                         />
                         <div className="flex justify-between text-[10px] text-[#9C9C9F]">
-                          <span>{p.min}</span>
-                          <span>{p.max}</span>
+                          <span>{formatVal(p.key, p.min)}</span>
+                          <span>{formatVal(p.key, p.max)}</span>
                         </div>
                         <div className="flex gap-2">
                           <button
                             onClick={handleSave}
                             disabled={saving}
-                            className="flex-1 py-1.5 text-xs font-semibold bg-[#2E6DA4] text-white hover:bg-[#1B3A5C] transition-colors"
+                            className="flex-1 py-1.5 text-xs font-semibold bg-[#2E6DA4] text-white hover:bg-[#1B3A5C] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                           >
                             {saving ? "Salvando..." : "Salvar"}
                           </button>
@@ -224,7 +292,8 @@ var ConfigModal = function (props) {
                             onClick={function () {
                               handleCancel(p.key);
                             }}
-                            className="flex-1 py-1.5 text-xs font-semibold bg-[#E8EFF7] text-[#3B4049] hover:bg-[#B8D4EC] transition-colors"
+                            disabled={saving}
+                            className="flex-1 py-1.5 text-xs font-semibold bg-[#E8EFF7] text-[#3B4049] hover:bg-[#B8D4EC] transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
                           >
                             Cancelar
                           </button>
@@ -247,7 +316,7 @@ var ConfigModal = function (props) {
                 return (
                   <div
                     key={i}
-                    className="rounded-lg bg-[#E2EAF4] border border-[#E8EFF7] px-4 py-3"
+                    className="bg-[#E2EAF4] border border-[#E8EFF7] px-4 py-3"
                   >
                     <div className="text-[10px] text-[#9C9C9F] font-medium">
                       {p.label}
@@ -260,6 +329,35 @@ var ConfigModal = function (props) {
               })}
             </div>
           </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-4 border-t border-[#E8EFF7] flex items-center justify-between">
+          <button
+            onClick={handleReset}
+            disabled={saving || resetting}
+            className="flex items-center gap-1.5 text-xs font-medium text-[#9C9C9F] hover:text-[#DC2F37] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <svg
+              width="13"
+              height="13"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+              <path d="M3 3v5h5" />
+            </svg>
+            {resetting ? "Restaurando..." : "Restaurar padrões"}
+          </button>
+          <button
+            onClick={onClose}
+            disabled={saving || resetting}
+            className="px-4 py-1.5 text-xs font-semibold bg-[#E8EFF7] text-[#3B4049] hover:bg-[#B8D4EC] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            Fechar
+          </button>
         </div>
       </div>
     </div>

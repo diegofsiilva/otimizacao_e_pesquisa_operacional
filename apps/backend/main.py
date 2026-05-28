@@ -25,7 +25,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="Sistema de Credito API",
-    description="Backend para dashboard, upload de bases, geracao de limites e resultados.",
+    description="Backend para cockpit, upload de bases, geracao de limites e resultados.",
     version="0.1.0",
     lifespan=lifespan,
 )

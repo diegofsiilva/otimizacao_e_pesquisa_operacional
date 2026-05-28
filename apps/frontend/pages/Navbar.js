@@ -1,7 +1,7 @@
 // pages/Navbar.js
-// Navbar fixa full-width, colada no topo. Altura fixa 56px. Sem border-radius. Sem animação de scroll.
-// Gradiente PAN original (Azul PAN #07B2FD -> Azul Royal #005AEA, 90deg).
-// Link ativo em branco com texto azul PAN. Logo e nome navegam para o dashboard.
+// Navbar fixa full-width, colada no topo. Altura fixa 56px. Sem border-radius.
+// Gradiente PAN original (Azul PAN #07B2FD → Azul Royal #005AEA, 90deg).
+// Link ativo em branco com texto azul PAN. Logo navega para o Cockpit.
 
 var Navbar = function (props) {
   var page = props.page;
@@ -10,8 +10,8 @@ var Navbar = function (props) {
 
   var links = [
     {
-      key: "dashboard",
-      label: "Home",
+      key: "cockpit",
+      label: "Cockpit",
       icon: (
         <svg
           width="15"
@@ -21,10 +21,10 @@ var Navbar = function (props) {
           stroke="currentColor"
           strokeWidth="2"
         >
-          <rect x="3" y="3" width="7" height="7" rx="0" />
-          <rect x="14" y="3" width="7" height="7" rx="0" />
-          <rect x="3" y="14" width="7" height="7" rx="0" />
-          <rect x="14" y="14" width="7" height="7" rx="0" />
+          <rect x="3" y="3" width="7" height="7" />
+          <rect x="14" y="3" width="7" height="7" />
+          <rect x="3" y="14" width="7" height="7" />
+          <rect x="14" y="14" width="7" height="7" />
         </svg>
       ),
     },
@@ -43,6 +43,23 @@ var Navbar = function (props) {
           <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
           <polyline points="17 8 12 3 7 8" />
           <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+      ),
+    },
+    {
+      key: "resultados",
+      label: "Resultados",
+      icon: (
+        <svg
+          width="15"
+          height="15"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
+          <polyline points="16 7 22 7 22 13" />
         </svg>
       ),
     },
@@ -74,11 +91,11 @@ var Navbar = function (props) {
       }}
       className="fixed top-0 left-0 w-full z-40 flex items-center h-14 px-8 shadow-xl border-b border-white/10"
     >
-      {/* Logo + nome -- clicavel, navega para o dashboard */}
+      {/* Logo - clicável, navega para o Cockpit */}
       <div
         className="flex items-center gap-2.5 mr-6 flex-shrink-0 cursor-pointer"
         onClick={function () {
-          setPage("dashboard");
+          setPage("cockpit");
         }}
       >
         <img

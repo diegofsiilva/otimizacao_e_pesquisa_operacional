@@ -2,17 +2,20 @@
 
 ## 1. Visão Geral
 
-O front-end é uma SPA (Single Page Application) sem etapa de build, baseada em React 18 + Babel Standalone + Tailwind CSS, todos carregados via CDN. A identidade visual segue o brandbook do Banco PAN: paleta primária em tons de azul escuro (`#0D1B2A`, `#1B3A5C`, `#2E6DA4`), gradiente de navbar `#07B2FD -> #005AEA`, arestas retas sem `border-radius`, tipografia Circular (com fallback para Inter).
+O front-end é uma SPA (Single Page Application) sem etapa de build, baseada em React 18 + Babel Standalone + Tailwind CSS, todos carregados via CDN. A identidade visual segue o brandbook do Banco PAN: paleta primária em tons de azul escuro (`#0D1B2A`, `#1B3A5C`, `#2E6DA4`), gradiente de navbar `#07B2FD` para `#005AEA`, arestas retas sem `border-radius`, tipografia Circular (com fallback para Inter).
 
-A aplicação é organizada em **três fluxos principais** acessíveis pela navbar fixa:
+Todos os dados exibidos vêm da API do backend via `api.js`. Não há dados mockados na aplicação.
 
-| Rota (estado `page`) | Componente | Responsabilidade |
-|---|---|---|
-| `dashboard` | `Dashboard.js` | Visão geral da última safra + tabela de clusters históricos |
-| `gerar` | `GerarLimites.js` | Upload de base CSV, execução do Simplex, resultados inline |
-| modal (overlay) | `ConfigModal.js` | Edição dos parâmetros do modelo |
+A aplicação é organizada em **quatro fluxos principais** acessíveis pela navbar fixa:
 
-> **Nota de roteamento:** A aplicação não usa React Router. O estado `page` em `App` (em `index.html`) controla qual componente é renderizado. A troca de tela é instantânea, sem recarregamento de página.
+| Estado `page` | Componente        | Responsabilidade                                                  |
+| ------------- | ----------------- | ----------------------------------------------------------------- |
+| `cockpit`     | `Cockpit.js`      | Visão geral da última simulação concluída e tabela de clusters    |
+| `gerar`       | `GerarLimites.js` | Upload de base `.parquet`, monitoramento do pipeline e resultados |
+| `resultados`  | `Resultados.js`   | Histórico de simulações com gráficos e exportação                 |
+| modal         | `ConfigModal.js`  | Edição dos parâmetros do modelo de otimização                     |
+
+A aplicação não usa React Router. O estado `page` em `App` (definido em `index.html`) controla qual componente é renderizado. A troca de tela é instantânea, sem recarregamento de página. O `ErrorBoundary` com `key={page}` força a remontagem completa a cada navegação, garantindo que os dados sejam sempre recarregados da API.
 
 ---
 
@@ -20,9 +23,10 @@ A aplicação é organizada em **três fluxos principais** acessíveis pela navb
 
 ```
 apps/frontend/
-├── index.html              # Entry point + App root + ErrorBoundary
-├── data.js                 # Dados globais de referência
-├── styles.css              # Estilos globais, fonte Circular, animação upload-zone
+├── index.html              # Entry point, App root, ErrorBoundary
+├── api.js                  # Cliente HTTP para o backend FastAPI
+├── data.js                 # Helpers de formatação e metadados de UI
+├── styles.css              # Estilos globais, fonte Circular, animações
 ├── assets/
 │   ├── Logo_PAN.jpg
 │   └── fonts/
@@ -30,311 +34,249 @@ apps/frontend/
 │       ├── lineto-circular-book.ttf
 │       └── lineto-circular-medium.ttf
 └── pages/
-    ├── Navbar.js            # Navbar fixa, gradiente PAN, links de navegação
-    ├── Dashboard.js         # KPIs + tabela de clusters da última safra
-    ├── GerarLimites.js      # Upload + execução + resultados completos inline
-    ├── Resultados.js        # Componentes SVG de gráficos (globais) + página legada
-    └── ConfigModal.js       # Modal de configuração de parâmetros do modelo
+    ├── Navbar.js            # Navbar fixa com gradiente PAN
+    ├── Cockpit.js         # Componente Cockpit
+    ├── GerarLimites.js      # Upload, monitoramento e resultados inline
+    ├── Resultados.js        # Componentes SVG de gráficos + página de histórico
+    └── ConfigModal.js       # Modal de configuração dos parâmetros do modelo
 ```
 
 ---
 
-## 3. Fluxo 1 — Home (Dashboard)
+## 3. api.js
 
-### 3.1 Objetivo
+Centraliza todas as chamadas ao backend. Não há `fetch` em nenhum outro arquivo.
 
-A Home é a tela de entrada da aplicação. Sua função é dar ao usuário (perfil Rodinei — Estratégia de Crédito) uma leitura rápida do estado atual da carteira e do histórico de simulações executadas.
+| Método | Função                        | Endpoint                              |
+| ------ | ----------------------------- | ------------------------------------- |
+| `GET`  | `health()`                    | `/api/health`                         |
+| `GET`  | `listSafras()`                | `/api/safras`                         |
+| `GET`  | `listConsultas()`             | `/api/consultas`                      |
+| `POST` | `createConsulta(...)`         | `/api/consultas`                      |
+| `GET`  | `getConsulta(id)`             | `/api/consultas/{id}`                 |
+| `GET`  | `getClusters(id)`             | `/api/consultas/{id}/clusters`        |
+| `GET`  | `getClientes(id, limit, off)` | `/api/consultas/{id}/clientes`        |
+| `GET`  | `exportClientes(id)`          | `/api/consultas/{id}/clientes/export` |
+| `GET`  | `getHistoricoCliente(token)`  | `/api/clientes/{token}`               |
+| `GET`  | `getConfig()`                 | `/api/config`                         |
+| `PUT`  | `updateConfig(params)`        | `/api/config`                         |
 
-### 3.2 Composição da tela
-
-**Cabeçalho**
-
-Título "Home" com sublinhado azul PAN de 2 px e data da última safra carregada. Botão "Nova Simulação" no canto direito navega para `gerar`.
-
-**KPIs (4 cards)**
-
-| Card | Dado |
-|---|---|
-| Total de Clientes | Contagem total da base da safra |
-| Clusters Identificados | Número de clusters gerados pelo CART |
-| Score Médio | Média ponderada do `score_credito_cross` |
-| Clientes Elegíveis | Clientes com `flag_filtros = 0` |
-
-Cada card exibe valor principal, badge de variação (alta/queda/neutro) e ícone temático. As cores dos badges seguem a paleta terciária PAN: verde `#67DE98` para alta, vermelho `#FF5D5C` para queda, azul claro neutro para estável.
-
-**Tabela de Clusters Identificados**
-
-Exibe o resultado agregado da última execução do algoritmo. Colunas: **Cluster ID**, **Limite Sugerido** (formatado em R$) e **Status** (badge "Solução Viável" verde ou "Sem Solução" vermelho).
-
-- Campo de busca filtra por Cluster ID em tempo real (case-insensitive)
-- Botão **Exportar** gera `clusters.csv` com as colunas `cluster_id`, `limite_sugerido`, `status` via `Blob` + `URL.createObjectURL`, sem depender de servidor
-- Paginação visual (Anterior / 1 2 3 / Próximo)
+`pollConsulta(id, onUpdate, intervalMs)` é um utilitário que chama `getConsulta` em loop até o status ser `concluido` ou `erro`, resolvendo a Promise com o resultado final. Retorna um objeto com método `cancel()` para interromper o polling.
 
 ---
 
-## 4. Fluxo 2 — Gerar Limites + Resultados
+## 4. data.js
 
-Este é o fluxo central da aplicação. O protótipo original tratava "Gerar Limites" e "Resultados" como duas telas separadas — o usuário fazia o upload em uma tela e navegava para outra para ver os gráficos. Na implementação final, as duas telas foram **fundidas em uma só página com dois estados visuais**.
+Contém apenas helpers de apresentação e metadados de UI. Não há dados mockados.
 
-### 4.1 Estado inicial — Instruções e Upload
+**Helpers de formatação**
 
-Quando o usuário acessa "Gerar Limites" sem ter rodado uma simulação, a página exibe:
+- `fmt(v)`: formata número como moeda sem casas decimais. Exemplo: `4500` vira `R$ 4.500`.
+- `fmtZ(v)`: formata número como moeda com duas casas decimais. Usado para o valor objetivo `z`.
 
-**Tabela de estrutura esperada do CSV**
+**`PARAMS_EDITAVEIS`**
 
-Antes do campo de upload, há uma tabela de referência completa com as 8 colunas esperadas no arquivo:
+Metadados dos controles do `ConfigModal`: chave, label em português, valor de fallback, limites e passo do slider. Os valores reais vêm sempre de `GET /api/config`. Os `value` aqui são apenas fallbacks exibidos antes da API responder.
 
-| Coluna | Tipo | Descrição |
-|---|---|---|
-| `token` | string | Identificador único do cliente |
-| `flag_filtros` | int | 0 = elegível / 1 = excluído da otimização |
-| `pd_calibrada` | float | Probabilidade de default calibrada |
-| `capacidade_pagamento` | float | Capacidade de pagamento em R$ |
-| `renda_estimada` | float | Renda estimada (proxy quando capacidade_pagamento é nulo) |
-| `score_credito_cross` | float | Score de crédito (escala 300-900) |
-| `score_propensao_contrato` | float | Score de propensão ao contrato (escala 3-846) |
-| `fx_idade` | string | Faixa etária categórica (opcional) |
+| Chave   | Label                          | Faixa                | Default   |
+| ------- | ------------------------------ | -------------------- | --------- |
+| `t`     | Taxa de interchange            | 0,5% a 5%            | 1,75%     |
+| `LGD`   | Loss Given Default             | 30% a 100%           | 80%       |
+| `u_bar` | Utilização esperada do limite  | 30% a 100%           | 75%       |
+| `L_max` | Limite máximo por cluster (R$) | R$ 5.000 a R$ 50.000 | R$ 25.000 |
+| `T`     | Horizonte de uso (meses)       | 6 a 60               | 22        |
 
-Uma nota abaixo da tabela informa o mínimo recomendado de **500+ clientes com `flag_filtros = 0`** para que o CART gere clusters com `min_samples_leaf = 500`.
+**`PARAMS_NAO_EDITAVEIS`**
 
-**Dropzone de upload**
-
-Área clicável com suporte a drag-and-drop. Aceita `.csv` e `.xlsx`. Estados visuais:
-- **Vazio:** borda tracejada cinza azulada, fundo branco
-- **Drag sobre:** borda azul PAN sólida, fundo `#D6E8F5`
-- **Arquivo carregado:** borda azul PAN, fundo `#D6E8F5/50`, nome do arquivo exibido
-
-Após selecionar um arquivo, aparece o botão **Executar Simplex** com feedback de loading (ícone giratório + texto "Executando...") durante o processamento.
-
-### 4.2 Estado pós-execução — Resultados inline
-
-Após `ran = true`, o título da página muda para "Resultados da Simulação" e os seguintes blocos aparecem:
-
-**Banner informativo**
-
-Barra azul claro com ícone de informação indicando que os dados são da última execução. Link "carregar um novo arquivo" reseta `ran = false` e `file = null`, voltando ao estado de upload sem precisar navegar.
-
-**KPIs de resultado (4 cards)**
-
-| Card | Destaque |
-|---|---|
-| Total de Clusters | Neutro |
-| Limite Total Aprovado | Destacado (fundo `#D6E8F5`, valor em azul PAN) |
-| Clientes Ativos | Neutro |
-| Taxa de Aprovação | Neutro |
-
-**Mini-cards de viabilidade + Tabela de clusters**
-
-Três cards horizontais: Total de Clusters, Com Solução Viável (borda verde), Sem Solução (borda amarela). Abaixo, a tabela completa com Cluster ID, Limite Sugerido e badge de status para cada cluster.
-
-**Gráficos (linha 1)**
-
-- **Limites por Cluster** — gráfico de barras verticais SVG. Barras azul PAN para clusters com limite; barras cinza `#E8EFF7` para clusters sem solução. Rótulos de valor acima de cada barra.
-- **Distribuição por Status** — gráfico de rosca (donut) SVG com legenda lateral. Cores: verde `#67DE98` (Ativo), vermelho `#FF5D5C` (Inativo), amarelo `#FAE95D` (Pendente).
-
-**Seção de comparação Simplex vs PuLP**
-
-Seção exclusiva desta implementação, sem equivalente no protótipo. Dois cards lado a lado exibem métricas agregadas de cada solver (valor objetivo `z`, tempo de execução em ms, status de otimização). Abaixo, tabela cluster-a-cluster com as colunas Cluster, Simplex (R$), PuLP/CBC (R$) e Match (badge "Idêntico" verde ou "Diverge" amarelo). Rodapé exibe o delta `z` percentual e o PD financeiro atual.
-
-**Gráficos (linha 2)**
-
-- **Evolução do Limite Total** — gráfico de linha SVG com área sombreada. Toggle "Comparar simulação anterior" sobrepõe segunda série em linha tracejada amarela, com legenda discriminando as duas execuções.
-- **Distribuição de Score** — histograma SVG de barras verticais por faixa de `score_credito_cross` (300-400, 400-500, ..., 900+).
-
-**Botão Exportar CSV**
-
-Posicionado no cabeçalho da seção de resultados. Gera `limites_clusters.csv` com as colunas Cluster, Simplex (R$), PuLP/CBC (R$), Match via `Blob` + `URL.createObjectURL`.
-
-### 4.3 Diagrama de estados do fluxo
-
-```
-[Abre /gerar]
-      |
-      v
-[Estado: upload]
-  +-------------------------+
-  |  Instruções CSV         |
-  |  Dropzone               |
-  +------------+------------+
-               | seleciona arquivo
-               v
-         [file != null]
-         Botao "Executar" aparece
-               | clica Executar
-               v
-         [running = true]
-         Processamento em execução
-               |
-               v
-         [ran = true]
-  +-------------------------+
-  |  Resultados inline      |
-  |  KPIs . Clusters        |
-  |  Graficos . Comparacao  |
-  |  Exportar CSV           |
-  +------------+------------+
-               | clica "carregar novo arquivo"
-               v
-         [ran=false, file=null]
-         volta ao estado upload
-```
+Array de pares `{ label, value }` exibidos como somente leitura no `ConfigModal`. São parâmetros fixados pela modelagem ou pelo regulador.
 
 ---
 
-## 5. Fluxo 3 — Alterar Parâmetros (ConfigModal)
+## 5. Fluxo 1 - Cockpit (Cockpit.js)
 
-### 5.1 Acesso
+### 5.1 Objetivo
 
-O modal é disparado pelo ícone de engrenagem na navbar (último item, identificado como `isConfig: true`). Não ocupa uma rota própria — é uma sobreposição sobre a página ativa com fundo semi-transparente `#0D1B2A/40`.
+Tela de entrada da aplicação. Apresenta a visão consolidada da última simulação concluída e a tabela de clusters correspondente.
 
-### 5.2 Parâmetros editáveis
+### 5.2 Carregamento de dados
 
-Cada parâmetro é exibido como um controle composto: **slider** horizontal sincronizado com **campo numérico** editável. Mover o slider atualiza o campo e vice-versa em tempo real. Os limites de cada slider refletem os intervalos válidos do modelo:
+Ao montar, o componente executa `listConsultas()` e `listSafras()` em paralelo. Filtra as consultas com `status_consulta === "concluido"` e seleciona a mais recente como consulta atual e a segunda como consulta anterior (usada para calcular deltas). Em seguida, carrega os clusters da consulta atual via `getClusters(id)`.
 
-| Parâmetro | Chave | Faixa | Default |
-|---|---|---|---|
-| Taxa de interchange | `t` | 0 – 5% | 1,75% |
-| Loss Given Default (LGD) | `LGD` | 30% – 100% | 80% |
-| Utilização esperada do limite | `u_bar` | 30% – 100% | 75% |
-| Teto máximo de Limite (R$) | `L_max` | R$ 10.000 – R$ 50.000 | R$ 25.000 |
+### 5.3 Estados de render
 
-### 5.3 Parâmetros não editáveis
+**Carregando:** spinner centralizado enquanto as chamadas respondem.
 
-Exibidos em grid de 2 colunas como cards somente-leitura, com label e valor formatado. São parâmetros fixados pela equipe de modelagem ou pelo regulador:
+**Vazio:** exibido quando não há nenhuma consulta concluída. Mostra CTA para Gerar Limites.
 
-| Parâmetro | Valor |
-|---|---|
-| Custo de capital (Ke) | 14,25% |
-| Custo de funding (Kd) | 11,50% |
-| Taxa de recuperação (RR) | 30% |
-| Exposição padrão (EAD) | Limite |
-| LGD | 80% |
-| PD financeiro atual | 13,75% |
+**Normal:** KPIs, banner de referência e tabela de clusters.
 
-### 5.4 Fluxo de interação
+### 5.4 KPIs
 
-```
-[Clica engrenagem na navbar]
-         |
-         v
-   Modal abre (overlay)
-   Parametros carregados no estado local
-         |
-         +-- [ajusta slider ou campo numerico]
-         |    +-- ambos se sincronizam em tempo real
-         |
-         +-- [clica Salvar]
-         |    +-- parametros persistidos
-         |    +-- modal fecha
-         |
-         +-- [clica Cancelar / clica fora / Esc]
-              +-- descarta alteracoes -> modal fecha
-```
+| Card                   | Campo na API           | Delta                           |
+| ---------------------- | ---------------------- | ------------------------------- |
+| Total de Clientes      | `n_clientes_total`     | Absoluto vs consulta anterior   |
+| Clusters Identificados | `n_clusters`           | Absoluto vs consulta anterior   |
+| Clientes Elegíveis     | `n_clientes_elegiveis` | Absoluto vs consulta anterior   |
+| Valor Objetivo (z)     | `z_otimo`              | Percentual vs consulta anterior |
+
+Quando não há consulta anterior, o badge de delta não é exibido.
+
+### 5.5 Tabela de clusters
+
+Exibe os dados de `ClusterResultadoResponse` da consulta mais recente. Colunas: Cluster ID, Clientes, PD Média, Score Cross Médio, Fator de Alavancagem, Limite Otimizado e Status (Viável / Sem Solução).
+
+- Busca filtra por `CLU-{cluster_id}` em tempo real
+- Paginação de 15 registros por página
+- Exportar gera `clusters_{safra}.csv` no browser via `Blob`, sem chamar a API
 
 ---
 
-## 6. Diferenças em Relação ao Protótipo Figma
+## 6. Fluxo 2 - Gerar Limites (GerarLimites.js)
 
-### 6.1 Navbar e identidade visual
+### 6.1 Upload
 
-| Aspecto | Protótipo | Implementação |
-|---|---|---|
-| Marca | "Sistema de Crédito" (texto simples) | Logo `Logo_PAN.jpg` + "Banco PAN / Otimizador de Limites" |
-| Cor da navbar | Branco/cinza claro | Gradiente `#07B2FD -> #005AEA` (identidade PAN) |
-| Itens | Dashboard . Gerar Limites . Resultados | Home . Gerar Limites . Configurações |
-| Item "Resultados" | Rota independente | Removido — conteúdo fundido em Gerar Limites |
-| "Configurações" | Ícone de engrenagem flutuante (canto inferior esquerdo) | Item fixo na navbar, alinhado aos demais links |
-| Border-radius | Botões e cards arredondados | Sem arredondamento — bordas retas conforme brandbook PAN |
+Aceita exclusivamente arquivos `.parquet`. A tentativa de upload de qualquer outro formato exibe erro de validação antes de qualquer requisição.
 
-### 6.2 Tela Home
+A dropzone suporta drag-and-drop e clique. O campo `safra_numero` fica oculto em "Opções avançadas" e é opcional: quando omitido, o backend auto-incrementa o número da safra.
 
-| Aspecto | Protótipo | Implementação |
-|---|---|---|
-| Título da tabela principal | "Lista de Clientes" | "Clusters Identificados" |
-| Colunas da tabela | Cluster . Score (barra) . Status . Limite . Cadastro . Ações | Cluster ID . Limite Sugerido . Status |
-| Botões da tabela | Importar . Exportar . Adicionar | Somente Exportar |
-| Status na tabela | Ativo / Em Análise / Inativo | Solução Viável / Sem Solução |
-| KPIs | Total de Clientes . Clusters Ativos . Limite Total . Taxa de Aprovação | Total de Clientes . Clusters Identificados . Score Médio . Clientes Elegíveis |
-| Score individual | Barra proporcional com cores verde/amarelo/vermelho | Não exibido (tabela é de clusters, não de clientes individuais) |
+### 6.2 Colunas esperadas no .parquet
 
-A mudança da tabela de clientes para clusters reflete a decisão de modelagem: a unidade de otimização é o cluster, não o cliente individual — o que é exibido são os clusters consolidados resultantes da execução do CART + Simplex.
+| Coluna                     | Tipo   | Descrição                                 |
+| -------------------------- | ------ | ----------------------------------------- |
+| `token`                    | int    | Identificador único do cliente            |
+| `flag_filtros`             | int    | 0 = elegível / 1 = excluído da otimização |
+| `score_interno`            | int    | Score interno do produto                  |
+| `pd_produto`               | float  | Probabilidade de default do produto       |
+| `score_credito_cross`      | int    | Score de crédito cross (300 a 900)        |
+| `score_propensao_contrato` | float  | Score de propensão ao contrato (3 a 846)  |
+| `capacidade_pagamento`     | float? | Capacidade de pagamento em R$ (opcional)  |
+| `renda_estimada`           | float? | Renda estimada em R$ (opcional)           |
+| `fx_idade`                 | string | Faixa etária categórica (ex: 26-35)       |
+| `flag_contrato`            | int    | 1 = cliente com contrato ativo            |
+| `flag_ativacao`            | int    | 1 = cliente ativado                       |
 
-### 6.3 Tela Gerar Limites
+### 6.3 Modal de envio
 
-| Aspecto | Protótipo | Implementação |
-|---|---|---|
-| Conteúdo pré-upload | Apenas dropzone | Tabela de estrutura do CSV com 8 colunas + nota de mínimo recomendado |
-| Pós-execução | Navega para tela "Resultados" separada | Resultados aparecem inline na mesma página |
-| Botão de navegação | "Ver análise completa em Resultados" (CTA) | Removido — não há navegação separada |
-| Reset | Navegar para outra tela | Link "carregar um novo arquivo" reseta o estado sem sair da página |
+Ao clicar em "Executar Simplex", um modal bloqueante cobre a tela enquanto o arquivo é enviado via `POST /api/consultas`. O modal exibe o nome e o tamanho do arquivo e não pode ser fechado pelo usuário. Fecha automaticamente quando o backend responde.
 
-### 6.4 Tela Resultados (fundida em Gerar Limites)
+### 6.4 Tratamento do conflito 409
 
-| Aspecto | Protótipo | Implementação |
-|---|---|---|
-| Localização | Rota `/resultados` independente | Bloco condicional `{ran && ...}` dentro de `GerarLimites` |
-| Estado vazio | Não previsto | Banner com CTA para upload quando `ran = false` |
-| Seção Simplex vs PuLP | Não prevista | Cards de métricas agregadas + tabela cluster-a-cluster com delta `z` |
-| Comparação entre runs | Não prevista | Toggle "Comparar simulação anterior" sobrepõe série tracejada amarela no gráfico de evolução |
-| Exportação | Não prevista na tela | Botão "Exportar CSV" no cabeçalho dos resultados |
+Se `safra_numero` for informado e a safra já existir, o backend retorna 409. O modal fecha e um aviso inline aparece com dois botões: "Usar safra existente" (reenvia com `usar_safra_existente=true`) e "Cancelar".
 
-### 6.5 ConfigModal
+### 6.5 Monitoramento
 
-| Aspecto | Protótipo | Implementação |
-|---|---|---|
-| Controle de edição | Ícone de lápis por parâmetro; expandia slider inline ao clicar | Todos os sliders visíveis simultaneamente |
-| Salvar/Cancelar | Por parâmetro (dentro de cada card expandido) | Global — único par de botões no rodapé do modal |
-| Tema | Branco com bordas arredondadas | Fundo `#E2EAF4` nos cards de parâmetros, bordas retas |
+Após receber a resposta `pendente` do backend, a consulta aparece na lista de simulações. O polling inicia com uma primeira verificação em 5 segundos (tempo para o background task iniciar) e depois a cada 60 segundos via `GET /api/consultas/{id}`.
 
----
+Durante a execução, cada consulta exibe as três etapas do pipeline com animação de pulso: Calibração, Clustering (CART) e Otimização (Simplex). O botão "Verificar agora" cancela o timer pendente e consulta imediatamente.
 
-## 7. Visualizações de Dados
+Quando o status muda para `concluido`, o componente chama `getClusters(id)` e exibe os resultados abaixo da lista. Quando muda para `erro`, exibe `erro_etapa` e `erro_mensagem` do backend.
 
-Todos os gráficos são componentes SVG puros definidos em `Resultados.js` como variáveis globais (`var`), acessíveis por `GerarLimites.js` após o carregamento de todos os scripts.
+### 6.6 Resultados inline
 
-| Componente | Tipo | Dados exibidos |
-|---|---|---|
-| `BarChartSVG` | Barras verticais | Limite ótimo por cluster (R$) |
-| `DonutChart` | Rosca com buraco | Proporção de clientes por status |
-| `LineChartSVG` | Linha com área + série opcional | Evolução mensal do limite total (R$ milhões). Prop `data2` ativa série comparativa tracejada em amarelo |
-| `AreaChartSVG` | Histograma de frequência | Distribuição de clientes por faixa de score |
+Exibidos após a conclusão da consulta ativa ou ao clicar em "Ver resultados" em qualquer consulta concluída da lista.
 
-Todas as visualizações usam exclusivamente as cores da paleta PAN: azul `#2E6DA4` como cor principal, `#E8EFF7` para linhas de grade e barras sem valor, paleta terciária (verde/amarelo/vermelho) para status. Sem bibliotecas externas de charting.
+**KPIs:** `n_clusters`, `z_otimo`, `n_clientes_elegiveis`, `n_clientes_ofertados` (com percentual calculado sobre elegíveis).
+
+**Gráficos:**
+
+- Barras verticais com os 15 clusters de maior limite otimizado
+- Donut com distribuição de clientes: Com limite / Elegível sem limite / Inelegível
+
+**Tabela de clusters:** paginada em 20 por página, com colunas PD Média, Score Cross Médio, Fator de Alavancagem, Limite Otimizado e Status.
+
+**Exportar:** chama `Api.exportClientes(id)` que baixa o CSV completo de clientes gerado pelo backend.
 
 ---
 
-## 8. Como Executar
+## 7. Fluxo 3 - Resultados (Resultados.js)
 
-O front-end não possui build. Funciona diretamente no browser via `file://` ou servidor HTTP estático.
+Página independente acessível diretamente pela navbar. Ao montar, carrega todas as consultas concluídas e safras em paralelo e seleciona a mais recente por padrão.
+
+### 7.1 Seletor de simulação
+
+Dropdown no cabeçalho lista todas as consultas concluídas no formato `{safra} · {arquivo}`. Ao trocar a seleção, os clusters da nova consulta são carregados via `getClusters(id)`.
+
+### 7.2 KPIs
+
+Mesmos quatro campos de `ConsultaResponse`: `n_clusters`, `z_otimo`, `n_clientes_elegiveis`, `n_clientes_ofertados`.
+
+### 7.3 Gráficos
+
+| Componente     | Dados                                                                                   |
+| -------------- | --------------------------------------------------------------------------------------- |
+| `BarChartSVG`  | Top 15 clusters por `limite_otimizado`, ordenados decrescentemente                      |
+| `DonutChart`   | Distribuição de clientes: Com limite / Elegível sem limite / Inelegível                 |
+| `LineChartSVG` | Evolução do `z_otimo` entre consultas concluídas, ordenadas cronologicamente            |
+| `RiskHistSVG`  | Histograma de clusters por faixa de PD média: 0-5%, 5-10%, 10-15%, 15-20%, 20-25%, 25%+ |
+
+### 7.4 Parâmetros utilizados
+
+Seção colapsável exibindo os parâmetros exatos da consulta selecionada (`t`, `LGD`, `u_bar`, `L_max`, `T`). Útil para auditoria e reprodução dos resultados.
+
+### 7.5 Exportação
+
+Botão "Exportar clientes CSV" chama `Api.exportClientes(id)`, que retorna o arquivo gerado pelo backend com todos os campos de `ClienteResultadoResponse`.
+
+---
+
+## 8. Fluxo 4 - Configurações (ConfigModal.js)
+
+### 8.1 Acesso
+
+Disparado pelo último item da navbar (identificado como `isConfig: true`). Sobrepõe a página ativa com fundo semi-transparente. Ao abrir, carrega os valores atuais via `GET /api/config`.
+
+### 8.2 Parâmetros editáveis
+
+Cada parâmetro é exibido como um card com valor atual e botão de edição. Ao clicar em editar, o card expande com um slider cujos limites e passo são definidos em `PARAMS_EDITAVEIS` em `data.js`.
+
+Salvar envia `PUT /api/config` com o payload `{ t, LGD, u_bar, L_max, T }` e atualiza o estado local. Cancelar restaura o valor que veio da API na abertura do modal (não o fallback local de `data.js`).
+
+### 8.3 Restaurar padrões
+
+Botão no rodapé do modal. Exibe `window.confirm` antes de executar. Envia `PUT /api/config` com os valores de fábrica definidos em `PARAMS_EDITAVEIS.value` e atualiza o banco.
+
+### 8.4 Parâmetros não editáveis
+
+Grid de dois cards por linha exibindo os parâmetros fixados pela modelagem ou pelo regulador.
+
+---
+
+## 9. Visualizações de Dados
+
+Todos os gráficos são componentes SVG puros definidos em `Resultados.js` como variáveis globais (`var`), acessíveis por `GerarLimites.js` após o carregamento dos scripts. Não há bibliotecas externas de charting.
+
+| Componente     | Tipo                | Descrição                                                                                                                                                             |
+| -------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BarChartSVG`  | Barras verticais    | Barras azul PAN para clusters com limite, cinza `#E8EFF7` para clusters sem solução. Rótulo de valor acima de cada barra. Eixo Y com escala automática em R$k ou R$M. |
+| `LineChartSVG` | Linha com área      | Área sombreada azul, pontos com rótulo de valor alternados. Requer no mínimo 2 pontos; exibe aviso quando há apenas uma consulta.                                     |
+| `DonutChart`   | Rosca               | Fatias calculadas a partir das contagens da `ConsultaResponse`. Legenda lateral com valores absolutos.                                                                |
+| `RiskHistSVG`  | Histograma de risco | Seis faixas de PD média com gradiente visual de verde (baixo risco) a vermelho (alto risco). Conta clusters por faixa.                                                |
+
+Todas as visualizações usam exclusivamente cores da paleta PAN: azul `#2E6DA4` como cor principal, `#E8EFF7` para linhas de grade, paleta terciária (verde/amarelo/vermelho) para status e risco.
+
+---
+
+## 10. Como Executar
+
+O front-end sobe automaticamente junto com o backend via `run_server.py`:
 
 ```bash
-# Python (recomendado — evita restricoes de CORS no file://)
-cd apps/frontend
-python -m http.server 8080
-# Acesse: http://localhost:8080
-
-# Node.js
-cd apps/frontend
-npx serve .
+cd apps/backend
+python run_server.py
 ```
 
-### Dependências (todas via CDN)
+Para subir somente o front-end de forma isolada:
 
-| Biblioteca | Versão | Finalidade |
-|---|---|---|
-| React | 18 | UI reativa |
-| ReactDOM | 18 | Renderização no DOM |
+```bash
+cd apps/frontend
+python -m http.server 5500
+```
+
+### Dependências (via CDN)
+
+| Biblioteca       | Versão | Finalidade                     |
+| ---------------- | ------ | ------------------------------ |
+| React            | 18     | UI reativa                     |
+| ReactDOM         | 18     | Renderização no DOM            |
 | Babel Standalone | latest | Transpilação de JSX no browser |
-| Tailwind CSS | CDN | Estilização utilitária |
-
-### User Stories atendidas
-
-| ID | Título | Status |
-|---|---|---|
-| US01 | Carregar base de dados | Implementado — dropzone com drag-and-drop, feedback visual |
-| US04 | Gerar limite por cluster | Implementado — upload de CSV + execução + resultados inline |
-| US06 | Visualizar distribuição dos limites | Implementado — 4 gráficos SVG + seção Simplex vs PuLP |
-| US07 | Exportar resultados | Implementado — CSV client-side em Dashboard e em Resultados |
-| US02 | Ajustar clusterização | Implementado — parâmetros editáveis no ConfigModal |
-| US03 | Configurar metas de produção | Implementado — modal funcional com sliders sincronizados |
-| US05 | Consultar restrições ativas | Implementado — parâmetros não editáveis exibidos no ConfigModal |
+| Tailwind CSS     | CDN    | Estilização utilitária         |
