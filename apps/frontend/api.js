@@ -4,7 +4,6 @@
 //   GET    /api/health
 //   GET    /api/safras
 //   GET    /api/consultas
-//   POST   /api/consultas                          (multipart/form-data)
 //   GET    /api/consultas/{id}
 //   GET    /api/consultas/{id}/clusters
 //   GET    /api/consultas/{id}/clientes?limit&offset
@@ -12,6 +11,11 @@
 //   GET    /api/clientes/{token}
 //   GET    /api/config
 //   PUT    /api/config                             (JSON)
+//
+// Upload em chunks (para arquivos grandes):
+//   POST   /api/uploads/iniciar?nome_arquivo=...
+//   POST   /api/uploads/{id}/chunk?index=N        (multipart, um chunk por vez)
+//   POST   /api/uploads/{id}/finalizar            (remonta e dispara pipeline)
 
 var API_BASE_URL =
   window.API_BASE_URL ||
@@ -93,47 +97,6 @@ var Api = {
     return Api.request("/consultas");
   },
 
-  // POST /api/consultas  (multipart/form-data)
-  //
-  // Parâmetros:
-  //   file                 File      obrigatório - arquivo .parquet
-  //   safraNumero          int|null  opcional - se omitido, backend auto-incrementa
-  //   usarSafraExistente   bool      default false - se true, reutiliza safra existente
-  //   params               object    opcional - sobreescreve parâmetros do modelo
-  //     { t, LGD, u_bar, L_max, T }
-  //
-  // Retorna: ConsultaResponse com status_consulta = "pendente"
-  // Lança erro com status 409 se safraNumero já existir e usarSafraExistente = false.
-  //
-  // Como o pipeline roda em background, use Api.pollConsulta() para aguardar
-  // a conclusão após chamar este endpoint.
-  createConsulta: function (file, params, safraNumero, usarSafraExistente) {
-    var form = new FormData();
-    form.append("file", file);
-
-    var query = new URLSearchParams();
-
-    if (safraNumero != null) {
-      query.append("safra_numero", String(safraNumero));
-    }
-
-    query.append("usar_safra_existente", usarSafraExistente ? "true" : "false");
-
-    // parâmetros do modelo - apenas os que foram informados
-    var p = params || {};
-    if (p.t != null) query.append("t", String(p.t));
-    if (p.LGD != null) query.append("LGD", String(p.LGD));
-    if (p.u_bar != null) query.append("u_bar", String(p.u_bar));
-    if (p.L_max != null) query.append("L_max", String(p.L_max));
-    if (p.T != null) query.append("T", String(p.T));
-
-    var qs = query.toString();
-    return Api.request("/consultas" + (qs ? "?" + qs : ""), {
-      method: "POST",
-      body: form,
-    });
-  },
-
   // GET /api/consultas/{id}
   // Retorna: ConsultaResponse
   getConsulta: function (consultaId) {
@@ -194,6 +157,74 @@ var Api = {
   },
 
   // -------------------------------------------------------------------------
+  // Upload em chunks
+  //
+  // Para arquivos grandes, use este fluxo em vez de createConsulta():
+  //   1. Api.iniciarUpload(nomeArquivo)          -> { upload_id }
+  //   2. Api.enviarChunk(uploadId, index, blob)  -> { ok, index, bytes }  (repetir)
+  //   3. Api.finalizarUpload(uploadId, ...)      -> ConsultaResponse
+  //
+  // O GerarLimites.js divide o File em slices de CHUNK_SIZE bytes e chama
+  // enviarChunk() sequencialmente, atualizando a barra de progresso a cada chunk.
+  // -------------------------------------------------------------------------
+
+  // POST /api/uploads/iniciar?nome_arquivo={nome}
+  // Retorna: { upload_id }
+  iniciarUpload: function (nomeArquivo) {
+    return Api.request(
+      "/uploads/iniciar?nome_arquivo=" + encodeURIComponent(nomeArquivo),
+      { method: "POST" },
+    );
+  },
+
+  // POST /api/uploads/{id}/chunk?index={n}  (multipart com o blob do chunk)
+  // Retorna: { ok, index, bytes }
+  enviarChunk: function (uploadId, index, blob, nomeArquivo) {
+    var form = new FormData();
+    form.append("file", blob, nomeArquivo || "chunk");
+    return Api.request(
+      "/uploads/" + encodeURIComponent(uploadId) + "/chunk?index=" + index,
+      { method: "POST", body: form },
+    );
+  },
+
+  // POST /api/uploads/{id}/finalizar
+  // Remonta o arquivo a partir dos chunks e dispara o pipeline em background.
+  // Aceita os mesmos parâmetros opcionais de createConsulta.
+  // Retorna: ConsultaResponse com status_consulta = "pendente"
+  // Lança erro com status 409 se safraNumero já existir e usarSafraExistente = false.
+  finalizarUpload: function (
+    uploadId,
+    params,
+    safraNumero,
+    usarSafraExistente,
+  ) {
+    var query = new URLSearchParams();
+
+    if (safraNumero != null) {
+      query.append("safra_numero", String(safraNumero));
+    }
+    query.append("usar_safra_existente", usarSafraExistente ? "true" : "false");
+
+    // parâmetros do modelo - apenas os que foram informados
+    var p = params || {};
+    if (p.t != null) query.append("t", String(p.t));
+    if (p.LGD != null) query.append("LGD", String(p.LGD));
+    if (p.u_bar != null) query.append("u_bar", String(p.u_bar));
+    if (p.L_max != null) query.append("L_max", String(p.L_max));
+    if (p.T != null) query.append("T", String(p.T));
+
+    var qs = query.toString();
+    return Api.request(
+      "/uploads/" +
+        encodeURIComponent(uploadId) +
+        "/finalizar" +
+        (qs ? "?" + qs : ""),
+      { method: "POST" },
+    );
+  },
+
+  // -------------------------------------------------------------------------
   // Clusters de uma consulta
   // -------------------------------------------------------------------------
 
@@ -213,7 +244,7 @@ var Api = {
 
   // GET /api/consultas/{id}/clientes?limit={limit}&offset={offset}
   // Retorna: ClienteResultadoResponse[]
-  // limit: 1–1000, default 100 | offset: default 0
+  // limit: 1-1000, default 100 | offset: default 0
   getClientes: function (consultaId, limit, offset) {
     var q = new URLSearchParams();
     if (limit != null) q.append("limit", String(limit));
