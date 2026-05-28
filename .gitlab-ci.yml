@@ -1,5 +1,15 @@
 stages:
+  - test
   - deploy
+
+test_backend_optimizer:
+  stage: test
+  tags:
+    - g04-server
+  script:
+    - python -m pip install -r apps/backend/requirements.txt
+    - python -m unittest discover -s apps/algoritmo_simplex/tests -p "test_*.py"
+    - python -m unittest discover -s apps/backend/tests -p "test_*.py"
 
 deploy:
   stage: deploy

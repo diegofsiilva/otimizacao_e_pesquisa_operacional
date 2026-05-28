@@ -5,7 +5,7 @@
 Esta versao foi ajustada para cobrir diretamente os quatro itens avaliados da entrega parcial:
 
 1. **Operacoes do front-end:** o backend expoe as rotas usadas pelo front-end para saude da API, safras, consultas, upload direto, upload em chunks, polling de status, clusters, clientes paginados, exportacao CSV, historico de cliente e configuracao dos parametros do modelo.
-2. **Operacoes documentadas e testadas:** foram adicionados testes automatizados em `apps/backend/tests/` e `apps/algoritmo_simplex/tests/`, cobrindo contratos das rotas, upload em chunks, validacao de arquivo e casos didaticos do Simplex.
+2. **Operacoes documentadas e testadas:** foram adicionados testes automatizados em `apps/backend/tests/` e `apps/algoritmo_simplex/tests/`, cobrindo contratos das rotas, integracao HTTP, upload em chunks, validacao de arquivo, worker de background e casos didaticos do Simplex.
 3. **Otimizador testavel:** o Simplex proprio pode ser executado isoladamente por `python apps/algoritmo_simplex/simplex.py` e tambem por `python -m unittest discover -s apps/algoritmo_simplex/tests`.
 4. **Execucao nao bloqueante:** a API registra a consulta e agenda o pipeline via `BackgroundTasks`; a execucao bloqueante do otimizador roda fora da event loop com `asyncio.get_running_loop().run_in_executor(...)`.
 
@@ -21,11 +21,32 @@ Tambem foram corrigidos pontos de robustez:
 Na raiz do repositorio:
 
 ```bash
+python -m pip install -r apps/backend/requirements.txt
 python -m unittest discover -s apps/algoritmo_simplex/tests -p "test_*.py"
 python -m unittest discover -s apps/backend/tests -p "test_*.py"
 ```
 
-Os testes do backend nao exigem PostgreSQL; eles validam o contrato da API, o comportamento de upload em chunks e a integracao assincrona por inspecao do codigo. O teste completo com banco e pipeline real continua sendo feito executando a aplicacao e enviando um parquet pelo front-end ou por `curl`, conforme descrito na secao **Testes realizados no back-end**.
+Os testes do backend nao exigem PostgreSQL; eles validam o contrato da API, o comportamento de upload em chunks, a integracao HTTP com `TestClient` e o worker assincrono com pool fake. O teste completo com banco e pipeline real continua sendo feito executando a aplicacao e enviando um parquet pelo front-end ou por `curl`, conforme descrito na secao **Testes realizados no back-end**.
+
+### Matriz de evidencias da avaliacao
+
+| Item avaliado | Evidencia na implementacao | Teste automatizado |
+| --- | --- | --- |
+| O back-end implementa as operacoes de que o front-end necessita | `apps/backend/api/routes.py` e `apps/backend/api/upload_routes.py` expõem health, safras, consultas, upload, status, clusters, clientes, export e config | `apps/backend/tests/test_backend_contracts.py` e `apps/backend/tests/test_api_integration.py` |
+| As operacoes do back-end estao documentadas e foram testadas | Esta documentacao, `apps/backend/README.md` e OpenAPI automatico em `/docs` | `python -m unittest discover -s apps/backend/tests -p "test_*.py"` |
+| O otimizador implementa um algoritmo de otimizacao testavel | `apps/algoritmo_simplex/simplex.py` implementa Simplex proprio, sem solver pronto | `apps/algoritmo_simplex/tests/test_simplex.py` |
+| A execucao do otimizador nao bloqueia as demais funcionalidades | `BackgroundTasks` agenda o job e `run_in_executor` tira o pipeline bloqueante da event loop | `apps/backend/tests/test_backend_contracts.py` e `apps/backend/tests/test_pipeline_background.py` |
+| CI executa validacoes antes do deploy | `.gitlab-ci.yml` possui stage `test` antes do stage `deploy` | Job `test_backend_optimizer` |
+
+### Fixture pequena para testes manuais
+
+Para gerar um parquet minimo com o esquema esperado pela aplicacao:
+
+```bash
+python apps/backend/tests/fixtures/tiny_credit_base.py
+```
+
+O arquivo gerado fica em `apps/backend/tests/fixtures/tiny_credit_base.parquet`. Ele serve para validar upload e contratos de entrada sem usar bases reais do parceiro. O pipeline completo de producao ainda depende dos artefatos de calibracao e clustering descritos neste documento.
 
 ## Contextualização
 
