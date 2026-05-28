@@ -36,10 +36,19 @@ var GerarLimites = function (props) {
   var uploadError = su5[0];
   var setUploadError = su5[1];
 
-  // Modal de envio (bloqueia UI durante o POST)
+  // Modal de envio com progresso de chunks
   var sm1 = React.useState(false);
   var envioModal = sm1[0];
   var setEnvioModal = sm1[1];
+  var sm2 = React.useState(0);
+  var uploadProgress = sm2[0];
+  var setUploadProgress = sm2[1];
+  var sm3 = React.useState("iniciando");
+  var uploadStep = sm3[0];
+  var setUploadStep = sm3[1];
+
+  // Tamanho de cada chunk: 5MB — confortavelmente abaixo de qualquer timeout de túnel
+  var CHUNK_SIZE = 5 * 1024 * 1024;
 
   // Conflito 409 (safra já existe)
   var sc1 = React.useState(false);
@@ -146,7 +155,7 @@ var GerarLimites = function (props) {
         atualizarConsultaNaLista(c);
 
         if (c.status_consulta === "concluido") {
-          // Pipeline terminou - busca clusters e exibe resultados
+          // Pipeline terminou — busca clusters e exibe resultados
           setLoadingClusters(true);
           Api.getClusters(c.id)
             .then(function (cls) {
@@ -162,14 +171,14 @@ var GerarLimites = function (props) {
         } else if (c.status_consulta === "erro") {
           // Para de pingar
         } else {
-          // Ainda "pendente" ou "executando" - agenda próximo ping em 60s
+          // Ainda "pendente" ou "executando" — agenda próximo ping em 60s
           pollRef.current.timer = setTimeout(function () {
             verificarConsulta(consultaId);
           }, 60000);
         }
       })
       .catch(function () {
-        // Erro de rede - tenta novamente em 60s
+        // Erro de rede — tenta novamente em 60s
         pollRef.current.timer = setTimeout(function () {
           verificarConsulta(consultaId);
         }, 60000);
@@ -215,19 +224,58 @@ var GerarLimites = function (props) {
   function iniciarUpload(usarSafraExistente) {
     setShowConflito(false);
     setUploadError(null);
+    setUploadProgress(0);
+    setUploadStep("iniciando");
     setEnvioModal(true);
 
     var safraNum = safraInput.trim() ? parseInt(safraInput.trim(), 10) : null;
     if (safraNum !== null && isNaN(safraNum)) safraNum = null;
 
-    Api.createConsulta(file, null, safraNum, usarSafraExistente || false)
+    var totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+    var uploadId = null;
+
+    // 1. Iniciar sessão de upload
+    Api.iniciarUpload(file.name)
+      .then(function (res) {
+        uploadId = res.upload_id;
+        setUploadStep("enviando");
+
+        // 2. Enviar chunks sequencialmente via Promise chain
+        var chain = Promise.resolve();
+        for (var i = 0; i < totalChunks; i++) {
+          (function (index) {
+            chain = chain.then(function () {
+              var start = index * CHUNK_SIZE;
+              var end = Math.min(start + CHUNK_SIZE, file.size);
+              var blob = file.slice(start, end);
+              return Api.enviarChunk(uploadId, index, blob, file.name).then(
+                function () {
+                  setUploadProgress(
+                    Math.round(((index + 1) / totalChunks) * 100),
+                  );
+                },
+              );
+            });
+          })(i);
+        }
+        return chain;
+      })
+      .then(function () {
+        // 3. Finalizar — remonta o arquivo no servidor e dispara o pipeline
+        setUploadStep("finalizando");
+        return Api.finalizarUpload(
+          uploadId,
+          null,
+          safraNum,
+          usarSafraExistente || false,
+        );
+      })
       .then(function (c) {
         setEnvioModal(false);
         setFile(null);
         setSafraInput("");
         setMostrarOpcAvancadas(false);
 
-        // Adiciona no topo da lista
         setConsultas(function (prev) {
           return [c].concat(
             prev.filter(function (x) {
@@ -246,7 +294,7 @@ var GerarLimites = function (props) {
           setShowConflito(true);
         } else {
           setUploadError(
-            err.message || "Erro ao criar consulta. Tente novamente.",
+            err.message || "Erro ao enviar arquivo. Tente novamente.",
           );
         }
       });
@@ -310,7 +358,7 @@ var GerarLimites = function (props) {
   }
 
   function formatDateTime(iso) {
-    if (!iso) return "-";
+    if (!iso) return "—";
     return new Date(iso).toLocaleString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
@@ -456,58 +504,62 @@ var GerarLimites = function (props) {
         <div className="mt-1 h-0.5 w-10 bg-[#2E6DA4]" />
       </div>
 
-      {/* ------------------------------------------------------------------ */}
-      {/* Modal de envio (overlay bloqueante)                                  */}
-      {/* ------------------------------------------------------------------ */}
+      {/* Modal de envio com progresso de chunks */}
       {envioModal && (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
           <div className="bg-white border border-[#E8EFF7] shadow-2xl w-full max-w-sm p-8 flex flex-col items-center gap-5 text-center">
-            {/* Spinner */}
-            <div className="relative w-14 h-14">
+            {/* Ícone */}
+            <div className="w-14 h-14 bg-[#D6E8F5] flex items-center justify-center">
               <svg
-                className="animate-spin w-14 h-14"
-                viewBox="0 0 56 56"
+                width="24"
+                height="24"
                 fill="none"
+                viewBox="0 0 24 24"
+                stroke="#2E6DA4"
+                strokeWidth="2"
               >
-                <circle
-                  cx="28"
-                  cy="28"
-                  r="24"
-                  stroke="#E8EFF7"
-                  strokeWidth="4"
-                />
-                <path
-                  d="M28 4a24 24 0 0 1 24 24"
-                  stroke="#2E6DA4"
-                  strokeWidth="4"
-                  strokeLinecap="round"
-                />
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <svg
-                  width="20"
-                  height="20"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="#2E6DA4"
-                  strokeWidth="2"
-                >
-                  <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-                  <polyline points="17 8 12 3 7 8" />
-                  <line x1="12" y1="3" x2="12" y2="15" />
-                </svg>
-              </div>
             </div>
 
+            {/* Título e subtítulo */}
             <div>
               <p className="text-sm font-semibold text-[#0D1B2A]">
-                Enviando arquivo...
+                {uploadStep === "iniciando" && "Preparando upload..."}
+                {uploadStep === "enviando" && "Enviando arquivo..."}
+                {uploadStep === "finalizando" && "Registrando simulação..."}
               </p>
               <p className="text-xs text-[#9C9C9F] mt-1">
-                Aguarde enquanto o arquivo é enviado e a simulação é registrada
+                {uploadStep === "enviando"
+                  ? "O arquivo está sendo enviado em partes. Não feche esta janela."
+                  : "Aguarde um momento."}
               </p>
             </div>
 
+            {/* Barra de progresso — só aparece durante o envio de chunks */}
+            {uploadStep === "enviando" && (
+              <div className="w-full space-y-1.5">
+                <div className="w-full bg-[#E2EAF4] h-2">
+                  <div
+                    className="h-2 bg-[#2E6DA4] transition-all duration-300"
+                    style={{ width: uploadProgress + "%" }}
+                  />
+                </div>
+                <div className="flex justify-between text-[11px] text-[#9C9C9F]">
+                  <span>{uploadProgress}%</span>
+                  <span>
+                    {formatBytes(
+                      Math.round((file.size * uploadProgress) / 100),
+                    )}{" "}
+                    de {formatBytes(file.size)}
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Informações do arquivo */}
             {file && (
               <div className="w-full bg-[#E2EAF4] border border-[#E8EFF7] px-4 py-3 text-left">
                 <div className="flex items-center gap-2">
@@ -839,7 +891,7 @@ var GerarLimites = function (props) {
               <label className="text-xs font-semibold text-[#3B4049]">
                 Número da safra{" "}
                 <span className="text-[#9C9C9F] font-normal">
-                  (opcional - deixe em branco para incremento automático)
+                  (opcional — deixe em branco para incremento automático)
                 </span>
               </label>
               <div className="flex items-center gap-2 mt-1.5">
@@ -1351,7 +1403,7 @@ var GerarLimites = function (props) {
                 value:
                   selectedConsulta.n_clusters != null
                     ? String(selectedConsulta.n_clusters)
-                    : "-",
+                    : "—",
                 sub: "segmentação CART",
                 highlight: false,
               },
@@ -1360,7 +1412,7 @@ var GerarLimites = function (props) {
                 value:
                   selectedConsulta.z_otimo != null
                     ? fmtZ(selectedConsulta.z_otimo)
-                    : "-",
+                    : "—",
                 sub:
                   selectedConsulta.status_lp === "multiplas_solucoes"
                     ? "Múltiplas soluções"
@@ -1374,7 +1426,7 @@ var GerarLimites = function (props) {
                     ? Number(
                         selectedConsulta.n_clientes_elegiveis,
                       ).toLocaleString("pt-BR")
-                    : "-",
+                    : "—",
                 sub:
                   selectedConsulta.n_clientes_total != null
                     ? "de " +
@@ -1392,7 +1444,7 @@ var GerarLimites = function (props) {
                     ? Number(
                         selectedConsulta.n_clientes_ofertados,
                       ).toLocaleString("pt-BR")
-                    : "-",
+                    : "—",
                 sub: selectedConsulta.n_clientes_elegiveis
                   ? (
                       (selectedConsulta.n_clientes_ofertados /
@@ -1501,7 +1553,7 @@ var GerarLimites = function (props) {
             <div className="bg-white border border-[#E8EFF7] shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8EFF7]">
                 <div className="text-sm font-semibold text-[#0D1B2A]">
-                  Clusters - Resultados Detalhados
+                  Clusters — Resultados Detalhados
                 </div>
                 <span className="text-xs text-[#9C9C9F]">
                   {clusters.length} clusters · página {tablePage} de{" "}
@@ -1560,7 +1612,7 @@ var GerarLimites = function (props) {
                             {c.fator_alavancagem.toFixed(2)}x
                           </td>
                           <td className="px-3 py-2.5 font-semibold text-[#0D1B2A]">
-                            {temLimite ? fmt(c.limite_otimizado) : "-"}
+                            {temLimite ? fmt(c.limite_otimizado) : "—"}
                           </td>
                           <td className="px-3 py-2.5">
                             {temLimite ? (
