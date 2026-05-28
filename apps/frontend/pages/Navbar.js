@@ -10,7 +10,7 @@ var Navbar = function (props) {
 
   var links = [
     {
-      key: "cockpit",
+      key: "dashboard",
       label: "Cockpit",
       icon: (
         <svg
@@ -64,6 +64,23 @@ var Navbar = function (props) {
       ),
     },
     {
+      key: "clientes",
+      label: "Clientes",
+      icon: (
+        <svg
+          width="15"
+          height="15"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+          strokeWidth="2"
+        >
+          <circle cx="11" cy="11" r="8" />
+          <path d="m21 21-4.35-4.35" />
+        </svg>
+      ),
+    },
+    {
       key: "config",
       label: "Configurações",
       isConfig: true,
@@ -91,11 +108,11 @@ var Navbar = function (props) {
       }}
       className="fixed top-0 left-0 w-full z-40 flex items-center h-14 px-8 shadow-xl border-b border-white/10"
     >
-      {/* Logo - clicável, navega para o Cockpit */}
+      {/* Logo — clicável, navega para o Cockpit */}
       <div
         className="flex items-center gap-2.5 mr-6 flex-shrink-0 cursor-pointer"
         onClick={function () {
-          setPage("cockpit");
+          setPage("dashboard");
         }}
       >
         <img

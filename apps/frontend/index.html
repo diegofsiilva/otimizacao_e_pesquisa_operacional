@@ -39,6 +39,7 @@
     <script type="text/babel" src="pages/Cockpit.js"></script>
     <script type="text/babel" src="pages/GerarLimites.js"></script>
     <script type="text/babel" src="pages/Resultados.js"></script>
+    <script type="text/babel" src="pages/Clientes.js"></script>
     <script type="text/babel" src="pages/ConfigModal.js"></script>
 
     <!-- App raiz -->
@@ -76,8 +77,8 @@
       }
 
       var App = function () {
-        // Página ativa. Possíveis valores: "cockpit" | "gerar" | "resultados"
-        var s1 = React.useState("cockpit");
+        // Página ativa. Possíveis valores: "dashboard" | "gerar" | "resultados" | "clientes"
+        var s1 = React.useState("dashboard");
         var page = s1[0];
         var setPage = s1[1];
 
@@ -90,9 +91,10 @@
         // key={page} no ErrorBoundary garante que o componente é remontado a
         // cada navegação, recarregando dados frescos da API automaticamente.
         function renderPage(p) {
-          if (p === "cockpit") return <Cockpit setPage={setPage} />;
+          if (p === "dashboard") return <Cockpit setPage={setPage} />;
           if (p === "gerar") return <GerarLimites setPage={setPage} />;
           if (p === "resultados") return <Resultados setPage={setPage} />;
+          if (p === "clientes") return <Clientes setPage={setPage} />;
           return null;
         }
 
