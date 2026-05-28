@@ -8,6 +8,5 @@ deploy:
   only:
     - develop
   script:
-    - cd /home/cc06-g4/g04
-    - git pull origin develop
+    - cp -r $CI_PROJECT_DIR/. /home/cc06-g4/g04/
     - sudo systemctl restart g04
