@@ -110,20 +110,18 @@ var BarChartSVG = function (props) {
 };
 
 // Gráfico de linha - evolução temporal com rótulo em cada ponto
+// data2 opcional: segunda série sobreposta (linha tracejada, cor de contraste)
 var LineChartSVG = function (props) {
   var data = props.data;
+  var data2 = props.data2 || null;
   var w = 420;
   var h = 175;
   var pad = { top: 24, right: 20, bottom: 24, left: 44 };
   var cw = w - pad.left - pad.right;
   var ch = h - pad.top - pad.bottom;
-  var max =
-    Math.max.apply(
-      null,
-      data.map(function (d) {
-        return d.value;
-      }),
-    ) * 1.15 || 1;
+  var allValues = data.map(function (d) { return d.value; });
+  if (data2) data2.forEach(function (d) { allValues.push(d.value); });
+  var max = Math.max.apply(null, allValues) * 1.15 || 1;
   var pts = data.map(function (d, i) {
     return [
       pad.left + (cw / (data.length - 1)) * i,
@@ -199,36 +197,32 @@ var LineChartSVG = function (props) {
         var labelY = i % 2 === 0 ? p[1] - 10 : p[1] + 18;
         return (
           <g key={i}>
-            <circle
-              cx={p[0]}
-              cy={p[1]}
-              r="4"
-              fill="#2E6DA4"
-              stroke="#fff"
-              strokeWidth="2"
-            />
-            <text
-              x={p[0]}
-              y={labelY}
-              textAnchor="middle"
-              fontSize="9"
-              fontWeight="600"
-              fill="#3B4049"
-            >
+            <circle cx={p[0]} cy={p[1]} r="4" fill="#2E6DA4" stroke="#fff" strokeWidth="2" />
+            <text x={p[0]} y={labelY} textAnchor="middle" fontSize="9" fontWeight="600" fill="#3B4049">
               R${d.value.toFixed(1)}M
             </text>
-            <text
-              x={p[0]}
-              y={h - pad.bottom + 14}
-              textAnchor="middle"
-              fontSize="9"
-              fill="#9C9C9F"
-            >
+            <text x={p[0]} y={h - pad.bottom + 14} textAnchor="middle" fontSize="9" fill="#9C9C9F">
               {d.label}
             </text>
           </g>
         );
       })}
+      {data2 && (function () {
+        var pts2 = data2.map(function (d, i) {
+          return [pad.left + (cw / (data2.length - 1)) * i, pad.top + ch - (ch * d.value) / max];
+        });
+        var poly2 = pts2.map(function (p) { return p[0] + "," + p[1]; }).join(" ");
+        return (
+          <g>
+            <polyline points={poly2} fill="none" stroke="#FAE95D" strokeWidth="2" strokeDasharray="5,3" strokeLinejoin="round" />
+            {pts2.map(function (p, i) {
+              return (
+                <circle key={i} cx={p[0]} cy={p[1]} r="3.5" fill="#FAE95D" stroke="#fff" strokeWidth="1.5" />
+              );
+            })}
+          </g>
+        );
+      })()}
     </svg>
   );
 };
@@ -392,35 +386,20 @@ var DonutChart = function (props) {
   );
 };
 
+var EVOLUCAO_PREV = [
+  { mes: "Jan", value: 6.8 },
+  { mes: "Fev", value: 7.5 },
+  { mes: "Mar", value: 8.3 },
+  { mes: "Abr", value: 9.1 },
+  { mes: "Mai", value: 10.4 },
+  { mes: "Jun", value: 12.2 },
+];
+
 var Resultados = function (props) {
   var hasData = props.hasData;
   var setPage = props.setPage;
-  var s1 = React.useState(null);
-  var resultData = s1[0];
-  var setResultData = s1[1];
-  var s2 = React.useState(null);
-  var apiError = s2[0];
-  var setApiError = s2[1];
-
-  React.useEffect(
-    function () {
-      if (!hasData) return;
-      var alive = true;
-      Api.getResultados()
-        .then(function (data) {
-          if (!alive) return;
-          setResultData(data);
-          setApiError(null);
-        })
-        .catch(function () {
-          if (alive) setApiError("Usando dados locais: backend indisponivel.");
-        });
-      return function () {
-        alive = false;
-      };
-    },
-    [hasData],
-  );
+  var sc1 = React.useState(false);
+  var showComparison = sc1[0]; var setShowComparison = sc1[1];
 
   if (!hasData) {
     return (
@@ -847,13 +826,26 @@ var Resultados = function (props) {
       {/* Gráficos linha 2 */}
       <div className="grid grid-cols-2 gap-4">
         <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
-          <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
-            Evolução do Limite Total
+          <div className="flex items-start justify-between mb-1">
+            <div className="text-sm font-semibold text-[#0D1B2A]">Evolução do Limite Total</div>
+            <button
+              onClick={function () { setShowComparison(function (v) { return !v; }); }}
+              className={"flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium border transition-colors " + (showComparison ? "bg-[#2E6DA4] text-white border-[#2E6DA4]" : "border-[#E8EFF7] text-[#3B4049] hover:bg-[#E2EAF4]")}
+            >
+              <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5"><path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3m8 0h3a2 2 0 002-2v-3"/></svg>
+              Comparar simulação anterior
+            </button>
           </div>
-          <div className="text-xs text-[#9C9C9F] mb-4">
+          <div className="text-xs text-[#9C9C9F] mb-3">
             Crescimento mensal do limite aprovado em R$ milhões
           </div>
-          <LineChartSVG data={lineData} />
+          {showComparison && (
+            <div className="flex items-center gap-4 mb-3 text-xs">
+              <span className="flex items-center gap-1.5"><span className="inline-block w-6 h-0.5 bg-[#2E6DA4]"></span><span className="text-[#3B4049] font-medium">Simulação atual (Mai/2025)</span></span>
+              <span className="flex items-center gap-1.5"><span className="inline-block w-6 border-t-2 border-dashed border-[#FAE95D]"></span><span className="text-[#3B4049] font-medium">Simulação anterior (Abr/2025)</span></span>
+            </div>
+          )}
+          <LineChartSVG data={lineData} data2={showComparison ? EVOLUCAO_PREV : null} />
         </div>
 
         <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
