@@ -224,7 +224,7 @@ c_k = n_k \cdot \pi_k \cdot \left(\bar{u}\cdot t \cdot T - PD_k \cdot \mathrm{LG
 $$
 onde $PD_k$ é a PD calibrada média do cluster (média de `pd_calibrada`). As restrições incluem, em particular: (i) teto de risco financeiro agregado (comparado ao benchmark $\overline{PD}_{fin}^{atual}$, calculado como a média de `pd_calibrada` na base elegível), (ii) limite por capacidade de pagamento com alavancagem $L_k \le m_k\cdot CP_k$ e (iii) teto operacional $L_k \le L^{max}$.
 
-**Etapa 4 — Resolução via Simplex.** O PL é resolvido por uma implementação própria do método Simplex. O algoritmo constrói o tableau inicial com variáveis de folga, itera selecionando variável entrante e variável sainte (com regra de Bland para evitar ciclagem), realiza pivoteamentos e encerra quando não há melhoria na função objetivo ou quando identifica casos especiais (como problema ilimitado). Ao final, retorna o vetor ótimo $L_k^*$, o valor ótimo $Z^*$ e o status da solução.
+**Etapa 4 — Resolução via Simplex.** O PL é resolvido por uma implementação própria do método Simplex. O algoritmo constrói o tableau inicial com variáveis de folga, itera selecionando variável entrante e variável sainte (com regra de Bland para evitar ciclagem), realiza pivoteamentos e encerra quando não há melhoria na função objetivo ou quando identifica casos especiais (como problema ilimitado). Ao final, retorna o vetor ótimo $L_k^*$, o valor ótimo $Z^*$ e o status da solução. (BLAND, 1977) 
 
 **Validação numérica com solver externo.** Para verificar a correção da implementação própria do Simplex, o mesmo problema de Programação Linear foi resolvido também com um solver consolidado via biblioteca PuLP (solver CBC como padrão). A validação consistiu em executar ambos os resolvedores sobre as mesmas instâncias e comparar (i) o status da solução, (ii) o valor da função objetivo e (iii) o vetor de decisão $L_k$, aceitando apenas discrepâncias residuais compatíveis com tolerâncias numéricas. Essa checagem funciona como teste de sanidade durante o desenvolvimento e aumenta a confiabilidade da solução antes do uso operacional do pipeline.
 
@@ -429,6 +429,8 @@ AL-MUSBAHU, Abdulrahim; TETE, Ahmed Rufai; MANYISA, Yisa Emmanuel; MOHAMMED, Jib
 
 BANCO CENTRAL DO BRASIL. Inadimplência da carteira de crédito – Total (SGS 21082). Sistema Gerenciador de Séries Temporais (SGS). Disponível em: <https://www3.bcb.gov.br/sgspub/consultarvalores/consultarValoresSeries.do?method=consultarGraficoPorId&hdOidSeriesSelecionadas=21082>. Acesso em: 26 maio 2026.
 
+BLAND, Robert G. New finite pivoting rules for the simplex method. Mathematics of Operations Research, v. 2, n. 2, p. 103-107, 1977. DOI: 10.1287/moor.2.2.103.
+
 KWAPONG, Samuel Darkwa. Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd. 2013. Dissertação (MSc in Industrial Mathematics) — Kwame Nkrumah University of Science and Technology, Institute of Distance Learning, Kumasi, 2013. Disponível em: <https://ir.knust.edu.gh/handle/123456789/5841>. Acesso em: 20 maio 2026.
 // https://ir.knust.edu.gh/items/ffdc0243-2ecc-4937-8aa1-6a752e613d93
 
@@ -437,3 +439,4 @@ LI, Bingxiang; TAO, Rui; LI, Meng. Identification of Enterprise Financial Risk B
 
 SCARPEL, R. A.; MILIONI, A. Z. Utilização conjunta de modelagem econométrica e otimização em decisões de concessão de crédito. **Pesquisa Operacional**, v. 22, n. 1, p. 61-72, 2002. DOI: 10.1590/S0101-74382002000100004. Disponível em: <https://www.scielo.br/j/pope/a/3DkFSwbgRxdtDDG6MSPBDLM/>. Acesso em: 20 maio 2026.
 // https://www.scielo.br/j/pope/a/3DkFSwbgRxdtDDG6MSPBDLM/
+
