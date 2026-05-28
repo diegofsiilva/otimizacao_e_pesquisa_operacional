@@ -1,240 +1,1340 @@
 // pages/GerarLimites.js
-// Deps globais: CLUSTERS_UPLOAD, CLUSTER_LIMITES, STATUS_PIE, EVOLUCAO, SCORE_DIST, SOLVER_COMPARISON, fmt, fmtZ
-// Após execução, exibe os resultados completos da simulação inline nesta mesma página.
+// Deps globais: Api (api.js), fmt, fmtZ (data.js)
+// Deps de render: BarChartSVG, DonutChart (definidos em Resultados.js, carregado depois)
+//
+// Fluxo:
+//   1. Usuário faz upload de um .parquet (drag & drop ou clique)
+//   2. Modal "Enviando..." bloqueia a UI durante o POST /api/consultas
+//   3. Backend responde imediatamente com status "pendente"
+//   4. Consulta aparece na lista de simulações com spinner
+//   5. Polling a cada 60s via GET /api/consultas/{id}
+//   6. Ao atingir "concluido": busca clusters e exibe resultados inline
+//   7. Em caso de "erro": exibe etapa e mensagem do backend
 
 var GerarLimites = function (props) {
   var setPage = props.setPage;
   var setHasData = props.setHasData;
-  var s1 = React.useState(null);
-  var file = s1[0]; var setFile = s1[1];
-  var s2 = React.useState(false);
-  var drag = s2[0]; var setDrag = s2[1];
-  var s3 = React.useState(false);
-  var ran = s3[0]; var setRan = s3[1];
-  var s4 = React.useState(false);
-  var running = s4[0]; var setRunning = s4[1];
+
+  // -------------------------------------------------------------------------
+  // Estado
+  // -------------------------------------------------------------------------
+
+  // Upload
+  var su1 = React.useState(null);
+  var file = su1[0];
+  var setFile = su1[1];
+  var su2 = React.useState(false);
+  var drag = su2[0];
+  var setDrag = su2[1];
+  var su3 = React.useState("");
+  var safraInput = su3[0];
+  var setSafraInput = su3[1];
+  var su4 = React.useState(false);
+  var mostrarOpcAvancadas = su4[0];
+  var setMostrarOpcAvancadas = su4[1];
+  var su5 = React.useState(null);
+  var uploadError = su5[0];
+  var setUploadError = su5[1];
+
+  // Modal de envio (bloqueia UI durante o POST)
+  var sm1 = React.useState(false);
+  var envioModal = sm1[0];
+  var setEnvioModal = sm1[1];
+
+  // Conflito 409 (safra já existe)
   var sc1 = React.useState(false);
-  var showComparison = sc1[0]; var setShowComparison = sc1[1];
+  var showConflito = sc1[0];
+  var setShowConflito = sc1[1];
+  var sc2 = React.useState(null);
+  var safraConflitada = sc2[0];
+  var setSafraConflitada = sc2[1];
+
+  // Histórico de consultas
+  var sh1 = React.useState([]);
+  var consultas = sh1[0];
+  var setConsultas = sh1[1];
+  var sh2 = React.useState(true);
+  var loadingHistory = sh2[0];
+  var setLoadingHistory = sh2[1];
+
+  // Mapa safra_id → SafraResponse
+  var sf1 = React.useState({});
+  var safraMap = sf1[0];
+  var setSafraMap = sf1[1];
+
+  // Consulta sendo monitorada ativamente
+  var sa1 = React.useState(null);
+  var activeId = sa1[0];
+  var setActiveId = sa1[1];
+
+  // Clusters da consulta selecionada para exibição de resultados
+  var sr1 = React.useState(null);
+  var clusters = sr1[0];
+  var setClusters = sr1[1];
+  var sr2 = React.useState(null);
+  var selectedId = sr2[0];
+  var setSelectedId = sr2[1];
+  var sr3 = React.useState(false);
+  var loadingClusters = sr3[0];
+  var setLoadingClusters = sr3[1];
+
+  // Paginação da tabela de clusters
+  var sp1 = React.useState(1);
+  var tablePage = sp1[0];
+  var setTablePage = sp1[1];
+  var TABLE_PER_PAGE = 20;
+
+  // -------------------------------------------------------------------------
+  // Refs
+  // -------------------------------------------------------------------------
+
   var inputRef = React.useRef(null);
+  // { timer: TimeoutId | null, consultaId: string | null }
+  var pollRef = React.useRef({ timer: null, consultaId: null });
+
+  // -------------------------------------------------------------------------
+  // Efeito: carrega histórico e safras ao montar; limpa timer ao desmontar
+  // -------------------------------------------------------------------------
+
+  React.useEffect(function () {
+    Promise.all([Api.listConsultas(), Api.listSafras()])
+      .then(function (results) {
+        setConsultas(results[0]);
+        var map = {};
+        results[1].forEach(function (s) {
+          map[s.id] = s;
+        });
+        setSafraMap(map);
+        setLoadingHistory(false);
+      })
+      .catch(function () {
+        setLoadingHistory(false);
+      });
+
+    return function () {
+      if (pollRef.current.timer) clearTimeout(pollRef.current.timer);
+    };
+  }, []);
+
+  // -------------------------------------------------------------------------
+  // Polling
+  // -------------------------------------------------------------------------
+
+  function atualizarConsultaNaLista(atualizada) {
+    setConsultas(function (prev) {
+      return prev.map(function (c) {
+        return c.id === atualizada.id ? atualizada : c;
+      });
+    });
+    // Atualiza o safraMap se a safra for nova
+    if (atualizada.safra_id) {
+      Api.listSafras()
+        .then(function (safras) {
+          var map = {};
+          safras.forEach(function (s) {
+            map[s.id] = s;
+          });
+          setSafraMap(map);
+        })
+        .catch(function () {});
+    }
+  }
+
+  function verificarConsulta(consultaId) {
+    Api.getConsulta(consultaId)
+      .then(function (c) {
+        atualizarConsultaNaLista(c);
+
+        if (c.status_consulta === "concluido") {
+          // Pipeline terminou - busca clusters e exibe resultados
+          setLoadingClusters(true);
+          Api.getClusters(c.id)
+            .then(function (cls) {
+              setClusters(cls);
+              setSelectedId(c.id);
+              setLoadingClusters(false);
+              if (setHasData) setHasData(true);
+            })
+            .catch(function () {
+              setLoadingClusters(false);
+            });
+          // Não agenda próximo tick
+        } else if (c.status_consulta === "erro") {
+          // Para de pingar
+        } else {
+          // Ainda "pendente" ou "executando" - agenda próximo ping em 60s
+          pollRef.current.timer = setTimeout(function () {
+            verificarConsulta(consultaId);
+          }, 60000);
+        }
+      })
+      .catch(function () {
+        // Erro de rede - tenta novamente em 60s
+        pollRef.current.timer = setTimeout(function () {
+          verificarConsulta(consultaId);
+        }, 60000);
+      });
+  }
+
+  function iniciarPolling(consultaId) {
+    if (pollRef.current.timer) clearTimeout(pollRef.current.timer);
+    pollRef.current.consultaId = consultaId;
+    // Primeiro ping em 5s (tempo para o backend iniciar o background task)
+    pollRef.current.timer = setTimeout(function () {
+      verificarConsulta(consultaId);
+    }, 5000);
+  }
+
+  function handleVerificarAgora() {
+    var cid = pollRef.current.consultaId;
+    if (!cid) return;
+    if (pollRef.current.timer) clearTimeout(pollRef.current.timer);
+    verificarConsulta(cid);
+  }
+
+  // -------------------------------------------------------------------------
+  // Handlers de upload
+  // -------------------------------------------------------------------------
 
   function handleFile(f) {
-    if (f) { setFile(f); setRan(false); }
+    if (!f) return;
+    if (!f.name.endsWith(".parquet")) {
+      setUploadError("Formato inválido. Apenas arquivos .parquet são aceitos.");
+      return;
+    }
+    setUploadError(null);
+    setFile(f);
   }
+
   function onDrop(e) {
     e.preventDefault();
     setDrag(false);
-    handleFile(e.dataTransfer.files[0]);
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  }
+
+  function iniciarUpload(usarSafraExistente) {
+    setShowConflito(false);
+    setUploadError(null);
+    setEnvioModal(true);
+
+    var safraNum = safraInput.trim() ? parseInt(safraInput.trim(), 10) : null;
+    if (safraNum !== null && isNaN(safraNum)) safraNum = null;
+
+    Api.createConsulta(file, null, safraNum, usarSafraExistente || false)
+      .then(function (c) {
+        setEnvioModal(false);
+        setFile(null);
+        setSafraInput("");
+        setMostrarOpcAvancadas(false);
+
+        // Adiciona no topo da lista
+        setConsultas(function (prev) {
+          return [c].concat(
+            prev.filter(function (x) {
+              return x.id !== c.id;
+            }),
+          );
+        });
+
+        setActiveId(c.id);
+        iniciarPolling(c.id);
+      })
+      .catch(function (err) {
+        setEnvioModal(false);
+        if (err.status === 409) {
+          setSafraConflitada(safraNum);
+          setShowConflito(true);
+        } else {
+          setUploadError(
+            err.message || "Erro ao criar consulta. Tente novamente.",
+          );
+        }
+      });
   }
 
   function handleExecutar() {
-    setRunning(true);
-    setTimeout(function () {
-      setRunning(false);
-      setRan(true);
-      if (setHasData) setHasData(true);
-    }, 1200);
+    iniciarUpload(false);
   }
 
-  function exportarLimites() {
-    var sc = SOLVER_COMPARISON;
-    var header = ["Cluster", "Simplex (R$)", "PuLP/CBC (R$)", "Match"];
-    var rows = sc.simplex.clusters.map(function (cs, i) {
-      var cp = sc.pulp.clusters[i];
-      var match = cs.limite === cp.limite ? "Sim" : "Não";
-      return [cs.id, cs.limite || 0, cp.limite || 0, match];
+  // -------------------------------------------------------------------------
+  // Handler: selecionar consulta concluída para ver resultados
+  // -------------------------------------------------------------------------
+
+  function handleSelecionarConsulta(c) {
+    if (c.status_consulta !== "concluido") return;
+    if (selectedId === c.id) return;
+    setSelectedId(c.id);
+    setClusters(null);
+    setTablePage(1);
+    setLoadingClusters(true);
+    Api.getClusters(c.id)
+      .then(function (cls) {
+        setClusters(cls);
+        setLoadingClusters(false);
+      })
+      .catch(function () {
+        setLoadingClusters(false);
+      });
+  }
+
+  // -------------------------------------------------------------------------
+  // Handler: exportar CSV de clientes
+  // -------------------------------------------------------------------------
+
+  function handleExportar(consultaId) {
+    Api.exportClientes(consultaId)
+      .then(function (blob) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement("a");
+        a.href = url;
+        a.download = "clientes_" + consultaId.slice(0, 8) + ".csv";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      })
+      .catch(function (err) {
+        alert("Erro ao exportar: " + err.message);
+      });
+  }
+
+  // -------------------------------------------------------------------------
+  // Helpers de formatação
+  // -------------------------------------------------------------------------
+
+  function formatBytes(bytes) {
+    if (!bytes) return "";
+    if (bytes < 1024) return bytes + " B";
+    if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
+    return (bytes / (1024 * 1024)).toFixed(2) + " MB";
+  }
+
+  function formatDateTime(iso) {
+    if (!iso) return "-";
+    return new Date(iso).toLocaleString("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
-    var csv = [header].concat(rows).map(function (r) { return r.join(";"); }).join("\n");
-    var blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
-    var url = URL.createObjectURL(blob);
-    var a = document.createElement("a");
-    a.href = url;
-    a.download = "limites_clusters.csv";
-    document.body.appendChild(a); a.click(); document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   }
 
-  var total = CLUSTERS_UPLOAD.length;
-  var viavel = CLUSTERS_UPLOAD.filter(function (c) { return c.status === "viavel"; }).length;
-  var sem = total - viavel;
+  function formatDuration(inicio, fim) {
+    if (!inicio || !fim) return null;
+    var ms = new Date(fim) - new Date(inicio);
+    var s = Math.floor(ms / 1000);
+    if (s < 60) return s + "s";
+    return Math.floor(s / 60) + "m " + (s % 60) + "s";
+  }
 
-  var RESULT_KPIS = [
-    { label: "Total de Clusters", value: "73", sub: "↑ 5 novos clusters", highlight: false },
-    { label: "Limite Total Aprovado", value: "R$ 127,4M", sub: "↑ 8,5% vs mês anterior", highlight: true },
-    { label: "Clientes Ativos", value: "48.320", sub: "↑ 12 novos este mês", highlight: false },
-    { label: "Taxa de Aprovação", value: "87,3%", sub: "↑ 2,3% vs ano anterior", highlight: false },
-  ];
+  function getStatusMeta(status) {
+    if (status === "pendente")
+      return {
+        label: "Aguardando início",
+        cor: "#FAE95D",
+        corTexto: "#7a6a00",
+        spinning: false,
+      };
+    if (status === "executando")
+      return {
+        label: "Em execução",
+        cor: "#2E6DA4",
+        corTexto: "#2E6DA4",
+        spinning: true,
+      };
+    if (status === "concluido")
+      return {
+        label: "Concluído",
+        cor: "#67DE98",
+        corTexto: "#1a7a4a",
+        spinning: false,
+      };
+    if (status === "erro")
+      return {
+        label: "Erro",
+        cor: "#FF5D5C",
+        corTexto: "#DC2F37",
+        spinning: false,
+      };
+    return {
+      label: status,
+      cor: "#9C9C9F",
+      corTexto: "#9C9C9F",
+      spinning: false,
+    };
+  }
 
-  var sc = SOLVER_COMPARISON;
+  function getEtapaLabel(etapa) {
+    if (etapa === "calibracao") return "Calibração";
+    if (etapa === "clustering") return "Clustering (CART)";
+    if (etapa === "otimizacao") return "Otimização (Simplex)";
+    return etapa || "Desconhecida";
+  }
+
+  // -------------------------------------------------------------------------
+  // Derivados
+  // -------------------------------------------------------------------------
+
+  var selectedConsulta = null;
+  for (var i = 0; i < consultas.length; i++) {
+    if (consultas[i].id === selectedId) {
+      selectedConsulta = consultas[i];
+      break;
+    }
+  }
+
+  var activeConsulta = null;
+  for (var j = 0; j < consultas.length; j++) {
+    if (consultas[j].id === activeId) {
+      activeConsulta = consultas[j];
+      break;
+    }
+  }
+
+  var isRunning =
+    activeConsulta &&
+    (activeConsulta.status_consulta === "pendente" ||
+      activeConsulta.status_consulta === "executando");
+
+  // Dados para gráfico de barras (top 15 clusters por limite)
+  var barData = [];
+  if (clusters) {
+    var sorted = clusters.slice().sort(function (a, b) {
+      return b.limite_otimizado - a.limite_otimizado;
+    });
+    barData = sorted.slice(0, 15).map(function (c) {
+      return { label: "CLU-" + c.cluster_id, value: c.limite_otimizado };
+    });
+  }
+
+  // Dados para donut (distribuição de clientes)
+  var donutData = [];
+  if (selectedConsulta && selectedConsulta.status_consulta === "concluido") {
+    var nOfer = selectedConsulta.n_clientes_ofertados || 0;
+    var nEleg = selectedConsulta.n_clientes_elegiveis || 0;
+    var nTotal = selectedConsulta.n_clientes_total || 0;
+    donutData = [
+      { name: "Com limite", value: nOfer, color: "#67DE98" },
+      {
+        name: "Elegível, sem limite",
+        value: Math.max(0, nEleg - nOfer),
+        color: "#FAE95D",
+      },
+      {
+        name: "Inelegível",
+        value: Math.max(0, nTotal - nEleg),
+        color: "#B8D4EC",
+      },
+    ];
+  }
+
+  // Paginação da tabela de clusters
+  var clustersPaginados = clusters
+    ? clusters.slice(
+        (tablePage - 1) * TABLE_PER_PAGE,
+        tablePage * TABLE_PER_PAGE,
+      )
+    : [];
+  var totalPaginas = clusters ? Math.ceil(clusters.length / TABLE_PER_PAGE) : 1;
+
+  // -------------------------------------------------------------------------
+  // Render
+  // -------------------------------------------------------------------------
 
   return (
     <div className="space-y-6">
+      {/* ------------------------------------------------------------------ */}
+      {/* Header                                                               */}
+      {/* ------------------------------------------------------------------ */}
       <div>
-        <h1 className="text-xl font-bold text-[#0D1B2A]">
-          {ran ? "Resultados da Simulação" : "Carregar Base & Gerar Limites"}
-        </h1>
-        {ran && (
-          <p className="mt-1 text-xs text-[#9C9C9F]">
-            Output do algoritmo Simplex · simulação executada em Mai/2025
-          </p>
-        )}
+        <h1 className="text-xl font-bold text-[#0D1B2A]">Gerar Limites</h1>
+        <p className="mt-1 text-xs text-[#9C9C9F]">
+          Faça upload da base em formato .parquet e execute o pipeline de
+          otimização
+        </p>
         <div className="mt-1 h-0.5 w-10 bg-[#2E6DA4]" />
       </div>
 
-      {/* Fase 1: instruções CSV + upload (sempre visível enquanto não rodou) */}
-      {!ran && (
-        <>
-          <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
-            <div className="flex items-center gap-2 mb-4">
-              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="#2E6DA4" strokeWidth="2">
-                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
-                <polyline points="14 2 14 8 20 8" />
-                <line x1="16" y1="13" x2="8" y2="13" />
-                <line x1="16" y1="17" x2="8" y2="17" />
-                <polyline points="10 9 9 9 8 9" />
+      {/* ------------------------------------------------------------------ */}
+      {/* Modal de envio (overlay bloqueante)                                  */}
+      {/* ------------------------------------------------------------------ */}
+      {envioModal && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-[#E8EFF7] shadow-2xl w-full max-w-sm p-8 flex flex-col items-center gap-5 text-center">
+            {/* Spinner */}
+            <div className="relative w-14 h-14">
+              <svg
+                className="animate-spin w-14 h-14"
+                viewBox="0 0 56 56"
+                fill="none"
+              >
+                <circle
+                  cx="28"
+                  cy="28"
+                  r="24"
+                  stroke="#E8EFF7"
+                  strokeWidth="4"
+                />
+                <path
+                  d="M28 4a24 24 0 0 1 24 24"
+                  stroke="#2E6DA4"
+                  strokeWidth="4"
+                  strokeLinecap="round"
+                />
               </svg>
-              <span className="text-sm font-semibold text-[#0D1B2A]">Estrutura esperada do CSV</span>
-            </div>
-
-            <div className="overflow-x-auto border border-[#E8EFF7] mb-4">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-[#0D1B2A]">
-                    {["Coluna", "Tipo", "Descrição", "Exemplo"].map(function (h) {
-                      return (
-                        <th key={h} className="px-3 py-2.5 text-left font-semibold text-white uppercase tracking-wide whitespace-nowrap">
-                          {h}
-                        </th>
-                      );
-                    })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { col: "token", tipo: "string", desc: "Identificador único do cliente", ex: "CLI001" },
-                    { col: "flag_filtros", tipo: "int", desc: "0 = elegível para otimização / 1 = excluído", ex: "0" },
-                    { col: "pd_calibrada", tipo: "float", desc: "Probabilidade de default calibrada", ex: "0.05" },
-                    { col: "capacidade_pagamento", tipo: "float", desc: "Capacidade de pagamento em R$", ex: "800.0" },
-                    { col: "renda_estimada", tipo: "float", desc: "Renda estimada (proxy se capacidade_pagamento for nulo)", ex: "2500.0" },
-                    { col: "score_credito_cross", tipo: "float", desc: "Score de crédito, escala 300 a 900", ex: "720" },
-                    { col: "score_propensao_contrato", tipo: "float", desc: "Score de propensão ao contrato, escala 3 a 846", ex: "450" },
-                    { col: "fx_idade", tipo: "string", desc: "Faixa etária categórica (opcional — não utilizada como feature do CART)", ex: "26-35" },
-                  ].map(function (r, i) {
-                    return (
-                      <tr key={r.col} className={"border-t border-[#E8EFF7] " + (i % 2 === 0 ? "" : "bg-[#E2EAF4]/60")}>
-                        <td className="px-3 py-2 font-mono font-semibold text-[#2E6DA4] whitespace-nowrap">{r.col}</td>
-                        <td className="px-3 py-2 text-[#9C9C9F] whitespace-nowrap">{r.tipo}</td>
-                        <td className="px-3 py-2 text-[#3B4049]">{r.desc}</td>
-                        <td className="px-3 py-2 font-mono text-[#9C9C9F] whitespace-nowrap">{r.ex}</td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <p className="text-xs text-[#9C9C9F]">
-              Mínimo recomendado:{" "}
-              <span className="font-semibold text-[#3B4049]">500+ clientes com flag_filtros = 0</span>{" "}
-              para o CART (árvore de decisão) gerar clusters com tamanho mínimo adequado (min_samples_leaf=500). O algoritmo pode gerar até 800 clusters.
-            </p>
-          </div>
-
-          {/* Dropzone */}
-          <div>
-            <p className="text-sm font-semibold text-[#0D1B2A] mb-3">Fazer Upload</p>
-            <div
-              className={
-                "upload-zone flex flex-col items-center justify-center gap-3 border-2 border-dashed py-14 px-6 cursor-pointer " +
-                (drag
-                  ? "border-[#2E6DA4] bg-[#D6E8F5]"
-                  : file
-                    ? "border-[#2E6DA4] bg-[#D6E8F5]/50"
-                    : "border-[#B8D4EC] bg-white hover:border-[#2E6DA4] hover:bg-[#D6E8F5]/40")
-              }
-              onDragOver={function (e) { e.preventDefault(); setDrag(true); }}
-              onDragLeave={function () { setDrag(false); }}
-              onDrop={onDrop}
-              onClick={function () { inputRef.current.click(); }}
-            >
-              <input ref={inputRef} type="file" accept=".csv,.xlsx" className="hidden" onChange={function (e) { handleFile(e.target.files[0]); }} />
-              <div className="w-12 h-12 bg-[#D6E8F5] flex items-center justify-center">
-                <svg width="22" height="22" fill="none" viewBox="0 0 24 24" stroke="#2E6DA4" strokeWidth="2">
+              <div className="absolute inset-0 flex items-center justify-center">
+                <svg
+                  width="20"
+                  height="20"
+                  fill="none"
+                  viewBox="0 0 24 24"
+                  stroke="#2E6DA4"
+                  strokeWidth="2"
+                >
                   <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
                   <polyline points="17 8 12 3 7 8" />
                   <line x1="12" y1="3" x2="12" y2="15" />
                 </svg>
               </div>
-              {file ? (
-                <>
-                  <p className="text-sm font-semibold text-[#0D1B2A]">Arquivo carregado: {file.name}</p>
-                  <p className="text-xs text-[#9C9C9F]">Clique para substituir ou arraste outro arquivo</p>
-                </>
-              ) : (
-                <>
-                  <p className="text-sm font-semibold text-[#0D1B2A]">Arraste seu arquivo aqui ou clique para selecionar</p>
-                  <p className="text-xs text-[#9C9C9F]">Formatos suportados: CSV, XLSX</p>
-                </>
-              )}
             </div>
-          </div>
 
-          {/* Botão executar */}
-          {file && (
-            <div className="flex items-center gap-3">
-              <button
-                onClick={handleExecutar}
-                disabled={running}
-                className={
-                  "flex items-center gap-2 px-5 py-2.5 text-sm font-semibold transition-colors shadow-sm " +
-                  (running ? "bg-[#2E6DA4] text-white cursor-not-allowed" : "bg-[#2E6DA4] text-white hover:bg-[#1B3A5C]")
-                }
-              >
-                {running ? (
-                  <>
-                    <svg className="animate-spin" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0" />
-                    </svg>
-                    Executando...
-                  </>
-                ) : (
-                  <>
-                    <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                      <polygon points="5 3 19 12 5 21 5 3" />
-                    </svg>
-                    Executar Simplex
-                  </>
-                )}
-              </button>
-              <span className="text-xs text-[#9C9C9F]">Arquivo: {file.name}</span>
+            <div>
+              <p className="text-sm font-semibold text-[#0D1B2A]">
+                Enviando arquivo...
+              </p>
+              <p className="text-xs text-[#9C9C9F] mt-1">
+                Aguarde enquanto o arquivo é enviado e a simulação é registrada
+              </p>
             </div>
-          )}
-        </>
+
+            {file && (
+              <div className="w-full bg-[#E2EAF4] border border-[#E8EFF7] px-4 py-3 text-left">
+                <div className="flex items-center gap-2">
+                  <svg
+                    width="14"
+                    height="14"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="#2E6DA4"
+                    strokeWidth="2"
+                  >
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <polyline points="14 2 14 8 20 8" />
+                  </svg>
+                  <span className="text-xs font-semibold text-[#0D1B2A] truncate">
+                    {file.name}
+                  </span>
+                </div>
+                <p className="text-[10px] text-[#9C9C9F] mt-1 pl-5">
+                  {formatBytes(file.size)}
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
       )}
 
-      {/* Fase 2: resultados completos */}
-      {ran && (
-        <div className="space-y-6">
+      {/* ------------------------------------------------------------------ */}
+      {/* Seção de upload                                                      */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="bg-white border border-[#E8EFF7] shadow-sm p-5 space-y-5">
+        <div className="flex items-center gap-2">
+          <svg
+            width="15"
+            height="15"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="#2E6DA4"
+            strokeWidth="2"
+          >
+            <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
+          <span className="text-sm font-semibold text-[#0D1B2A]">
+            Nova Simulação
+          </span>
+        </div>
 
-          {/* Header de resultados com exportar */}
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3 px-4 py-3 bg-[#D6E8F5] border border-[#2E6DA4]/30 text-sm text-[#1B3A5C] flex-1 mr-4">
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2" className="flex-shrink-0">
-                <circle cx="12" cy="12" r="10" />
-                <line x1="12" y1="8" x2="12" y2="12" />
-                <line x1="12" y1="16" x2="12.01" y2="16" />
+        {/* Estrutura esperada do parquet */}
+        <div>
+          <p className="text-xs font-semibold text-[#9C9C9F] uppercase tracking-wide mb-2">
+            Colunas esperadas no .parquet
+          </p>
+          <div className="overflow-x-auto border border-[#E8EFF7]">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-[#0D1B2A]">
+                  {["Coluna", "Tipo", "Descrição"].map(function (h) {
+                    return (
+                      <th
+                        key={h}
+                        className="px-3 py-2 text-left font-semibold text-white uppercase tracking-wide whitespace-nowrap"
+                      >
+                        {h}
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {[
+                  {
+                    col: "token",
+                    tipo: "int",
+                    desc: "Identificador único do cliente",
+                  },
+                  {
+                    col: "flag_filtros",
+                    tipo: "int",
+                    desc: "0 = elegível para otimização · 1 = excluído",
+                  },
+                  {
+                    col: "score_interno",
+                    tipo: "int",
+                    desc: "Score interno do produto",
+                  },
+                  {
+                    col: "pd_produto",
+                    tipo: "float",
+                    desc: "Probabilidade de default do produto",
+                  },
+                  {
+                    col: "score_credito_cross",
+                    tipo: "int",
+                    desc: "Score de crédito cross (300–900)",
+                  },
+                  {
+                    col: "score_propensao_contrato",
+                    tipo: "float",
+                    desc: "Score de propensão ao contrato (3–846)",
+                  },
+                  {
+                    col: "capacidade_pagamento",
+                    tipo: "float?",
+                    desc: "Capacidade de pagamento em R$ (opcional)",
+                  },
+                  {
+                    col: "renda_estimada",
+                    tipo: "float?",
+                    desc: "Renda estimada em R$ (opcional)",
+                  },
+                  {
+                    col: "fx_idade",
+                    tipo: "string",
+                    desc: "Faixa etária categórica (ex: 26-35)",
+                  },
+                  {
+                    col: "flag_contrato",
+                    tipo: "int",
+                    desc: "1 = cliente com contrato ativo",
+                  },
+                  {
+                    col: "flag_ativacao",
+                    tipo: "int",
+                    desc: "1 = cliente ativado",
+                  },
+                ].map(function (r, i) {
+                  return (
+                    <tr
+                      key={r.col}
+                      className={
+                        "border-t border-[#E8EFF7] " +
+                        (i % 2 === 0 ? "" : "bg-[#E2EAF4]/50")
+                      }
+                    >
+                      <td className="px-3 py-2 font-mono font-semibold text-[#2E6DA4] whitespace-nowrap">
+                        {r.col}
+                      </td>
+                      <td className="px-3 py-2 text-[#9C9C9F] whitespace-nowrap font-mono">
+                        {r.tipo}
+                      </td>
+                      <td className="px-3 py-2 text-[#3B4049]">{r.desc}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Dropzone */}
+        <div>
+          <input
+            ref={inputRef}
+            type="file"
+            accept=".parquet"
+            className="hidden"
+            onChange={function (e) {
+              handleFile(e.target.files[0]);
+            }}
+          />
+          <div
+            className={[
+              "flex flex-col items-center justify-center gap-3 border-2 border-dashed py-12 px-6 cursor-pointer transition-colors",
+              drag
+                ? "border-[#2E6DA4] bg-[#D6E8F5]"
+                : file
+                  ? "border-[#2E6DA4] bg-[#D6E8F5]/40"
+                  : "border-[#B8D4EC] bg-[#F7FAFD] hover:border-[#2E6DA4] hover:bg-[#D6E8F5]/30",
+            ].join(" ")}
+            onDragOver={function (e) {
+              e.preventDefault();
+              setDrag(true);
+            }}
+            onDragLeave={function () {
+              setDrag(false);
+            }}
+            onDrop={onDrop}
+            onClick={function () {
+              inputRef.current.click();
+            }}
+          >
+            <div
+              className={[
+                "w-14 h-14 flex items-center justify-center transition-colors",
+                file ? "bg-[#2E6DA4]" : "bg-[#D6E8F5]",
+              ].join(" ")}
+            >
+              <svg
+                width="24"
+                height="24"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke={file ? "white" : "#2E6DA4"}
+                strokeWidth="2"
+              >
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="17 8 12 3 7 8" />
+                <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
-              <span>
-                Indicadores da última execução do Simplex. Para nova simulação,{" "}
-                <button onClick={function () { setRan(false); setFile(null); }} className="font-bold underline hover:text-[#0D1B2A]">
-                  carregue um novo arquivo
-                </button>.
-              </span>
+            </div>
+
+            {file ? (
+              <div className="text-center">
+                <p className="text-sm font-semibold text-[#0D1B2A]">
+                  {file.name}
+                </p>
+                <p className="text-xs text-[#9C9C9F] mt-0.5">
+                  {formatBytes(file.size)}
+                </p>
+                <p className="text-xs text-[#2E6DA4] mt-1">
+                  Clique para substituir ou arraste outro arquivo
+                </p>
+              </div>
+            ) : (
+              <div className="text-center">
+                <p className="text-sm font-semibold text-[#0D1B2A]">
+                  Arraste o arquivo aqui ou clique para selecionar
+                </p>
+                <p className="text-xs text-[#9C9C9F] mt-0.5">
+                  Somente arquivos{" "}
+                  <span className="font-semibold">.parquet</span>
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Erro de validação */}
+        {uploadError && (
+          <div className="flex items-start gap-2 px-3 py-2.5 bg-[#FF5D5C]/10 border border-[#FF5D5C]/30 text-xs text-[#DC2F37]">
+            <svg
+              width="13"
+              height="13"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              className="flex-shrink-0 mt-0.5"
+            >
+              <circle cx="12" cy="12" r="10" />
+              <line x1="12" y1="8" x2="12" y2="12" />
+              <line x1="12" y1="16" x2="12.01" y2="16" />
+            </svg>
+            {uploadError}
+          </div>
+        )}
+
+        {/* Conflito 409 */}
+        {showConflito && (
+          <div className="border border-[#FAE95D]/70 bg-[#FAE95D]/10 p-4 space-y-3">
+            <div className="flex items-start gap-2">
+              <svg
+                width="15"
+                height="15"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="#7a6a00"
+                strokeWidth="2"
+                className="flex-shrink-0 mt-0.5"
+              >
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+                <line x1="12" y1="9" x2="12" y2="13" />
+                <line x1="12" y1="17" x2="12.01" y2="17" />
+              </svg>
+              <div>
+                <p className="text-xs font-semibold text-[#3B4049]">
+                  Safra M{safraConflitada} já existe
+                </p>
+                <p className="text-xs text-[#9C9C9F] mt-0.5">
+                  Deseja criar a consulta vinculada à safra existente, ou
+                  cancelar e informar outro número?
+                </p>
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={function () {
+                  iniciarUpload(true);
+                }}
+                className="flex-1 py-1.5 text-xs font-semibold bg-[#2E6DA4] text-white hover:bg-[#1B3A5C] transition-colors"
+              >
+                Usar safra existente
+              </button>
+              <button
+                onClick={function () {
+                  setShowConflito(false);
+                }}
+                className="flex-1 py-1.5 text-xs font-semibold bg-[#E8EFF7] text-[#3B4049] hover:bg-[#B8D4EC] transition-colors"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Opções avançadas */}
+        <div>
+          <button
+            onClick={function () {
+              setMostrarOpcAvancadas(function (v) {
+                return !v;
+              });
+            }}
+            className="flex items-center gap-1.5 text-xs font-medium text-[#9C9C9F] hover:text-[#3B4049] transition-colors"
+          >
+            <svg
+              width="12"
+              height="12"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+              strokeWidth="2.5"
+              style={{
+                transform: mostrarOpcAvancadas
+                  ? "rotate(90deg)"
+                  : "rotate(0deg)",
+                transition: "transform 0.15s",
+              }}
+            >
+              <polyline points="9 18 15 12 9 6" />
+            </svg>
+            Opções avançadas
+          </button>
+
+          {mostrarOpcAvancadas && (
+            <div className="mt-3 p-4 bg-[#E2EAF4] border border-[#E8EFF7] space-y-1">
+              <label className="text-xs font-semibold text-[#3B4049]">
+                Número da safra{" "}
+                <span className="text-[#9C9C9F] font-normal">
+                  (opcional - deixe em branco para incremento automático)
+                </span>
+              </label>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className="text-sm font-bold text-[#2E6DA4]">M</span>
+                <input
+                  type="number"
+                  min="1"
+                  placeholder="ex: 4"
+                  value={safraInput}
+                  onChange={function (e) {
+                    setSafraInput(e.target.value);
+                  }}
+                  className="w-32 px-3 py-1.5 text-sm border border-[#E8EFF7] bg-white focus:outline-none focus:border-[#2E6DA4] focus:ring-1 focus:ring-[#2E6DA4]"
+                />
+              </div>
+              <p className="text-[11px] text-[#9C9C9F]">
+                Se a safra já existir, o sistema pedirá confirmação antes de
+                reutilizá-la.
+              </p>
+            </div>
+          )}
+        </div>
+
+        {/* Botão executar */}
+        {file && (
+          <div className="flex items-center gap-3 pt-1">
+            <button
+              onClick={handleExecutar}
+              className="flex items-center gap-2 px-5 py-2.5 text-sm font-semibold bg-[#2E6DA4] text-white hover:bg-[#1B3A5C] transition-colors shadow-sm"
+            >
+              <svg
+                width="15"
+                height="15"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2.5"
+              >
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              Executar Simplex
+            </button>
+            <div className="flex items-center gap-1.5 text-xs text-[#9C9C9F]">
+              <svg
+                width="12"
+                height="12"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+              {file.name} · {formatBytes(file.size)}
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Lista de simulações                                                  */}
+      {/* ------------------------------------------------------------------ */}
+      <div className="bg-white border border-[#E8EFF7] shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8EFF7]">
+          <div className="flex items-center gap-2 text-sm font-semibold text-[#0D1B2A]">
+            <svg
+              width="15"
+              height="15"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="#9C9C9F"
+              strokeWidth="2"
+            >
+              <rect x="2" y="17" width="20" height="4" />
+              <rect x="2" y="11" width="20" height="4" />
+              <rect x="2" y="5" width="20" height="4" />
+            </svg>
+            Simulações
+          </div>
+
+          {isRunning && (
+            <button
+              onClick={handleVerificarAgora}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium border border-[#E8EFF7] text-[#3B4049] hover:bg-[#E2EAF4] transition-colors"
+            >
+              <svg
+                width="12"
+                height="12"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+              Verificar agora
+            </button>
+          )}
+        </div>
+
+        {loadingHistory ? (
+          <div className="flex items-center justify-center py-12 gap-2 text-sm text-[#9C9C9F]">
+            <svg
+              className="animate-spin"
+              width="16"
+              height="16"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+            >
+              <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0" />
+            </svg>
+            Carregando histórico...
+          </div>
+        ) : consultas.length === 0 ? (
+          <div className="flex flex-col items-center justify-center py-12 gap-2 text-center">
+            <svg
+              width="32"
+              height="32"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="#B8D4EC"
+              strokeWidth="1.5"
+            >
+              <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+            <p className="text-sm text-[#9C9C9F]">
+              Nenhuma simulação registrada
+            </p>
+            <p className="text-xs text-[#9C9C9F]">
+              Faça upload de um .parquet para começar
+            </p>
+          </div>
+        ) : (
+          <div className="divide-y divide-[#E8EFF7]">
+            {consultas.map(function (c) {
+              var meta = getStatusMeta(c.status_consulta);
+              var safra = safraMap[c.safra_id];
+              var isSelected = c.id === selectedId;
+              var isActive = c.id === activeId;
+
+              return (
+                <div
+                  key={c.id}
+                  className={[
+                    "px-5 py-4 transition-colors",
+                    c.status_consulta === "concluido"
+                      ? "cursor-pointer hover:bg-[#E2EAF4]"
+                      : "",
+                    isSelected ? "bg-[#D6E8F5]/60" : "",
+                  ].join(" ")}
+                  onClick={function () {
+                    handleSelecionarConsulta(c);
+                  }}
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-3 min-w-0">
+                      {/* Ícone de status */}
+                      <div className="flex-shrink-0 mt-0.5">
+                        {meta.spinning ? (
+                          <svg
+                            className="animate-spin"
+                            width="16"
+                            height="16"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                          >
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              stroke="#E8EFF7"
+                              strokeWidth="3"
+                            />
+                            <path
+                              d="M12 2a10 10 0 0 1 10 10"
+                              stroke="#2E6DA4"
+                              strokeWidth="3"
+                              strokeLinecap="round"
+                            />
+                          </svg>
+                        ) : c.status_consulta === "concluido" ? (
+                          <svg
+                            width="16"
+                            height="16"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                            stroke="#1a7a4a"
+                            strokeWidth="2.5"
+                          >
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              fill="#67DE98"
+                              fillOpacity="0.2"
+                              stroke="#67DE98"
+                            />
+                            <polyline
+                              points="9 12 11 14 15 10"
+                              stroke="#1a7a4a"
+                            />
+                          </svg>
+                        ) : c.status_consulta === "erro" ? (
+                          <svg
+                            width="16"
+                            height="16"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              fill="#FF5D5C"
+                              fillOpacity="0.15"
+                              stroke="#FF5D5C"
+                              strokeWidth="2"
+                            />
+                            <line
+                              x1="9"
+                              y1="9"
+                              x2="15"
+                              y2="15"
+                              stroke="#DC2F37"
+                              strokeWidth="2.5"
+                            />
+                            <line
+                              x1="15"
+                              y1="9"
+                              x2="9"
+                              y2="15"
+                              stroke="#DC2F37"
+                              strokeWidth="2.5"
+                            />
+                          </svg>
+                        ) : (
+                          <svg
+                            width="16"
+                            height="16"
+                            fill="none"
+                            viewBox="0 0 24 24"
+                          >
+                            <circle
+                              cx="12"
+                              cy="12"
+                              r="10"
+                              fill="#FAE95D"
+                              fillOpacity="0.3"
+                              stroke="#FAE95D"
+                              strokeWidth="2"
+                            />
+                            <line
+                              x1="12"
+                              y1="8"
+                              x2="12"
+                              y2="12"
+                              stroke="#7a6a00"
+                              strokeWidth="2"
+                            />
+                            <line
+                              x1="12"
+                              y1="16"
+                              x2="12.01"
+                              y2="16"
+                              stroke="#7a6a00"
+                              strokeWidth="2"
+                            />
+                          </svg>
+                        )}
+                      </div>
+
+                      {/* Info principal */}
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="text-sm font-semibold text-[#0D1B2A] truncate">
+                            {c.nome_arquivo_parquet}
+                          </span>
+                          {safra && (
+                            <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-semibold bg-[#D6E8F5] text-[#2E6DA4]">
+                              {safra.nome}
+                            </span>
+                          )}
+                          {isActive && isRunning && (
+                            <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-medium bg-[#2E6DA4]/10 text-[#2E6DA4]">
+                              atual
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Status label */}
+                        <p
+                          className="text-xs mt-0.5"
+                          style={{ color: meta.corTexto }}
+                        >
+                          {meta.label}
+                        </p>
+
+                        {/* Detalhes por status */}
+                        {(c.status_consulta === "pendente" ||
+                          c.status_consulta === "executando") && (
+                          <div className="flex items-center gap-3 mt-2">
+                            {[
+                              "Calibração",
+                              "Clustering (CART)",
+                              "Otimização (Simplex)",
+                            ].map(function (etapa, idx) {
+                              return (
+                                <div
+                                  key={etapa}
+                                  className="flex items-center gap-1.5"
+                                >
+                                  {idx > 0 && (
+                                    <svg
+                                      width="10"
+                                      height="10"
+                                      fill="none"
+                                      viewBox="0 0 24 24"
+                                      stroke="#B8D4EC"
+                                      strokeWidth="2.5"
+                                    >
+                                      <polyline points="9 18 15 12 9 6" />
+                                    </svg>
+                                  )}
+                                  <span className="flex items-center gap-1 text-[11px] text-[#9C9C9F]">
+                                    <span className="w-1.5 h-1.5 rounded-full bg-[#2E6DA4] animate-pulse inline-block" />
+                                    {etapa}
+                                  </span>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+
+                        {c.status_consulta === "concluido" && (
+                          <div className="flex items-center gap-3 mt-1.5 text-[11px] text-[#9C9C9F] flex-wrap">
+                            {c.n_clusters != null && (
+                              <span>{c.n_clusters} clusters</span>
+                            )}
+                            {c.n_clientes_elegiveis != null && (
+                              <span>
+                                ·{" "}
+                                {Number(c.n_clientes_elegiveis).toLocaleString(
+                                  "pt-BR",
+                                )}{" "}
+                                elegíveis
+                              </span>
+                            )}
+                            {c.z_otimo != null && (
+                              <span>· z = {fmtZ(c.z_otimo)}</span>
+                            )}
+                            {formatDuration(c.iniciado_em, c.concluido_em) && (
+                              <span>
+                                ·{" "}
+                                {formatDuration(c.iniciado_em, c.concluido_em)}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {c.status_consulta === "erro" && (
+                          <div className="mt-2 space-y-0.5">
+                            <p className="text-[11px] font-semibold text-[#DC2F37]">
+                              Falhou em: {getEtapaLabel(c.erro_etapa)}
+                            </p>
+                            {c.erro_mensagem && (
+                              <p
+                                className="text-[11px] text-[#9C9C9F] font-mono truncate max-w-sm"
+                                title={c.erro_mensagem}
+                              >
+                                {c.erro_mensagem}
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Direita: data + ações */}
+                    <div className="flex-shrink-0 text-right space-y-2">
+                      <p className="text-[11px] text-[#9C9C9F]">
+                        {formatDateTime(c.criado_em)}
+                      </p>
+
+                      {c.status_consulta === "concluido" && (
+                        <div className="flex items-center gap-1 justify-end">
+                          <button
+                            onClick={function (e) {
+                              e.stopPropagation();
+                              handleSelecionarConsulta(c);
+                            }}
+                            className={
+                              "px-2.5 py-1 text-[11px] font-semibold transition-colors " +
+                              (isSelected
+                                ? "bg-[#2E6DA4] text-white"
+                                : "border border-[#E8EFF7] text-[#3B4049] hover:bg-[#E2EAF4]")
+                            }
+                          >
+                            {isSelected ? "Selecionado" : "Ver resultados"}
+                          </button>
+                          <button
+                            onClick={function (e) {
+                              e.stopPropagation();
+                              handleExportar(c.id);
+                            }}
+                            className="px-2.5 py-1 text-[11px] font-medium border border-[#E8EFF7] text-[#9C9C9F] hover:bg-[#E2EAF4] transition-colors"
+                            title="Exportar clientes CSV"
+                          >
+                            <svg
+                              width="11"
+                              height="11"
+                              fill="none"
+                              viewBox="0 0 24 24"
+                              stroke="currentColor"
+                              strokeWidth="2"
+                            >
+                              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                              <polyline points="7 10 12 15 17 10" />
+                              <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Rodapé: polling info */}
+        {isRunning && (
+          <div className="flex items-center gap-2 px-5 py-2.5 border-t border-[#E8EFF7] bg-[#E2EAF4]/50">
+            <svg
+              className="animate-spin"
+              width="11"
+              height="11"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="#2E6DA4"
+              strokeWidth="2.5"
+            >
+              <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0" />
+            </svg>
+            <span className="text-[11px] text-[#9C9C9F]">
+              Verificando automaticamente a cada 60 segundos ·{" "}
+              <button
+                onClick={handleVerificarAgora}
+                className="text-[#2E6DA4] hover:underline font-medium"
+              >
+                verificar agora
+              </button>
+            </span>
+          </div>
+        )}
+      </div>
+
+      {/* ------------------------------------------------------------------ */}
+      {/* Resultados da consulta selecionada                                   */}
+      {/* ------------------------------------------------------------------ */}
+      {selectedConsulta && selectedConsulta.status_consulta === "concluido" && (
+        <div className="space-y-5">
+          {/* Header de resultados */}
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-bold text-[#0D1B2A]">
+                Resultados da Simulação
+              </h2>
+              <p className="text-xs text-[#9C9C9F] mt-0.5">
+                {selectedConsulta.nome_arquivo_parquet}
+                {safraMap[selectedConsulta.safra_id] &&
+                  " · Safra " + safraMap[selectedConsulta.safra_id].nome}
+                {" · Concluído em " +
+                  formatDateTime(selectedConsulta.concluido_em)}
+              </p>
             </div>
             <button
-              onClick={exportarLimites}
-              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-[#E8EFF7] bg-white text-[#3B4049] hover:bg-[#E2EAF4] transition-colors shadow-sm whitespace-nowrap"
+              onClick={function () {
+                handleExportar(selectedConsulta.id);
+              }}
+              className="flex items-center gap-2 px-4 py-2 text-sm font-semibold border border-[#E8EFF7] bg-white text-[#3B4049] hover:bg-[#E2EAF4] transition-colors shadow-sm"
             >
-              <svg width="13" height="13" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <svg
+                width="13"
+                height="13"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
                 <polyline points="7 10 12 15 17 10" />
                 <line x1="12" y1="15" x2="12" y2="3" />
@@ -245,223 +1345,324 @@ var GerarLimites = function (props) {
 
           {/* KPIs */}
           <div className="grid grid-cols-4 gap-4">
-            {RESULT_KPIS.map(function (k) {
+            {[
+              {
+                label: "Total de Clusters",
+                value:
+                  selectedConsulta.n_clusters != null
+                    ? String(selectedConsulta.n_clusters)
+                    : "-",
+                sub: "segmentação CART",
+                highlight: false,
+              },
+              {
+                label: "Valor Objetivo (z)",
+                value:
+                  selectedConsulta.z_otimo != null
+                    ? fmtZ(selectedConsulta.z_otimo)
+                    : "-",
+                sub:
+                  selectedConsulta.status_lp === "multiplas_solucoes"
+                    ? "Múltiplas soluções"
+                    : "Solução ótima",
+                highlight: true,
+              },
+              {
+                label: "Clientes Elegíveis",
+                value:
+                  selectedConsulta.n_clientes_elegiveis != null
+                    ? Number(
+                        selectedConsulta.n_clientes_elegiveis,
+                      ).toLocaleString("pt-BR")
+                    : "-",
+                sub:
+                  selectedConsulta.n_clientes_total != null
+                    ? "de " +
+                      Number(selectedConsulta.n_clientes_total).toLocaleString(
+                        "pt-BR",
+                      ) +
+                      " na base"
+                    : "na base",
+                highlight: false,
+              },
+              {
+                label: "Clientes Ofertados",
+                value:
+                  selectedConsulta.n_clientes_ofertados != null
+                    ? Number(
+                        selectedConsulta.n_clientes_ofertados,
+                      ).toLocaleString("pt-BR")
+                    : "-",
+                sub: selectedConsulta.n_clientes_elegiveis
+                  ? (
+                      (selectedConsulta.n_clientes_ofertados /
+                        selectedConsulta.n_clientes_elegiveis) *
+                      100
+                    ).toFixed(1) + "% dos elegíveis"
+                  : "",
+                highlight: false,
+              },
+            ].map(function (k) {
               return (
                 <div
                   key={k.label}
-                  className={"border shadow-sm p-5 " + (k.highlight ? "border-[#2E6DA4]/40 bg-[#D6E8F5]" : "bg-white border-[#E8EFF7]")}
+                  className={
+                    "border shadow-sm p-5 " +
+                    (k.highlight
+                      ? "border-[#2E6DA4]/40 bg-[#D6E8F5]"
+                      : "bg-white border-[#E8EFF7]")
+                  }
                 >
-                  <div className="text-xs font-medium text-[#9C9C9F] mb-2">{k.label}</div>
-                  <div className={"text-2xl font-bold mb-1 " + (k.highlight ? "text-[#2E6DA4]" : "text-[#0D1B2A]")}>{k.value}</div>
+                  <div className="text-xs font-medium text-[#9C9C9F] mb-2">
+                    {k.label}
+                  </div>
+                  <div
+                    className={
+                      "text-xl font-bold mb-1 leading-tight " +
+                      (k.highlight ? "text-[#2E6DA4]" : "text-[#0D1B2A]")
+                    }
+                  >
+                    {k.value}
+                  </div>
                   <div className="text-xs text-[#9C9C9F]">{k.sub}</div>
                 </div>
               );
             })}
           </div>
 
-          {/* Clusters — mini cards + tabela */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-2 text-base font-semibold text-[#0D1B2A]">
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="#2E6DA4" strokeWidth="2.5">
-                <polyline points="22 7 13.5 15.5 8.5 10.5 2 17" />
-                <polyline points="16 7 22 7 22 13" />
+          {/* Loading de clusters */}
+          {loadingClusters && (
+            <div className="flex items-center justify-center py-10 gap-2 text-sm text-[#9C9C9F] bg-white border border-[#E8EFF7]">
+              <svg
+                className="animate-spin"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+              >
+                <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0" />
               </svg>
-              Limites Gerados por Cluster
+              Carregando dados dos clusters...
             </div>
+          )}
 
-            <div className="grid grid-cols-3 gap-4">
+          {/* Gráficos */}
+          {clusters && !loadingClusters && (
+            <div className="grid grid-cols-2 gap-4">
               <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
-                <div className="text-xs font-medium text-[#9C9C9F] mb-1">Total de Clusters</div>
-                <div className="text-3xl font-bold text-[#0D1B2A]">{total}</div>
+                <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
+                  Top 15 Clusters por Limite
+                </div>
+                <div className="text-xs text-[#9C9C9F] mb-4">
+                  Limite ótimo atribuído a cada cluster pelo Simplex (R$)
+                </div>
+                <BarChartSVG data={barData} />
               </div>
-              <div className="bg-white border border-[#67DE98]/50 shadow-sm p-5">
-                <div className="text-xs font-medium text-[#2E6DA4] mb-1">Com Solução Viável</div>
-                <div className="text-3xl font-bold text-[#2E6DA4]">{viavel}</div>
-              </div>
-              <div className="bg-white border border-[#FAE95D]/60 shadow-sm p-5">
-                <div className="text-xs font-medium text-[#3B4049] mb-1">Sem Solução</div>
-                <div className="text-3xl font-bold text-[#3B4049]">{sem}</div>
-              </div>
-            </div>
 
-            <div className="bg-white border border-[#E8EFF7] shadow-sm overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="bg-[#0D1B2A]">
-                    {["Cluster ID", "Limite Sugerido", "Status"].map(function (h) {
+              <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+                <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
+                  Distribuição de Clientes
+                </div>
+                <div className="text-xs text-[#9C9C9F] mb-4">
+                  Proporção por elegibilidade e oferta de limite
+                </div>
+                <div className="flex items-center gap-6">
+                  <DonutChart data={donutData} />
+                  <div className="space-y-3 flex-1">
+                    {donutData.map(function (d) {
                       return (
-                        <th key={h} className="px-4 py-2.5 text-left text-[11px] font-semibold text-white uppercase tracking-wide">
-                          {h}
-                        </th>
+                        <div
+                          key={d.name}
+                          className="flex items-center gap-2 text-sm"
+                        >
+                          <div
+                            className="w-2.5 h-2.5 flex-shrink-0"
+                            style={{ background: d.color }}
+                          />
+                          <span className="font-medium text-[#3B4049] flex-1">
+                            {d.name}
+                          </span>
+                          <span className="font-semibold text-[#0D1B2A]">
+                            {Number(d.value).toLocaleString("pt-BR")}
+                          </span>
+                        </div>
                       );
                     })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {CLUSTERS_UPLOAD.map(function (c) {
-                    return (
-                      <tr key={c.id} className="border-b border-[#E2EAF4] hover:bg-[#E2EAF4] transition-colors">
-                        <td className="px-4 py-3 font-semibold text-[#2E6DA4]">{c.id}</td>
-                        <td className="px-4 py-3 font-medium text-[#0D1B2A]">
-                          {c.limite ? fmt(c.limite) + ",00" : "—"}
-                        </td>
-                        <td className="px-4 py-3">
-                          {c.status === "viavel" ? (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold bg-[#67DE98]/20 text-[#2E6DA4] border border-[#67DE98]/50">
-                              <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                <circle cx="12" cy="12" r="10" /><path d="M9 12l2 2 4-4" />
-                              </svg>
-                              Solução Viável
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 text-xs font-semibold bg-[#FF5D5C]/20 text-[#DC2F37] border border-[#FF5D5C]/40">
-                              <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                                <circle cx="12" cy="12" r="10" />
-                                <line x1="15" y1="9" x2="9" y2="15" /><line x1="9" y1="9" x2="15" y2="15" />
-                              </svg>
-                              Sem Solução
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          {/* Gráficos linha 1 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
-              <div className="text-sm font-semibold text-[#0D1B2A] mb-1">Limites por Cluster</div>
-              <div className="text-xs text-[#9C9C9F] mb-4">Limite ótimo atribuído a cada cluster pelo Simplex (R$)</div>
-              <BarChartSVG data={CLUSTER_LIMITES.map(function (d) { return { label: d.name, value: d.limite }; })} />
-            </div>
-            <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
-              <div className="text-sm font-semibold text-[#0D1B2A] mb-1">Distribuição por Status</div>
-              <div className="text-xs text-[#9C9C9F] mb-4">Proporção de clientes por situação na carteira</div>
-              <div className="flex items-center gap-6">
-                <DonutChart data={STATUS_PIE} />
-                <div className="space-y-3 flex-1">
-                  {STATUS_PIE.map(function (d) {
-                    return (
-                      <div key={d.name} className="flex items-center gap-2 text-sm">
-                        <div className="w-2.5 h-2.5 flex-shrink-0" style={{ background: d.color }} />
-                        <span className="font-medium text-[#3B4049] flex-1">{d.name}</span>
-                        <span className="font-semibold text-[#0D1B2A]">{d.value}%</span>
-                      </div>
-                    );
-                  })}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Comparação de Solvers */}
-          <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
-            <div className="mb-1 text-sm font-semibold text-[#0D1B2A]">Comparação de Solvers: Simplex vs PuLP</div>
-            <div className="text-xs text-[#9C9C9F] mb-5">Validação da solução ótima com biblioteca externa (PuLP / CBC)</div>
+          {/* Tabela de clusters */}
+          {clusters && !loadingClusters && (
+            <div className="bg-white border border-[#E8EFF7] shadow-sm overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8EFF7]">
+                <div className="text-sm font-semibold text-[#0D1B2A]">
+                  Clusters - Resultados Detalhados
+                </div>
+                <span className="text-xs text-[#9C9C9F]">
+                  {clusters.length} clusters · página {tablePage} de{" "}
+                  {totalPaginas}
+                </span>
+              </div>
 
-            <div className="grid grid-cols-2 gap-3 mb-5">
-              {[sc.simplex, sc.pulp].map(function (s) {
-                return (
-                  <div key={s.label} className="border border-[#E8EFF7] bg-[#E2EAF4] p-4">
-                    <div className="flex items-center justify-between mb-3">
-                      <span className="text-xs font-semibold text-[#3B4049]">{s.label}</span>
-                      <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-medium bg-[#67DE98]/20 text-[#2E6DA4] border border-[#67DE98]/50">{s.status}</span>
-                    </div>
-                    <div className="text-2xl font-bold text-[#2E6DA4] mb-1">{fmtZ(s.z)}</div>
-                    <div className="text-xs text-[#9C9C9F]">Valor objetivo (z)</div>
-                    <div className="text-xs text-[#9C9C9F] mt-1">Tempo: <span className="font-medium text-[#3B4049]">{s.tempo_ms} ms</span></div>
-                  </div>
-                );
-              })}
-            </div>
-
-            <div className="overflow-x-auto border border-[#E8EFF7]">
-              <table className="w-full text-xs">
-                <thead>
-                  <tr className="bg-[#0D1B2A]">
-                    {["Cluster", "Simplex (R$)", "PuLP / CBC (R$)", "Match"].map(function (h) {
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="bg-[#0D1B2A]">
+                      {[
+                        "Cluster",
+                        "Clientes",
+                        "PD Média",
+                        "Score Cross Médio",
+                        "Fator Alavancagem",
+                        "Limite Otimizado",
+                        "Status",
+                      ].map(function (h) {
+                        return (
+                          <th
+                            key={h}
+                            className="px-3 py-2.5 text-left font-semibold text-white uppercase tracking-wide whitespace-nowrap"
+                          >
+                            {h}
+                          </th>
+                        );
+                      })}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clustersPaginados.map(function (c, i) {
+                      var temLimite = c.limite_otimizado > 0;
                       return (
-                        <th key={h} className="px-3 py-2.5 text-left font-semibold text-white uppercase tracking-wide whitespace-nowrap">{h}</th>
+                        <tr
+                          key={c.cluster_id}
+                          className={
+                            "border-b border-[#E2EAF4] hover:bg-[#E2EAF4] transition-colors " +
+                            (i % 2 === 0 ? "" : "bg-[#F7FAFD]")
+                          }
+                        >
+                          <td className="px-3 py-2.5 font-mono font-semibold text-[#2E6DA4]">
+                            CLU-{c.cluster_id}
+                          </td>
+                          <td className="px-3 py-2.5 text-[#3B4049]">
+                            {Number(c.n_clientes).toLocaleString("pt-BR")}
+                          </td>
+                          <td className="px-3 py-2.5 text-[#3B4049]">
+                            {(c.pd_media * 100).toFixed(2)}%
+                          </td>
+                          <td className="px-3 py-2.5 text-[#3B4049]">
+                            {Math.round(c.score_credito_cross_medio)}
+                          </td>
+                          <td className="px-3 py-2.5 text-[#3B4049]">
+                            {c.fator_alavancagem.toFixed(2)}x
+                          </td>
+                          <td className="px-3 py-2.5 font-semibold text-[#0D1B2A]">
+                            {temLimite ? fmt(c.limite_otimizado) : "-"}
+                          </td>
+                          <td className="px-3 py-2.5">
+                            {temLimite ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold bg-[#67DE98]/20 text-[#1a7a4a] border border-[#67DE98]/50">
+                                <svg
+                                  width="9"
+                                  height="9"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth="3"
+                                >
+                                  <polyline points="20 6 9 17 4 12" />
+                                </svg>
+                                Viável
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-semibold bg-[#FF5D5C]/10 text-[#DC2F37] border border-[#FF5D5C]/30">
+                                <svg
+                                  width="9"
+                                  height="9"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                  strokeWidth="3"
+                                >
+                                  <line x1="18" y1="6" x2="6" y2="18" />
+                                  <line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                                Sem solução
+                              </span>
+                            )}
+                          </td>
+                        </tr>
                       );
                     })}
-                  </tr>
-                </thead>
-                <tbody>
-                  {sc.simplex.clusters.map(function (cs, i) {
-                    var cp = sc.pulp.clusters[i];
-                    var match = cs.limite === cp.limite;
-                    return (
-                      <tr key={cs.id} className={"border-t border-[#E8EFF7] " + (i % 2 === 0 ? "" : "bg-[#E2EAF4]/60")}>
-                        <td className="px-3 py-2 font-mono font-semibold text-[#2E6DA4]">{cs.id}</td>
-                        <td className="px-3 py-2 text-[#3B4049]">{cs.limite ? fmt(cs.limite) : "—"}</td>
-                        <td className="px-3 py-2 text-[#3B4049]">{cp.limite ? fmt(cp.limite) : "—"}</td>
-                        <td className="px-3 py-2">
-                          {match ? (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium bg-[#67DE98]/20 text-[#2E6DA4] border border-[#67DE98]/50">
-                              <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12" /></svg>
-                              Idêntico
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center gap-1 px-2 py-0.5 text-[11px] font-medium bg-[#FAE95D]/30 text-[#3B4049] border border-[#FAE95D]/70">
-                              <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="3">
-                                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                              </svg>
-                              Diverge
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-            </div>
-
-            <div className="mt-3 text-xs text-[#9C9C9F]">
-              Delta z = <span className="font-semibold text-[#3B4049]">{(sc.delta_z_pct * 100).toFixed(4)}%</span>
-              {" · "}PD financeiro atual: <span className="font-semibold text-[#3B4049]">{(sc.pd_fin_atual * 100).toFixed(2)}%</span>
-            </div>
-          </div>
-
-          {/* Gráficos linha 2 */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
-              <div className="flex items-start justify-between mb-1">
-                <div className="text-sm font-semibold text-[#0D1B2A]">Evolução do Limite Total</div>
-                <button
-                  onClick={function () { setShowComparison(function (v) { return !v; }); }}
-                  className={"flex items-center gap-1.5 px-2.5 py-1 text-[11px] font-medium border transition-colors " + (showComparison ? "bg-[#2E6DA4] text-white border-[#2E6DA4]" : "border-[#E8EFF7] text-[#3B4049] hover:bg-[#E2EAF4]")}
-                >
-                  <svg width="11" height="11" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2.5">
-                    <path d="M8 3H5a2 2 0 00-2 2v3m18 0V5a2 2 0 00-2-2h-3M3 16v3a2 2 0 002 2h3m8 0h3a2 2 0 002-2v-3" />
-                  </svg>
-                  Comparar simulação anterior
-                </button>
+                  </tbody>
+                </table>
               </div>
-              <div className="text-xs text-[#9C9C9F] mb-3">Crescimento mensal do limite aprovado em R$ milhões</div>
-              {showComparison && (
-                <div className="flex items-center gap-4 mb-3 text-xs">
-                  <span className="flex items-center gap-1.5"><span className="inline-block w-6 h-0.5 bg-[#2E6DA4]"></span><span className="text-[#3B4049] font-medium">Simulação atual (Mai/2025)</span></span>
-                  <span className="flex items-center gap-1.5"><span className="inline-block w-6 border-t-2 border-dashed border-[#FAE95D]"></span><span className="text-[#3B4049] font-medium">Simulação anterior (Abr/2025)</span></span>
+
+              {/* Paginação */}
+              {totalPaginas > 1 && (
+                <div className="flex items-center justify-between px-5 py-3 border-t border-[#E8EFF7]">
+                  <span className="text-xs text-[#9C9C9F]">
+                    {(tablePage - 1) * TABLE_PER_PAGE + 1}–
+                    {Math.min(tablePage * TABLE_PER_PAGE, clusters.length)} de{" "}
+                    {clusters.length}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <button
+                      disabled={tablePage === 1}
+                      onClick={function () {
+                        setTablePage(function (p) {
+                          return p - 1;
+                        });
+                      }}
+                      className="px-3 h-7 text-xs text-[#9C9C9F] hover:bg-[#E2EAF4] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Anterior
+                    </button>
+                    {Array.from(
+                      { length: Math.min(5, totalPaginas) },
+                      function (_, i) {
+                        var start = Math.max(
+                          1,
+                          Math.min(tablePage - 2, totalPaginas - 4),
+                        );
+                        var n = start + i;
+                        return (
+                          <button
+                            key={n}
+                            onClick={function () {
+                              setTablePage(n);
+                            }}
+                            className={
+                              "w-7 h-7 text-xs font-medium transition-colors " +
+                              (tablePage === n
+                                ? "bg-[#2E6DA4] text-white"
+                                : "text-[#3B4049] hover:bg-[#E2EAF4]")
+                            }
+                          >
+                            {n}
+                          </button>
+                        );
+                      },
+                    )}
+                    <button
+                      disabled={tablePage === totalPaginas}
+                      onClick={function () {
+                        setTablePage(function (p) {
+                          return p + 1;
+                        });
+                      }}
+                      className="px-3 h-7 text-xs text-[#9C9C9F] hover:bg-[#E2EAF4] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Próximo
+                    </button>
+                  </div>
                 </div>
               )}
-              <LineChartSVG
-                data={EVOLUCAO.map(function (d) { return { label: d.mes, value: d.valor }; })}
-                data2={showComparison ? EVOLUCAO_PREV : null}
-              />
             </div>
-
-            <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
-              <div className="text-sm font-semibold text-[#0D1B2A] mb-1">Distribuição de Score</div>
-              <div className="text-xs text-[#9C9C9F] mb-4">Número de clientes por faixa de score de crédito</div>
-              <AreaChartSVG data={SCORE_DIST.map(function (d) { return { label: d.score, value: d.n }; })} />
-            </div>
-          </div>
-
+          )}
         </div>
       )}
     </div>
