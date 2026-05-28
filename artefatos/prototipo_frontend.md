@@ -108,7 +108,7 @@ O usuário consegue ajustar os parâmetros do modelo de clusterização e defini
 **Passos:**
 
 1.  O usuário navega para a seção "Resultados".
-2.  Na tela "Visualizar Resultados", o usuário encontra um dashboard com KPIs como "Total de Clusters", "Limite Total Aprovado", "Clientes Ativos" e "Taxa de Aprovação".
+2.  Na tela "Visualizar Resultados", o usuário encontra um cockpit com KPIs como "Total de Clusters", "Limite Total Aprovado", "Clientes Ativos" e "Taxa de Aprovação".
 3.  Gráficos visuais, como "Limites por Cluster", "Distribuição por Status", "Evolução Temporal de Limites" e "Distribuição por Faixa de Score", são apresentados para uma análise aprofundada.
 4.  Na tela do Dashboard (Home), o usuário pode utilizar o botão "Exportar" para gerar um arquivo com os resultados finais da otimização.
 
