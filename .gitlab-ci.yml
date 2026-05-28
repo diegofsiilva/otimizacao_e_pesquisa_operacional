@@ -2,12 +2,16 @@ stages:
   - deploy
 
 deploy:
+  stages:
+  - deploy
+
+deploy:
   stage: deploy
   tags:
     - g04-server
   only:
     - develop
   script:
-  - cp -r $CI_PROJECT_DIR/. /home/cc06-g4/g04/
-  - chmod +x /home/cc06-g4/g04/apps/backend/start.sh
-  - sudo systemctl restart g04
+    - cp -r $CI_PROJECT_DIR/. /home/cc06-g4/g04/ --exclude='.git'
+    - chmod +x /home/cc06-g4/g04/apps/backend/start.sh
+    - sudo systemctl restart g04
