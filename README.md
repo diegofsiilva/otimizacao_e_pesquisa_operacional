@@ -65,30 +65,47 @@ A solução agrupa os clientes elegíveis em clusters com perfis semelhantes e r
 ```
 g04/
 ├── apps/
-│   └── algoritmo_simplex/      # implementação do algoritmo Simplex e pipeline de execução
-│       ├── clustering.py       # clusterização dos clientes via K-Means
-│       ├── main.py             # orquestração do pipeline completo
-│       ├── models.py           # estruturas de dados (Problema, Tableau)
-│       ├── simplex.py          # implementação do algoritmo Simplex
-│       ├── simplex_pulp.py     # solver de referência usando PuLP/CBC
-│       ├── comparar.py         # script de comparação Simplex × PuLP
-│       ├── requirements.txt    # dependências Python
-│       └── input/              # arquivos de configuração JSON
-├── artefatos/                  # documentação técnica de cada sprint
+│   ├── algoritmo_simplex/        # otimizador e pipeline de otimizacao
+│   │   ├── clustering.py         # clusterizacao CART e agregacao por cluster
+│   │   ├── main.py               # orquestra calibracao, clustering e Simplex
+│   │   ├── models.py             # estruturas Problema e Tableau
+│   │   ├── simplex.py            # implementacao propria do algoritmo Simplex
+│   │   ├── simplex_pulp.py       # solver de referencia para comparacao
+│   │   ├── comparar.py           # comparacao Simplex proprio x PuLP
+│   │   ├── input/                # parametros JSON do modelo
+│   │   └── tests/                # testes automatizados do otimizador
+│   ├── backend/                  # API FastAPI usada pelo frontend
+│   │   ├── api/                  # rotas REST e upload em chunks
+│   │   ├── db/                   # conexao PostgreSQL e migrations
+│   │   ├── model/                # schemas Pydantic
+│   │   ├── services/             # regras de negocio e integracao com otimizador
+│   │   ├── tests/                # testes unitarios, integracao HTTP e background worker
+│   │   ├── main.py               # aplicacao FastAPI
+│   │   ├── run_server.py         # sobe backend e frontend estatico juntos
+│   │   ├── requirements.txt      # dependencias do backend
+│   │   └── start.sh              # inicializacao no ambiente de deploy
+│   └── frontend/                 # SPA React via CDN/Babel
+│       ├── pages/                # telas Cockpit, Gerar Limites, Resultados, Clientes e Config
+│       ├── assets/               # logo e fontes
+│       ├── api.js                # cliente HTTP do backend
+│       ├── data.js               # helpers e metadados de UI
+│       ├── index.html            # ponto de entrada da aplicacao
+│       └── styles.css            # estilos globais
+├── artefatos/                    # documentacao tecnica das entregas
+│   ├── back-end.md               # documentacao do backend e otimizador
+│   ├── frontend.md               # documentacao do frontend
 │   ├── entendimento_negocio.md
 │   ├── entendimento_ux.md
 │   ├── modelagem_matematica.md
-│   ├── algoritmo_simplex.md
-│   └── comparacao_simplex.md   # validação cruzada com a biblioteca PuLP
-├── apresentacoes/              # apresentações de cada sprint
-├── data/                       # dados do projeto (não versionados)
-│   ├── parquet/                # arquivos de entrada no formato Parquet (fornecidos pelo parceiro)
-│   └── csv/                    # arquivos gerados pelos scripts de preparação
-├── scripts/                    # utilitários de preparação de dados
-│   ├── analise_09_calibracao_final.py
-│   ├── calibrar_pd.py
-│   ├── convert_parquet_to_csv.py
-│   └── reduce_csv.py
+│   ├── prototipo_frontend.md
+│   └── comparacao_simplex.md
+├── apresentacoes/                # apresentacoes das sprints
+├── data/                         # dados do projeto e caches locais
+│   ├── parquet/                  # arquivos Parquet de entrada
+│   ├── csv/                      # tabelas intermediarias e auxiliares
+│   └── cache/                    # parquets calibrados/clusterizados gerados
+├── scripts/                      # utilitarios de preparacao, calibracao e analise
+├── .gitlab-ci.yml                # pipeline de teste e deploy
 └── README.md
 ```
 
@@ -285,3 +302,4 @@ Os arquivos JSON de parâmetros devem estar em `apps/algoritmo_simplex/input/`.
 ## 📋 Licença/License
 
 <img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/cc.svg?ref=chooser-v1"><img style="height:22px!important;margin-left:3px;vertical-align:text-bottom;" src="https://mirrors.creativecommons.org/presskit/icons/by.svg?ref=chooser-v1"><p xmlns:cc="http://creativecommons.org/ns#" xmlns:dct="http://purl.org/dc/terms/"><a property="dct:title" rel="cc:attributionURL" href="https://git.inteli.edu.br/graduacao/2026-1b/t15/g04">G04</a> by <a href="https://www.inteli.edu.br/">Inteli</a>, Diego Figueiredo Silva, Lucas Garcia Rodrigues Lopes, Luiz Gustavo Borges Oliveira, Maria Clara Oliveira Santos, Rebeca Namura Sbroglio, Richard Dias Alves, Teodoro Borges de Carvalho Neira is licensed under <a href="http://creativecommons.org/licenses/by/4.0/?ref=chooser-v1" target="_blank" rel="license noopener noreferrer" style="display:inline-block;">Attribution 4.0 International</a>.</p>
+
