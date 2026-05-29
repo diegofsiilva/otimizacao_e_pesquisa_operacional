@@ -36,6 +36,7 @@ build/
 # ==============================
 .env
 .env.*
+!apps/backend/.env.example
 .env.local
 .env.development.local
 .env.test.local
@@ -134,6 +135,7 @@ $RECYCLE.BIN/
 *.lock
 tmp/
 temp/
+.codex_test_deps/
 
 # ==============================
 # DVC - CONTROLE DE VERSÃO DE DADOS

@@ -1,105 +1,181 @@
 """
 apps/algoritmo_simplex/clustering.py
 
-Agrupa clientes em clusters usando K-Means e calcula os parâmetros agregados
-necessários para o modelo de otimização de limites de crédito via Simplex.
-
-A clusterização é feita sobre clientes elegíveis (flag_filtros == 0), usando as
-features pd_calibrada, capacidade_pagamento, score_credito_cross, score_propensao_contrato
-e fx_idade. Para cada cluster, são calculados os parâmetros que o LP precisa:
-n_k, PD_k, pi_k, CP_k e m_k.
+Agrupa clientes elegiveis em clusters usando CART e calcula os parametros
+agregados necessarios para o modelo de otimizacao de limites de credito.
 
 Uso:
-    python clustering.py <arquivo_clientes.csv>
+    python clustering.py <arquivo_calibrado.parquet> [parametros.json]
 
 Entrada:
-    - <nome>.csv: base de clientes no nível individual (com coluna pd_calibrada)
+    - <nome>_calibrado.parquet : base de clientes calibrada em data/cache/
+    - parametros.json          : parametros do modelo (padrao: parametros.json)
 
-Saída:
-    - <nome>_com_cluster.csv : base original com a coluna cluster_id adicionada
-    - <nome>_clusters.csv    : tabela agregada no nível do cluster com parâmetros para o LP
+Saida:
+    - <nome>_calibrado_com_cluster.parquet : base com cluster_id adicionada
+    - <nome>_calibrado_clusters.parquet    : tabela agregada por cluster para o LP
 
-Arquivos CSV devem estar em data/csv/
-Arquivos de saída serão gerados em data/csv/
+Arquivos parquet de entrada devem estar em data/cache/
+Arquivos JSON devem estar em apps/algoritmo_simplex/input/
+Arquivos parquet de saida serao gerados em data/cache/
 """
 
+import json
+import sys
+import time
 from pathlib import Path
+
 import numpy as np
 import pandas as pd
+from sklearn.tree import DecisionTreeRegressor
 
-from sklearn.compose import ColumnTransformer
-from sklearn.cluster import KMeans
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import OneHotEncoder, StandardScaler
-from sklearn.impute import SimpleImputer
+ROOT = Path(__file__).resolve().parent.parent.parent
+DATA_DIR = ROOT / "data" / "cache"
+JSON_DIR = Path(__file__).resolve().parent / "input"
 
 
 def normalize_propensao(score: pd.Series) -> pd.Series:
-    """Normaliza a propensão para o intervalo [0, 1]"""
-    pi = (score.astype(float) - 3.0) / 843.0
-    return pi.clip(0.0, 1.0)
+    """Normaliza score_propensao_contrato para o intervalo [0, 1]."""
+    return ((score.astype(float) - 3.0) / 843.0).clip(0.0, 1.0)
 
 
 def build_cp_proxy(df: pd.DataFrame) -> pd.Series:
-    """Caso não haja a coluna capacidade_pagamento, usa proxy baseado na renda estimada"""
-    cp = df["capacidade_pagamento"]
-    renda = df["renda_estimada"]
-    return cp.where(cp.notna(), renda * 0.30)
+    """Retorna capacidade_pagamento quando disponivel, renda_estimada * 0.30 caso contrario."""
+    return df["capacidade_pagamento"].where(
+        df["capacidade_pagamento"].notna(),
+        df["renda_estimada"] * 0.30,
+    )
 
 
 def score_to_m(
-    score_cross_mean: float, *, s_low=300.0, s_high=900.0, m_low=0.3, m_high=1.8
+    score_cross_mean: float,
+    *,
+    s_low: float = 300.0,
+    s_high: float = 900.0,
+    m_low: float = 0.3,
+    m_high: float = 1.8,
 ) -> float:
-    """Calcula o fator de alavancagem m_k do cluster a partir do score de crédito médio."""
-    x = (score_cross_mean - s_low) / (s_high - s_low)
-    x = float(np.clip(x, 0.0, 1.0))
+    """Calcula o fator de alavancagem m_k por interpolacao linear do score medio do cluster."""
+    x = float(np.clip((score_cross_mean - s_low) / (s_high - s_low), 0.0, 1.0))
     return m_low + x * (m_high - m_low)
 
 
+def calcular_ck(
+    pi: pd.Series,
+    pd_calibrada: pd.Series,
+    *,
+    t: float,
+    LGD: float,
+    u_bar: float,
+    T: float,
+) -> pd.Series:
+    """
+    Calcula o score composto c_k por cliente.
+
+    c_k = pi * (u_bar * t * T - pd_calibrada * LGD)
+
+    Usado como variavel guia do CART para que cada cluster seja homogeneo
+    na dimensao que o LP maximiza.
+    """
+    return pi * (u_bar * t * T - pd_calibrada * LGD)
+
+
 def main(
-    input_csv_name: str,
-    n_clusters: int = 7,
+    input_parquet_name: str,
+    params_json_name: str = "parametros.json",
+    max_leaf_nodes: int = 800,
+    min_samples_leaf: int = 500,
     random_state: int = 42,
-):
-    input_path = (
-        Path(__file__).resolve().parent.parent.parent / "data" / "csv" / input_csv_name
-    )
-    df = pd.read_csv(input_path)
+) -> None:
+    """
+    Pipeline completo de clusterizacao via CART.
 
-    # (1) filtra elegíveis
+    K=800 foi escolhido empiricamente: varredura de K=50 a K=2000 mostrou que
+    a partir de K=800 todos os incrementos adicionam menos de 0.5% ao retorno
+    esperado da carteira. K=800 captura 98.4% do retorno maximo.
+    """
+    t_inicio = time.time()
+    DATA_DIR.mkdir(parents=True, exist_ok=True)
+
+    json_path = JSON_DIR / params_json_name
+    if not json_path.exists():
+        raise FileNotFoundError(
+            f"[clustering] {params_json_name} nao encontrado em {JSON_DIR}"
+        )
+
+    with open(json_path) as f:
+        params = json.load(f)
+
+    t_param = params["t"]
+    LGD = params["LGD"]
+    u_bar = params["u_bar"]
+    T = params["T"]
+
+    print(f"Parametros: t={t_param}, LGD={LGD}, u_bar={u_bar}, T={T}")
+
+    input_path = DATA_DIR / input_parquet_name
+    if not input_path.exists():
+        raise FileNotFoundError(
+            f"[clustering] {input_parquet_name} nao encontrado em {DATA_DIR}"
+        )
+
+    print(f"\nLendo {input_parquet_name}...")
+    df = pd.read_parquet(input_path)
+    total_linhas = len(df)
+
     df = df[df["flag_filtros"] == 0].copy()
+    print(
+        f"  {total_linhas:,} linhas totais -> {len(df):,} elegiveis (flag_filtros == 0)"
+    )
 
-    # (2) features derivadas que batem com o LP
     df["pi"] = normalize_propensao(df["score_propensao_contrato"])
     df["cp_proxy"] = build_cp_proxy(df)
-
-    # (3) define colunas para clusterização
-    numeric_features = ["pd_calibrada", "cp_proxy", "score_credito_cross", "pi"]
-    categorical_features = ["fx_idade"]
-
-    pre = ColumnTransformer(
-        transformers=[
-            (
-                "num",
-                Pipeline(
-                    [
-                        ("imputer", SimpleImputer(strategy="median")),
-                        ("scaler", StandardScaler()),
-                    ]
-                ),
-                numeric_features,
-            ),
-            ("cat", OneHotEncoder(handle_unknown="ignore"), categorical_features),
-        ]
+    df["ck_guia"] = calcular_ck(
+        df["pi"],
+        df["pd_calibrada"],
+        t=t_param,
+        LGD=LGD,
+        u_bar=u_bar,
+        T=T,
     )
 
-    model = KMeans(n_clusters=n_clusters, random_state=random_state, n_init="auto")
+    feature_cols = ["pd_calibrada", "pi", "cp_proxy", "score_credito_cross"]
+    df_features = df[feature_cols].copy()
 
-    pipe = Pipeline([("pre", pre), ("kmeans", model)])
-    df["cluster_id"] = pipe.fit_predict(df)
+    for col in feature_cols:
+        n_nulos = df_features[col].isna().sum()
+        if n_nulos > 0:
+            mediana = df_features[col].median()
+            df_features[col] = df_features[col].fillna(mediana)
+            print(f"  Imputacao: {col} -- {n_nulos:,} nulos -> mediana ({mediana:.4f})")
 
-    # (4) agrega e produz os parâmetros do LP
-    def p5(x):
+    X = df_features.values
+    y = df["ck_guia"].values
+
+    print(
+        f"\nTreinando CART (max_leaf_nodes={max_leaf_nodes}, min_samples_leaf={min_samples_leaf})..."
+    )
+
+    t_cart = time.time()
+    arvore = DecisionTreeRegressor(
+        max_leaf_nodes=max_leaf_nodes,
+        min_samples_leaf=min_samples_leaf,
+        random_state=random_state,
+    )
+    arvore.fit(X, y)
+
+    n_clusters_real = arvore.get_n_leaves()
+    print(f"  Concluido em {time.time() - t_cart:.1f}s")
+    print(f"  Clusters gerados: {n_clusters_real} (solicitado max. {max_leaf_nodes})")
+
+    folhas_raw = arvore.apply(X)
+    folhas_unicas = np.unique(folhas_raw)
+    mapa_folha = {folha: idx for idx, folha in enumerate(folhas_unicas)}
+    df["cluster_id"] = np.vectorize(mapa_folha.get)(folhas_raw)
+
+    print("\nAgregando parametros por cluster...")
+
+    def p5(x: pd.Series) -> float:
         return float(np.nanquantile(x.astype(float), 0.05))
 
     clusters = df.groupby("cluster_id", as_index=False).agg(
@@ -108,27 +184,52 @@ def main(
         pi_k=("pi", "mean"),
         CP_k=("cp_proxy", p5),
         score_cross_mean=("score_credito_cross", "mean"),
+        ck_medio=("ck_guia", "mean"),
+        ck_std=("ck_guia", "std"),
     )
     clusters["m_k"] = clusters["score_cross_mean"].apply(score_to_m)
 
-    # (5) salva saídas com nomes derivados do arquivo de entrada
-    out_dir = Path(__file__).resolve().parent.parent.parent / "data" / "csv"
-    stem = Path(input_csv_name).stem
+    std_total = df["ck_guia"].std()
+    ck_std_medio = clusters["ck_std"].mean()
+    reducao_var = 100 * (1 - ck_std_medio / std_total)
 
-    df.to_csv(out_dir / f"{stem}_com_cluster.csv", index=False)
-    clusters.to_csv(out_dir / f"{stem}_clusters.csv", index=False)
+    print(f"\nDIAGNOSTICO DOS CLUSTERS")
+    print(f"  Total de clusters:           {len(clusters):>6}")
+    print(f"  Clientes por cluster:")
+    print(f"    minimo:                    {clusters['n_k'].min():>6,}")
+    print(f"    mediana:                   {clusters['n_k'].median():>6,.0f}")
+    print(f"    maximo:                    {clusters['n_k'].max():>6,}")
+    print(f"  PD_k por cluster:")
+    print(f"    minimo:                    {clusters['PD_k'].min():>6.4f}")
+    print(f"    mediana:                   {clusters['PD_k'].median():>6.4f}")
+    print(f"    maximo:                    {clusters['PD_k'].max():>6.4f}")
+    print(f"  Homogeneidade interna:")
+    print(f"    ck_std total (sem cluster):{std_total:>8.4f}")
+    print(f"    ck_std medio (intra):      {ck_std_medio:>8.4f}")
+    print(f"    reducao de variancia:      {reducao_var:>7.2f}%")
 
-    print(f"Arquivos salvos em: {out_dir}")
-    print(f"  {stem}_com_cluster.csv")
-    print(f"  {stem}_clusters.csv")
+    stem = Path(input_parquet_name).stem
+    out_com_cluster = DATA_DIR / f"{stem}_com_cluster.parquet"
+    out_clusters = DATA_DIR / f"{stem}_clusters.parquet"
+
+    print(f"\nSalvando saidas...")
+
+    df.drop(columns=["ck_guia"], inplace=True)
+    df.to_parquet(out_com_cluster, index=False)
+    print(f"  {out_com_cluster.name}")
+
+    clusters.drop(columns=["ck_std"], inplace=True)
+    clusters.to_parquet(out_clusters, index=False)
+    print(f"  {out_clusters.name}")
+
+    print(f"\nConcluido em {time.time() - t_inicio:.1f}s total")
 
 
 if __name__ == "__main__":
-    import sys
-
     if len(sys.argv) < 2:
         print("Uso:")
-        print("    python clustering.py <arquivo_clientes.csv>")
+        print("    python clustering.py <arquivo_calibrado.parquet> [parametros.json]")
         sys.exit(1)
 
-    main(sys.argv[1])
+    params_json = sys.argv[2] if len(sys.argv) >= 3 else "parametros.json"
+    main(sys.argv[1], params_json_name=params_json)
