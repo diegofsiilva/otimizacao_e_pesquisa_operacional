@@ -22,19 +22,20 @@ A aplicação não usa React Router. O estado `page` em `App` (definido em `inde
 
 ## 2. User Stories Priorizadas
 
-Ordenadas por prioridade de negócio (P1 = crítico para o fluxo principal, P3 = melhoria).
+Baseadas nas user stories originais do documento de UX (`artefatos/entendimento_ux.md`), ordenadas por prioridade de negócio. P1 = crítico para o fluxo principal, P3 = melhoria ou funcionalidade adicional não prevista no protótipo.
 
-| Prioridade | ID   | Título                                 | Componente                   | Status       | Observação                                                                                               |
-| ---------- | ---- | -------------------------------------- | ---------------------------- | ------------ | -------------------------------------------------------------------------------------------------------- |
-| P1         | US01 | Enviar base de clientes para simulação | `GerarLimites`               | Implementado | Upload `.parquet` com chunked transfer e modal de progresso por etapas                                   |
-| P1         | US02 | Monitorar execução do pipeline         | `GerarLimites`               | Implementado | Polling automático com etapas animadas (Calibração → Clustering → Simplex); botão "Verificar agora"      |
-| P1         | US03 | Visualizar resultado da simulação      | `GerarLimites`               | Implementado | Resultados inline pós-conclusão: KPIs, gráficos de barras e donut, tabela de clusters paginada           |
-| P1         | US04 | Consultar cockpit da última safra      | `Cockpit`                    | Implementado | KPIs com delta vs simulação anterior; tabela de clusters; CTA para nova simulação quando não há dados    |
-| P2         | US05 | Consultar histórico de simulações      | `Resultados`                 | Implementado | Seletor de simulação concluída; gráfico de evolução do `z_otimo`; histograma de risco por PD             |
-| P2         | US06 | Exportar clientes para CSV             | `GerarLimites`, `Resultados` | Implementado | `Api.exportClientes(id)` - arquivo gerado pelo backend com todos os campos de `ClienteResultadoResponse` |
-| P2         | US07 | Configurar parâmetros do modelo        | `ConfigModal`                | Implementado | Sliders com sync em tempo real; salvar via `PUT /api/config`; restaurar padrões com confirmação          |
-| P3         | US08 | Buscar cliente individual por token    | `Clientes`                   | Implementado | Histórico entre safras: cluster, limite, PD, score cross por período                                     |
-| P3         | US09 | Auditar parâmetros de uma simulação    | `Resultados`                 | Implementado | Seção colapsável com `t`, `LGD`, `u_bar`, `L_max`, `T` da consulta selecionada                           |
+| Prioridade | ID   | Título original                      | Componente                   | Status              | Observação |
+| ---------- | ---- | ------------------------------------ | ---------------------------- | ------------------- | ---------- |
+| P1         | US01 | Carregar base de dados               | `GerarLimites`               | Implementado        | Upload `.parquet` com chunked transfer, modal de progresso e validação de formato antes da requisição |
+| P1         | US04 | Gerar limite por cluster             | `GerarLimites`               | Implementado        | Pipeline Calibração → Clustering (CART) → Simplex executado no backend; polling com etapas animadas; resultados inline com KPIs, gráficos e tabela |
+| P1         | US06 | Visualizar distribuição dos limites  | `GerarLimites`, `Resultados` | Implementado        | Barras verticais top-15, donut de distribuição de clientes, histograma de PD por faixa de risco, evolução de `z_otimo` entre safras |
+| P1         | US07 | Exportar resultados                  | `GerarLimites`, `Resultados` | Implementado        | `Api.exportClientes(id)` retorna CSV completo gerado pelo backend com todos os campos de `ClienteResultadoResponse` |
+| P2         | US02 | Ajustar clusterização                | `ConfigModal`                | Parcial             | O ConfigModal expõe parâmetros do modelo Simplex (`t`, `LGD`, `u_bar`, `L_max`, `T`), mas não o parâmetro `n_clusters` da etapa CART. Configurar `n_clusters` diretamente no frontend não está implementado |
+| P2         | US03 | Configurar metas de produção         | `ConfigModal`                | Parcial             | As metas de negócio previstas na US03 original (meta de clientes aprovados e meta de volume financeiro) não estão expostas no ConfigModal. O modal cobre apenas parâmetros do modelo de otimização |
+| P2         | US05 | Consultar restrições ativas          | `Resultados`, `GerarLimites` | Parcial             | Os resultados exibem status por cluster (Viável / Sem Solução) e PD média, mas não detalham quais restrições (R1 carteira, R2 alavancagem, R3 teto) ficaram ativas por cluster |
+| P3         | —    | Cockpit da última safra              | `Cockpit`                    | Não previsto no UX  | KPIs com delta vs simulação anterior; tabela de clusters da consulta mais recente; CTA quando não há dados |
+| P3         | —    | Buscar cliente individual por token  | `Clientes`                   | Não previsto no UX  | Histórico entre safras: cluster atribuído, limite otimizado, PD calibrada, score cross por período |
+| P3         | —    | Auditar parâmetros de uma simulação  | `Resultados`                 | Não previsto no UX  | Seção colapsável com `t`, `LGD`, `u_bar`, `L_max`, `T` exatos da consulta selecionada |
 
 ---
 
