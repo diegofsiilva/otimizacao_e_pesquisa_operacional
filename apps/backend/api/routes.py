@@ -5,6 +5,7 @@ Definição das rotas da API.
 
 from __future__ import annotations
 
+from pathlib import Path
 from uuid import UUID
 
 from fastapi import (
@@ -89,8 +90,16 @@ async def upload_e_criar_consulta(
     Retorna 409 se safra_numero informado já existir e usar_safra_existente
     for False, indicando ao front que deve exibir o popup de confirmação.
     """
-    conteudo = await file.read()
     nome_arquivo = file.filename or "base.parquet"
+    if Path(nome_arquivo).name != nome_arquivo:
+        raise HTTPException(status_code=400, detail="Nome de arquivo invalido.")
+    if not nome_arquivo.lower().endswith(".parquet"):
+        raise HTTPException(
+            status_code=400,
+            detail="Formato invalido. Envie um arquivo .parquet.",
+        )
+
+    conteudo = await file.read()
 
     # monta overrides de parâmetros - apenas os que foram informados
     overrides = {
@@ -112,7 +121,12 @@ async def upload_e_criar_consulta(
     )
 
     try:
-        return await criar_consulta(payload, conteudo, background_tasks)
+        return await criar_consulta(
+            payload,
+            conteudo,
+            background_tasks,
+            usar_safra_existente=usar_safra_existente,
+        )
     except ValueError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 

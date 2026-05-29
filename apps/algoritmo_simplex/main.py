@@ -127,19 +127,6 @@ def montar_problema(clusters: pd.DataFrame, params: dict, df: pd.DataFrame) -> P
     A_r3 = np.eye(n).tolist()
     b_r3 = [float(L_max)] * n
 
-    # # R5: concentração máxima por cluster
-    # alpha = params["alpha"]
-
-    # for _, row_k in clusters.iterrows():
-    #     linha = []
-    #     for _, row_j in clusters.iterrows():
-    #         if row_j["cluster_id"] == row_k["cluster_id"]:
-    #             linha.append(row_j["n_k"] * (1 - alpha))
-    #         else:
-    #             linha.append(-row_j["n_k"] * alpha)
-    #     A.append(linha)
-    #     b.append(0.0)
-
     return Problema(
         c=c,
         A=[r1] + A_r2 + A_r3,

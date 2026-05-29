@@ -47,7 +47,7 @@ var GerarLimites = function (props) {
   var uploadStep = sm3[0];
   var setUploadStep = sm3[1];
 
-  // Tamanho de cada chunk: 5MB — confortavelmente abaixo de qualquer timeout de túnel
+  // Tamanho de cada chunk: 5MB - confortavelmente abaixo de qualquer timeout de túnel
   var CHUNK_SIZE = 5 * 1024 * 1024;
 
   // Conflito 409 (safra já existe)
@@ -155,7 +155,7 @@ var GerarLimites = function (props) {
         atualizarConsultaNaLista(c);
 
         if (c.status_consulta === "concluido") {
-          // Pipeline terminou — busca clusters e exibe resultados
+          // Pipeline terminou - busca clusters e exibe resultados
           setLoadingClusters(true);
           Api.getClusters(c.id)
             .then(function (cls) {
@@ -171,14 +171,14 @@ var GerarLimites = function (props) {
         } else if (c.status_consulta === "erro") {
           // Para de pingar
         } else {
-          // Ainda "pendente" ou "executando" — agenda próximo ping em 60s
+          // Ainda "pendente" ou "executando" - agenda próximo ping em 60s
           pollRef.current.timer = setTimeout(function () {
             verificarConsulta(consultaId);
           }, 60000);
         }
       })
       .catch(function () {
-        // Erro de rede — tenta novamente em 60s
+        // Erro de rede - tenta novamente em 60s
         pollRef.current.timer = setTimeout(function () {
           verificarConsulta(consultaId);
         }, 60000);
@@ -261,7 +261,7 @@ var GerarLimites = function (props) {
         return chain;
       })
       .then(function () {
-        // 3. Finalizar — remonta o arquivo no servidor e dispara o pipeline
+        // 3. Finalizar - remonta o arquivo no servidor e dispara o pipeline
         setUploadStep("finalizando");
         return Api.finalizarUpload(
           uploadId,
@@ -358,7 +358,7 @@ var GerarLimites = function (props) {
   }
 
   function formatDateTime(iso) {
-    if (!iso) return "—";
+    if (!iso) return "-";
     return new Date(iso).toLocaleString("pt-BR", {
       day: "2-digit",
       month: "2-digit",
@@ -538,7 +538,7 @@ var GerarLimites = function (props) {
               </p>
             </div>
 
-            {/* Barra de progresso — só aparece durante o envio de chunks */}
+            {/* Barra de progresso - só aparece durante o envio de chunks */}
             {uploadStep === "enviando" && (
               <div className="w-full space-y-1.5">
                 <div className="w-full bg-[#E2EAF4] h-2">
@@ -891,7 +891,7 @@ var GerarLimites = function (props) {
               <label className="text-xs font-semibold text-[#3B4049]">
                 Número da safra{" "}
                 <span className="text-[#9C9C9F] font-normal">
-                  (opcional — deixe em branco para incremento automático)
+                  (opcional - deixe em branco para incremento automático)
                 </span>
               </label>
               <div className="flex items-center gap-2 mt-1.5">
@@ -1403,7 +1403,7 @@ var GerarLimites = function (props) {
                 value:
                   selectedConsulta.n_clusters != null
                     ? String(selectedConsulta.n_clusters)
-                    : "—",
+                    : "-",
                 sub: "segmentação CART",
                 highlight: false,
               },
@@ -1412,7 +1412,7 @@ var GerarLimites = function (props) {
                 value:
                   selectedConsulta.z_otimo != null
                     ? fmtZ(selectedConsulta.z_otimo)
-                    : "—",
+                    : "-",
                 sub:
                   selectedConsulta.status_lp === "multiplas_solucoes"
                     ? "Múltiplas soluções"
@@ -1426,7 +1426,7 @@ var GerarLimites = function (props) {
                     ? Number(
                         selectedConsulta.n_clientes_elegiveis,
                       ).toLocaleString("pt-BR")
-                    : "—",
+                    : "-",
                 sub:
                   selectedConsulta.n_clientes_total != null
                     ? "de " +
@@ -1444,7 +1444,7 @@ var GerarLimites = function (props) {
                     ? Number(
                         selectedConsulta.n_clientes_ofertados,
                       ).toLocaleString("pt-BR")
-                    : "—",
+                    : "-",
                 sub: selectedConsulta.n_clientes_elegiveis
                   ? (
                       (selectedConsulta.n_clientes_ofertados /
@@ -1553,7 +1553,7 @@ var GerarLimites = function (props) {
             <div className="bg-white border border-[#E8EFF7] shadow-sm overflow-hidden">
               <div className="flex items-center justify-between px-5 py-4 border-b border-[#E8EFF7]">
                 <div className="text-sm font-semibold text-[#0D1B2A]">
-                  Clusters — Resultados Detalhados
+                  Clusters - Resultados Detalhados
                 </div>
                 <span className="text-xs text-[#9C9C9F]">
                   {clusters.length} clusters · página {tablePage} de{" "}
@@ -1612,7 +1612,7 @@ var GerarLimites = function (props) {
                             {c.fator_alavancagem.toFixed(2)}x
                           </td>
                           <td className="px-3 py-2.5 font-semibold text-[#0D1B2A]">
-                            {temLimite ? fmt(c.limite_otimizado) : "—"}
+                            {temLimite ? fmt(c.limite_otimizado) : "-"}
                           </td>
                           <td className="px-3 py-2.5">
                             {temLimite ? (

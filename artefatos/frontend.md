@@ -140,7 +140,7 @@ Array de pares `{ label, value }` exibidos como somente leitura no `ConfigModal`
 
 ---
 
-## 7. Fluxo 1 — Cockpit (Cockpit.js)
+## 7. Fluxo 1 - Cockpit (Cockpit.js)
 
 ### 7.1 Objetivo
 
@@ -179,7 +179,7 @@ Exibe os dados de `ClusterResultadoResponse` da consulta mais recente. Colunas: 
 
 ---
 
-## 8. Fluxo 2 — Gerar Limites (GerarLimites.js)
+## 8. Fluxo 2 - Gerar Limites (GerarLimites.js)
 
 ### 8.1 Upload
 
@@ -236,7 +236,7 @@ Exibidos após a conclusão da consulta ativa ou ao clicar em "Ver resultados" e
 
 ---
 
-## 9. Fluxo 3 — Resultados (Resultados.js)
+## 9. Fluxo 3 - Resultados (Resultados.js)
 
 Página independente acessível diretamente pela navbar. Ao montar, carrega todas as consultas concluídas e safras em paralelo e seleciona a mais recente por padrão.
 
@@ -250,11 +250,11 @@ Mesmos quatro campos de `ConsultaResponse`: `n_clusters`, `z_otimo`, `n_clientes
 
 ### 9.3 Gráficos
 
-| Componente     | Dados                                                                                    |
-| -------------- | ---------------------------------------------------------------------------------------- |
-| `BarChartSVG`  | Top 15 clusters por `limite_otimizado`, ordenados decrescentemente                       |
-| `DonutChart`   | Distribuição de clientes: Com limite / Elegível sem limite / Inelegível                  |
-| `LineChartSVG` | Evolução do `z_otimo` entre consultas concluídas, ordenadas cronologicamente             |
+| Componente     | Dados                                                                                   |
+| -------------- | --------------------------------------------------------------------------------------- |
+| `BarChartSVG`  | Top 15 clusters por `limite_otimizado`, ordenados decrescentemente                      |
+| `DonutChart`   | Distribuição de clientes: Com limite / Elegível sem limite / Inelegível                 |
+| `LineChartSVG` | Evolução do `z_otimo` entre consultas concluídas, ordenadas cronologicamente            |
 | `RiskHistSVG`  | Histograma de clusters por faixa de PD média: 0-5%, 5-10%, 10-15%, 15-20%, 20-25%, 25%+ |
 
 ### 9.4 Parâmetros utilizados
@@ -267,7 +267,7 @@ Botão "Exportar clientes CSV" chama `Api.exportClientes(id)`, que retorna o arq
 
 ---
 
-## 10. Fluxo 4 — Clientes (Clientes.js)
+## 10. Fluxo 4 - Clientes (Clientes.js)
 
 ### 10.1 Objetivo
 
@@ -283,7 +283,7 @@ Exibidos quando a API retorna ao menos um registro histórico. Cada entrada corr
 
 ---
 
-## 11. Fluxo 5 — Configurações (ConfigModal.js)
+## 11. Fluxo 5 - Configurações (ConfigModal.js)
 
 ### 11.1 Acesso
 
