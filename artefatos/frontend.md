@@ -316,3 +316,20 @@ Todos os gráficos são componentes SVG puros definidos em `Resultados.js` como 
 | `RiskHistSVG`  | Histograma de risco | Seis faixas de PD média com gradiente visual de verde (baixo risco) a vermelho (alto risco). Conta clusters por faixa.                                                |
 
 Todas as visualizações usam exclusivamente cores da paleta PAN: azul `#2E6DA4` como cor principal, `#E8EFF7` para linhas de grade, paleta terciária (verde/amarelo/vermelho) para status e risco.
+
+## 13. Diferenças em Relação ao Protótipo
+
+A implementação do front-end manteve os fluxos centrais definidos no protótipo: carregamento da base, geração de limites, acompanhamento dos resultados, visualização analítica e configuração dos parâmetros do modelo. No entanto, durante a integração com o back-end e com o otimizador, algumas decisões de implementação foram ajustadas para refletir melhor a arquitetura real da solução e as necessidades técnicas do pipeline de otimização.
+
+| Item no protótipo | Implementação entregue | Justificativa |
+| ----------------- | ---------------------- | ------------- |
+| Upload de arquivo CSV/XLSX simulando uma base parquet | Upload real de arquivo `.parquet` | O `.parquet` é o formato utilizado pelo pipeline de dados e pelo back-end. A alteração aproxima a interface da operação real esperada em produção e reduz inconsistências entre protótipo e execução técnica. |
+| Geração de limites apresentada como uma ação imediata após o upload | Execução assíncrona com criação de consulta, status pendente e acompanhamento por polling | O processo de otimização envolve leitura da base, calibração de PD, clusterização e execução do Simplex, etapas que podem demandar tempo. Por isso, a interface foi adaptada para acompanhar uma execução longa sem bloquear o uso da aplicação. |
+| Upload simples de arquivo único | Upload em chunks com barra de progresso | A estratégia em chunks melhora a robustez para arquivos grandes, evita falhas por limite de payload e oferece feedback visual mais adequado ao usuário durante o envio da base. |
+| Visualizações previstas de forma conceitual no protótipo | Gráficos SVG implementados no front-end: barras, rosca, linha temporal e histograma de risco | Os gráficos SVG funcionam como estrutura equivalente ao canvas, permitindo visualizações gráficas próprias, leves e sem dependência de bibliotecas externas de charting. A escolha também facilita o controle visual e a adaptação às métricas reais do modelo. |
+| Tela de configurações com parâmetros gerais do modelo | Modal de configuração com os parâmetros utilizados pelo otimizador: `t`, `LGD`, `u_bar`, `L_max` e `T` | A implementação priorizou os parâmetros efetivamente consumidos pelo modelo de programação linear, garantindo consistência entre interface, back-end e otimizador. |
+| Resultados exibidos principalmente por cluster | Resultados por cluster, indicadores consolidados, histórico de simulações e exportação de clientes | A entrega expande a análise planejada no protótipo, oferecendo uma visão mais completa para acompanhamento das safras e reutilização dos resultados em outros sistemas. |
+| Não havia uma tela específica para análise individual de clientes | Inclusão da tela de busca por token e histórico do cliente | A nova tela melhora a capacidade de auditoria da solução, permitindo acompanhar a evolução de um cliente específico entre diferentes simulações e safras. |
+| Protótipo focado na experiência visual da jornada | Front-end integrado aos contratos reais da API | A implementação deixou de ser apenas demonstrativa e passou a consumir os endpoints reais do back-end, aumentando a fidelidade técnica da entrega parcial. |
+
+Essas diferenças foram incorporadas como melhorias de viabilidade técnica e aderência ao funcionamento real da aplicação. Assim, a entrega preserva a intenção original do protótipo, mas adapta a experiência para um cenário mais próximo da execução em produção, considerando arquivos grandes, processamento assíncrono, persistência dos resultados e integração com o otimizador.
