@@ -24,17 +24,17 @@ A aplicação não usa React Router. O estado `page` em `App` (definido em `inde
 
 Ordenadas por prioridade de negócio (P1 = crítico para o fluxo principal, P3 = melhoria).
 
-| Prioridade | ID   | Título                                 | Componente                   | Status       | Observação |
-| ---------- | ---- | -------------------------------------- | ---------------------------- | ------------ | ---------- |
-| P1         | US01 | Enviar base de clientes para simulação | `GerarLimites`               | Implementado | Upload `.parquet` com chunked transfer e modal de progresso por etapas |
-| P1         | US02 | Monitorar execução do pipeline         | `GerarLimites`               | Implementado | Polling automático com etapas animadas (Calibração → Clustering → Simplex); botão "Verificar agora" |
-| P1         | US03 | Visualizar resultado da simulação      | `GerarLimites`               | Implementado | Resultados inline pós-conclusão: KPIs, gráficos de barras e donut, tabela de clusters paginada |
-| P1         | US04 | Consultar cockpit da última safra      | `Cockpit`                    | Implementado | KPIs com delta vs simulação anterior; tabela de clusters; CTA para nova simulação quando não há dados |
-| P2         | US05 | Consultar histórico de simulações      | `Resultados`                 | Implementado | Seletor de simulação concluída; gráfico de evolução do `z_otimo`; histograma de risco por PD |
-| P2         | US06 | Exportar clientes para CSV             | `GerarLimites`, `Resultados` | Implementado | `Api.exportClientes(id)` — arquivo gerado pelo backend com todos os campos de `ClienteResultadoResponse` |
-| P2         | US07 | Configurar parâmetros do modelo        | `ConfigModal`                | Implementado | Sliders com sync em tempo real; salvar via `PUT /api/config`; restaurar padrões com confirmação |
-| P3         | US08 | Buscar cliente individual por token    | `Clientes`                   | Implementado | Histórico entre safras: cluster, limite, PD, score cross por período |
-| P3         | US09 | Auditar parâmetros de uma simulação    | `Resultados`                 | Implementado | Seção colapsável com `t`, `LGD`, `u_bar`, `L_max`, `T` da consulta selecionada |
+| Prioridade | ID   | Título                                 | Componente                   | Status       | Observação                                                                                               |
+| ---------- | ---- | -------------------------------------- | ---------------------------- | ------------ | -------------------------------------------------------------------------------------------------------- |
+| P1         | US01 | Enviar base de clientes para simulação | `GerarLimites`               | Implementado | Upload `.parquet` com chunked transfer e modal de progresso por etapas                                   |
+| P1         | US02 | Monitorar execução do pipeline         | `GerarLimites`               | Implementado | Polling automático com etapas animadas (Calibração → Clustering → Simplex); botão "Verificar agora"      |
+| P1         | US03 | Visualizar resultado da simulação      | `GerarLimites`               | Implementado | Resultados inline pós-conclusão: KPIs, gráficos de barras e donut, tabela de clusters paginada           |
+| P1         | US04 | Consultar cockpit da última safra      | `Cockpit`                    | Implementado | KPIs com delta vs simulação anterior; tabela de clusters; CTA para nova simulação quando não há dados    |
+| P2         | US05 | Consultar histórico de simulações      | `Resultados`                 | Implementado | Seletor de simulação concluída; gráfico de evolução do `z_otimo`; histograma de risco por PD             |
+| P2         | US06 | Exportar clientes para CSV             | `GerarLimites`, `Resultados` | Implementado | `Api.exportClientes(id)` - arquivo gerado pelo backend com todos os campos de `ClienteResultadoResponse` |
+| P2         | US07 | Configurar parâmetros do modelo        | `ConfigModal`                | Implementado | Sliders com sync em tempo real; salvar via `PUT /api/config`; restaurar padrões com confirmação          |
+| P3         | US08 | Buscar cliente individual por token    | `Clientes`                   | Implementado | Histórico entre safras: cluster, limite, PD, score cross por período                                     |
+| P3         | US09 | Auditar parâmetros de uma simulação    | `Resultados`                 | Implementado | Seção colapsável com `t`, `LGD`, `u_bar`, `L_max`, `T` da consulta selecionada                           |
 
 ---
 
@@ -139,7 +139,7 @@ Array de pares `{ label, value }` exibidos como somente leitura no `ConfigModal`
 
 ---
 
-## 7. Fluxo 1 — Cockpit (Cockpit.js)
+## 7. Fluxo 1 - Cockpit (Cockpit.js)
 
 ### 7.1 Objetivo
 
@@ -178,7 +178,7 @@ Exibe os dados de `ClusterResultadoResponse` da consulta mais recente. Colunas: 
 
 ---
 
-## 8. Fluxo 2 — Gerar Limites (GerarLimites.js)
+## 8. Fluxo 2 - Gerar Limites (GerarLimites.js)
 
 ### 8.1 Upload
 
@@ -235,7 +235,7 @@ Exibidos após a conclusão da consulta ativa ou ao clicar em "Ver resultados" e
 
 ---
 
-## 9. Fluxo 3 — Resultados (Resultados.js)
+## 9. Fluxo 3 - Resultados (Resultados.js)
 
 Página independente acessível diretamente pela navbar. Ao montar, carrega todas as consultas concluídas e safras em paralelo e seleciona a mais recente por padrão.
 
@@ -249,11 +249,11 @@ Mesmos quatro campos de `ConsultaResponse`: `n_clusters`, `z_otimo`, `n_clientes
 
 ### 9.3 Gráficos
 
-| Componente     | Dados                                                                                    |
-| -------------- | ---------------------------------------------------------------------------------------- |
-| `BarChartSVG`  | Top 15 clusters por `limite_otimizado`, ordenados decrescentemente                       |
-| `DonutChart`   | Distribuição de clientes: Com limite / Elegível sem limite / Inelegível                  |
-| `LineChartSVG` | Evolução do `z_otimo` entre consultas concluídas, ordenadas cronologicamente             |
+| Componente     | Dados                                                                                   |
+| -------------- | --------------------------------------------------------------------------------------- |
+| `BarChartSVG`  | Top 15 clusters por `limite_otimizado`, ordenados decrescentemente                      |
+| `DonutChart`   | Distribuição de clientes: Com limite / Elegível sem limite / Inelegível                 |
+| `LineChartSVG` | Evolução do `z_otimo` entre consultas concluídas, ordenadas cronologicamente            |
 | `RiskHistSVG`  | Histograma de clusters por faixa de PD média: 0-5%, 5-10%, 10-15%, 15-20%, 20-25%, 25%+ |
 
 ### 9.4 Parâmetros utilizados
@@ -266,7 +266,7 @@ Botão "Exportar clientes CSV" chama `Api.exportClientes(id)`, que retorna o arq
 
 ---
 
-## 10. Fluxo 4 — Clientes (Clientes.js)
+## 10. Fluxo 4 - Clientes (Clientes.js)
 
 ### 10.1 Objetivo
 
@@ -282,7 +282,7 @@ Exibidos quando a API retorna ao menos um registro histórico. Cada entrada corr
 
 ---
 
-## 11. Fluxo 5 — Configurações (ConfigModal.js)
+## 11. Fluxo 5 - Configurações (ConfigModal.js)
 
 ### 11.1 Acesso
 

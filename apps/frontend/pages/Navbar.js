@@ -108,7 +108,7 @@ var Navbar = function (props) {
       }}
       className="fixed top-0 left-0 w-full z-40 flex items-center h-14 px-8 shadow-xl border-b border-white/10"
     >
-      {/* Logo — clicável, navega para o Cockpit */}
+      {/* Logo - clicável, navega para o Cockpit */}
       <div
         className="flex items-center gap-2.5 mr-6 flex-shrink-0 cursor-pointer"
         onClick={function () {

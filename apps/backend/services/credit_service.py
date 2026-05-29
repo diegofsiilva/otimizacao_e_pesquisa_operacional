@@ -684,7 +684,7 @@ async def criar_consulta_de_path(
     Registra uma consulta no banco e dispara o pipeline em background
     a partir de um arquivo já presente em disco.
 
-    Diferente de criar_consulta(), não recebe bytes nem grava o arquivo —
+    Diferente de criar_consulta(), não recebe bytes nem grava o arquivo -
     assume que parquet_path já aponta para o arquivo final remontado.
     """
     if not parquet_path.name.lower().endswith(".parquet"):

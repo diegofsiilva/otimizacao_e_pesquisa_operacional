@@ -80,12 +80,12 @@ var Clientes = function (props) {
   // -------------------------------------------------------------------------
 
   function formatPct(v) {
-    if (v == null) return "—";
+    if (v == null) return "-";
     return (v * 100).toFixed(2) + "%";
   }
 
   function formatScore(v) {
-    if (v == null) return "—";
+    if (v == null) return "-";
     return Math.round(v).toLocaleString("pt-BR");
   }
 
@@ -114,13 +114,13 @@ var Clientes = function (props) {
 
   // Dados para o gráfico de linha (limite otimizado por safra)
   var lineData = historico.map(function (h) {
-    return { label: h.safra_ref_uso || "—", value: h.limite_otimizado };
+    return { label: h.safra_ref_uso || "-", value: h.limite_otimizado };
   });
 
   // Dados para o gráfico de PD calibrada por safra
   var pdData = historico.map(function (h) {
     return {
-      label: h.safra_ref_uso || "—",
+      label: h.safra_ref_uso || "-",
       value: parseFloat((h.pd_calibrada * 100).toFixed(4)),
     };
   });
@@ -267,7 +267,7 @@ var Clientes = function (props) {
                 Aparece em {historico.length}{" "}
                 {historico.length === 1 ? "simulação" : "simulações"}
                 {" · "}Faixa etária:{" "}
-                {historico[historico.length - 1].fx_idade || "—"}
+                {historico[historico.length - 1].fx_idade || "-"}
                 {historico[historico.length - 1].renda_estimada != null && (
                   <>
                     {" "}
@@ -316,7 +316,7 @@ var Clientes = function (props) {
                     {/* Safra */}
                     <div className="flex items-center justify-between mb-3">
                       <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-bold bg-[#0D1B2A] text-white">
-                        {h.safra_ref_uso || "—"}
+                        {h.safra_ref_uso || "-"}
                       </span>
                       {i === historico.length - 1 && (
                         <span className="text-[10px] text-[#2E6DA4] font-semibold">
@@ -419,7 +419,7 @@ var Clientes = function (props) {
             </div>
           </div>
 
-          {/* Gráficos — só aparecem quando há 2+ safras */}
+          {/* Gráficos - só aparecem quando há 2+ safras */}
           {historico.length >= 2 && (
             <div className="grid grid-cols-2 gap-4">
               <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
@@ -492,7 +492,7 @@ var Clientes = function (props) {
                       >
                         <td className="px-3 py-2.5">
                           <span className="inline-flex items-center px-2 py-0.5 text-[11px] font-bold bg-[#0D1B2A] text-white">
-                            {h.safra_ref_uso || "—"}
+                            {h.safra_ref_uso || "-"}
                           </span>
                         </td>
                         <td className="px-3 py-2.5 font-mono font-semibold text-[#2E6DA4]">
@@ -515,10 +515,10 @@ var Clientes = function (props) {
                         <td className="px-3 py-2.5 text-[#3B4049]">
                           {h.score_propensao_contrato != null
                             ? h.score_propensao_contrato.toFixed(1)
-                            : "—"}
+                            : "-"}
                         </td>
                         <td className="px-3 py-2.5 text-[#3B4049]">
-                          {h.cp_proxy != null ? fmt(h.cp_proxy) : "—"}
+                          {h.cp_proxy != null ? fmt(h.cp_proxy) : "-"}
                         </td>
                         <td className="px-3 py-2.5">
                           <span

@@ -12,7 +12,7 @@
 
 ## RESUMO
 
-*(A ser entregue na Sprint 4.)*
+_(A ser entregue na Sprint 4.)_
 
 **Palavras-chave:** palavra1, palavra2, palavra3.
 
@@ -32,37 +32,37 @@ A escolha dessa abordagem é motivada diretamente pelo contexto operacional do p
 
 O pipeline proposto articula quatro etapas: preparação e validação dos dados de entrada, segmentação dos clientes em perfis homogêneos, formulação e resolução do problema de Programação Linear e pós-processamento dos limites para aderência às regras operacionais. A Figura 1 ilustra esse fluxo, com ênfase nas restrições de risco e capacidade de pagamento que delimitam o espaço de soluções factíveis.
 
-**Figura 1 — Fluxo do pipeline metodológico**
+**Figura 1 - Fluxo do pipeline metodológico**
 
-![Figura 1 — Fluxo do pipeline metodológico](assets/diagrama.png)
+![Figura 1 - Fluxo do pipeline metodológico](assets/diagrama.png)
 
-*Fonte: Elaboração própria (2026).*
+_Fonte: Elaboração própria (2026)._
 
 ### 2.1 Dados utilizados
 
 Os dados foram fornecidos pelo parceiro de projeto em três tabelas correspondentes a safras temporais (M1, M2, e M3), contendo clientes correntistas com variáveis de perfil, risco, capacidade de pagamento e comportamento. A base total tem cerca de 15 milhões de clientes por safra, das quais uma fração é elegível ao produto e segue para a etapa de otimização. A Tabela 1 resume as variáveis utilizadas diretamente no modelo e seu papel na formulação; as demais colunas são usadas apenas para controle e análises descritivas. As restrições e o papel na função objetivo associados a essas variáveis são detalhadas na Seção 2.3.
 
-**Tabela 1 — Variáveis fornecidas pelo parceiro (estatísticas da safra M1)**
+**Tabela 1 - Variáveis fornecidas pelo parceiro (estatísticas da safra M1)**
 
-| Variável                     | Descrição                                     | Estatísticas (M1)                                                  | Papel no modelo |
-|:-----------------------------|:----------------------------------------------|:-------------------------------------------------------------------|:---------------|
-| `token`                      | Identificador anônimo por safra               | 0 a 14.569.141                                                     | Chave de identificação |
-| `safra_ref_uso`              | Safra de referência                           | M1, M2, M3                                                         | Permite backtesting entre safras |
-| `score_interno`              | Score de crédito interno                      | min=54, med=292, max=975                                           | Não usado diretamente; gera `pd_produto` |
-| `pd_produto`                 | Probabilidade de default no produto           | min=0,025, med=0,71, max=0,946                                     | Parâmetro de risco na função objetivo e na restrição R1 |
-| `score_generico_1`           | Score de bureau (bureau 1)                    | min=49, med=409, max=995. Nulls: 0,1%                              | Variável de segmentação para clusterização |
-| `score_generico_2`           | Score de bureau (bureau 2)                    | min=1, med=713, max=942. Nulls: <0,01%                             | Variável de segmentação para clusterização |
-| `capacidade_pagamento`       | Estimativa interna de capacidade de pagamento | min=0, med=548, max=25.000. Nulls: 0,3% M1; 42,2% M2; 43,5% M3     | Restrição R2 (alavancagem) |
-| `delta_capacidade_pagamento` | Capacidade deduzida dos saldos a vencer       | min=−25.000, med=55, max=25.000. Nulls: idem                       | Variante conservadora (apoio à análise) |
-| `renda_estimada`             | Estimativa interna de renda                   | min=1.275, med=1.908, max=17.950. Nulls: 0,3%                      | Proxy para R2 quando `capacidade_pagamento` é nula |
-| `fx_idade`                   | Faixa etária                                  | 9 faixas: 21–30 (35,5%), 31–40 (31,1%), 41–50 (18,8%)              | Segmentação e análise de resultados |
-| `flag_filtros`               | Indicador de perfil restrito                  | 0 = elegível (1,84M), 1 = restrito (12,73M)                        | Filtro de elegibilidade |
-| `score_propensao_contrato`   | Score de propensão à conversão                | min=3, med=315, max=846                                            | Parâmetro de conversão na função objetivo |
-| `score_credito_cross`        | Score de crédito multiproduto                 | min=103, med=706, max=954                                          | Define a faixa de alavancagem do cluster (mₖ) |
-| `limite_ofertado`            | Limite ofertado na política atual             | min=200, med=806, max=20.000. 99,2% null                           | Baseline para backtesting |
-| `flag_contrato`              | Indicadora de contratação (1 = contratou)     | 6.506 (0,04%)                                                      | Backtesting (conversão) |
-| `flag_ativacao`              | Indicadora de ativação (1 = ativou)           | 5.704 (87,7% dos que contrataram)                                  | Backtesting (ativação) |
-| `over30mob3`                 | Atraso >30 dias nas 3 primeiras parcelas      | 4.966 válidos, 377 eventos (7,6%). 99,97% null                     | Inadimplência observada (viés de seleção) |
+| Variável                     | Descrição                                     | Estatísticas (M1)                                              | Papel no modelo                                         |
+| :--------------------------- | :-------------------------------------------- | :------------------------------------------------------------- | :------------------------------------------------------ |
+| `token`                      | Identificador anônimo por safra               | 0 a 14.569.141                                                 | Chave de identificação                                  |
+| `safra_ref_uso`              | Safra de referência                           | M1, M2, M3                                                     | Permite backtesting entre safras                        |
+| `score_interno`              | Score de crédito interno                      | min=54, med=292, max=975                                       | Não usado diretamente; gera `pd_produto`                |
+| `pd_produto`                 | Probabilidade de default no produto           | min=0,025, med=0,71, max=0,946                                 | Parâmetro de risco na função objetivo e na restrição R1 |
+| `score_generico_1`           | Score de bureau (bureau 1)                    | min=49, med=409, max=995. Nulls: 0,1%                          | Variável de segmentação para clusterização              |
+| `score_generico_2`           | Score de bureau (bureau 2)                    | min=1, med=713, max=942. Nulls: <0,01%                         | Variável de segmentação para clusterização              |
+| `capacidade_pagamento`       | Estimativa interna de capacidade de pagamento | min=0, med=548, max=25.000. Nulls: 0,3% M1; 42,2% M2; 43,5% M3 | Restrição R2 (alavancagem)                              |
+| `delta_capacidade_pagamento` | Capacidade deduzida dos saldos a vencer       | min=−25.000, med=55, max=25.000. Nulls: idem                   | Variante conservadora (apoio à análise)                 |
+| `renda_estimada`             | Estimativa interna de renda                   | min=1.275, med=1.908, max=17.950. Nulls: 0,3%                  | Proxy para R2 quando `capacidade_pagamento` é nula      |
+| `fx_idade`                   | Faixa etária                                  | 9 faixas: 21–30 (35,5%), 31–40 (31,1%), 41–50 (18,8%)          | Segmentação e análise de resultados                     |
+| `flag_filtros`               | Indicador de perfil restrito                  | 0 = elegível (1,84M), 1 = restrito (12,73M)                    | Filtro de elegibilidade                                 |
+| `score_propensao_contrato`   | Score de propensão à conversão                | min=3, med=315, max=846                                        | Parâmetro de conversão na função objetivo               |
+| `score_credito_cross`        | Score de crédito multiproduto                 | min=103, med=706, max=954                                      | Define a faixa de alavancagem do cluster (mₖ)           |
+| `limite_ofertado`            | Limite ofertado na política atual             | min=200, med=806, max=20.000. 99,2% null                       | Baseline para backtesting                               |
+| `flag_contrato`              | Indicadora de contratação (1 = contratou)     | 6.506 (0,04%)                                                  | Backtesting (conversão)                                 |
+| `flag_ativacao`              | Indicadora de ativação (1 = ativou)           | 5.704 (87,7% dos que contrataram)                              | Backtesting (ativação)                                  |
+| `over30mob3`                 | Atraso >30 dias nas 3 primeiras parcelas      | 4.966 válidos, 377 eventos (7,6%). 99,97% null                 | Inadimplência observada (viés de seleção)               |
 
 Além das variáveis das três safras, alguns parâmetros necessários à formulação do modelo foram informados diretamente pelo parceiro (por exemplo, taxa de _interchange_, LGD e horizonte de receita). Esses valores são tratados como constantes na formulação e são apresentados explicitamente na Seção 2.3, junto com a função objetivo e as restrições.
 
@@ -75,6 +75,7 @@ O pré-processamento tem como objetivo transformar as variáveis de entrada em p
 **Calibração da probabilidade de inadimplência.** Observou-se que a razão entre inadimplência observada e inadimplência esperada não é constante ao longo do espectro de risco, o que pode levar a subestimação de risco em faixas mais arriscadas. Para mitigar esse efeito, a probabilidade bruta de inadimplência do produto (`pd_produto`) é calibrada por decis de risco.
 
 A calibração segue o procedimento:
+
 1. Define-se o decil $d(i)\in\{1,\dots,10\}$ de cada cliente $i$ a partir da distribuição de `pd_produto` na população elegível (cortes percentílicos de 10%).
 2. Para cada decil $d$, estima-se um fator multiplicativo $\gamma_d$ comparando inadimplência observada e esperada no histórico, usando `over30mob3` como proxy de evento de default (considerando apenas registros com observação válida de `over30mob3`). Uma forma equivalente de escrever essa calibração é:
    $$
@@ -84,18 +85,23 @@ A calibração segue o procedimento:
 3. Em decis com baixa amostra de observações (tipicamente os decis de maior risco, devido a viés de seleção na aprovação histórica), $\gamma_d$ é obtido por extrapolação conservadora a partir do padrão estimado nos decis com evidência empírica suficiente, com truncamento para evitar valores extremos.
 
 Por fim, a PD calibrada no nível do cliente é definida por:
+
 $$
 PD_i^{cal} \;=\; PD_i \cdot \gamma_{d(i)},
 $$
+
 e armazenada como `pd_calibrada`. Essa variável é utilizada como parâmetro de risco tanto na função objetivo quanto nas restrições de risco do modelo.
 
 **Propensão à contratação.** A propensão à contratação é derivada de `score_propensao_contrato` e normalizada para o intervalo $[0,1]$, gerando a variável $\pi_i$. Foi aplicada normalização do tipo min–max com truncamento:
+
 $$
 \pi_i \;=\; \mathrm{clip}\!\left(\frac{s_i - s_{\min}}{s_{\max}-s_{\min}},\,0,\,1\right),
 $$
+
 onde $s_i$ é o score do cliente e $s_{\min}$ e $s_{\max}$ são limites observados/assumidos para o score na base. A normalização garante comparabilidade entre safras e evita que valores fora do intervalo dominem a etapa de segmentação.
 
 **Proxy de capacidade de pagamento.** A capacidade de pagamento é utilizada para impor restrições prudenciais de alavancagem. Como a variável `capacidade_pagamento` apresenta proporção elevada de valores ausentes em determinadas safras, foi construída uma proxy no nível do cliente:
+
 $$
 CP_i \;=\;
 \begin{cases}
@@ -103,6 +109,7 @@ CP_i \;=\;
 0{,}30 \cdot \texttt{renda\_estimada}_i, & \text{caso contrário.}
 \end{cases}
 $$
+
 A constante 0,30 reflete uma regra conservadora de comprometimento de renda (fração da renda destinada ao pagamento), permitindo que a restrição de capacidade permaneça ativa mesmo quando a medida direta é ausente. A constante 0,30 é uma **premissa do grupo** (regra conservadora de comprometimento de renda) adotada para manter a restrição de capacidade ativa quando `capacidade_pagamento` é ausente.
 
 **Tratamento de valores ausentes e preparação para segmentação.** Após a criação de `pd_calibrada`, $\pi_i$ e $CP_i$, valores ausentes residuais nas variáveis numéricas de segmentação são imputados por estatísticas robustas (por exemplo, mediana), reduzindo sensibilidade a caudas e outliers. Como a etapa de segmentação foi desenhada para produzir clusters homogêneos nas variáveis consumidas pelo PL, o pré-processamento evita transformações que distorçam interpretação econômica. Em particular, quando a segmentação utiliza modelos baseados em árvore (CART), não é necessária padronização das variáveis; já em abordagens baseadas em distância (como K-Means, usadas em protótipos anteriores), aplica-se padronização (z-score) e codificação apropriada de variáveis categóricas (por exemplo, `fx_idade`).
@@ -111,31 +118,31 @@ Como resultado do pré-processamento, a base elegível passa a conter as variáv
 
 ### 2.3 Modelagem matemática
 
-Esta seção apresenta a formulação matemática do problema de definição de limites de crédito pré-aprovados. Dado um conjunto de clientes elegíveis, agrupados por $K$ _clusters_ relativamente homogêneos, busca-se determinar o limite $L_k$ a ser ofertado a cada cluster $k$ de modo a maximizar o retorno líquido esperado da carteira. Opta-se por uma formulação de Programação Linear (LP) por sua interpretabilidade em larga escala, uma vez que a decisão deve ser tomada simultaneamente para múltiplos perfis de clientes, além de ser um requisito mapeado pelo parceiro. 
+Esta seção apresenta a formulação matemática do problema de definição de limites de crédito pré-aprovados. Dado um conjunto de clientes elegíveis, agrupados por $K$ _clusters_ relativamente homogêneos, busca-se determinar o limite $L_k$ a ser ofertado a cada cluster $k$ de modo a maximizar o retorno líquido esperado da carteira. Opta-se por uma formulação de Programação Linear (LP) por sua interpretabilidade em larga escala, uma vez que a decisão deve ser tomada simultaneamente para múltiplos perfis de clientes, além de ser um requisito mapeado pelo parceiro.
 
 Para preservar a linearidade do modelo, grandezas de risco e comportamento (como probabilidade de inadimplência ($PD_k$), propensão à contratação ($\pi_k$) e parâmetros operacionais do produto) são tratadas como parâmetros estimados na etapa de pré-processamento, enquanto os limites $L_k$ constituem as variáveis de decisão. A função objetivo considera a receita esperada de _interchange_ descontada da perda esperada por inadimplência, e as restrições incorporam políticas prudenciais e operacionais, como teto de risco agregado, alavancagem em relação à capacidade de pagamento e limites máximos por oferta.
 
 A Tabela 2 resume os principais parâmetros utilizados na formulação, incluindo grandezas estimadas a partir dos dados (por exemplo, $PD_k$, $\pi_k$, $CP_k$) e constantes operacionais fornecidas pelo parceiro (por exemplo, taxa de _interchange_ $t$, horizonte de receita $T$ e $\mathrm{LGD}$). Esses parâmetros são calculados na etapa de pré-processamento e, em seguida, tratados como constantes no problema de otimização, garantindo que a função objetivo e as restrições permaneçam lineares nas variáveis de decisão $L_k$.
 
-**Tabela 2 — Parâmetros do modelo de otimização**
+**Tabela 2 - Parâmetros do modelo de otimização**
 
-| Símbolo | Descrição | Unidade / Domínio | Como é obtido (no pipeline) | Fonte |
-|---|---|---|---|---|
-| $K$ | Número de clusters de clientes elegíveis | inteiro, $K \ge 100$ |  Definido pelos hiperparâmetros do CART | Pré-processamento |
-| $k$ | Índice do cluster | $k \in \{1,\dots,K\}$ | — | — |
-| $n_k$ | Número de clientes no cluster $k$ | inteiro positivo | Contagem de observações no cluster | Dados + clusterização |
-| $PD_k$ | Probabilidade de default representativa do cluster $k$ | $[0,1]$ | Média de `pd_calibrada` dentro do cluster $k$ | Dados (scoring interno) |
-| $\pi_k$ | Propensão à contratação (normalizada) do cluster $k$ | $[0,1]$ | Normaliza `score_propensao_contrato` via min–max e tira média no cluster | Dados + normalização |
-| $CP_k$ | Capacidade de pagamento representativa do cluster $k$ | R\$ | Percentil 5 de `cp_proxy` no cluster, onde `cp_proxy = capacidade_pagamento` (quando disponível) e, caso contrário, `0,30 * renda estimada` | Dados + regra de proxy |
-| $m_k$ | Multiplicador de alavancagem permitido no cluster $k$ | ex.: $[0{,}3,\,1{,}8]$ | Interpolação linear a partir do `score_credito_cross` médio do cluster | Política/heurística calibrada |
-| $t$ | Taxa de interchange mensal | adimensional | Constante | Parceiro / premissa |
-| $T$ | Horizonte de receita considerado | meses | Constante (ex.: $T=22$) | Parceiro / premissa |
-| $\bar{u}$ | Utilização média esperada do limite | $[0,1]$ | Constante (ex.: $\bar{u}=0{,}75$) | Parceiro / premissa |
-| $\mathrm{LGD}$ | Loss Given Default | $[0,1]$ | Constante (ex.: $\mathrm{LGD}=0{,}80$) | Parceiro / premissa |
-| $\gamma_d$ | Fator de calibração da PD no decil $d$ | $>0$ | Razão empírica (ex.: baseada em `over30mob3` vs `pd_produto`) por decil | Estimado em análise histórica |
-| $\overline{PD}_{fin}^{atual}$ | Teto de risco financeiro da carteira (ponderado por exposição) | $[0,1]$ | Média de `pd_calibrada` na base elegível (`flag_filtros == 0`) | Calculado nos dados |
-| $L^{max}$ | Limite máximo permitido por oferta | R\$ | Constante (ex.: $25.000$) | Política operacional |
-| $\alpha$  | Concentração máxima de exposição em um único cluster | $[0,1]$ | Constante (ex.: 5%) para as restrições | Política/prudencial |
+| Símbolo                       | Descrição                                                      | Unidade / Domínio      | Como é obtido (no pipeline)                                                                                                                 | Fonte                         |
+| ----------------------------- | -------------------------------------------------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------- |
+| $K$                           | Número de clusters de clientes elegíveis                       | inteiro, $K \ge 100$   | Definido pelos hiperparâmetros do CART                                                                                                      | Pré-processamento             |
+| $k$                           | Índice do cluster                                              | $k \in \{1,\dots,K\}$  | -                                                                                                                                           | -                             |
+| $n_k$                         | Número de clientes no cluster $k$                              | inteiro positivo       | Contagem de observações no cluster                                                                                                          | Dados + clusterização         |
+| $PD_k$                        | Probabilidade de default representativa do cluster $k$         | $[0,1]$                | Média de `pd_calibrada` dentro do cluster $k$                                                                                               | Dados (scoring interno)       |
+| $\pi_k$                       | Propensão à contratação (normalizada) do cluster $k$           | $[0,1]$                | Normaliza `score_propensao_contrato` via min–max e tira média no cluster                                                                    | Dados + normalização          |
+| $CP_k$                        | Capacidade de pagamento representativa do cluster $k$          | R\$                    | Percentil 5 de `cp_proxy` no cluster, onde `cp_proxy = capacidade_pagamento` (quando disponível) e, caso contrário, `0,30 * renda estimada` | Dados + regra de proxy        |
+| $m_k$                         | Multiplicador de alavancagem permitido no cluster $k$          | ex.: $[0{,}3,\,1{,}8]$ | Interpolação linear a partir do `score_credito_cross` médio do cluster                                                                      | Política/heurística calibrada |
+| $t$                           | Taxa de interchange mensal                                     | adimensional           | Constante                                                                                                                                   | Parceiro / premissa           |
+| $T$                           | Horizonte de receita considerado                               | meses                  | Constante (ex.: $T=22$)                                                                                                                     | Parceiro / premissa           |
+| $\bar{u}$                     | Utilização média esperada do limite                            | $[0,1]$                | Constante (ex.: $\bar{u}=0{,}75$)                                                                                                           | Parceiro / premissa           |
+| $\mathrm{LGD}$                | Loss Given Default                                             | $[0,1]$                | Constante (ex.: $\mathrm{LGD}=0{,}80$)                                                                                                      | Parceiro / premissa           |
+| $\gamma_d$                    | Fator de calibração da PD no decil $d$                         | $>0$                   | Razão empírica (ex.: baseada em `over30mob3` vs `pd_produto`) por decil                                                                     | Estimado em análise histórica |
+| $\overline{PD}_{fin}^{atual}$ | Teto de risco financeiro da carteira (ponderado por exposição) | $[0,1]$                | Média de `pd_calibrada` na base elegível (`flag_filtros == 0`)                                                                              | Calculado nos dados           |
+| $L^{max}$                     | Limite máximo permitido por oferta                             | R\$                    | Constante (ex.: $25.000$)                                                                                                                   | Política operacional          |
+| $\alpha$                      | Concentração máxima de exposição em um único cluster           | $[0,1]$                | Constante (ex.: 5%) para as restrições                                                                                                      | Política/prudencial           |
 
 #### Função objetivo
 
@@ -152,7 +159,7 @@ $$
 
 No primeiro termo, $\pi_k$ representa a probabilidade de contratação (ou propensão à conversão) do cluster $k$; $\bar{u}$ é a fração média esperada do limite efetivamente utilizada; $t$ é a taxa de _interchange_ aplicada sobre o volume transacionado; e $T$ acumula a receita ao longo do horizonte considerado. Assim, $T\cdot\bar{u}\cdot t\cdot L_k$ aproxima a receita total de _interchange_ por cliente (condicional ao cliente utilizar o produto), enquanto o fator $\pi_k$ pondera essa receita pela chance de contratação.
 
-No segundo termo, $PD_k$ é a probabilidade calibrada de inadimplência do cluster $k$ — corresponde à média de `pd_calibrada` dentro do cluster, onde `pd_calibrada` foi obtida na Seção 2.2 multiplicando a PD bruta pelo fator $\gamma_{d(k)}$; e $\mathrm{LGD}$ é a perda dada a inadimplência. A expressão $PD_k\cdot \mathrm{LGD}\cdot L_k$ representa a perda esperada por cliente, e novamente é ponderada por $\pi_k$, refletindo que a perda só se materializa no subconjunto que efetivamente contrata o produto.
+No segundo termo, $PD_k$ é a probabilidade calibrada de inadimplência do cluster $k$ - corresponde à média de `pd_calibrada` dentro do cluster, onde `pd_calibrada` foi obtida na Seção 2.2 multiplicando a PD bruta pelo fator $\gamma_{d(k)}$; e $\mathrm{LGD}$ é a perda dada a inadimplência. A expressão $PD_k\cdot \mathrm{LGD}\cdot L_k$ representa a perda esperada por cliente, e novamente é ponderada por $\pi_k$, refletindo que a perda só se materializa no subconjunto que efetivamente contrata o produto.
 
 Agrupando os termos constantes, pode-se reescrever a função objetivo como:
 
@@ -169,17 +176,20 @@ O coeficiente $c_k$ pode ser interpretado como o retorno líquido marginal esper
 As restrições do modelo traduzem regras prudenciais e operacionais do produto em limites matemáticos para o conjunto de soluções factíveis. Em todas elas, assume-se que o volume total de exposição é proporcional ao somatório dos limites ofertados ponderados pelo tamanho dos clusters, isto é, $E = \sum_{k=1}^{K} n_k L_k$.
 
 **(R0) Não negatividade (domínio).** Como o limite é uma quantia monetária ofertada, impõe-se:
+
 $$
 L_k \ge 0,\quad \forall k \in \{1,\dots,K\}.
 $$
 
 **(R1) Teto de inadimplência financeira (risco ponderado por exposição).** Para controlar o risco agregado da carteira em termos financeiros, limita-se a inadimplência média ponderada pela exposição. Na forma de razão, tem-se:
+
 $$
 \frac{\sum_{k=1}^{K} n_k \cdot PD_k \cdot L_k}{\sum_{k=1}^{K} n_k \cdot L_k}
 \le \overline{PD}_{fin}^{atual}.
 $$
 
 Para manter o modelo linear, a restrição é escrita na forma equivalente (multiplicando ambos os lados por $\sum_{k} n_k L_k$, que é não negativa e estritamente positiva em qualquer solução não-trivial):
+
 $$
 \sum_{k=1}^{K} n_k \cdot PD_k \cdot L_k
 \le
@@ -189,20 +199,25 @@ $$
 Essa formulação garante que, mesmo que o otimizador aumente limites em clusters rentáveis, a carteira resultante não ultrapasse o patamar de risco financeiro observado/aceito na política vigente.
 
 **(R2) Restrição de capacidade de pagamento (alavancagem por cluster).** Para evitar concessões desproporcionais à capacidade de pagamento do perfil, o limite do cluster $k$ é limitado por uma fração $m_k$ da capacidade representativa $CP_k$:
+
 $$
 L_k \le m_k \cdot CP_k,\quad \forall k.
 $$
+
 O multiplicador $m_k$ reflete faixas de política (por exemplo, derivadas do `score_credito_cross`), enquanto $CP_k$ consolida a informação de renda/capacidade em nível de cluster (por exemplo, via percentil inferior para robustez).
 
 **(R3) Teto operacional de limite por oferta.** Por diretriz operacional, cada oferta possui limite máximo:
+
 $$
 L_k \le L^{max},\quad \forall k.
 $$
 
 **(R4) Verificação de concentração por cluster (pós-otimização).** Além das restrições formais do PL, após a resolução aplica-se uma verificação de diversificação de portfólio: nenhum cluster deve concentrar mais do que uma fração $\alpha$ da exposição total resultante $E = \sum_{j=1}^{K} n_j \cdot L_j^{final}$, ou seja,
+
 $$
 n_k \cdot L_k^{final} \le \alpha \cdot E,\quad \forall k.
 $$
+
 Como essa verificação incide sobre os limites discretizados no pós-processamento (e não sobre as variáveis contínuas $L_k$), ela é conduzida fora do PL e descrita em detalhes na Seção 2.4.
 
 ### 2.4 Implementação do algoritmo
@@ -211,9 +226,10 @@ A implementação foi desenvolvida em Python e organizada como um _pipeline_ exe
 
 **Entrada e parâmetros.** O pipeline recebe (i) um arquivo Parquet com registros de clientes e (ii) um arquivo JSON contendo constantes operacionais do produto (por exemplo, taxa de _interchange_ $t$, horizonte $T$, utilização média $\bar{u}$, $\mathrm{LGD}$ e teto $L^{max}$). A partir da base elegível, calcula-se também o benchmark de risco agregado $\overline{PD}_{fin}^{atual}$, utilizado na restrição de risco da carteira.
 
-**Etapa 1 — Preparação dos dados (visão geral).** As etapas de limpeza, transformação e criação de variáveis derivadas (como a propensão normalizada $\pi$ e a proxy de capacidade de pagamento) seguem o pré-processamento descrito na Seção 2.2. Nesta subseção, o foco é a integração dessas saídas na etapa prescritiva (otimização).
+**Etapa 1 - Preparação dos dados (visão geral).** As etapas de limpeza, transformação e criação de variáveis derivadas (como a propensão normalizada $\pi$ e a proxy de capacidade de pagamento) seguem o pré-processamento descrito na Seção 2.2. Nesta subseção, o foco é a integração dessas saídas na etapa prescritiva (otimização).
 
-**Etapa 2 — Segmentação em clusters (CART).** Os clientes elegíveis são particionados em $K$ clusters por meio de uma árvore de decisão do tipo CART, de forma a produzir grupos homogêneos nas variáveis relevantes ao PL. Em termos operacionais: 
+**Etapa 2 - Segmentação em clusters (CART).** Os clientes elegíveis são particionados em $K$ clusters por meio de uma árvore de decisão do tipo CART, de forma a produzir grupos homogêneos nas variáveis relevantes ao PL. Em termos operacionais:
+
 1. Filtram-se apenas clientes elegíveis.
 2. Constrói-se a variável de propensão $\pi$ a partir de normalização min–max do score de propensão (com truncamento para $[0,1]$).
 3. Constrói-se uma proxy de capacidade de pagamento (por exemplo, usando a capacidade observada quando disponível e uma regra de proxy quando ausente).
@@ -222,17 +238,20 @@ A implementação foi desenvolvida em Python e organizada como um _pipeline_ exe
 
 Como saída, obtém-se uma tabela agregada por cluster que concentra todos os parâmetros usados na formulação do PL.
 
-**Etapa 3 — Montagem do problema de Programação Linear.** Com os parâmetros por cluster, monta-se o PL na forma padrão (matriz de restrições e vetor de coeficientes), em que cada variável de decisão $L_k$ representa o limite ofertado ao cluster $k$. O vetor de coeficientes da função objetivo é montado como $n_k \cdot c_k$ para cada cluster $k$, onde $c_k$ é o coeficiente marginal definido na Seção 2.3:
+**Etapa 3 - Montagem do problema de Programação Linear.** Com os parâmetros por cluster, monta-se o PL na forma padrão (matriz de restrições e vetor de coeficientes), em que cada variável de decisão $L_k$ representa o limite ofertado ao cluster $k$. O vetor de coeficientes da função objetivo é montado como $n_k \cdot c_k$ para cada cluster $k$, onde $c_k$ é o coeficiente marginal definido na Seção 2.3:
+
 $$
 c_k = \pi_k \cdot \left(\bar{u}\cdot t \cdot T - PD_k \cdot \mathrm{LGD}\right),
 $$
+
 com $PD_k$ sendo a média de `pd_calibrada` no cluster (PD já incorpora o fator $\gamma_{d(k)}$ da calibração). As restrições incluem, em particular: (i) teto de risco financeiro agregado (comparado ao benchmark $\overline{PD}_{fin}^{atual}$, calculado como a média de `pd_calibrada` na base elegível), (ii) limite por capacidade de pagamento com alavancagem $L_k \le m_k\cdot CP_k$ e (iii) teto operacional $L_k \le L^{max}$.
 
-**Etapa 4 — Resolução via Simplex.** O PL é resolvido por uma implementação própria do método Simplex. O algoritmo constrói o tableau inicial com variáveis de folga, itera selecionando variável entrante e variável saínte (com regra de Bland para evitar ciclagem), realiza pivoteamentos e encerra quando não há melhoria na função objetivo ou quando identifica casos especiais (como problema ilimitado). Ao final, retorna o vetor ótimo $L_k^*$, o valor ótimo $Z^*$ e o status da solução. A regra de Bland (1977) é adotada por ser a referência teórica original que prova a finitude do Simplex sob essa regra de pivoteamento, não havendo substituto mais recente que altere esse resultado clássico. 
+**Etapa 4 - Resolução via Simplex.** O PL é resolvido por uma implementação própria do método Simplex. O algoritmo constrói o tableau inicial com variáveis de folga, itera selecionando variável entrante e variável saínte (com regra de Bland para evitar ciclagem), realiza pivoteamentos e encerra quando não há melhoria na função objetivo ou quando identifica casos especiais (como problema ilimitado). Ao final, retorna o vetor ótimo $L_k^*$, o valor ótimo $Z^*$ e o status da solução. A regra de Bland (1977) é adotada por ser a referência teórica original que prova a finitude do Simplex sob essa regra de pivoteamento, não havendo substituto mais recente que altere esse resultado clássico.
 
 **Validação numérica com solver externo.** Para verificar a correção da implementação própria do Simplex, o mesmo problema de Programação Linear foi resolvido também com um solver consolidado via biblioteca PuLP (solver CBC como padrão). A validação consistiu em executar ambos os resolvedores sobre as mesmas instâncias e comparar (i) o status da solução, (ii) o valor da função objetivo e (iii) o vetor de decisão $L_k$, aceitando apenas discrepâncias residuais compatíveis com tolerâncias numéricas. Essa checagem funciona como teste de sanidade durante o desenvolvimento e aumenta a confiabilidade da solução antes do uso operacional do pipeline.
 
 **Pós-otimização e saída.** Para aderência operacional, os limites contínuos retornados pelo Simplex são pós-processados antes da comunicação do resultado. Em particular, aplica-se um critério de “oferta ativa” e uma discretização simples, compatível com a prática de limites em faixas: para cada cluster $k$, define-se o limite final $L_k^{final}$ como
+
 $$
 L_k^{final} \;=\;
 \begin{cases}
@@ -240,12 +259,15 @@ L_k^{final} \;=\;
 0, & \text{se } L_k^* < 200,
 \end{cases}
 $$
+
 isto é, limites abaixo de R\$ 200 são interpretados como “sem oferta”, e os demais são arredondados ao múltiplo de R\$ 50 mais próximo. O resultado final é então reportado por cluster e pode ser propagado ao nível individual via mapeamento do cliente ao seu respectivo `cluster_id`.
 
 Além do ajuste operacional, realiza-se a **verificação em pós-otimização** da diretriz de diversificação (R4), usando o parâmetro $\alpha$. Define-se a exposição total resultante como $E = \sum_{j=1}^{K} n_j \cdot L_j^{final}$ e checa-se, para cada cluster, se sua participação respeita
+
 $$
 n_k \cdot L_k^{final} \le \alpha \cdot E,\quad \forall k.
 $$
+
 Caso a condição seja violada para algum cluster, a violação é sinalizada para revisão de parâmetros (por exemplo, ajuste de $\alpha$ e/ou de regras operacionais) e reexecução do pipeline, mantendo a etapa de otimização como um PL estritamente linear.
 
 **Acesso operacional (CLI e endpoint).** Além da execução via linha de comando para fins de reprodutibilidade, o mesmo pipeline pode ser encapsulado em um serviço de backend e disponibilizado por meio de um endpoint HTTP. Nesse formato, uma requisição informa a referência aos dados e os parâmetros do produto, e a resposta retorna o status da otimização, métricas-resumo (por exemplo, $Z^*$ e restrições ativas) e a recomendação de limites por cluster (ou por cliente, após o mapeamento), viabilizando integração com sistemas internos e automação do processo decisório.
@@ -257,6 +279,7 @@ A solução foi desenvolvida com foco em reprodutibilidade e execução em ambie
 **Linguagem e ambiente.** A implementação é inteiramente em Python, executável via linha de comando. A configuração de parâmetros operacionais do produto (por exemplo, $t$, $\bar{u}$, $T$, $\mathrm{LGD}$ e $L^{max}$) é externalizada em arquivo JSON, permitindo reproduzir cenários sem alteração de código.
 
 **Bibliotecas principais (pipeline de otimização).**
+
 - **pandas:** leitura/escrita de dados tabulares (Parquet) e agregações por cluster para obtenção de $n_k$, $PD_k$, $\pi_k$ e $CP_k$.
 - **NumPy:** operações numéricas e estatísticas (por exemplo, percentis e truncamentos) usadas em variáveis derivadas e agregações.
 - **scikit-learn:** modelos e rotinas de pré-processamento utilizados na etapa de segmentação (por exemplo, clusterização e transformações como imputação, padronização e codificação _one-hot_ quando aplicável).
@@ -265,6 +288,7 @@ A solução foi desenvolvida com foco em reprodutibilidade e execução em ambie
 **Implementação do Simplex.** O resolvedor do PL foi implementado do zero em Python (sem bibliotecas externas de otimização), permitindo maior transparência sobre as regras de entrada/saída da base, pivoteamento e critérios de parada, além de facilitar auditoria do processo de decisão.
 
 **Ferramentas auxiliares (análises e preparação de dados).**
+
 - **PyArrow:** leitura eficiente de dados em formato Parquet em scripts de análise e preparação.
 - **Matplotlib:** geração de gráficos e figuras utilizadas na etapa exploratória e na documentação de resultados.
 
@@ -274,23 +298,23 @@ A solução foi desenvolvida com foco em reprodutibilidade e execução em ambie
 
 ## 3. TRABALHOS RELACIONADOS
 
-Esta seção apresenta e analisa os trabalhos identificados na revisão de literatura, posicionando-os em relação ao problema proposto. A busca sistemática descrita em 3.1 resultou na seleção de três estudos que cobrem os dois componentes técnicos centrais do projeto — programação linear aplicada a decisões de crédito e clusterização para identificação de risco financeiro —, analisados individualmente nas seções 3.2 a 3.4, comparados sistematicamente em 3.5 e sintetizados em termos de lacuna em 3.6.
+Esta seção apresenta e analisa os trabalhos identificados na revisão de literatura, posicionando-os em relação ao problema proposto. A busca sistemática descrita em 3.1 resultou na seleção de três estudos que cobrem os dois componentes técnicos centrais do projeto - programação linear aplicada a decisões de crédito e clusterização para identificação de risco financeiro -, analisados individualmente nas seções 3.2 a 3.4, comparados sistematicamente em 3.5 e sintetizados em termos de lacuna em 3.6.
 
 ### 3.1 Protocolo de Busca e Seleção
 
-A busca foi conduzida nas bases SciELO, Google Scholar, BDTD/NDLTD, Scopus/Web of Science, Dimensions e BASE. As consultas foram realizadas em português e inglês, combinando termos de domínio como *credit portfolio*, *credit limit* e *bank loan* com termos metodológicos como *linear programming*, *simplex*, *optimization*, *clustering* e *risk identification*. ScienceDirect, IEEE Xplore e arXiv.org também foram consultados, mas não retornaram resultados aderentes aos critérios de inclusão definidos. As queries são documentadas em inglês para fins de padronização e reprodutibilidade; buscas equivalentes foram realizadas em português nas bases que suportam indexação no idioma. As principais queries utilizadas foram:
+A busca foi conduzida nas bases SciELO, Google Scholar, BDTD/NDLTD, Scopus/Web of Science, Dimensions e BASE. As consultas foram realizadas em português e inglês, combinando termos de domínio como _credit portfolio_, _credit limit_ e _bank loan_ com termos metodológicos como _linear programming_, _simplex_, _optimization_, _clustering_ e _risk identification_. ScienceDirect, IEEE Xplore e arXiv.org também foram consultados, mas não retornaram resultados aderentes aos critérios de inclusão definidos. As queries são documentadas em inglês para fins de padronização e reprodutibilidade; buscas equivalentes foram realizadas em português nas bases que suportam indexação no idioma. As principais queries utilizadas foram:
 
-| # | Query |
-|---|---|
-| 1 | `"credit limit optimization" AND "linear programming" AND "bank"` |
-| 2 | `"optimal credit portfolio" AND "linear programming"` |
-| 3 | `"credit portfolio" AND "linear programming" AND "risk"` |
-| 4 | `"loan allocation" AND "linear programming" AND "financial institution"` |
-| 5 | `"linear programming" AND "bank loan" AND "optimal revenue"` |
-| 6 | `"credit line assignment" AND "customer segmentation"` |
-| 7 | `"enterprise financial risk" AND "clustering algorithm"` |
-| 8 | `"clustering" AND "financial risk" AND "bank"` |
-| 9 | `"credit risk" AND "cluster analysis" AND "bank"` |
+| #   | Query                                                                    |
+| --- | ------------------------------------------------------------------------ |
+| 1   | `"credit limit optimization" AND "linear programming" AND "bank"`        |
+| 2   | `"optimal credit portfolio" AND "linear programming"`                    |
+| 3   | `"credit portfolio" AND "linear programming" AND "risk"`                 |
+| 4   | `"loan allocation" AND "linear programming" AND "financial institution"` |
+| 5   | `"linear programming" AND "bank loan" AND "optimal revenue"`             |
+| 6   | `"credit line assignment" AND "customer segmentation"`                   |
+| 7   | `"enterprise financial risk" AND "clustering algorithm"`                 |
+| 8   | `"clustering" AND "financial risk" AND "bank"`                           |
+| 9   | `"credit risk" AND "cluster analysis" AND "bank"`                        |
 
 As queries foram adaptadas e aplicadas às bases listadas, respeitando as particularidades de indexação de cada uma.
 
@@ -298,17 +322,17 @@ As queries foram adaptadas e aplicadas às bases listadas, respeitando as partic
 
 **Critérios de exclusão:** materiais sem densidade técnica; textos promocionais ou instrucionais voltados ao consumidor final; referências sem conexão com modelagem analítica, otimização ou apoio quantitativo à decisão de crédito; e trabalhos cujo foco principal não permitisse estabelecer relação com o problema de alocação, aprovação ou gestão de crédito.
 
-Após a etapa de triagem, foram selecionados três trabalhos para análise comparativa. O critério de seleção priorizou cobertura dos componentes técnicos centrais do projeto: programação linear aplicada a decisões de crédito (AL-MUSBAHU et al., 2025; KWAPONG, 2013) e clusterização para identificação de risco financeiro (LI; TAO; LI, 2022). Um trabalho adicional identificado na busca — Scarpel e Milioni (2002) — aborda a integração entre modelagem preditiva e otimização prescritiva em decisões de crédito, o que o aproxima conceitualmente do pipeline adotado neste projeto. Contudo, sua formulação emprega Programação Inteira sobre uma variável de decisão binária aplicada a crédito corporativo, contexto e natureza de decisão suficientemente distintos para que uma análise comparativa direta fosse de profundidade limitada. Por essa razão, o trabalho é referenciado como validação metodológica do paradigma de duas etapas na seção de lacuna identificada, sem integrar o conjunto de análises comparativas detalhadas.
+Após a etapa de triagem, foram selecionados três trabalhos para análise comparativa. O critério de seleção priorizou cobertura dos componentes técnicos centrais do projeto: programação linear aplicada a decisões de crédito (AL-MUSBAHU et al., 2025; KWAPONG, 2013) e clusterização para identificação de risco financeiro (LI; TAO; LI, 2022). Um trabalho adicional identificado na busca - Scarpel e Milioni (2002) - aborda a integração entre modelagem preditiva e otimização prescritiva em decisões de crédito, o que o aproxima conceitualmente do pipeline adotado neste projeto. Contudo, sua formulação emprega Programação Inteira sobre uma variável de decisão binária aplicada a crédito corporativo, contexto e natureza de decisão suficientemente distintos para que uma análise comparativa direta fosse de profundidade limitada. Por essa razão, o trabalho é referenciado como validação metodológica do paradigma de duas etapas na seção de lacuna identificada, sem integrar o conjunto de análises comparativas detalhadas.
 
 Ressalta-se que esta revisão de literatura constitui uma base inicial, compatível com a fase de desenvolvimento em que o projeto se encontra. O conjunto de três trabalhos foi escolhido por oferecer uma fundação sólida para cada componente técnico do modelo, sem pretensão de exaustividade. Trabalhos adicionais poderão ser incorporados em versões futuras do artigo à medida que o escopo da análise for ampliado.
 
 ---
 
-### 3.2 Application of Linear Programming for Optimal Net Revenue on Bank Loan — AL-MUSBAHU et al. (2025)
+### 3.2 Application of Linear Programming for Optimal Net Revenue on Bank Loan - AL-MUSBAHU et al. (2025)
 
 O trabalho aborda a aplicação da Programação Linear no contexto de otimizar a receita total no quesito de empréstimos bancários. A otimização de portfólios se trata de um pilar importante no setor de finanças e da Teoria de Investimentos, tendo implicações tanto para investidores quanto gestores, que precisam alocar recursos para múltiplas categorias de ativos (AL-MUSBAHU et al., 2025). Embora publicado em um periódico de circulação recente, o trabalho foi selecionado por ser o estudo mais atual identificado que aplica programação linear diretamente a portfólios de empréstimos bancários com dados reais de 2025, tornando-o relevante para a validação da abordagem adotada neste projeto.
 
-Dessa forma, a Programação Linear apresenta-se como uma maneira para otimizar a alocação de empréstimos bancários em diferentes áreas (como empréstimos de crédito e para o financiamento de carros, por exemplo), considerando que as relações entre as variáveis mantenham-se lineares. Por esse caminho, uma função matemática linear pode ser mapeada, levando em consideração as relações da concessão de risco-retorno, segundo Konno e Yamazaki (1991, *apud* AL-MUSBAHU et al., 2025).
+Dessa forma, a Programação Linear apresenta-se como uma maneira para otimizar a alocação de empréstimos bancários em diferentes áreas (como empréstimos de crédito e para o financiamento de carros, por exemplo), considerando que as relações entre as variáveis mantenham-se lineares. Por esse caminho, uma função matemática linear pode ser mapeada, levando em consideração as relações da concessão de risco-retorno, segundo Konno e Yamazaki (1991, _apud_ AL-MUSBAHU et al., 2025).
 
 Com informações de Janeiro de 2025, coletadas do **Access Bank**, localizado na região Ogun, na Nigéria, o modelo definido leva em consideração informações reais relacionadas a taxas e parâmetros para a modelagem, como juros e risco. Assim, o programa foi capaz de retornar uma alocação ótima para um caso de teste, seguindo todas as restrições mapeadas para o cenário (como o fato de que 45% dos empréstimos totais precisavam ser destinados para o financiamento de carros e empréstimos para organizações) (AL-MUSBAHU et al., 2025).
 
@@ -330,11 +354,11 @@ Além disso, o artigo comparado opera com um conjunto menor de variáveis agrega
 
 ---
 
-### 3.3 Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd. — KWAPONG (2013)
+### 3.3 Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd. - KWAPONG (2013)
 
 Kwapong (2013) formula e resolve um modelo de programação linear para maximizar o retorno líquido da carteira de crédito do Akuapem Rural Bank Ltd., banco rural de Gana com portfólio total de GH¢ 15 milhões. O banco opera com cinco modalidades de empréstimo (Indústria Artesanal, Transporte, Agricultura, Salário e Microfinanças), cada uma com taxa de juros e probabilidade de inadimplência distintas: o empréstimo de Transporte, por exemplo, opera a 32% com 5% de inadimplência, enquanto o Salário apresenta 30% de taxa e apenas 1% de inadimplência. A função objetivo maximiza a receita líquida de cada modalidade, descontando a perda esperada por inadimplência, formulada como $Z = \sum_j I_j(1 - P_j)x_j$. O modelo é resolvido sob quatro restrições principais: teto total de fundos, alocação mínima de 40% para Salário e Microfinanças, mínimo de 60% para os demais segmentos e teto de inadimplência agregada de 3% (KWAPONG, 2013).
 
-Para testar a robustez da solução, o autor analisa sete cenários variando o número de restrições e as taxas de juros. No cenário base, a solução ótima aloca GH¢ 7 milhões a Transporte, GH¢ 2 milhões a Agricultura e GH¢ 6 milhões a Salário, com retorno de GH¢ 4,48 milhões, descartando Indústria Artesanal e Microfinanças por baixa atratividade líquida. O trabalho conclui que há relação positiva entre risco e retorno e que o aumento das taxas de juros melhora o resultado, desde que o risco seja controlado (KWAPONG, 2013). Apesar de publicado em 2013 e tratar-se de uma dissertação de mestrado — e não de artigo em periódico ou conferência —, é o antecedente metodológico mais próximo identificado para a função objetivo adotada neste projeto. Nenhum trabalho equivalente com essa estrutura de formulação (LP para maximização de receita líquida ajustada por risco em carteira de crédito bancário) foi encontrado em revista ou anais nas bases consultadas, razão pela qual foi incluído na análise comparativa.
+Para testar a robustez da solução, o autor analisa sete cenários variando o número de restrições e as taxas de juros. No cenário base, a solução ótima aloca GH¢ 7 milhões a Transporte, GH¢ 2 milhões a Agricultura e GH¢ 6 milhões a Salário, com retorno de GH¢ 4,48 milhões, descartando Indústria Artesanal e Microfinanças por baixa atratividade líquida. O trabalho conclui que há relação positiva entre risco e retorno e que o aumento das taxas de juros melhora o resultado, desde que o risco seja controlado (KWAPONG, 2013). Apesar de publicado em 2013 e tratar-se de uma dissertação de mestrado - e não de artigo em periódico ou conferência -, é o antecedente metodológico mais próximo identificado para a função objetivo adotada neste projeto. Nenhum trabalho equivalente com essa estrutura de formulação (LP para maximização de receita líquida ajustada por risco em carteira de crédito bancário) foi encontrado em revista ou anais nas bases consultadas, razão pela qual foi incluído na análise comparativa.
 
 A estrutura da função objetivo de Kwapong (2013) guarda relação estrutural direta com o presente trabalho: ambas maximizam a receita líquida descontando a perda esperada por inadimplência, com a forma $Z = \sum_j I_j(1 - P_j)x_j$ mapeando explicitamente o trade-off risco-retorno de cada categoria de crédito. Essa equivalência valida que a programação linear é um instrumento adequado para problemas de portfólio de crédito com controle simultâneo de risco. Vale destacar também a análise de sensibilidade conduzida nos sete cenários: ao variar o número de restrições e as taxas de juros, o autor identifica quais restrições são de fato limitantes por meio dos preços duais, como o valor negativo de -0,013 associado à restrição de alocação setorial, que sinaliza um efeito desfavorável sobre o retorno. Essa prática de análise de sensibilidade é metodologicamente sólida e diretamente replicável no pipeline do presente projeto.
 
@@ -346,7 +370,7 @@ De forma geral, Kwapong (2013) é o antecedente mais próximo do presente trabal
 
 ---
 
-### 3.4 Identification of Enterprise Financial Risk Based on Clustering Algorithm — LI; TAO; LI (2022)
+### 3.4 Identification of Enterprise Financial Risk Based on Clustering Algorithm - LI; TAO; LI (2022)
 
 O trabalho aborda a identificação de risco financeiro em empresas listadas na China, com o objetivo de selecionar um conjunto pequeno de empresas de alto risco que concentre uma proporção elevada de companhias que viriam a receber tratamento especial (ST – "special treatment") nos anos seguintes (LI; TAO; LI, 2022). A metodologia parte de 27 indicadores financeiros alternativos, dos quais são selecionadas 4 variáveis financeiras finais: razão de ativos tangíveis, razão de caixa sobre ativos, razão de endividamento de curto prazo e razão de endividamento de longo prazo. Os autores aplicam PCA para reduzir essas 4 variáveis a 2 dimensões e, em seguida, utilizam o algoritmo K-means (com K = 3 na primeira etapa e K = 4 na segunda etapa, aplicando K-means novamente apenas no cluster com mais empresas ST) para formar grupos e identificar o cluster de alto risco (LI; TAO; LI, 2022). O resultado principal mostra que o cluster de alto risco representa apenas 9% da amostra, mas concentra cerca de 36% das novas empresas ST já no ano corrente, proporção que aumenta ao estender o horizonte para 5 anos. Os autores concluem que o K-means, mesmo selecionando um grupo pequeno, é eficaz para filtrar empresas que merecem atenção cuidadosa de investidores (LI; TAO; LI, 2022).
 
@@ -366,15 +390,15 @@ Examinados individualmente nas seções anteriores, os três trabalhos revelam p
 
 A distribuição dos trabalhos nesses dois eixos é reveladora. Al-Musbahu et al. (2025) e Kwapong (2013) empregam programação linear sobre categorias de crédito predefinidas pelo banco, sem qualquer etapa de segmentação baseada em dados. Li, Tao e Li (2022) seguem o caminho inverso: demonstram que dados financeiros conseguem separar perfis de risco com objetividade, mas encerram o trabalho nessa etapa, sem traduzir os grupos em nenhuma decisão operacional. O presente trabalho parte da combinação das duas abordagens.
 
-| Dimensão | AL-MUSBAHU et al. (2025) | KWAPONG (2013) | LI; TAO; LI (2022) | Este trabalho |
-|---|---|---|---|---|
-| **Problema central** | Alocação ótima de portfólio de empréstimos bancários | Maximização de receita líquida de portfólio de crédito rural | Identificação de empresas de alto risco financeiro | Otimização de limites de crédito pré-aprovados por cluster de clientes |
-| **Técnica principal** | Programação Linear | Programação Linear + análise de sensibilidade (7 cenários) | K-Means em dois níveis + PCA | CART + Programação Linear (Simplex próprio, validado com CBC via PuLP) |
-| **Nível de análise** | Portfólio agregado por tipo de produto | Portfólio agregado por modalidade | Grupo de empresas (sem decisão operacional) | Cluster de clientes individuais (~800 grupos) |
-| **Segmentação dos tomadores** | Ausente — categorias predefinidas institucionalmente | Ausente — modalidades predefinidas institucionalmente | Endógena via K-Means — **produto final** do pipeline | Endógena via CART — **etapa intermediária** do pipeline |
-| **Variável de decisão** | Volume alocado por tipo de empréstimo (R$) | Volume alocado por modalidade de crédito (R$) | Não há | Limite contínuo $L_k \in \mathbb{R}^+$ por cluster |
-| **Controle de risco** | Taxa de inadimplência por categoria de empréstimo | Teto de PD agregada (3%) + PD por modalidade | Concentração de eventos ST no cluster de risco | PD financeira ponderada (R1), alavancagem diferenciada por score (R2), verificação de concentração por cluster (R4) |
-| **Domínio de aplicação** | Empréstimos bancários — Nigéria | Crédito rural — Gana | Risco corporativo — China | Cartão de crédito PF — Brasil (~1,8M elegíveis/safra) |
+| Dimensão                      | AL-MUSBAHU et al. (2025)                             | KWAPONG (2013)                                               | LI; TAO; LI (2022)                                   | Este trabalho                                                                                                       |
+| ----------------------------- | ---------------------------------------------------- | ------------------------------------------------------------ | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| **Problema central**          | Alocação ótima de portfólio de empréstimos bancários | Maximização de receita líquida de portfólio de crédito rural | Identificação de empresas de alto risco financeiro   | Otimização de limites de crédito pré-aprovados por cluster de clientes                                              |
+| **Técnica principal**         | Programação Linear                                   | Programação Linear + análise de sensibilidade (7 cenários)   | K-Means em dois níveis + PCA                         | CART + Programação Linear (Simplex próprio, validado com CBC via PuLP)                                              |
+| **Nível de análise**          | Portfólio agregado por tipo de produto               | Portfólio agregado por modalidade                            | Grupo de empresas (sem decisão operacional)          | Cluster de clientes individuais (~800 grupos)                                                                       |
+| **Segmentação dos tomadores** | Ausente - categorias predefinidas institucionalmente | Ausente - modalidades predefinidas institucionalmente        | Endógena via K-Means - **produto final** do pipeline | Endógena via CART - **etapa intermediária** do pipeline                                                             |
+| **Variável de decisão**       | Volume alocado por tipo de empréstimo (R$)           | Volume alocado por modalidade de crédito (R$)                | Não há                                               | Limite contínuo $L_k \in \mathbb{R}^+$ por cluster                                                                  |
+| **Controle de risco**         | Taxa de inadimplência por categoria de empréstimo    | Teto de PD agregada (3%) + PD por modalidade                 | Concentração de eventos ST no cluster de risco       | PD financeira ponderada (R1), alavancagem diferenciada por score (R2), verificação de concentração por cluster (R4) |
+| **Domínio de aplicação**      | Empréstimos bancários - Nigéria                      | Crédito rural - Gana                                         | Risco corporativo - China                            | Cartão de crédito PF - Brasil (~1,8M elegíveis/safra)                                                               |
 
 A tabela confirma uma observação que emerge das análises anteriores: o trabalho que mais se aproxima estruturalmente deste é Kwapong (2013), não pelo contexto geográfico nem pela escala, mas pela forma da função objetivo. A expressão utilizada por Kwapong,
 
@@ -406,19 +430,19 @@ Reconhece-se que a abordagem proposta tem limitações próprias: a qualidade da
 
 ## 4. RESULTADOS
 
-*(A ser entregue na Sprint 4.)*
+_(A ser entregue na Sprint 4.)_
 
 ---
 
 ## 5. ANÁLISE E DISCUSSÃO
 
-*(A ser entregue na Sprint 4.)*
+_(A ser entregue na Sprint 4.)_
 
 ---
 
 ## 6. CONCLUSÃO
 
-*(A ser entregue na Sprint 4.)*
+_(A ser entregue na Sprint 4.)_
 
 ---
 
@@ -430,7 +454,7 @@ BANCO CENTRAL DO BRASIL. Inadimplência da carteira de crédito – Total (SGS 2
 
 BLAND, Robert G. New finite pivoting rules for the simplex method. **Mathematics of Operations Research**, v. 2, n. 2, p. 103-107, 1977. DOI: 10.1287/moor.2.2.103. Disponível em: <https://www.cs.bu.edu/faculty/gacs/courses/cs530/lectures/BlandRule.pdf>. Acesso em: 28 maio 2026.
 
-KWAPONG, Samuel Darkwa. **Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd.** 2013. 84 f. Dissertação (MSc in Industrial Mathematics) — Kwame Nkrumah University of Science and Technology, Institute of Distance Learning, Kumasi, 2013. Disponível em: <https://ir.knust.edu.gh/handle/123456789/5841>. Acesso em: 20 maio 2026.
+KWAPONG, Samuel Darkwa. **Application of Linear Programming to Optimal Credit Portfolio: The Case of Akuapem Rural Bank Ltd.** 2013. 84 f. Dissertação (MSc in Industrial Mathematics) - Kwame Nkrumah University of Science and Technology, Institute of Distance Learning, Kumasi, 2013. Disponível em: <https://ir.knust.edu.gh/handle/123456789/5841>. Acesso em: 20 maio 2026.
 
 LI, Bingxiang; TAO, Rui; LI, Meng. Identification of Enterprise Financial Risk Based on Clustering Algorithm. **Computational Intelligence and Neuroscience**, v. 2022, art. 1086945, 2022. DOI: 10.1155/2022/1086945. Disponível em: <https://doi.org/10.1155/2022/1086945>. Acesso em: 28 maio 2026.
 
