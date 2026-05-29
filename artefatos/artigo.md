@@ -20,17 +20,17 @@
 
 ## 1. INTRODUÇÃO
 
-Definir limites de crédito pré-aprovados é uma das decisões mais importantes para instituições financeiras, pois afeta ao mesmo tempo o quanto o cliente consegue usar o produto, o retorno esperado e a exposição ao risco. Quando essa decisão precisa ser tomada para milhões de clientes, ela deixa de ser apenas uma escolha pontual e passa a exigir um processo consistente, rastreável e alinhado a regras prudenciais e operacionais, como teto de risco agregado, limite máximo ofertado e alavancagem em relação à capacidade de pagamento.
+Definir limites de crédito pré-aprovados é uma das decisões mais importantes para instituições financeiras, pois afeta, ao mesmo tempo, o quanto o cliente consegue usar o produto, o retorno esperado e a exposição ao risco. Quando essa decisão precisa ser tomada para milhões de clientes, ela deixa de ser apenas uma escolha pontual e passa a exigir um processo consistente, rastreável e alinhado a regras prudenciais e operacionais, como teto de risco agregado, limite máximo ofertado e alavancagem em relação à capacidade de pagamento.
 
 No contexto brasileiro, indicadores públicos mostram que a inadimplência segue sendo um tema relevante no mercado de crédito, o que reforça a necessidade de métodos quantitativos para apoiar políticas de concessão. Por exemplo, a inadimplência da carteira de crédito do Sistema Financeiro Nacional (medida como o percentual de operações com atraso superior a 90 dias) foi de 4,33% em março de 2026 (BANCO CENTRAL DO BRASIL, 2026). Esse cenário sustenta a motivação para abordagens que conectem, de forma objetiva, retorno e risco, evitando que a definição de limites dependa apenas de regras fixas ou decisões pouco padronizadas.
 
-Este trabalho propõe um pipeline reprodutível para definição de limites de crédito pré-aprovados a partir de dados históricos. Nele, clientes elegíveis são segmentados em perfis relativamente homogêneos e, em seguida, formula-se um problema de Programação Linear para maximizar o retorno líquido esperado, sujeito a restrições de risco, capacidade de pagamento e limites operacionais. O problema é resolvido por uma implementação própria do método Simplex, e os resultados são disponibilizados em formato executável e integrável, viabilizando incorporação em rotinas internas de parametrização e monitoramento.
+Este trabalho propõe um pipeline reprodutível para definição de limites de crédito pré-aprovados a partir de dados históricos. Nele, clientes elegíveis são segmentados em perfis relativamente homogêneos e, em seguida, formula-se um problema de Programação Linear para maximizar o retorno líquido esperado, sujeito a restrições de risco, capacidade de pagamento e limites operacionais. O problema é resolvido por uma implementação própria do método Simplex, e os resultados são disponibilizados em formato executável e integrável, viabilizando a incorporação em rotinas internas de parametrização e monitoramento.
 
 A escolha dessa abordagem é motivada diretamente pelo contexto operacional do parceiro, que precisa definir limites pré-aprovados em larga escala com (i) restrições prudenciais explícitas (teto de risco agregado e alavancagem por capacidade de pagamento), (ii) limites operacionais por oferta e (iii) rastreabilidade/auditabilidade das decisões. Além disso, o parceiro já possui uma política vigente de oferta, o que permite avaliar ganhos de retorno e controle de risco comparando as recomendações do modelo com o baseline observado (campo limite_ofertado).
 
 ## 2. MATERIAIS E MÉTODOS
 
-O pipeline proposto articula quatro etapas: preparação e validação dos dados de entrada, segmentação dos clientes em perfis homogêneos, formulação e resolução do problema de Programação Linear e pós-processamento dos limites para aderência operacional. A Figura 1 ilustra esse fluxo, com ênfase nas restrições de risco e capacidade de pagamento que delimitam o espaço de soluções factíveis.
+O pipeline proposto articula quatro etapas: preparação e validação dos dados de entrada, segmentação dos clientes em perfis homogêneos, formulação e resolução do problema de Programação Linear e pós-processamento dos limites para aderência às regras operacionais. A Figura 1 ilustra esse fluxo, com ênfase nas restrições de risco e capacidade de pagamento que delimitam o espaço de soluções factíveis.
 
 **Figura 1 — Fluxo do pipeline metodológico**
 
@@ -40,7 +40,7 @@ O pipeline proposto articula quatro etapas: preparação e validação dos dados
 
 ### 2.1 Dados utilizados
 
-Os dados foram fornecidos pelo parceiro de projeto em três tabelas correspondentes a safras temporais (M1, M2, e M3), contendo clientes correntistas com variáveis de perfil, risco, capacidade de pagamento e comportamento. A base total tem cerca de 15 milhões de clientes por safra, das quais uma fração é elegível ao produto e segue para a etapa de otimização. A Tabela 1 resume as variáveis utilizadas diretamente no modelo e seu papel na formulação; as demais colunas são usadas apenas para controle a análises descritivas. As restrições e o papel na função associadas a essas variáveis são detalhadas na Seção 2.3.
+Os dados foram fornecidos pelo parceiro de projeto em três tabelas correspondentes a safras temporais (M1, M2, e M3), contendo clientes correntistas com variáveis de perfil, risco, capacidade de pagamento e comportamento. A base total tem cerca de 15 milhões de clientes por safra, das quais uma fração é elegível ao produto e segue para a etapa de otimização. A Tabela 1 resume as variáveis utilizadas diretamente no modelo e seu papel na formulação; as demais colunas são usadas apenas para controle e análises descritivas. As restrições e o papel na função objetivo associados a essas variáveis são detalhadas na Seção 2.3.
 
 **Tabela 1 — Variáveis fornecidas pelo parceiro (estatísticas da safra M1)**
 
@@ -64,7 +64,7 @@ Os dados foram fornecidos pelo parceiro de projeto em três tabelas corresponden
 | `flag_ativacao`              | Indicadora de ativação (1 = ativou)           | 5.704 (87,7% dos que contrataram)                                  | Backtesting (ativação) |
 | `over30mob3`                 | Atraso >30 dias nas 3 primeiras parcelas      | 4.966 válidos, 377 eventos (7,6%). 99,97% null                     | Inadimplência observada (viés de seleção) |
 
-Além das variáveis das três safras, alguns parâmetros necessários à formulação do modelo foram informados diretamente pelo parceiro (por exemplo, taxa de _interchange_, LGD e horizonte de receita). Esses valores são tratados como constantes na formulação e são apresentados explicitamente na seção 2.3, junto com a função objetivo e as restrições.
+Além das variáveis das três safras, alguns parâmetros necessários à formulação do modelo foram informados diretamente pelo parceiro (por exemplo, taxa de _interchange_, LGD e horizonte de receita). Esses valores são tratados como constantes na formulação e são apresentados explicitamente na Seção 2.3, junto com a função objetivo e as restrições.
 
 ### 2.2 Pré-processamento
 
@@ -113,7 +113,7 @@ Como resultado do pré-processamento, a base elegível passa a conter as variáv
 
 Esta seção apresenta a formulação matemática do problema de definição de limites de crédito pré-aprovados. Dado um conjunto de clientes elegíveis, agrupados por $K$ _clusters_ relativamente homogêneos, busca-se determinar o limite $L_k$ a ser ofertado a cada cluster $k$ de modo a maximizar o retorno líquido esperado da carteira. Opta-se por uma formulação de Programação Linear (LP) por sua interpretabilidade em larga escala, uma vez que a decisão deve ser tomada simultaneamente para múltiplos perfis de clientes, além de ser um requisito mapeado pelo parceiro. 
 
-Para preservar a linearidade do modelo, grandezas de risco e comportamento (como probabilidade de inadimplência ($PD_k$), propensão à contratação ($\pi_k$) e parâmetros operacionais do produto) são tratadas como parâmetros estimados na etapa de pré-processamento, enquanto os limites $L_k$ constituem as variáveis de decisão. A função objetivo considera a receita esperada de _interchange_ descontada da perda esperada por inadimplência, e as restrições incorporam políticas prudenciais e operacionais, como teto de risco agregado, alavancagem em relação à capacidade  de pagamento e limites máximos por oferta.
+Para preservar a linearidade do modelo, grandezas de risco e comportamento (como probabilidade de inadimplência ($PD_k$), propensão à contratação ($\pi_k$) e parâmetros operacionais do produto) são tratadas como parâmetros estimados na etapa de pré-processamento, enquanto os limites $L_k$ constituem as variáveis de decisão. A função objetivo considera a receita esperada de _interchange_ descontada da perda esperada por inadimplência, e as restrições incorporam políticas prudenciais e operacionais, como teto de risco agregado, alavancagem em relação à capacidade de pagamento e limites máximos por oferta.
 
 A Tabela 2 resume os principais parâmetros utilizados na formulação, incluindo grandezas estimadas a partir dos dados (por exemplo, $PD_k$, $\pi_k$, $CP_k$) e constantes operacionais fornecidas pelo parceiro (por exemplo, taxa de _interchange_ $t$, horizonte de receita $T$ e $\mathrm{LGD}$). Esses parâmetros são calculados na etapa de pré-processamento e, em seguida, tratados como constantes no problema de otimização, garantindo que a função objetivo e as restrições permaneçam lineares nas variáveis de decisão $L_k$.
 
@@ -203,7 +203,7 @@ $$
 $$
 n_k \cdot L_k^{final} \le \alpha \cdot E,\quad \forall k.
 $$
-Como essa verificação incide sobre os limites discretizados pós-processamento (e não sobre as variáveis contínuas $L_k$), ela é conduzida fora do PL e descrita em detalhes na Seção 2.4.
+Como essa verificação incide sobre os limites discretizados no pós-processamento (e não sobre as variáveis contínuas $L_k$), ela é conduzida fora do PL e descrita em detalhes na Seção 2.4.
 
 ### 2.4 Implementação do algoritmo
 
@@ -228,7 +228,7 @@ c_k = \pi_k \cdot \left(\bar{u}\cdot t \cdot T - PD_k \cdot \mathrm{LGD}\right),
 $$
 com $PD_k$ sendo a média de `pd_calibrada` no cluster (PD já incorpora o fator $\gamma_{d(k)}$ da calibração). As restrições incluem, em particular: (i) teto de risco financeiro agregado (comparado ao benchmark $\overline{PD}_{fin}^{atual}$, calculado como a média de `pd_calibrada` na base elegível), (ii) limite por capacidade de pagamento com alavancagem $L_k \le m_k\cdot CP_k$ e (iii) teto operacional $L_k \le L^{max}$.
 
-**Etapa 4 — Resolução via Simplex.** O PL é resolvido por uma implementação própria do método Simplex. O algoritmo constrói o tableau inicial com variáveis de folga, itera selecionando variável entrante e variável sainte (com regra de Bland para evitar ciclagem), realiza pivoteamentos e encerra quando não há melhoria na função objetivo ou quando identifica casos especiais (como problema ilimitado). Ao final, retorna o vetor ótimo $L_k^*$, o valor ótimo $Z^*$ e o status da solução. A regra de Bland (1977) é adotada por ser a referência teórica original que prova a finitude do Simplex sob essa regra de pivoteamento, não existindo substituto mais recente que altere esse resultado clássico. 
+**Etapa 4 — Resolução via Simplex.** O PL é resolvido por uma implementação própria do método Simplex. O algoritmo constrói o tableau inicial com variáveis de folga, itera selecionando variável entrante e variável saínte (com regra de Bland para evitar ciclagem), realiza pivoteamentos e encerra quando não há melhoria na função objetivo ou quando identifica casos especiais (como problema ilimitado). Ao final, retorna o vetor ótimo $L_k^*$, o valor ótimo $Z^*$ e o status da solução. A regra de Bland (1977) é adotada por ser a referência teórica original que prova a finitude do Simplex sob essa regra de pivoteamento, não havendo substituto mais recente que altere esse resultado clássico. 
 
 **Validação numérica com solver externo.** Para verificar a correção da implementação própria do Simplex, o mesmo problema de Programação Linear foi resolvido também com um solver consolidado via biblioteca PuLP (solver CBC como padrão). A validação consistiu em executar ambos os resolvedores sobre as mesmas instâncias e comparar (i) o status da solução, (ii) o valor da função objetivo e (iii) o vetor de decisão $L_k$, aceitando apenas discrepâncias residuais compatíveis com tolerâncias numéricas. Essa checagem funciona como teste de sanidade durante o desenvolvimento e aumenta a confiabilidade da solução antes do uso operacional do pipeline.
 
