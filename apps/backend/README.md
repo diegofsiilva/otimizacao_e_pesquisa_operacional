@@ -63,4 +63,28 @@ Documentação interativa disponível em `{APP_HOST}:{APP_PORT}/docs` com o serv
 
 O endpoint `POST /api/consultas` recebe um arquivo `.parquet`, registra a consulta com status `pendente` e dispara o pipeline em background. O frontend consulta `GET /api/consultas/{id}` periodicamente para acompanhar o progresso.
 
+Etapas do pipeline: calibracao de PD, clustering via CART e otimizacao por programacao linear (Simplex).
+
+## Testes
+
+Execute a partir da raiz do repositorio:
+
+```bash
+python -m pip install -r apps/backend/requirements.txt
+python -m unittest discover -s apps/algoritmo_simplex/tests -p "test_*.py"
+python -m unittest discover -s apps/backend/tests -p "test_*.py"
+```
+
+A suite cobre:
+
+- casos didaticos do Simplex proprio;
+- contrato das rotas usadas pelo front-end;
+- upload em chunks e validacao de `.parquet`;
+- integracao HTTP com `TestClient`;
+- worker de background com pool fake, validando persistencia esperada sem PostgreSQL real.
+
+## Observacao sobre o pipeline completo
+
+O endpoint `POST /api/consultas` recebe um arquivo `.parquet`, registra a consulta com status `pendente` e dispara o pipeline em background. O frontend consulta `GET /api/consultas/{id}` periodicamente para acompanhar o progresso.
+
 Etapas do pipeline: calibração de PD, clustering via CART e otimização por programação linear (Simplex).

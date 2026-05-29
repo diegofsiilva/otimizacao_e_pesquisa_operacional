@@ -135,6 +135,7 @@ $RECYCLE.BIN/
 *.lock
 tmp/
 temp/
+.codex_test_deps/
 
 # ==============================
 # DVC - CONTROLE DE VERSÃO DE DADOS
