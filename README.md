@@ -94,6 +94,120 @@ g04/
 
 ## 🚀 Como executar
 
+### Backend e frontend da aplicação
+
+O modo recomendado para a entrega atual é subir o backend FastAPI e o frontend estático juntos pelo script do backend.
+
+#### Pré-requisitos
+
+- Python 3.11+
+- PostgreSQL 14+
+- Banco PostgreSQL criado para a aplicação
+- Credenciais do banco configuradas em `apps/backend/.env`
+
+#### 1. Configurar o backend
+
+Na raiz do repositório:
+
+```bash
+cd apps/backend
+python -m venv .venv
+```
+
+Ative o ambiente virtual:
+
+```bash
+# Windows PowerShell
+.\.venv\Scripts\Activate.ps1
+
+# Linux/macOS
+source .venv/bin/activate
+```
+
+Instale as dependências:
+
+```bash
+pip install -r requirements.txt
+```
+
+Crie o arquivo de ambiente:
+
+```bash
+# Windows PowerShell
+Copy-Item .env.example .env
+
+# Linux/macOS
+cp .env.example .env
+```
+
+Edite `apps/backend/.env` com as credenciais do PostgreSQL:
+
+```env
+APP_HOST=http://127.0.0.1
+APP_PORT=8000
+FRONTEND_PORT=5500
+
+DB_HOST=localhost
+DB_PORT=5432
+DB_DATABASE=credito
+DB_USER=postgres
+DB_PASSWORD=sua_senha
+```
+
+#### 2. Subir backend e frontend juntos
+
+Ainda dentro de `apps/backend`:
+
+```bash
+python run_server.py
+```
+
+Esse comando:
+
+- sobe o backend em `http://127.0.0.1:8000`;
+- executa as migrations automaticamente;
+- sobe o frontend estático em `http://127.0.0.1:5500`;
+- disponibiliza a documentação interativa em `http://127.0.0.1:8000/docs`.
+
+#### 3. Executar somente o backend
+
+Caso queira subir apenas a API:
+
+```bash
+cd apps/backend
+uvicorn main:app --host 127.0.0.1 --port 8000 --reload
+```
+
+#### 4. Executar somente o frontend
+
+Caso queira subir apenas a interface:
+
+```bash
+cd apps/frontend
+python -m http.server 5500
+```
+
+Abra no navegador:
+
+```text
+http://127.0.0.1:5500
+```
+
+Observação: para consumir um backend local, confira se `window.API_BASE_URL` em `apps/frontend/index.html` aponta para `http://127.0.0.1:8000/api`. Em ambiente publicado, esse valor pode apontar para a URL do deploy.
+
+#### 5. Rodar os testes do backend e otimizador
+
+Na raiz do repositório:
+
+```bash
+python -m unittest discover -s apps/algoritmo_simplex/tests -p "test_*.py"
+python -m unittest discover -s apps/backend/tests -p "test_*.py"
+```
+
+Os testes cobrem o Simplex, contratos das rotas, upload em chunks, integração HTTP e execução do worker em background.
+
+### Pipeline do otimizador via terminal
+
 ### Pré-requisitos
 
 Instale as dependências a partir do diretório `apps/algoritmo_simplex/`:
@@ -162,8 +276,8 @@ Os arquivos JSON de parâmetros devem estar em `apps/algoritmo_simplex/input/`.
 - 0.2.0 - 15/05/2026
   - Sprint 2 - Refinamento do modelo matemático, implementação do algoritmo Simplex e protótipo do front-end
 
-- 0.3.0 - xx/xx/xxxx
-
+- 0.3.0 - 29/05/2026
+  - Sprint 3 - Clusterização do algoritmo, desenvolvimento do front-end, back-end e artigo
 - 0.4.0 - xx/xx/xxxx
 
 - 0.5.0 - xx/xx/xxxx
