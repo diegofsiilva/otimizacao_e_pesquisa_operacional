@@ -6,20 +6,66 @@ O front-end é uma SPA (Single Page Application) sem etapa de build, baseada em 
 
 Todos os dados exibidos vêm da API do backend via `api.js`. Não há dados mockados na aplicação.
 
-A aplicação é organizada em **quatro fluxos principais** acessíveis pela navbar fixa:
+A aplicação é organizada em cinco fluxos acessíveis pela navbar fixa:
 
 | Estado `page` | Componente        | Responsabilidade                                                  |
 | ------------- | ----------------- | ----------------------------------------------------------------- |
-| `cockpit`     | `Cockpit.js`      | Visão geral da última simulação concluída e tabela de clusters    |
+| `dashboard`   | `Cockpit.js`      | Visão geral da última simulação concluída e tabela de clusters    |
 | `gerar`       | `GerarLimites.js` | Upload de base `.parquet`, monitoramento do pipeline e resultados |
 | `resultados`  | `Resultados.js`   | Histórico de simulações com gráficos e exportação                 |
+| `clientes`    | `Clientes.js`     | Busca de cliente por token e histórico de limites entre safras    |
 | modal         | `ConfigModal.js`  | Edição dos parâmetros do modelo de otimização                     |
 
 A aplicação não usa React Router. O estado `page` em `App` (definido em `index.html`) controla qual componente é renderizado. A troca de tela é instantânea, sem recarregamento de página. O `ErrorBoundary` com `key={page}` força a remontagem completa a cada navegação, garantindo que os dados sejam sempre recarregados da API.
 
 ---
 
-## 2. Estrutura de Arquivos
+## 2. User Stories Priorizadas
+
+Ordenadas por prioridade de negócio (P1 = crítico para o fluxo principal, P3 = melhoria).
+
+| Prioridade | ID   | Título                                 | Componente                   | Status       | Observação |
+| ---------- | ---- | -------------------------------------- | ---------------------------- | ------------ | ---------- |
+| P1         | US01 | Enviar base de clientes para simulação | `GerarLimites`               | Implementado | Upload `.parquet` com chunked transfer e modal de progresso por etapas |
+| P1         | US02 | Monitorar execução do pipeline         | `GerarLimites`               | Implementado | Polling automático com etapas animadas (Calibração → Clustering → Simplex); botão "Verificar agora" |
+| P1         | US03 | Visualizar resultado da simulação      | `GerarLimites`               | Implementado | Resultados inline pós-conclusão: KPIs, gráficos de barras e donut, tabela de clusters paginada |
+| P1         | US04 | Consultar cockpit da última safra      | `Cockpit`                    | Implementado | KPIs com delta vs simulação anterior; tabela de clusters; CTA para nova simulação quando não há dados |
+| P2         | US05 | Consultar histórico de simulações      | `Resultados`                 | Implementado | Seletor de simulação concluída; gráfico de evolução do `z_otimo`; histograma de risco por PD |
+| P2         | US06 | Exportar clientes para CSV             | `GerarLimites`, `Resultados` | Implementado | `Api.exportClientes(id)` — arquivo gerado pelo backend com todos os campos de `ClienteResultadoResponse` |
+| P2         | US07 | Configurar parâmetros do modelo        | `ConfigModal`                | Implementado | Sliders com sync em tempo real; salvar via `PUT /api/config`; restaurar padrões com confirmação |
+| P3         | US08 | Buscar cliente individual por token    | `Clientes`                   | Implementado | Histórico entre safras: cluster, limite, PD, score cross por período |
+| P3         | US09 | Auditar parâmetros de uma simulação    | `Resultados`                 | Implementado | Seção colapsável com `t`, `LGD`, `u_bar`, `L_max`, `T` da consulta selecionada |
+
+---
+
+## 3. Como Executar
+
+O front-end sobe automaticamente junto com o backend via `run_server.py`:
+
+```bash
+cd apps/backend
+python run_server.py
+```
+
+Para subir somente o front-end de forma isolada:
+
+```bash
+cd apps/frontend
+python -m http.server 5500
+```
+
+### Dependências (via CDN)
+
+| Biblioteca       | Versão | Finalidade                     |
+| ---------------- | ------ | ------------------------------ |
+| React            | 18     | UI reativa                     |
+| ReactDOM         | 18     | Renderização no DOM            |
+| Babel Standalone | latest | Transpilação de JSX no browser |
+| Tailwind CSS     | CDN    | Estilização utilitária         |
+
+---
+
+## 4. Estrutura de Arquivos
 
 ```
 apps/frontend/
@@ -35,15 +81,16 @@ apps/frontend/
 │       └── lineto-circular-medium.ttf
 └── pages/
     ├── Navbar.js            # Navbar fixa com gradiente PAN
-    ├── Cockpit.js         # Componente Cockpit
+    ├── Cockpit.js           # Visão geral da última simulação concluída
     ├── GerarLimites.js      # Upload, monitoramento e resultados inline
     ├── Resultados.js        # Componentes SVG de gráficos + página de histórico
+    ├── Clientes.js          # Busca por token e histórico individual entre safras
     └── ConfigModal.js       # Modal de configuração dos parâmetros do modelo
 ```
 
 ---
 
-## 3. api.js
+## 5. api.js
 
 Centraliza todas as chamadas ao backend. Não há `fetch` em nenhum outro arquivo.
 
@@ -65,7 +112,7 @@ Centraliza todas as chamadas ao backend. Não há `fetch` em nenhum outro arquiv
 
 ---
 
-## 4. data.js
+## 6. data.js
 
 Contém apenas helpers de apresentação e metadados de UI. Não há dados mockados.
 
@@ -92,17 +139,17 @@ Array de pares `{ label, value }` exibidos como somente leitura no `ConfigModal`
 
 ---
 
-## 5. Fluxo 1 - Cockpit (Cockpit.js)
+## 7. Fluxo 1 — Cockpit (Cockpit.js)
 
-### 5.1 Objetivo
+### 7.1 Objetivo
 
 Tela de entrada da aplicação. Apresenta a visão consolidada da última simulação concluída e a tabela de clusters correspondente.
 
-### 5.2 Carregamento de dados
+### 7.2 Carregamento de dados
 
 Ao montar, o componente executa `listConsultas()` e `listSafras()` em paralelo. Filtra as consultas com `status_consulta === "concluido"` e seleciona a mais recente como consulta atual e a segunda como consulta anterior (usada para calcular deltas). Em seguida, carrega os clusters da consulta atual via `getClusters(id)`.
 
-### 5.3 Estados de render
+### 7.3 Estados de render
 
 **Carregando:** spinner centralizado enquanto as chamadas respondem.
 
@@ -110,7 +157,7 @@ Ao montar, o componente executa `listConsultas()` e `listSafras()` em paralelo. 
 
 **Normal:** KPIs, banner de referência e tabela de clusters.
 
-### 5.4 KPIs
+### 7.4 KPIs
 
 | Card                   | Campo na API           | Delta                           |
 | ---------------------- | ---------------------- | ------------------------------- |
@@ -121,7 +168,7 @@ Ao montar, o componente executa `listConsultas()` e `listSafras()` em paralelo. 
 
 Quando não há consulta anterior, o badge de delta não é exibido.
 
-### 5.5 Tabela de clusters
+### 7.5 Tabela de clusters
 
 Exibe os dados de `ClusterResultadoResponse` da consulta mais recente. Colunas: Cluster ID, Clientes, PD Média, Score Cross Médio, Fator de Alavancagem, Limite Otimizado e Status (Viável / Sem Solução).
 
@@ -131,15 +178,15 @@ Exibe os dados de `ClusterResultadoResponse` da consulta mais recente. Colunas: 
 
 ---
 
-## 6. Fluxo 2 - Gerar Limites (GerarLimites.js)
+## 8. Fluxo 2 — Gerar Limites (GerarLimites.js)
 
-### 6.1 Upload
+### 8.1 Upload
 
 Aceita exclusivamente arquivos `.parquet`. A tentativa de upload de qualquer outro formato exibe erro de validação antes de qualquer requisição.
 
 A dropzone suporta drag-and-drop e clique. O campo `safra_numero` fica oculto em "Opções avançadas" e é opcional: quando omitido, o backend auto-incrementa o número da safra.
 
-### 6.2 Colunas esperadas no .parquet
+### 8.2 Colunas esperadas no .parquet
 
 | Coluna                     | Tipo   | Descrição                                 |
 | -------------------------- | ------ | ----------------------------------------- |
@@ -155,15 +202,15 @@ A dropzone suporta drag-and-drop e clique. O campo `safra_numero` fica oculto em
 | `flag_contrato`            | int    | 1 = cliente com contrato ativo            |
 | `flag_ativacao`            | int    | 1 = cliente ativado                       |
 
-### 6.3 Modal de envio
+### 8.3 Modal de envio
 
 Ao clicar em "Executar Simplex", um modal bloqueante cobre a tela enquanto o arquivo é enviado via `POST /api/consultas`. O modal exibe o nome e o tamanho do arquivo e não pode ser fechado pelo usuário. Fecha automaticamente quando o backend responde.
 
-### 6.4 Tratamento do conflito 409
+### 8.4 Tratamento do conflito 409
 
 Se `safra_numero` for informado e a safra já existir, o backend retorna 409. O modal fecha e um aviso inline aparece com dois botões: "Usar safra existente" (reenvia com `usar_safra_existente=true`) e "Cancelar".
 
-### 6.5 Monitoramento
+### 8.5 Monitoramento
 
 Após receber a resposta `pendente` do backend, a consulta aparece na lista de simulações. O polling inicia com uma primeira verificação em 5 segundos (tempo para o background task iniciar) e depois a cada 60 segundos via `GET /api/consultas/{id}`.
 
@@ -171,7 +218,7 @@ Durante a execução, cada consulta exibe as três etapas do pipeline com anima�
 
 Quando o status muda para `concluido`, o componente chama `getClusters(id)` e exibe os resultados abaixo da lista. Quando muda para `erro`, exibe `erro_etapa` e `erro_mensagem` do backend.
 
-### 6.6 Resultados inline
+### 8.6 Resultados inline
 
 Exibidos após a conclusão da consulta ativa ou ao clicar em "Ver resultados" em qualquer consulta concluída da lista.
 
@@ -188,60 +235,76 @@ Exibidos após a conclusão da consulta ativa ou ao clicar em "Ver resultados" e
 
 ---
 
-## 7. Fluxo 3 - Resultados (Resultados.js)
+## 9. Fluxo 3 — Resultados (Resultados.js)
 
 Página independente acessível diretamente pela navbar. Ao montar, carrega todas as consultas concluídas e safras em paralelo e seleciona a mais recente por padrão.
 
-### 7.1 Seletor de simulação
+### 9.1 Seletor de simulação
 
 Dropdown no cabeçalho lista todas as consultas concluídas no formato `{safra} · {arquivo}`. Ao trocar a seleção, os clusters da nova consulta são carregados via `getClusters(id)`.
 
-### 7.2 KPIs
+### 9.2 KPIs
 
 Mesmos quatro campos de `ConsultaResponse`: `n_clusters`, `z_otimo`, `n_clientes_elegiveis`, `n_clientes_ofertados`.
 
-### 7.3 Gráficos
+### 9.3 Gráficos
 
-| Componente     | Dados                                                                                   |
-| -------------- | --------------------------------------------------------------------------------------- |
-| `BarChartSVG`  | Top 15 clusters por `limite_otimizado`, ordenados decrescentemente                      |
-| `DonutChart`   | Distribuição de clientes: Com limite / Elegível sem limite / Inelegível                 |
-| `LineChartSVG` | Evolução do `z_otimo` entre consultas concluídas, ordenadas cronologicamente            |
+| Componente     | Dados                                                                                    |
+| -------------- | ---------------------------------------------------------------------------------------- |
+| `BarChartSVG`  | Top 15 clusters por `limite_otimizado`, ordenados decrescentemente                       |
+| `DonutChart`   | Distribuição de clientes: Com limite / Elegível sem limite / Inelegível                  |
+| `LineChartSVG` | Evolução do `z_otimo` entre consultas concluídas, ordenadas cronologicamente             |
 | `RiskHistSVG`  | Histograma de clusters por faixa de PD média: 0-5%, 5-10%, 10-15%, 15-20%, 20-25%, 25%+ |
 
-### 7.4 Parâmetros utilizados
+### 9.4 Parâmetros utilizados
 
 Seção colapsável exibindo os parâmetros exatos da consulta selecionada (`t`, `LGD`, `u_bar`, `L_max`, `T`). Útil para auditoria e reprodução dos resultados.
 
-### 7.5 Exportação
+### 9.5 Exportação
 
 Botão "Exportar clientes CSV" chama `Api.exportClientes(id)`, que retorna o arquivo gerado pelo backend com todos os campos de `ClienteResultadoResponse`.
 
 ---
 
-## 8. Fluxo 4 - Configurações (ConfigModal.js)
+## 10. Fluxo 4 — Clientes (Clientes.js)
 
-### 8.1 Acesso
+### 10.1 Objetivo
+
+Permite ao analista localizar um cliente específico por token numérico e visualizar sua evolução entre safras: limite otimizado, PD calibrada, cluster atribuído e demais indicadores relevantes para análise individual de crédito.
+
+### 10.2 Busca
+
+Campo de texto aceita apenas tokens numéricos. A validação acontece no frontend antes da requisição. Ao submeter (Enter ou botão "Buscar"), chama `Api.getHistoricoCliente(token)` que mapeia para `GET /api/clientes/{token}`. Erro 404 exibe mensagem inline "Token não encontrado em nenhuma simulação." sem quebrar a tela.
+
+### 10.3 Resultados
+
+Exibidos quando a API retorna ao menos um registro histórico. Cada entrada corresponde a uma safra em que o cliente apareceu. Os dados são apresentados como cards de evolução cronológica, com os principais indicadores por safra: cluster atribuído, limite otimizado, PD calibrada, score cross e status.
+
+---
+
+## 11. Fluxo 5 — Configurações (ConfigModal.js)
+
+### 11.1 Acesso
 
 Disparado pelo último item da navbar (identificado como `isConfig: true`). Sobrepõe a página ativa com fundo semi-transparente. Ao abrir, carrega os valores atuais via `GET /api/config`.
 
-### 8.2 Parâmetros editáveis
+### 11.2 Parâmetros editáveis
 
 Cada parâmetro é exibido como um card com valor atual e botão de edição. Ao clicar em editar, o card expande com um slider cujos limites e passo são definidos em `PARAMS_EDITAVEIS` em `data.js`.
 
 Salvar envia `PUT /api/config` com o payload `{ t, LGD, u_bar, L_max, T }` e atualiza o estado local. Cancelar restaura o valor que veio da API na abertura do modal (não o fallback local de `data.js`).
 
-### 8.3 Restaurar padrões
+### 11.3 Restaurar padrões
 
 Botão no rodapé do modal. Exibe `window.confirm` antes de executar. Envia `PUT /api/config` com os valores de fábrica definidos em `PARAMS_EDITAVEIS.value` e atualiza o banco.
 
-### 8.4 Parâmetros não editáveis
+### 11.4 Parâmetros não editáveis
 
 Grid de dois cards por linha exibindo os parâmetros fixados pela modelagem ou pelo regulador.
 
 ---
 
-## 9. Visualizações de Dados
+## 12. Visualizações de Dados
 
 Todos os gráficos são componentes SVG puros definidos em `Resultados.js` como variáveis globais (`var`), acessíveis por `GerarLimites.js` após o carregamento dos scripts. Não há bibliotecas externas de charting.
 
@@ -253,30 +316,3 @@ Todos os gráficos são componentes SVG puros definidos em `Resultados.js` como 
 | `RiskHistSVG`  | Histograma de risco | Seis faixas de PD média com gradiente visual de verde (baixo risco) a vermelho (alto risco). Conta clusters por faixa.                                                |
 
 Todas as visualizações usam exclusivamente cores da paleta PAN: azul `#2E6DA4` como cor principal, `#E8EFF7` para linhas de grade, paleta terciária (verde/amarelo/vermelho) para status e risco.
-
----
-
-## 10. Como Executar
-
-O front-end sobe automaticamente junto com o backend via `run_server.py`:
-
-```bash
-cd apps/backend
-python run_server.py
-```
-
-Para subir somente o front-end de forma isolada:
-
-```bash
-cd apps/frontend
-python -m http.server 5500
-```
-
-### Dependências (via CDN)
-
-| Biblioteca       | Versão | Finalidade                     |
-| ---------------- | ------ | ------------------------------ |
-| React            | 18     | UI reativa                     |
-| ReactDOM         | 18     | Renderização no DOM            |
-| Babel Standalone | latest | Transpilação de JSX no browser |
-| Tailwind CSS     | CDN    | Estilização utilitária         |
