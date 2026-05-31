@@ -120,6 +120,7 @@ var Navbar = function (props) {
           alt="Banco PAN"
           className="h-8 w-auto object-contain flex-shrink-0"
         />
+        
         <div>
           <div className="text-sm font-bold text-white leading-tight">
             Banco PAN
