@@ -127,7 +127,7 @@ def montar_problema(clusters: pd.DataFrame, params: dict, df: pd.DataFrame) -> P
 
     # R3: teto máximo de limite (uma restrição por cluster)
     A_r3 = np.eye(n).tolist()
-    b_r3 = [float(L_max)] * n
+    b_r3 = np.full(n, float(L_max)).tolist()
 
     return Problema(
         c=c,
