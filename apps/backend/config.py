@@ -21,8 +21,9 @@ _load_env_file(BASE_DIR / ".env")
 
 
 def _csv_env(name: str, default: str) -> list[str]:
-    value = os.getenv(name, default)
-    return [item.strip() for item in value.split(",") if item.strip()]
+    raw = os.getenv(name, default)
+    parts = raw.split(",")
+    return [p.strip() for p in parts if p.strip()]
 
 
 def _path_env(name: str, default: Path) -> Path:
