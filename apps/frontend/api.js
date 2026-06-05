@@ -132,8 +132,8 @@ var Api = {
 
             if (onUpdate) onUpdate(consulta);
 
-            var s = consulta.status_consulta;
-            if (s === "concluido" || s === "erro") {
+            var consultaStatus = consulta.status_consulta;
+            if (consultaStatus === "concluido" || consultaStatus === "erro") {
               resolve(consulta);
             } else {
               // ainda "pendente" ou "executando" - agenda próximo tick
