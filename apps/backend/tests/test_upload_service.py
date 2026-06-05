@@ -48,6 +48,35 @@ class UploadServiceTestCase(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "Nome de arquivo"):
             upload_service.iniciar_upload("../base.parquet")
 
+    def test_salvar_chunk_upload_inexistente_dispara_file_not_found(self) -> None:
+        with self.assertRaisesRegex(FileNotFoundError, "não encontrado"):
+            upload_service.salvar_chunk("nao-existe", 0, b"AAAA")
+
+    def test_finalizar_upload_upload_inexistente_dispara_file_not_found(self) -> None:
+        with self.assertRaisesRegex(FileNotFoundError, "não encontrado"):
+            upload_service.finalizar_upload("nao-existe")
+
+    def test_finalizar_upload_sem_chunks_recusa(self) -> None:
+        sessao = upload_service.iniciar_upload("base.parquet")
+        upload_id = sessao["upload_id"]
+
+        with self.assertRaisesRegex(ValueError, "nenhum chunk"):
+            upload_service.finalizar_upload(upload_id)
+
+    def test_aceita_extensao_parquet_em_maiusculo(self) -> None:
+        sessao = upload_service.iniciar_upload("BASE.PARQUET")
+        upload_id = sessao["upload_id"]
+
+        upload_service.salvar_chunk(upload_id, 0, b"OK")
+        destino = upload_service.finalizar_upload(upload_id)
+
+        self.assertEqual(destino.name, "BASE.PARQUET")
+        self.assertEqual(destino.read_bytes(), b"OK")
+
+    def test_recusa_nome_com_barra_invertida_windows(self) -> None:
+        with self.assertRaisesRegex(ValueError, "Nome de arquivo"):
+            upload_service.iniciar_upload(r"pastas\base.parquet")
+
 
 if __name__ == "__main__":
     unittest.main()
