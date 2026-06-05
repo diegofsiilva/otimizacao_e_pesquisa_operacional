@@ -33,7 +33,7 @@ def calcular_pd_fin_atual(df: pd.DataFrame) -> float:
     Calcula a inadimplência financeira atual da carteira
     como média de pd_calibrada dos clientes elegíveis (flag_filtros == 0).
     """
-    pd_fin_atual = df[df["flag_filtros"] == 0]["pd_calibrada"].mean()
+    pd_fin_atual = df.query("flag_filtros == 0")["pd_calibrada"].mean()
     print(f"PD_fin_atual: {pd_fin_atual:.4f}")
     return pd_fin_atual
 
