@@ -9,7 +9,7 @@ Uso:
     python comparar.py
 
     # rodar também o problema real (clusters + parâmetros)
-    python comparar.py <arquivo_clientes.csv> <parametros.json>
+    python comparar.py <arquivo_calibrado.parquet> <parametros.json>
 
 Os problemas didáticos são os mesmos usados em `simplex.py` (e documentados em
 artefatos/algoritmo_simplex.md). O caso real reusa a mesma pipeline de
@@ -145,28 +145,33 @@ def problemas_didaticos() -> list[tuple[str, Problema]]:
     ]
 
 
-def problema_real(arquivo_csv_nome: str, arquivo_json_nome: str) -> Problema:
+def problema_real(arquivo_parquet_nome: str, arquivo_json_nome: str) -> Problema:
     """
     Reaproveita as funções de main.py para montar o problema real do projeto
     (otimização de limites de crédito) e devolvê-lo no mesmo formato esperado
     pelos dois solvers.
+
+    Parâmetros:
+        arquivo_parquet_nome : nome do parquet calibrado em data/cache/
+                               (ex: base_ref_M1_v2_calibrado.parquet)
+        arquivo_json_nome    : nome do JSON de parâmetros em algoritmo_simplex/input/
+                               (ex: parametros.json)
     """
     import json
     import pandas as pd
-    from main import calcular_pd_fin_atual, garantir_clusters, montar_problema
+    from main import garantir_clusters, montar_problema
 
-    arquivo_csv = (
-        Path(__file__).resolve().parent.parent.parent / "data" / "csv" / arquivo_csv_nome
+    arquivo_parquet = (
+        Path(__file__).resolve().parent.parent.parent / "data" / "cache" / arquivo_parquet_nome
     )
     arquivo_json = Path(__file__).resolve().parent / "input" / arquivo_json_nome
 
-    df = pd.read_csv(arquivo_csv)
+    df = pd.read_parquet(arquivo_parquet)
     with open(arquivo_json) as f:
         params = json.load(f)
 
-    pd_fin_atual = calcular_pd_fin_atual(df)
-    clusters = garantir_clusters(arquivo_csv_nome)
-    return montar_problema(clusters, params, pd_fin_atual)
+    clusters = garantir_clusters(arquivo_parquet_nome, arquivo_json_nome)
+    return montar_problema(clusters, params, df)
 
 
 def main() -> None:
@@ -180,7 +185,7 @@ def main() -> None:
     if len(sys.argv) >= 3:
         try:
             problema = problema_real(sys.argv[1], sys.argv[2])
-            resultados.append(comparar_resultados("Caso real (clusters)", problema))
+            resultados.append(comparar_resultados("Caso real (clusters + parâmetros)", problema))
         except Exception as e:
             print(f"\n[!] Não foi possível montar o caso real: {e}")
 
