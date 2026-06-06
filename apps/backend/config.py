@@ -27,8 +27,8 @@ def _csv_env(name: str, default: str) -> list[str]:
 
 
 def _path_env(name: str, default: Path) -> Path:
-    value = Path(os.getenv(name, str(default)))
-    return value if value.is_absolute() else BASE_DIR / value
+    p = Path(os.getenv(name, str(default)))
+    return p if p.is_absolute() else BASE_DIR / p
 
 
 # ---------------------------------------------------------------------------
