@@ -158,7 +158,7 @@ def exibir_resultado(
         clusters["n_k"].astype(int),
         limites,
     ):
-        print(f"  Cluster {cluster_id}: R$ {limite} (n={n_clientes})")
+        print("  Cluster {}: R$ {} (n={})".format(cluster_id, limite, n_clientes))
 
 
 def executar_pipeline(parquet_path: Path, params: dict) -> dict:
