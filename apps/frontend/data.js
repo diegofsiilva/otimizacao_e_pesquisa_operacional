@@ -14,10 +14,8 @@ var fmt = function (v) {
 // Formata um número como moeda brasileira com duas casas decimais.
 // Ex: 34182456.78 → "R$ 34.182.456,78"
 function fmtZ(v) {
-  return "R$ " + Number(v).toLocaleString("pt-BR", {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2,
-  });
+  var opts = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+  return "R$ " + Number(v).toLocaleString("pt-BR", opts);
 }
 
 // -------------------------------------------------------------------------
