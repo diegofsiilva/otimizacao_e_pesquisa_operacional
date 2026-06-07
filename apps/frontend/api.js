@@ -171,10 +171,8 @@ var Api = {
   // POST /api/uploads/iniciar?nome_arquivo={nome}
   // Retorna: { upload_id }
   iniciarUpload: function (nomeArquivo) {
-    return Api.request(
-      "/uploads/iniciar?nome_arquivo=" + encodeURIComponent(nomeArquivo),
-      { method: "POST" },
-    );
+    var qs = "nome_arquivo=" + encodeURIComponent(nomeArquivo);
+    return Api.request("/uploads/iniciar?" + qs, { method: "POST" });
   },
 
   // POST /api/uploads/{id}/chunk?index={n}  (multipart com o blob do chunk)
