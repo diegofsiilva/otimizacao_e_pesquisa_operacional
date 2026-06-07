@@ -158,3 +158,47 @@ $$
 | Por instância (genérica) | $p$ pivôs | $(p+1)\,m(n+m)$ | $\Theta\big(p\,m(n+m)\big)$ | $\Theta(p\,K^2)$ |
 | Espaço | — | — | $\Theta\big(m(n+m)\big)$ | $\Theta(K^2)$ |
 
+---
+
+## 3. Corretude
+
+A corretude é demonstrada em duas partes, no padrão clássico: **(i) corretude parcial** — *se* o algoritmo termina, a saída é uma solução ótima (ou o status correto); **(ii) terminação** — o algoritmo de fato termina. A corretude parcial é provada por **indução sobre o invariante do laço**; a terminação apoia-se na regra de Bland (1977), exatamente a fonte usada pelo grupo.
+
+### 3.1 Forma padrão e pré-condição
+
+A implementação **não usa Fase I nem variáveis artificiais**: ela inicia diretamente na origem, com a base formada pelas variáveis de folga e `values = b`. Para que essa base inicial seja **factível**, é necessário que $b \ge 0$ (caso contrário alguma folga inicial seria negativa). Essa é a pré-condição do algoritmo.
+
+O PL do projeto a satisfaz **por construção** (ver `montar_problema`): R1 tem lado direito exatamente $0$; R2 tem lado direito $m_k\,CP_k \ge 0$ (fator de alavancagem e capacidade de pagamento não-negativos); R3 tem lado direito $L^{max} > 0$. Portanto $b = [\,0,\; m_k CP_k,\; L^{max}\,] \ge 0$ e a origem é sempre factível.
+
+### 3.2 Invariante principal do laço
+
+> **Invariante $\mathcal{P}$.** No início de cada iteração do laço `while`, o tableau representa uma **solução básica factível (SBF)** do PL. Formalmente, sendo $B$ a submatriz das colunas de $[A\mid I]$ indexadas por `base`:
+>
+> - **(P1) Base válida em forma canônica.** Os $m$ índices de `base` são distintos e as colunas correspondentes de $[A\mid I]$ são linearmente independentes (formam uma base $B$). No tableau, cada coluna básica é o vetor unitário da sua linha; equivalentemente, o tableau armazena $B^{-1}[A\mid I]$ e `values` $= B^{-1}b$.
+> - **(P2) Factibilidade.** `values`$[i] \ge 0$ para todo $i$.
+> - **(P3) Contribuições coerentes.** `contributions`$[i] = \hat c_{\,\texttt{base}[i]}$ para todo $i$.
+> - **(P4) Equivalência ao sistema original.** O ponto $y^*$ com $y^*_{\texttt{base}[i]} = \texttt{values}[i]$ e $y^*_j = 0$ para $j$ não-básico satisfaz $[A\mid I]\,y^* = b$ e $y^* \ge 0$ — ou seja, $y^*$ é uma SBF do PL.
+
+### 3.3 Prova do invariante por indução
+
+**Base da indução (tableau inicial).** Em `construir_tableau_inicial`, `base` $= (n, n+1, \dots, n+m-1)$ são as $m$ folgas, cujas colunas em $[A\mid I]$ formam a identidade $I$; logo $B = I$, $B^{-1} = I$ e o tableau armazenado é $[A \mid I \mid b]$ — exatamente as colunas `x` $= A$, `s` $= I$ e `values` $= b$. Assim **(P1)** vale (colunas unitárias e independentes). **(P2)** vale porque `values` $= b \ge 0$ pela pré-condição da Seção 3.1. **(P3)** vale porque `contributions` $= 0 = \hat c$ das folgas. **(P4)** vale porque $I\cdot y^* = b$ é o próprio sistema padrão. $\checkmark$
+
+**Passo indutivo.** Suponha $\mathcal{P}$ no início de uma iteração que executa um pivô (se o laço encerra, nada há a provar). Seja $j_e$ a variável entrante (custo reduzido $c_{j_e} - z_{j_e} > 0$) e `col` sua coluna no tableau. O teste da razão mínima escolhe a linha de saída
+
+$$
+i^* = \arg\min_i \left\{ \frac{\texttt{values}[i]}{\texttt{col}[i]} \;:\; \texttt{col}[i] > 0 \right\},
+$$
+
+com elemento pivô $p = \texttt{col}[i^*] > 0$. (Se nenhum $\texttt{col}[i] > 0$, cai-se no caso ilimitado da Seção 3.6.) O pivoteamento normaliza a linha $i^*$ por $p$ e elimina a coluna $j_e$ das demais linhas. Verifica-se que $\mathcal{P}$ se mantém:
+
+- **(P1).** Após o pivô, a coluna $j_e$ vira $e_{i^*}$ (vale $1$ na linha $i^*$ e $0$ nas demais). Para qualquer outra coluna básica $e_q$ ($q \ne i^*$), sua entrada na linha $i^*$ já era $0$; logo a normalização da linha $i^*$ e as eliminações `linha_i -= col[i]·linha_{i^*}` não a alteram, e ela permanece unitária. A nova base (igual à anterior com $j_e$ no lugar de `base`$[i^*]$) tem, portanto, colunas unitárias. Ela é de fato uma base porque trocar a coluna `base`$[i^*]$ por $j_e$ preserva a invertibilidade — possível justamente porque a entrada pivô $p \ne 0$. Assim o tableau passa a ser $B'^{-1}[A\mid I]$ para a nova base $B'$. $\checkmark$
+- **(P2) — esta é a razão de ser do teste da razão mínima.** A nova linha pivô: $\texttt{values}[i^*] \leftarrow \texttt{values}[i^*]/p \ge 0$ (ambos $\ge 0$, $p>0$). Para $i \ne i^*$: $\texttt{values}[i] \leftarrow \texttt{values}[i] - \texttt{col}[i]\cdot \dfrac{\texttt{values}[i^*]}{p}$.
+  - Se $\texttt{col}[i] \le 0$: subtrai-se um termo $\le 0$, logo `values`$[i]$ **não diminui** e permanece $\ge 0$.
+  - Se $\texttt{col}[i] > 0$: $\texttt{values}[i] \leftarrow \texttt{col}[i]\left(\dfrac{\texttt{values}[i]}{\texttt{col}[i]} - \dfrac{\texttt{values}[i^*]}{p}\right) \ge 0$, pois $\dfrac{\texttt{values}[i^*]}{p}$ é o **mínimo** das razões, $\le \dfrac{\texttt{values}[i]}{\texttt{col}[i]}$.
+  
+  Em ambos os casos `values` permanece $\ge 0$. $\checkmark$
+- **(P3).** `contributions`$[i^*]$ é atualizada para $\hat c_{j_e}$ (`problema.c[indice_entra]` se for decisão, $0$ se for folga); as demais não mudam e continuam coerentes com suas variáveis básicas inalteradas. $\checkmark$
+- **(P4).** Cada passo do pivô é uma operação elementar de linha, isto é, multiplicação à esquerda por matriz invertível; isso **preserva o conjunto-solução** de $[A\mid I]y = b$. A nova SBF continua satisfazendo o sistema, e por (P2) é $\ge 0$. $\checkmark$
+
+Por indução, $\mathcal{P}$ vale no início de **toda** iteração. $\blacksquare$
+
