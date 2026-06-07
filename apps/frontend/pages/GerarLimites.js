@@ -1607,6 +1607,8 @@ var GerarLimites = function (props) {
                         "Score Cross Médio",
                         "Fator Alavancagem",
                         "Limite Otimizado",
+                        "Limite PuLP",
+                        "Delta",
                         "Status",
                       ].map(function (h) {
                         return (
@@ -1623,6 +1625,9 @@ var GerarLimites = function (props) {
                   <tbody>
                     {clustersPaginados.map(function (c, i) {
                       var temLimite = c.limite_otimizado > 0;
+                      var limitePulp = getLimitePulp(c);
+                      var deltaPulp =
+                        limitePulp == null ? null : c.limite_otimizado - limitePulp;
                       return (
                         <tr
                           key={c.cluster_id}
@@ -1648,6 +1653,20 @@ var GerarLimites = function (props) {
                           </td>
                           <td className="px-3 py-2.5 font-semibold text-[#0D1B2A]">
                             {temLimite ? fmt(c.limite_otimizado) : "-"}
+                          </td>
+                          <td className="px-3 py-2.5 font-semibold text-[#3B4049]">
+                            {limitePulp != null && limitePulp > 0
+                              ? fmt(limitePulp)
+                              : limitePulp === 0
+                                ? "-"
+                                : "N/D"}
+                          </td>
+                          <td className="px-3 py-2.5 text-[#3B4049]">
+                            {deltaPulp == null
+                              ? "N/D"
+                              : deltaPulp === 0
+                                ? "="
+                                : (deltaPulp > 0 ? "+" : "") + fmt(deltaPulp)}
                           </td>
                           <td className="px-3 py-2.5">
                             {temLimite ? (
