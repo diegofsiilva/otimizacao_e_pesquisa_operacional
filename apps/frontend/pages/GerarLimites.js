@@ -420,6 +420,31 @@ var GerarLimites = function (props) {
     return etapa || "Desconhecida";
   }
 
+  function getLimitePulp(c) {
+    if (!c) return null;
+    if (c.limite_pulp != null) return c.limite_pulp;
+    if (c.limite_pulp_otimizado != null) return c.limite_pulp_otimizado;
+    if (c.pulp_limite_otimizado != null) return c.pulp_limite_otimizado;
+    return null;
+  }
+
+  function hasComparacaoPulp(lista) {
+    return !!(
+      lista &&
+      lista.some(function (c) {
+        return getLimitePulp(c) != null;
+      })
+    );
+  }
+
+  function contarClientesAceitosPorLimite(lista, campo) {
+    if (!lista) return 0;
+    return lista.reduce(function (total, c) {
+      var limite = campo === "pulp" ? getLimitePulp(c) : c.limite_otimizado;
+      return limite > 0 ? total + (c.n_clientes || 0) : total;
+    }, 0);
+  }
+
   // -------------------------------------------------------------------------
   // Derivados
   // -------------------------------------------------------------------------
@@ -444,6 +469,11 @@ var GerarLimites = function (props) {
     activeConsulta &&
     (activeConsulta.status_consulta === "pendente" ||
       activeConsulta.status_consulta === "executando");
+
+  var temComparacaoPulp = hasComparacaoPulp(clusters);
+  var clientesAceitosPulp = temComparacaoPulp
+    ? contarClientesAceitosPorLimite(clusters, "pulp")
+    : null;
 
   // Dados para gráfico de barras (top 15 clusters por limite)
   var barData = [];
@@ -1445,13 +1475,18 @@ var GerarLimites = function (props) {
                         selectedConsulta.n_clientes_ofertados,
                       ).toLocaleString("pt-BR")
                     : "-",
-                sub: selectedConsulta.n_clientes_elegiveis
-                  ? (
-                      (selectedConsulta.n_clientes_ofertados /
-                        selectedConsulta.n_clientes_elegiveis) *
-                      100
-                    ).toFixed(1) + "% dos elegíveis"
-                  : "",
+                sub:
+                  (selectedConsulta.n_clientes_elegiveis
+                    ? (
+                        (selectedConsulta.n_clientes_ofertados /
+                          selectedConsulta.n_clientes_elegiveis) *
+                        100
+                      ).toFixed(1) + "% dos elegíveis"
+                    : "") +
+                  (temComparacaoPulp
+                    ? " · PuLP: " +
+                      Number(clientesAceitosPulp).toLocaleString("pt-BR")
+                    : " · PuLP indisponível"),
                 highlight: false,
               },
             ].map(function (k) {
