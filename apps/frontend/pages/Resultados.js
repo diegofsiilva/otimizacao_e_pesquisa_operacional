@@ -471,6 +471,331 @@ var RiskHistSVG = function (props) {
 };
 
 // ============================================================================
+// PolicyFunnelSVG - funil de decisao de credito
+// ============================================================================
+var PolicyFunnelSVG = function (props) {
+  var data = props.data || [];
+  if (data.length === 0) return null;
+
+  var w = 420;
+  var h = 170;
+  var pad = { top: 18, right: 18, bottom: 26, left: 130 };
+  var cw = w - pad.left - pad.right;
+  var rowH = 34;
+  var max =
+    Math.max.apply(
+      null,
+      data.map(function (d) {
+        return d.value;
+      }),
+    ) || 1;
+
+  return (
+    <svg viewBox={"0 0 " + w + " " + h} width="100%">
+      {data.map(function (d, i) {
+        var y = pad.top + i * rowH;
+        var bw = Math.max(4, cw * (d.value / max));
+        var pct = data[0] && data[0].value ? (d.value / data[0].value) * 100 : 0;
+        return (
+          <g key={d.label}>
+            <text
+              x={pad.left - 10}
+              y={y + 16}
+              textAnchor="end"
+              fontSize="11"
+              fontWeight="600"
+              fill="#3B4049"
+            >
+              {d.label}
+            </text>
+            <rect x={pad.left} y={y} width={cw} height="20" fill="#E8EFF7" />
+            <rect x={pad.left} y={y} width={bw} height="20" fill={d.color} />
+            <text
+              x={pad.left + bw + 8 > w - 34 ? pad.left + bw - 8 : pad.left + bw + 8}
+              y={y + 15}
+              textAnchor={pad.left + bw + 8 > w - 34 ? "end" : "start"}
+              fontSize="10"
+              fontWeight="600"
+              fill={pad.left + bw + 8 > w - 34 ? "#fff" : "#0D1B2A"}
+            >
+              {Number(d.value).toLocaleString("pt-BR")} ({pct.toFixed(1)}%)
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
+
+// ============================================================================
+// RiskReturnScatterSVG - retorno liquido esperado x risco medio do cluster
+// ============================================================================
+var RiskReturnScatterSVG = function (props) {
+  var points = props.points || [];
+  if (points.length === 0) return null;
+
+  var w = 460;
+  var h = 230;
+  var pad = { top: 22, right: 20, bottom: 36, left: 58 };
+  var cw = w - pad.left - pad.right;
+  var ch = h - pad.top - pad.bottom;
+
+  var maxPd =
+    Math.max.apply(
+      null,
+      points.map(function (p) {
+        return p.pd;
+      }),
+    ) || 0.01;
+  var minReturn =
+    Math.min.apply(
+      null,
+      points.map(function (p) {
+        return p.netPerClient;
+      }),
+    );
+  var maxReturn =
+    Math.max.apply(
+      null,
+      points.map(function (p) {
+        return p.netPerClient;
+      }),
+    );
+  var maxClients =
+    Math.max.apply(
+      null,
+      points.map(function (p) {
+        return p.clients;
+      }),
+    ) || 1;
+
+  var yMin = Math.min(0, minReturn);
+  var yMax = Math.max(1, maxReturn);
+  if (yMax === yMin) yMax = yMin + 1;
+  var zeroY = pad.top + ch - ((0 - yMin) / (yMax - yMin)) * ch;
+
+  function xScale(pd) {
+    return pad.left + (pd / maxPd) * cw;
+  }
+
+  function yScale(v) {
+    return pad.top + ch - ((v - yMin) / (yMax - yMin)) * ch;
+  }
+
+  function fmtMoney(v) {
+    if (Math.abs(v) >= 1000) return "R$" + (v / 1000).toFixed(1) + "k";
+    return "R$" + Math.round(v);
+  }
+
+  return (
+    <svg viewBox={"0 0 " + w + " " + h} width="100%" style={{ overflow: "visible" }}>
+      {[0, 0.5, 1].map(function (f) {
+        var y = pad.top + ch * (1 - f);
+        var val = yMin + (yMax - yMin) * f;
+        return (
+          <g key={f}>
+            <line x1={pad.left} x2={pad.left + cw} y1={y} y2={y} stroke="#E8EFF7" />
+            <text x={pad.left - 8} y={y + 4} textAnchor="end" fontSize="9" fill="#9C9C9F">
+              {fmtMoney(val)}
+            </text>
+          </g>
+        );
+      })}
+      <line x1={pad.left} x2={pad.left + cw} y1={zeroY} y2={zeroY} stroke="#DC2F37" strokeDasharray="4 4" />
+      {[0, 0.5, 1].map(function (f) {
+        var x = pad.left + cw * f;
+        var pd = maxPd * f * 100;
+        return (
+          <g key={f}>
+            <line x1={x} x2={x} y1={pad.top} y2={pad.top + ch} stroke="#F3F4F9" />
+            <text x={x} y={h - 14} textAnchor="middle" fontSize="9" fill="#9C9C9F">
+              {pd.toFixed(1)}%
+            </text>
+          </g>
+        );
+      })}
+      {points.map(function (p) {
+        var r = 4 + 10 * Math.sqrt(p.clients / maxClients);
+        var color = p.limit > 0 && p.netPerClient >= 0 ? "#0B8AA5" : p.limit > 0 ? "#FAE95D" : "#FF5D5C";
+        return (
+          <g key={p.id}>
+            <circle
+              cx={xScale(p.pd)}
+              cy={yScale(p.netPerClient)}
+              r={r}
+              fill={color}
+              fillOpacity="0.75"
+              stroke="#fff"
+              strokeWidth="1.5"
+            />
+            {p.rank <= 5 && (
+              <text x={xScale(p.pd)} y={yScale(p.netPerClient) - r - 4} textAnchor="middle" fontSize="8" fontWeight="600" fill="#3B4049">
+                CLU-{p.id}
+              </text>
+            )}
+          </g>
+        );
+      })}
+      <text x={pad.left + cw / 2} y={h - 2} textAnchor="middle" fontSize="10" fill="#9C9C9F">
+        PD media do cluster
+      </text>
+    </svg>
+  );
+};
+
+// ============================================================================
+// ExposureParetoSVG - concentracao acumulada da exposicao aprovada
+// ============================================================================
+var ExposureParetoSVG = function (props) {
+  var data = props.data || [];
+  if (data.length === 0) return null;
+
+  var w = 460;
+  var h = 220;
+  var pad = { top: 22, right: 38, bottom: 34, left: 54 };
+  var cw = w - pad.left - pad.right;
+  var ch = h - pad.top - pad.bottom;
+  var maxExposure =
+    Math.max.apply(
+      null,
+      data.map(function (d) {
+        return d.exposure;
+      }),
+    ) || 1;
+  var bw = Math.floor((cw / data.length) * 0.52);
+
+  var total = data.reduce(function (s, d) {
+    return s + d.exposure;
+  }, 0);
+  var running = 0;
+  var linePts = data.map(function (d, i) {
+    running += d.exposure;
+    return {
+      x: pad.left + (cw / data.length) * i + cw / data.length / 2,
+      y: pad.top + ch - (running / total) * ch,
+      pct: running / total,
+    };
+  });
+  var polyline = linePts
+    .map(function (p) {
+      return p.x + "," + p.y;
+    })
+    .join(" ");
+
+  function fmtShort(v) {
+    if (v >= 1000000000) return "R$" + (v / 1000000000).toFixed(1) + "B";
+    if (v >= 1000000) return "R$" + (v / 1000000).toFixed(0) + "M";
+    if (v >= 1000) return "R$" + (v / 1000).toFixed(0) + "k";
+    return "R$" + Math.round(v);
+  }
+
+  return (
+    <svg viewBox={"0 0 " + w + " " + h} width="100%" style={{ overflow: "visible" }}>
+      {[0, 0.5, 1].map(function (f) {
+        var y = pad.top + ch * (1 - f);
+        return (
+          <g key={f}>
+            <line x1={pad.left} x2={pad.left + cw} y1={y} y2={y} stroke="#E8EFF7" />
+            {f > 0 && (
+              <text x={pad.left - 8} y={y + 4} textAnchor="end" fontSize="9" fill="#9C9C9F">
+                {fmtShort(maxExposure * f)}
+              </text>
+            )}
+            <text x={pad.left + cw + 8} y={y + 4} fontSize="9" fill="#9C9C9F">
+              {(f * 100).toFixed(0)}%
+            </text>
+          </g>
+        );
+      })}
+      {data.map(function (d, i) {
+        var x = pad.left + (cw / data.length) * i + (cw / data.length - bw) / 2;
+        var bh = Math.max(2, ch * (d.exposure / maxExposure));
+        var y = pad.top + ch - bh;
+        return (
+          <g key={d.label}>
+            <rect x={x} y={y} width={bw} height={bh} fill="#2E6DA4" />
+            <text x={x + bw / 2} y={h - 16} textAnchor="middle" fontSize="8" fill="#9C9C9F">
+              {d.label}
+            </text>
+          </g>
+        );
+      })}
+      <polyline points={polyline} fill="none" stroke="#DC2F37" strokeWidth="2.5" />
+      {linePts.map(function (p, i) {
+        return <circle key={i} cx={p.x} cy={p.y} r="3" fill="#DC2F37" stroke="#fff" strokeWidth="1.5" />;
+      })}
+    </svg>
+  );
+};
+
+// ============================================================================
+// RiskBandAllocationSVG - exposicao por faixa de risco
+// ============================================================================
+var RiskBandAllocationSVG = function (props) {
+  var bands = props.bands || [];
+  if (bands.length === 0) return null;
+
+  var w = 460;
+  var h = 205;
+  var pad = { top: 22, right: 16, bottom: 42, left: 54 };
+  var cw = w - pad.left - pad.right;
+  var ch = h - pad.top - pad.bottom;
+  var maxExposure =
+    Math.max.apply(
+      null,
+      bands.map(function (b) {
+        return b.exposure;
+      }),
+    ) || 1;
+  var bw = Math.floor((cw / bands.length) * 0.58);
+  var colors = ["#0B8AA5", "#67DE98", "#FAE95D", "#FF8C6B", "#FF5D5C"];
+
+  function fmtShort(v) {
+    if (v >= 1000000000) return "R$" + (v / 1000000000).toFixed(1) + "B";
+    if (v >= 1000000) return "R$" + (v / 1000000).toFixed(0) + "M";
+    if (v >= 1000) return "R$" + (v / 1000).toFixed(0) + "k";
+    return "R$" + Math.round(v);
+  }
+
+  return (
+    <svg viewBox={"0 0 " + w + " " + h} width="100%" style={{ overflow: "visible" }}>
+      {[0, 0.5, 1].map(function (f) {
+        var y = pad.top + ch * (1 - f);
+        return (
+          <g key={f}>
+            <line x1={pad.left} x2={pad.left + cw} y1={y} y2={y} stroke="#E8EFF7" />
+            {f > 0 && (
+              <text x={pad.left - 8} y={y + 4} textAnchor="end" fontSize="9" fill="#9C9C9F">
+                {fmtShort(maxExposure * f)}
+              </text>
+            )}
+          </g>
+        );
+      })}
+      {bands.map(function (b, i) {
+        var x = pad.left + (cw / bands.length) * i + (cw / bands.length - bw) / 2;
+        var bh = b.exposure > 0 ? Math.max(2, ch * (b.exposure / maxExposure)) : 0;
+        var y = pad.top + ch - bh;
+        return (
+          <g key={b.label}>
+            {bh > 0 && <rect x={x} y={y} width={bw} height={bh} fill={colors[i]} />}
+            <text x={x + bw / 2} y={y - 5} textAnchor="middle" fontSize="9" fontWeight="600" fill="#3B4049">
+              {b.clusters}
+            </text>
+            <text x={x + bw / 2} y={h - 22} textAnchor="middle" fontSize="8" fill="#9C9C9F">
+              {b.label}
+            </text>
+            <text x={x + bw / 2} y={h - 10} textAnchor="middle" fontSize="8" fill="#9C9C9F">
+              {b.approval.toFixed(0)}% ofert.
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
+
+// ============================================================================
 // Resultados
 // ============================================================================
 var Resultados = function (props) {
