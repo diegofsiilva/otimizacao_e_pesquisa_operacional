@@ -8,10 +8,11 @@
 // mais recente. O seletor no topo permite alternar entre simulações passadas.
 //
 // Gráficos com dados reais:
-//   BarChartSVG  → top 15 clusters por limite_otimizado
-//   DonutChart   → distribuição de clientes (ofertado / elegível s/ limite / inelegível)
-//   LineChartSVG → evolução do z_otimo entre safras (quando há 2+ consultas)
-//   RiskHistSVG  → histograma de PD média por faixa de risco (clusters)
+//   RiskReturnScatterSVG → retorno líquido esperado x PD média
+//   PolicyFunnelSVG      → funil de elegibilidade/oferta
+//   ExposureParetoSVG    → concentração acumulada de exposição
+//   RiskBandAllocationSVG → exposição aprovada por faixa de PD
+//   LineChartSVG         → evolução do z_otimo entre safras
 
 // ============================================================================
 // BarChartSVG - barras verticais, label em cada barra
@@ -664,9 +665,10 @@ var ExposureParetoSVG = function (props) {
     ) || 1;
   var bw = Math.floor((cw / data.length) * 0.52);
 
-  var total = data.reduce(function (s, d) {
-    return s + d.exposure;
-  }, 0);
+  var total =
+    data.reduce(function (s, d) {
+      return s + d.exposure;
+    }, 0) || 1;
   var running = 0;
   var linePts = data.map(function (d, i) {
     running += d.exposure;
@@ -954,37 +956,145 @@ var Resultados = function (props) {
     }
   }
 
-  // Top 15 clusters por limite (bar chart)
-  var barData = clusters
-    .slice()
-    .sort(function (a, b) {
-      return b.limite_otimizado - a.limite_otimizado;
-    })
-    .slice(0, 15)
-    .map(function (c) {
-      return { label: "CLU-" + c.cluster_id, value: c.limite_otimizado };
-    });
+  var modelParams = selectedConsulta ? selectedConsulta.parametros || {} : {};
+  var t = modelParams.t != null ? modelParams.t : 0.0175;
+  var LGD = modelParams.LGD != null ? modelParams.LGD : 0.8;
+  var uBar = modelParams.u_bar != null ? modelParams.u_bar : 0.75;
+  var T = modelParams.T != null ? modelParams.T : 22;
 
-  // Donut: distribuição de clientes
-  var donutData = [];
+  function getExposure(c) {
+    return (
+      Math.max(0, c.limite_otimizado || 0) *
+      Math.max(0, c.n_clientes || 0)
+    );
+  }
+
+  function getNetPerClient(c) {
+    var limit = Math.max(0, c.limite_otimizado || 0);
+    if (limit === 0) return 0;
+    var takeRate = c.pi_media != null ? c.pi_media : 1;
+    var revenue = takeRate * t * uBar * T * limit;
+    var loss = takeRate * (c.pd_media || 0) * LGD * limit;
+    return revenue - loss;
+  }
+
+  // Funil de decisão: da base total até a oferta final.
+  var funnelData = [];
   if (selectedConsulta) {
     var nOfer = selectedConsulta.n_clientes_ofertados || 0;
     var nEleg = selectedConsulta.n_clientes_elegiveis || 0;
     var nTotal = selectedConsulta.n_clientes_total || 0;
-    donutData = [
-      { name: "Com limite", value: nOfer, color: "#67DE98" },
+    funnelData = [
+      { label: "Base total", value: nTotal, color: "#2E6DA4" },
+      { label: "Elegiveis", value: nEleg, color: "#0B8AA5" },
+      { label: "Com oferta", value: nOfer, color: "#67DE98" },
       {
-        name: "Elegível, sem limite",
+        label: "Sem oferta",
         value: Math.max(0, nEleg - nOfer),
-        color: "#FAE95D",
-      },
-      {
-        name: "Inelegível",
-        value: Math.max(0, nTotal - nEleg),
-        color: "#B8D4EC",
+        color: "#FF5D5C",
       },
     ];
   }
+
+  var viableClusters = clusters.filter(function (c) {
+    return c.limite_otimizado > 0;
+  });
+  var totalExposure = viableClusters.reduce(function (s, c) {
+    return s + getExposure(c);
+  }, 0);
+  var totalExpectedReturn = viableClusters.reduce(function (s, c) {
+    return s + getNetPerClient(c) * (c.n_clientes || 0);
+  }, 0);
+
+  var policyPoints = clusters
+    .slice()
+    .map(function (c) {
+      return {
+        id: c.cluster_id,
+        pd: c.pd_media || 0,
+        clients: c.n_clientes || 0,
+        limit: c.limite_otimizado || 0,
+        netPerClient: getNetPerClient(c),
+        rank: 99,
+      };
+    })
+    .sort(function (a, b) {
+      return b.netPerClient * b.clients - a.netPerClient * a.clients;
+    })
+    .map(function (p, idx) {
+      p.rank = idx + 1;
+      return p;
+    });
+
+  var paretoData = viableClusters
+    .slice()
+    .sort(function (a, b) {
+      return getExposure(b) - getExposure(a);
+    })
+    .slice(0, 12)
+    .map(function (c) {
+      return { label: "C" + c.cluster_id, exposure: getExposure(c) };
+    });
+
+  var riskBandDefs = [
+    { label: "0-5%", min: 0, max: 0.05 },
+    { label: "5-10%", min: 0.05, max: 0.1 },
+    { label: "10-15%", min: 0.1, max: 0.15 },
+    { label: "15-20%", min: 0.15, max: 0.2 },
+    { label: "20%+", min: 0.2, max: Infinity },
+  ];
+  var riskBands = riskBandDefs.map(function (b) {
+    var bucket = clusters.filter(function (c) {
+      return (c.pd_media || 0) >= b.min && (c.pd_media || 0) < b.max;
+    });
+    var offered = bucket.filter(function (c) {
+      return c.limite_otimizado > 0;
+    });
+    var exposure = offered.reduce(function (s, c) {
+      return s + getExposure(c);
+    }, 0);
+    return {
+      label: b.label,
+      exposure: exposure,
+      clusters: offered.length,
+      approval: bucket.length ? (offered.length / bucket.length) * 100 : 0,
+    };
+  });
+
+  var policyInsights = [
+    {
+      label: "Exposição aprovada",
+      value: fmt(totalExposure),
+      sub: viableClusters.length + " clusters com limite",
+    },
+    {
+      label: "Retorno esperado",
+      value: fmtZ(totalExpectedReturn),
+      sub: "receita menos perda esperada",
+    },
+    {
+      label: "PD média ofertada",
+      value:
+        totalExposure > 0
+          ? (
+              (viableClusters.reduce(function (s, c) {
+                return s + (c.pd_media || 0) * getExposure(c);
+              }, 0) /
+                totalExposure) *
+              100
+            ).toFixed(2) + "%"
+          : "-",
+      sub: "ponderada por exposição",
+    },
+    {
+      label: "Ticket médio",
+      value:
+        selectedConsulta && selectedConsulta.n_clientes_ofertados
+          ? fmt(totalExposure / selectedConsulta.n_clientes_ofertados)
+          : "-",
+      sub: "limite médio ofertado",
+    },
+  ];
 
   // Evolução do z entre consultas (linha temporal, ordenada da mais antiga)
   var evolucaoData = consultas
@@ -1193,70 +1303,13 @@ var Resultados = function (props) {
       {/* KPI cards */}
       {selectedConsulta && (
         <div className="grid grid-cols-4 gap-4">
-          {[
-            {
-              label: "Total de Clusters",
-              value:
-                selectedConsulta.n_clusters != null
-                  ? String(selectedConsulta.n_clusters)
-                  : "-",
-              sub: "segmentação CART",
-              highlight: false,
-            },
-            {
-              label: "Valor Objetivo (z)",
-              value:
-                selectedConsulta.z_otimo != null
-                  ? fmtZ(selectedConsulta.z_otimo)
-                  : "-",
-              sub:
-                selectedConsulta.status_lp === "multiplas_solucoes"
-                  ? "Múltiplas soluções"
-                  : "Solução ótima · Simplex",
-              highlight: true,
-            },
-            {
-              label: "Clientes Elegíveis",
-              value:
-                selectedConsulta.n_clientes_elegiveis != null
-                  ? Number(
-                      selectedConsulta.n_clientes_elegiveis,
-                    ).toLocaleString("pt-BR")
-                  : "-",
-              sub:
-                selectedConsulta.n_clientes_total != null
-                  ? "de " +
-                    Number(selectedConsulta.n_clientes_total).toLocaleString(
-                      "pt-BR",
-                    ) +
-                    " na base"
-                  : "na base",
-              highlight: false,
-            },
-            {
-              label: "Clientes Ofertados",
-              value:
-                selectedConsulta.n_clientes_ofertados != null
-                  ? Number(
-                      selectedConsulta.n_clientes_ofertados,
-                    ).toLocaleString("pt-BR")
-                  : "-",
-              sub: selectedConsulta.n_clientes_elegiveis
-                ? (
-                    (selectedConsulta.n_clientes_ofertados /
-                      selectedConsulta.n_clientes_elegiveis) *
-                    100
-                  ).toFixed(1) + "% dos elegíveis"
-                : "",
-              highlight: false,
-            },
-          ].map(function (k) {
+          {policyInsights.map(function (k, idx) {
             return (
               <div
                 key={k.label}
                 className={
                   "border shadow-sm p-5 " +
-                  (k.highlight
+                  (idx === 1
                     ? "border-[#2E6DA4]/40 bg-[#D6E8F5]"
                     : "bg-white border-[#E8EFF7]")
                 }
@@ -1267,7 +1320,7 @@ var Resultados = function (props) {
                 <div
                   className={
                     "text-xl font-bold mb-1 leading-tight " +
-                    (k.highlight ? "text-[#2E6DA4]" : "text-[#0D1B2A]")
+                    (idx === 1 ? "text-[#2E6DA4]" : "text-[#0D1B2A]")
                   }
                 >
                   {k.value}
@@ -1298,54 +1351,31 @@ var Resultados = function (props) {
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            {/* Limites por cluster */}
+            {/* Risco x retorno */}
             <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
               <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
-                Top 15 Clusters por Limite
+                Risco x Retorno por Cluster
               </div>
               <div className="text-xs text-[#9C9C9F] mb-4">
-                Limite ótimo atribuído a cada cluster pelo Simplex (R$)
+                Bolhas maiores representam mais clientes; linha vermelha marca retorno zero
               </div>
-              {barData.length > 0 ? (
-                <BarChartSVG data={barData} />
+              {policyPoints.length > 0 ? (
+                <RiskReturnScatterSVG points={policyPoints} />
               ) : (
                 <p className="text-xs text-[#9C9C9F]">Sem dados de clusters.</p>
               )}
             </div>
 
-            {/* Distribuição de clientes */}
+            {/* Funil de decisao */}
             <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
               <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
-                Distribuição de Clientes
+                Funil da Política de Crédito
               </div>
               <div className="text-xs text-[#9C9C9F] mb-4">
-                Proporção por elegibilidade e oferta de limite
+                Passagem da base total para elegibilidade e oferta efetiva
               </div>
-              {donutData.length > 0 ? (
-                <div className="flex items-center gap-6">
-                  <DonutChart data={donutData} />
-                  <div className="space-y-3 flex-1">
-                    {donutData.map(function (d) {
-                      return (
-                        <div
-                          key={d.name}
-                          className="flex items-center gap-2 text-sm"
-                        >
-                          <div
-                            className="w-2.5 h-2.5 flex-shrink-0"
-                            style={{ background: d.color }}
-                          />
-                          <span className="font-medium text-[#3B4049] flex-1">
-                            {d.name}
-                          </span>
-                          <span className="font-semibold text-[#0D1B2A]">
-                            {Number(d.value).toLocaleString("pt-BR")}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
+              {funnelData.length > 0 ? (
+                <PolicyFunnelSVG data={funnelData} />
               ) : (
                 <p className="text-xs text-[#9C9C9F]">
                   Sem dados de distribuição.
@@ -1356,31 +1386,46 @@ var Resultados = function (props) {
 
           {/* Gráficos - linha 2 */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Evolução do z entre safras */}
+            {/* Concentracao de exposicao */}
             <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
               <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
-                Evolução do Valor Objetivo
+                Concentração de Exposição
               </div>
               <div className="text-xs text-[#9C9C9F] mb-4">
-                z ótimo (R$) ao longo das simulações concluídas
+                Barras mostram exposição por cluster; linha vermelha é acumulado
               </div>
-              <LineChartSVG data={evolucaoData} />
+              {paretoData.length > 0 ? (
+                <ExposureParetoSVG data={paretoData} />
+              ) : (
+                <p className="text-xs text-[#9C9C9F]">Sem clusters ofertados.</p>
+              )}
             </div>
 
-            {/* Histograma de risco */}
+            {/* Alocacao por risco */}
             <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
               <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
-                Distribuição de Risco
+                Alocação por Faixa de PD
               </div>
               <div className="text-xs text-[#9C9C9F] mb-4">
-                Número de clusters por faixa de PD média
+                Exposição aprovada por risco, com taxa de oferta por faixa
               </div>
               {clusters.length > 0 ? (
-                <RiskHistSVG clusters={clusters} />
+                <RiskBandAllocationSVG bands={riskBands} />
               ) : (
                 <p className="text-xs text-[#9C9C9F]">Sem dados de clusters.</p>
               )}
             </div>
+          </div>
+
+          {/* Gráficos - linha 3 */}
+          <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+            <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
+              Evolução do Valor Objetivo
+            </div>
+            <div className="text-xs text-[#9C9C9F] mb-4">
+              Mantém a trilha histórica das simulações para comparação de safras
+            </div>
+            <LineChartSVG data={evolucaoData} />
           </div>
         </div>
       )}
