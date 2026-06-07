@@ -202,3 +202,93 @@ com elemento pivô $p = \texttt{col}[i^*] > 0$. (Se nenhum $\texttt{col}[i] > 0$
 
 Por indução, $\mathcal{P}$ vale no início de **toda** iteração. $\blacksquare$
 
+### 3.4 Terminação
+
+> **Lema (Bland, 1977).** Se, em todo pivô, (i) a variável **entrante** é a de menor índice com custo reduzido positivo **e** (ii) entre as linhas que empatam no teste da razão mínima escolhe-se como **saínte** a variável básica de menor índice, então nenhuma base se repete ao longo da execução; em particular, não há ciclagem.
+
+A implementação aplica **integralmente a cláusula (i)**: `indice_entra` é o primeiro $j$ com `todos_cj_zj[j] > 0`, e como os índices globais $0,\dots,n-1$ correspondem a $x_1,\dots,x_n$ e $n,\dots,n+m-1$ às folgas $s_1,\dots,s_m$, "primeiro $j$" é exatamente "menor índice de variável". Pelo Lema, como há no máximo $\binom{n+m}{m}$ bases e cada iteração produz uma base inédita (Seção 3.3 garante que cada iteração resulta numa base válida), o laço executa um número finito de iterações e **termina**. Esse é o motivo de a regra de Bland ser adotada em vez da regra de Dantzig (maior custo reduzido): a regra de Dantzig pode **ciclar** sob degeneração, que é frequente neste PL — R2 e R3 impõem dois tetos sobre a mesma variável $L_k$, gerando empates no teste da razão. O próprio Dantzig tratou a finitude sob degeneração por um **método de perturbação** dos lados direitos (DANTZIG, 1963, cap. 10, "Finiteness of the Simplex Method Under Perturbation"); o grupo optou pela alternativa combinatória de Bland (1977), mais simples de implementar por ser apenas uma regra de desempate por índice, sem alterar os dados do problema. A terminação aqui **não é cosmética**: depende criticamente de Bland (1977), fonte citada em [`artigo.md`](./artigo.md).
+
+> **Ressalva de rigor (diferença implementação × teoria).** A cláusula (ii) é implementada apenas **parcialmente**. O teste da razão em `simplex.py` (linhas 145–150) usa desempate estrito (`razao < menor_razao`), de modo que, entre razões empatadas, mantém a **primeira linha** encontrada — ou seja, o **menor índice de linha** $i$, e não a variável básica de menor índice `tableau.base[i]`. Como `base` deixa de ser ordenado após o primeiro pivô, esses dois critérios podem divergir. Estritamente, o teorema de finitude de Bland (1977) pressupõe a cláusula (ii) por **índice de variável**; com desempate por posição de linha, a garantia formal anticiclagem não está plenamente coberta pela fonte. Na prática, nenhuma ciclagem foi observada nos casos testados (Seção 3.5 e [`comparacao_simplex.md`](./comparacao_simplex.md)), e o número de pivôs manteve-se baixo (Seção 2.6); ainda assim, **para uma garantia teórica completa**, recomenda-se ajustar o desempate da saínte para o menor `tableau.base[i]` entre as razões mínimas. Esse ajuste é $O(m)$ e não altera a complexidade.
+
+### 3.5 Corretude parcial: condição de otimalidade
+
+> **Lema (otimalidade — Simplex clássico).** Para qualquer ponto factível $y$ do PL, vale a identidade
+> $$ z(y) \;=\; z(y^*) \;+\; \sum_{j \in \mathcal{N}} (c_j - z_j)\, y_j, $$
+> onde $y^*$ é a SBF corrente, $\mathcal{N}$ é o conjunto de variáveis não-básicas e $c_j - z_j$ é o custo reduzido (exatamente o que `calcular_cj_zj` computa, pois $z_j = \sum_i \texttt{contributions}[i]\cdot \texttt{col}_j[i]$). Essa identidade e o critério dela derivado ($c_j - z_j \le 0\ \forall j \Rightarrow$ ótimo) constituem o resultado central do Simplex original, cuja prova formal — junto ao teorema da dualidade — está em Dantzig (1963, cap. 6, "Proof of the Simplex Algorithm and the Duality Theorem", p. 120–146).
+
+*Dedução.* Particionando $y = (y_B, y_N)$, de $[A\mid I]y = b$ vem $y_B = B^{-1}b - B^{-1}N\,y_N$. Substituindo na função objetivo:
+
+$$
+z(y) = \hat c_B^\top y_B + \hat c_N^\top y_N = \hat c_B^\top B^{-1}b + \sum_{j\in\mathcal{N}} \big(\hat c_j - \hat c_B^\top B^{-1}[A\mid I]_j\big) y_j = z(y^*) + \sum_{j\in\mathcal{N}} (c_j - z_j)\,y_j. \qquad\square
+$$
+
+O laço só encerra quando **todos** os custos reduzidos são $\le 0$ (`todos_nao_positivos`). Nesse momento, para qualquer $y$ factível: cada $y_j \ge 0$ e cada $(c_j - z_j) \le 0$, logo $\sum_{j\in\mathcal{N}}(c_j - z_j)y_j \le 0$ e portanto
+
+$$
+z(y) \le z(y^*) \quad \text{para todo } y \text{ factível.}
+$$
+
+Ou seja, $y^*$ é um **maximizador global** do PL. O vetor retornado `x` é a projeção de $y^*$ sobre as variáveis de decisão (linhas 191–194 de `simplex.py`), e $z$ é recomputado como $c^\top x$. Combinando com a terminação (Seção 3.4): **o algoritmo termina e retorna a solução ótima**. $\blacksquare$
+
+A prova é coerente com a validação empírica de [`comparacao_simplex.md`](./comparacao_simplex.md): nos quatro casos testados (incluindo o caso real com 7 clusters), o valor ótimo $z$ coincidiu com o do solver CBC/PuLP dentro de $10^{-6}$, com diferença residual $\approx 1{,}5\times 10^{-8}$ atribuível apenas a aritmética de ponto flutuante.
+
+### 3.6 Casos especiais
+
+**Problema ilimitado.** Se em alguma iteração existe entrante $j_e$ com custo reduzido $> 0$ mas $\texttt{col}[i] \le 0$ para toda linha $i$, então a semirreta $y(\theta) = y^* + \theta d$ (que aumenta $y_{j_e}$ em $\theta$ e ajusta as básicas em $-\theta\,\texttt{col}[i] \ge 0$) é factível para todo $\theta \ge 0$, e $z(y(\theta)) = z(y^*) + \theta\,(c_{j_e} - z_{j_e}) \to +\infty$. O PL é genuinamente ilimitado e a implementação corretamente lança `ValueError("O problema é ilimitado.")`. $\checkmark$
+
+**Múltiplas soluções.** Ao atingir a otimalidade, se alguma variável **não-básica** $j$ tem custo reduzido exatamente $0$, então mover-se nessa direção mantém $z$ constante (o termo correspondente no Lema da Seção 3.5 é nulo), gerando um ótimo alternativo. A implementação sinaliza isso com o status `multiplas_solucoes`. A sinalização é **correta** quanto à *existência* de uma direção ótima alternativa, mas há duas diferenças em relação à teoria, discutidas na Seção 5: (i) ela não enumera nem parametriza a face ótima — retorna apenas um vértice e o status; (ii) usa comparação exata `== 0.0`, numericamente frágil.
+
+---
+
+## 4. Origem nas fontes e impacto das adaptações
+
+A tabela a seguir mapeia cada componente do resolvedor à sua origem e ao impacto das adaptações do grupo. As colunas de impacto respondem diretamente ao requisito de explicar "o que vem do Simplex original e como as adaptações afetam complexidade e corretude".
+
+| Componente | Origem | Adaptação do grupo | Impacto em complexidade | Impacto em corretude |
+| ---------- | ------ | ------------------ | ----------------------- | -------------------- |
+| Tableau, folgas, teste da razão, condição de otimalidade, dualidade | Simplex clássico — Dantzig (1951; 1963, cap. 5–6, p. 94–146) | tableau **denso** explícito | $\Theta(mN)$ por pivô e $\Theta(mN)$ de memória | nenhum (mesma álgebra) |
+| Regra de entrada na base | **Bland (1977)** | cláusula da entrante integral; desempate da saínte por linha | pior caso continua exponencial; pode exigir mais pivôs que Dantzig | **garante terminação** sob degeneração (com ressalva da Seção 3.4) |
+| Início na origem sem Fase I | simplificação da forma canônica | sem variáveis artificiais | elimina um PL auxiliar (fator constante) | correto **somente se** $b \ge 0$ |
+| Status `multiplas_solucoes` | extensão própria | adicionada | $+O(N)$ por término (desprezível) | correta na existência; frágil por `== 0.0` |
+| Cópia defensiva de `b` | correção de bug (via PuLP) | `list(problema.b)` | $+\Theta(m)$ (desprezível) | **necessária** para chamadas repetidas |
+| Pós-otimização (arredondamento) | regra de negócio do parceiro | fora do núcleo do Simplex | $O(K)$ após o PL | move a solução para fora do ótimo contínuo de forma limitada |
+
+### 4.1 Início na origem sem Fase I — a adaptação de maior impacto
+
+A formulação original resolve PLs gerais via **duas fases** (Fase I encontra uma SBF inicial com variáveis artificiais; Fase II otimiza), conforme Dantzig (1963, cap. 5, p. 94–119). O grupo eliminou a Fase I e inicia diretamente na origem com a base de folgas, aproveitando que o PL deste projeto já está na forma canônica com $b \ge 0$.
+
+- **Complexidade:** remove-se a resolução de um PL auxiliar — economia de um **fator constante** (na prática, quase metade do trabalho de uma execução em duas fases). Não há mudança assintótica: o custo é governado pela Fase II.
+- **Corretude:** a adaptação é correta **se e somente se** $b \ge 0$ (Seção 3.1). Esta é uma **pré-condição não verificada em tempo de execução**: se alguma instância tivesse $b_i < 0$, a base da indução (P2) falharia silenciosamente (`values[i] < 0`) e o algoritmo retornaria um resultado infactível **sem emitir erro**. Para o PL do projeto isso nunca ocorre, pois R1/R2/R3 garantem $b \ge 0$ por construção. **Recomendação:** documentar a pré-condição e, idealmente, adicionar uma checagem `assert all(bi >= 0 for bi in b)` para tornar a falha explícita caso o modelo evolua e passe a admitir restrições $\ge$ ou lados direitos negativos.
+
+### 4.2 Regra de Bland
+
+Adotada de Bland (1977). É o que sustenta a **terminação** (Seção 3.4) num PL estruturalmente degenerado (dois tetos por cluster). A cláusula da variável entrante é implementada integralmente; a do desempate da saínte é parcial (por posição de linha, não por índice de variável — ver ressalva na Seção 3.4), o que recomenda um pequeno ajuste para garantia teórica plena. O custo é não ter a melhor velocidade de pivoteamento possível — a regra de Bland costuma exigir mais pivôs que a de Dantzig e seu pior caso permanece exponencial — mas, dada a estrutura quase-separável do problema, o número de pivôs medido é pequeno ($p = O(K)$, Seção 2.6), de modo que o trade-off robustez × velocidade é favorável aqui.
+
+### 4.3 Detecção de múltiplas soluções — diferença implementação × teoria
+
+É uma extensão além do Simplex clássico. Em relação à teoria há duas consequências práticas:
+
+1. **Não enumera a face ótima.** O status apenas avisa que existe outra direção ótima; o produto de negócio, se precisar escolher entre limites equivalentes, teria de explorar a face ótima manualmente (p.ex. pivoteando na variável de custo reduzido nulo). Isso é uma limitação de escopo, não um erro.
+2. **Comparação exata `== 0.0`.** Por usar igualdade exata em ponto flutuante, um ótimo alternativo genuíno com custo reduzido $\approx 10^{-12}$ (resíduo numérico) pode **não** ser sinalizado, e, simetricamente, um resíduo de arredondamento poderia ser lido como zero. Como a detecção é apenas informativa (não altera $x$ nem $z$), o impacto sobre a otimalidade é nulo; mas, para robustez, o ideal seria um teste por tolerância (`abs(cj_zj) <= eps`), consistente com a tolerância de $10^{-6}$ já usada na comparação com o PuLP.
+
+### 4.4 Tableau denso × Simplex revisado
+
+A escolha do tableau denso (manter e atualizar todas as colunas) é deliberada e alinhada à justificativa do [`artigo.md`](./artigo.md): **transparência e auditabilidade** das regras de entrada/saída e do pivoteamento. A consequência é custo $\Theta(mN)$ por pivô e memória $\Theta(mN)$. Um **Simplex revisado** (mantendo apenas $B^{-1}$ em forma-produto) reduziria o trabalho por iteração e o consumo de memória em problemas esparsos e grandes. Para a escala atual ($K = 7$) e mesmo para a entrega final ($K \ge 100$, $m \approx 201$), o tableau denso é perfeitamente viável; a migração para Simplex revisado (ou para um solver consolidado como `scipy.optimize.linprog` / PuLP) só se justificaria em escalas substancialmente maiores. **A corretude é idêntica** — a diferença é puramente de eficiência, pois a álgebra subjacente é a mesma.
+
+### 4.5 Cópia defensiva de `b` (correção de aliasing)
+
+Conforme documentado em [`comparacao_simplex.md`](./comparacao_simplex.md), a comparação cruzada com o PuLP revelou um bug de **aliasing**: sem `valores_iniciais = list(problema.b)`, a coluna `Value` compartilhava memória com `problema.b`, e cada pivô mutava o vetor `b` original. O sintoma só aparecia ao reusar o mesmo objeto `Problema` em chamadas sucessivas. A correção custa $\Theta(m)$ (desprezível) e é **essencial para a corretude sob invocações repetidas** — exatamente o cenário de produção, em que o backend chama o resolvedor a cada requisição. Em termos do invariante: a cópia garante que (P4) se refira ao sistema **original** $[A\mid I]y = b$, e não a um $b$ corrompido por execuções anteriores.
+
+### 4.6 Pós-otimização (fora do núcleo)
+
+O arredondamento dos limites (zerar abaixo de R\$200, arredondar para múltiplo de R\$50) ocorre **depois** do Simplex (`exibir_resultado` / `executar_pipeline`) e **não afeta** a prova de otimalidade do PL contínuo. É uma discretização de negócio que pode deslocar a solução do ótimo contínuo por uma quantia limitada (no máximo R\$50 por cluster), aceitável operacionalmente. Vale registrar que essa etapa torna a solução **entregue** uma aproximação do ótimo do PL, não o ótimo exato — uma diferença entre o "ótimo matemático" e o "limite ofertado".
+
+---
+
+## 5. Síntese
+
+A implementação do grupo é o **Simplex clássico de Dantzig com a regra anticiclagem de Bland (1977)**, operando sobre um tableau denso na forma canônica de maximização. A análise estabelece:
+
+**Complexidade.** O custo por iteração é $\Theta\big(m(n+m)\big)$ e o custo total de uma instância resolvida em $p$ pivôs é $\Theta\big((p+1)\,m(n+m)\big)$. O pior caso é exponencial ($p \le \binom{n+m}{m}-1$), o melhor caso é $\Theta\big(m(n+m)\big)$ (origem ótima, $p=0$), e o piso universal é $\Omega\big(m(n+m)\big)$. Para o PL do parceiro ($n=K$, $m=2K+1$), isso é $\Theta(K^2)$ por pivô e, com os $p=O(K)$ pivôs observados empiricamente, $O(K^3)$ na prática — confirmando viabilidade tanto para $K=7$ quanto para a meta de $K\ge100$.
+
+**Corretude.** Provou-se, por indução sobre o invariante do laço, que o tableau mantém sempre uma SBF (corretude parcial); a regra de entrada de Bland garante a terminação (com a ressalva da Seção 3.4 sobre o desempate da saínte, que recomenda um ajuste $O(m)$ para garantia teórica plena); e a condição de parada (todos os custos reduzidos $\le 0$) implica otimalidade global pelo Lema da Seção 3.5. Os casos ilimitado e de múltiplas soluções sã
