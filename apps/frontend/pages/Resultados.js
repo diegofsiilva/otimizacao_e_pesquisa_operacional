@@ -1302,7 +1302,7 @@ var Resultados = function (props) {
 
       {/* KPI cards */}
       {selectedConsulta && (
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
           {policyInsights.map(function (k, idx) {
             return (
               <div
@@ -1350,7 +1350,7 @@ var Resultados = function (props) {
         </div>
       ) : (
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {/* Risco x retorno */}
             <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
               <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
@@ -1385,7 +1385,7 @@ var Resultados = function (props) {
           </div>
 
           {/* Gráficos - linha 2 */}
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
             {/* Concentracao de exposicao */}
             <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
               <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
