@@ -978,6 +978,14 @@ var Resultados = function (props) {
     return revenue - loss;
   }
 
+  function getLimitePulp(c) {
+    if (!c) return null;
+    if (c.limite_pulp != null) return c.limite_pulp;
+    if (c.limite_pulp_otimizado != null) return c.limite_pulp_otimizado;
+    if (c.pulp_limite_otimizado != null) return c.pulp_limite_otimizado;
+    return null;
+  }
+
   // Funil de decisão: da base total até a oferta final.
   var funnelData = [];
   if (selectedConsulta) {
@@ -998,6 +1006,12 @@ var Resultados = function (props) {
 
   var viableClusters = clusters.filter(function (c) {
     return c.limite_otimizado > 0;
+  });
+  var viableClustersPulp = clusters.filter(function (c) {
+    return getLimitePulp(c) > 0;
+  });
+  var temComparacaoPulp = clusters.some(function (c) {
+    return getLimitePulp(c) != null;
   });
   var totalExposure = viableClusters.reduce(function (s, c) {
     return s + getExposure(c);
@@ -1065,7 +1079,10 @@ var Resultados = function (props) {
     {
       label: "Exposição aprovada",
       value: fmt(totalExposure),
-      sub: viableClusters.length + " clusters com limite",
+      sub:
+        viableClusters.length +
+        " clusters com limite" +
+        (temComparacaoPulp ? " · PuLP: " + viableClustersPulp.length : ""),
     },
     {
       label: "Retorno esperado",
