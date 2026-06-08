@@ -24,6 +24,7 @@ from model.schemas import (
     ConsultaResponse,
     ParametrosModelo,
     SafraResponse,
+    StatusLPPulp,
 )
 
 
@@ -53,6 +54,9 @@ def _row_para_consulta(row) -> ConsultaResponse:
         status_consulta=row["status_consulta"],
         status_lp=row["status_lp"],
         z_otimo=row["z_otimo"],
+        z_pulp=row["z_pulp"],
+        status_lp_pulp=row["status_lp_pulp"],
+        delta_z_pct=row["delta_z_pct"],
         n_clientes_total=row["n_clientes_total"],
         n_clientes_elegiveis=row["n_clientes_elegiveis"],
         n_clientes_ofertados=row["n_clientes_ofertados"],
@@ -173,8 +177,8 @@ async def _pipeline_background(
                 INSERT INTO clusters_resultado (
                     consulta_id, cluster_id, n_clientes, pd_media, pi_media,
                     cp_percentil5, score_credito_cross_medio, ck_medio,
-                    fator_alavancagem, limite_otimizado
-                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+                    fator_alavancagem, limite_otimizado, limite_otimizado_pulp
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
                 """,
                 [
                     (
@@ -188,6 +192,7 @@ async def _pipeline_background(
                         c["ck_medio"],
                         c["fator_alavancagem"],
                         c["limite_otimizado"],
+                        c["limite_otimizado_pulp"],
                     )
                     for c in clusters
                 ],
@@ -284,16 +289,22 @@ async def _pipeline_background(
                     status_consulta      = $1,
                     status_lp            = $2,
                     z_otimo              = $3,
-                    n_clientes_total     = $4,
-                    n_clientes_elegiveis = $5,
-                    n_clientes_ofertados = $6,
-                    n_clusters           = $7,
-                    concluido_em         = $8
-                WHERE id = $9
+                    z_pulp               = $4,
+                    status_lp_pulp       = $5,
+                    delta_z_pct          = $6,
+                    n_clientes_total     = $7,
+                    n_clientes_elegiveis = $8,
+                    n_clientes_ofertados = $9,
+                    n_clusters           = $10,
+                    concluido_em         = $11
+                WHERE id = $12
                 """,
                 "concluido",
                 status_lp,
                 z,
+                resultado["z_pulp"],
+                resultado["status_pulp"],
+                resultado["delta_z_pct"],
                 n_total,
                 n_elegiveis,
                 n_ofertados,
@@ -547,7 +558,8 @@ async def get_clusters(consulta_id: UUID) -> list[ClusterResultadoResponse] | No
         rows = await conn.fetch(
             """
             SELECT cluster_id, n_clientes, pd_media, pi_media, cp_percentil5,
-                   score_credito_cross_medio, ck_medio, fator_alavancagem, limite_otimizado
+                   score_credito_cross_medio, ck_medio, fator_alavancagem,
+                   limite_otimizado, limite_otimizado_pulp
             FROM clusters_resultado
             WHERE consulta_id = $1
             ORDER BY cluster_id ASC
@@ -566,6 +578,7 @@ async def get_clusters(consulta_id: UUID) -> list[ClusterResultadoResponse] | No
             ck_medio=row["ck_medio"],
             fator_alavancagem=row["fator_alavancagem"],
             limite_otimizado=row["limite_otimizado"],
+            limite_otimizado_pulp=row["limite_otimizado_pulp"],
         )
         for row in rows
     ]
