@@ -118,3 +118,58 @@ O custo é proporcional ao número de variáveis.
 $$
 T_5(n)=\Theta(n)
 $$
+
+## 2.6 Melhor Caso
+
+O melhor caso ocorre quando:
+
+- a construção do modelo é realizada normalmente;
+- o solver encontra rapidamente uma solução ótima.
+
+Como a etapa de construção das restrições precisa sempre percorrer toda a matriz $A$, existe um limite inferior:
+
+$$
+\Omega(mn)
+$$
+
+---
+
+## 2.7 Pior Caso
+
+O pior caso ocorre quando o solver precisa explorar grande quantidade de bases ou nós internos para encontrar a solução ótima.
+
+Como o CBC utiliza algoritmos derivados do Simplex, seu pior caso teórico continua sendo exponencial.
+
+Assim:
+
+$$
+O(T_{solver}(n,m))
+$$
+
+onde, no pior caso, o custo pode ser exponencial.
+
+---
+
+## 2.8 Complexidade Total
+
+A construção do modelo possui custo:
+
+$$
+\Theta(mn)
+$$
+
+A resolução é dominada pelo solver:
+
+$$
+T(n,m)=
+\Theta(mn)+
+T_{solver}(n,m)
+\]
+
+Portanto:
+
+$$
+\boxed{
+T(n,m)=\Theta(mn + T_{solver}(n,m))
+}
+$$
