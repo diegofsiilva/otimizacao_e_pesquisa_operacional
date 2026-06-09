@@ -325,6 +325,16 @@ Considere:
 - $c \in \mathbb{R}^{n}$: vetor da função objetivo;
 - $b \in \mathbb{R}^{m}$: vetor dos lados direitos das restrições.
 
+O mapeamento entre os símbolos, o código e o problema do parceiro é:
+
+| Símbolo | Significado | No código (`simplex_pulp.py`) | No problema do parceiro |
+| ------- | ----------- | ----------------------------- | ----------------------- |
+| $n$ | nº de variáveis de decisão | `len(problema.c)` | $n = K$ (clusters) |
+| $m$ | nº de restrições $\le$ | `len(problema.b)` | $m = 2K + 1$ |
+| $A$ | matriz de coeficientes | `problema.A` | dimensão $m \times n$ |
+| $c$ | vetor da função objetivo | `problema.c` | dimensão $n$ |
+| $b$ | lados direitos | `problema.b` | dimensão $m$ |
+
 O algoritmo implementado em `simplex_pulp.py` executa as seguintes etapas:
 
 1. Criação do modelo de programação linear;
@@ -380,11 +390,12 @@ for i in range(m):
         pulp.lpSum(
             problema.A[i][j] * x_vars[j]
             for j in range(n)
-        ) <= problema.b[i]
+        ) <= problema.b[i],
+        f"R_{i}",
     )
 ```
 
-Para cada uma das $m$ restrições são percorridas as $n$ variáveis.
+Cada restrição é registrada com um nome (`R_i`), conforme o código. Para cada uma das $m$ restrições são percorridas as $n$ variáveis.
 
 $$
 T_3(n,m)=\Theta(mn)
@@ -516,7 +527,7 @@ T(n,m)=\Theta(mn + T_{solver}(n,m))
 }
 $$
 
-### 2.9 Quadro-resumo de Complexidade
+### 2.10 Quadro-resumo de Complexidade
 
 | Etapa | Complexidade | Nota |
 | ------ | ------------ | ---- |
@@ -524,7 +535,7 @@ $$
 | Resolução pelo solver | $T_{solver}(n,m)$ | depende do solver selecionado no ambiente |
 | Extração de $x$, $z$ e status | $\Theta(n)$ | custo linear no número de variáveis |
 
-### 2.10 Complexidade de Espaço
+### 2.11 Complexidade de Espaço
 
 O modelo armazena:
 
@@ -767,6 +778,10 @@ Assim, a implementação com PuLP é correta.
 $$
 \boxed{\text{A implementação é correta}}
 $$
+
+### 3.7 Validação empírica
+
+A corretude formal acima é corroborada pelo *golden test* documentado em [`comparacao_simplex.md`](./comparacao_simplex.md): nos casos testados (incluindo o caso real com 7 clusters), a solução retornada pelo solver via PuLP coincide com a do Simplex implementado pelo grupo (descrito em [`algoritmo_simplex.md`](./algoritmo_simplex.md) e na Parte I deste documento) dentro de $10^{-6}$, com diferença residual da ordem de $1{,}5 \times 10^{-8}$, atribuível apenas a aritmética de ponto flutuante. Essa concordância valida empiricamente tanto a fidelidade do modelo construído (provada nas Seções 3.2–3.3) quanto a equivalência entre as duas implementações. A fundamentação teórica de ambas está em [`artigo.md`](./artigo.md).
 
 ---
 
