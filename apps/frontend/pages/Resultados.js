@@ -704,6 +704,477 @@ var RiskHistP5 = function (props) {
 };
 
 // ============================================================================
+// SankeyPipelineP5 - fluxo do pipeline em diagrama de Sankey (p5.js)
+// ----------------------------------------------------------------------------
+// Mostra como a base de clientes flui pelas etapas ate receber (ou nao) limite:
+//   Base total -> Elegibilidade -> Clusters -> Faixa de limite
+//
+// Adaptacoes para o volume real de dados (muitos clusters):
+//   - Clusters: Top N maiores individualmente + um no "Outros" (resto agregado).
+//   - Limite: agregado em FAIXAS (Sem oferta / ate R$5k / R$5-15k / R$15k+),
+//     em vez de um no por cluster - escala para qualquer quantidade.
+//   - Cor = camada de informacao de RISCO (PD media): verde (baixo) -> vermelho.
+//
+// Interacoes (p5.js):
+//   - Hover: destaca o no/fluxo sob o cursor e mostra tooltip.
+//   - Clique: TRAVA o foco num no ou fluxo (clique de novo / no vazio destrava).
+//   - Animacao de entrada: as colunas sao reveladas em sequencia (da esquerda
+//     para a direita), dando a sensacao de "fluir" pelo pipeline.
+//   - Botoes Top 5 / 8 / 12 controlam quantos clusters aparecem individualmente.
+//
+// props: { total, elegiveis, clusters:[{cluster_id,n_clientes,pd_media,limite_otimizado}], topN }
+// ============================================================================
+
+// paleta de risco por PD media (mesma do histograma RiskHistP5)
+function _sankeyRiscoCor(pd) {
+  if (pd == null) return [150, 155, 165];
+  if (pd < 0.05) return [103, 222, 152];
+  if (pd < 0.1) return [168, 230, 176];
+  if (pd < 0.15) return [250, 233, 93];
+  if (pd < 0.2) return [255, 200, 122];
+  if (pd < 0.25) return [255, 140, 107];
+  return [255, 93, 92];
+}
+function _sankeyFaixaLimite(v) {
+  if (!v || v <= 0) return 0;
+  if (v <= 5000) return 1;
+  if (v <= 15000) return 2;
+  return 3;
+}
+var _SANKEY_FAIXA_META = [
+  { label: "Sem oferta", cor: [200, 90, 80] },
+  { label: "Ate R$ 5k", cor: [150, 180, 210] },
+  { label: "R$ 5-15k", cor: [90, 150, 205] },
+  { label: "R$ 15k+", cor: [46, 109, 164] },
+];
+
+var SankeyPipelineP5 = function (props) {
+  var ref = React.useRef(null);
+  var s = React.useState(props.topN || 8);
+  var topN = s[0];
+  var setTopN = s[1];
+
+  var total = props.total || 0;
+  var elig = props.elegiveis || 0;
+  var clusters = (props.clusters || []).filter(function (c) {
+    return c && c.n_clientes > 0;
+  });
+
+  var dataKey = JSON.stringify({
+    total: total,
+    elig: elig,
+    topN: topN,
+    c: clusters.map(function (c) {
+      return [c.cluster_id, c.n_clientes, c.pd_media, c.limite_otimizado];
+    }),
+  });
+
+  React.useEffect(
+    function () {
+      var node = ref.current;
+      if (!node || total <= 0 || clusters.length === 0) return;
+
+      var sketch = function (p) {
+        var W = 960;
+        var H = 460;
+        var nodes = [];
+        var links = [];
+        var hovN = null,
+          hovL = null,
+          lockN = null,
+          lockL = null;
+        var start = 0;
+        var INTRO = 1100;
+        var introDone = false;
+
+        function fmtNum(n) {
+          if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+          if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
+          return Math.round(n).toLocaleString("pt-BR");
+        }
+        function ease(x) {
+          return 1 - Math.pow(1 - x, 3);
+        }
+
+        function build() {
+          nodes = [];
+          links = [];
+          var nonElig = Math.max(0, total - elig);
+          var nTotal = { id: "total", col: 0, label: "Clientes", value: total, cor: [100, 120, 160] };
+          var nElig = { id: "elig", col: 1, label: "Elegiveis", value: elig, cor: [60, 140, 200] };
+          var nNao = { id: "nao", col: 1, label: "Inelegiveis", value: nonElig, cor: [160, 160, 170] };
+          nodes.push(nTotal, nElig, nNao);
+          links.push({ src: nTotal, dst: nElig, val: elig, cor: nElig.cor });
+          if (nonElig > 0) links.push({ src: nTotal, dst: nNao, val: nonElig, cor: nNao.cor });
+
+          var sorted = clusters.slice().sort(function (a, b) {
+            return b.n_clientes - a.n_clientes;
+          });
+          var top = sorted.slice(0, topN);
+          var rest = sorted.slice(topN);
+
+          var faixaNodes = {};
+          function getFaixa(idx) {
+            if (!faixaNodes[idx]) {
+              var m = _SANKEY_FAIXA_META[idx];
+              faixaNodes[idx] = { id: "fx" + idx, col: 3, label: m.label, value: 0, cor: m.cor, faixa: true };
+            }
+            return faixaNodes[idx];
+          }
+
+          top.forEach(function (c) {
+            var cor = _sankeyRiscoCor(c.pd_media);
+            var nc = {
+              id: "c" + c.cluster_id,
+              col: 2,
+              label: "CLU-" + c.cluster_id,
+              value: c.n_clientes,
+              cor: cor,
+              pd: c.pd_media,
+              limite: c.limite_otimizado,
+            };
+            nodes.push(nc);
+            links.push({ src: nElig, dst: nc, val: c.n_clientes, cor: cor });
+            var fx = getFaixa(_sankeyFaixaLimite(c.limite_otimizado));
+            fx.value += c.n_clientes;
+            links.push({ src: nc, dst: fx, val: c.n_clientes, cor: cor });
+          });
+
+          if (rest.length > 0) {
+            var restTotal = rest.reduce(function (sum, c) {
+              return sum + c.n_clientes;
+            }, 0);
+            var nOut = { id: "outros", col: 2, label: "Outros (" + rest.length + ")", value: restTotal, cor: [165, 170, 180], outros: true };
+            nodes.push(nOut);
+            links.push({ src: nElig, dst: nOut, val: restTotal, cor: [180, 185, 195] });
+            var byFaixa = {};
+            rest.forEach(function (c) {
+              var f = _sankeyFaixaLimite(c.limite_otimizado);
+              byFaixa[f] = (byFaixa[f] || 0) + c.n_clientes;
+            });
+            Object.keys(byFaixa).forEach(function (fk) {
+              var fx = getFaixa(parseInt(fk, 10));
+              fx.value += byFaixa[fk];
+              links.push({ src: nOut, dst: fx, val: byFaixa[fk], cor: [180, 185, 195] });
+            });
+          }
+
+          Object.keys(faixaNodes)
+            .map(Number)
+            .sort(function (a, b) {
+              return a - b;
+            })
+            .forEach(function (k) {
+              nodes.push(faixaNodes[k]);
+            });
+
+          layout();
+        }
+
+        function layout() {
+          var mTop = 86,
+            mBot = 30,
+            mX = 90,
+            nW = 20,
+            pad = 10;
+          var uW = W - 2 * mX;
+          var uH = H - mTop - mBot;
+          var colSp = uW / 3;
+          var cols = [[], [], [], []];
+          nodes.forEach(function (n) {
+            cols[n.col].push(n);
+          });
+          for (var c = 0; c < 4; c++) {
+            var col = cols[c];
+            var tot =
+              col.reduce(function (sum, n) {
+                return sum + n.value;
+              }, 0) || 1;
+            var availH = uH - (col.length - 1) * pad;
+            var y = mTop;
+            col.forEach(function (n) {
+              n.h = Math.max(9, (n.value / tot) * availH);
+              n.x = mX + c * colSp - nW / 2;
+              n.y = y;
+              n.w = nW;
+              y += n.h + pad;
+            });
+            var totalH = y - pad - mTop;
+            var off = (uH - totalH) / 2;
+            col.forEach(function (n) {
+              n.y += off;
+            });
+          }
+          var outOff = {},
+            inOff = {};
+          nodes.forEach(function (n) {
+            outOff[n.id] = 0;
+            inOff[n.id] = 0;
+          });
+          links.forEach(function (lk) {
+            var srcOut =
+              links
+                .filter(function (l) {
+                  return l.src.id === lk.src.id;
+                })
+                .reduce(function (sum, l) {
+                  return sum + l.val;
+                }, 0) || 1;
+            var dstIn =
+              links
+                .filter(function (l) {
+                  return l.dst.id === lk.dst.id;
+                })
+                .reduce(function (sum, l) {
+                  return sum + l.val;
+                }, 0) || 1;
+            lk.srcH = (lk.val / srcOut) * lk.src.h;
+            lk.dstH = (lk.val / dstIn) * lk.dst.h;
+            lk.srcX = lk.src.x + lk.src.w;
+            lk.srcY = lk.src.y + outOff[lk.src.id];
+            lk.dstX = lk.dst.x;
+            lk.dstY = lk.dst.y + inOff[lk.dst.id];
+            outOff[lk.src.id] += lk.srcH;
+            inOff[lk.dst.id] += lk.dstH;
+          });
+        }
+
+        p.setup = function () {
+          W = node.offsetWidth || 960;
+          p.createCanvas(W, H);
+          p.textFont("Inter, system-ui, sans-serif");
+          start = p.millis();
+          build();
+        };
+        p.windowResized = function () {
+          W = node.offsetWidth || 960;
+          p.resizeCanvas(W, H);
+          build();
+        };
+
+        function nodeContains(n, mx, my) {
+          return mx >= n.x - 2 && mx <= n.x + n.w + 2 && my >= n.y && my <= n.y + n.h;
+        }
+        function linkContains(lk, mx, my) {
+          if (mx < lk.srcX || mx > lk.dstX) return false;
+          var t = (mx - lk.srcX) / (lk.dstX - lk.srcX || 1);
+          var topY = p.lerp(lk.srcY, lk.dstY, t);
+          var botY = p.lerp(lk.srcY + lk.srcH, lk.dstY + lk.dstH, t);
+          return my >= topY && my <= botY;
+        }
+
+        function fNode() {
+          return lockN || hovN;
+        }
+        function fLink() {
+          return lockL || hovL;
+        }
+        function isNodeOn(n) {
+          var fn = fNode(),
+            fl = fLink();
+          if (!fn && !fl) return true;
+          if (fn)
+            return (
+              n === fn ||
+              links.some(function (l) {
+                return (l.src === fn && l.dst === n) || (l.dst === fn && l.src === n);
+              })
+            );
+          return fl.src === n || fl.dst === n;
+        }
+        function isLinkOn(lk) {
+          var fn = fNode(),
+            fl = fLink();
+          if (!fn && !fl) return true;
+          if (fn) return lk.src === fn || lk.dst === fn;
+          return lk === fl;
+        }
+
+        function drawLink(lk, intro) {
+          var on = isLinkOn(lk);
+          var a = (on ? 95 : 16) * intro;
+          p.noStroke();
+          p.fill(lk.cor[0], lk.cor[1], lk.cor[2], a);
+          var cpX = (lk.srcX + lk.dstX) / 2;
+          p.beginShape();
+          p.vertex(lk.srcX, lk.srcY);
+          for (var t = 0; t <= 1.0001; t += 0.05)
+            p.vertex(p.bezierPoint(lk.srcX, cpX, cpX, lk.dstX, t), p.bezierPoint(lk.srcY, lk.srcY, lk.dstY, lk.dstY, t));
+          p.vertex(lk.dstX, lk.dstY + lk.dstH);
+          for (var u = 1; u >= -0.0001; u -= 0.05)
+            p.vertex(
+              p.bezierPoint(lk.srcX, cpX, cpX, lk.dstX, u),
+              p.bezierPoint(lk.srcY + lk.srcH, lk.srcY + lk.srcH, lk.dstY + lk.dstH, lk.dstY + lk.dstH, u),
+            );
+          p.vertex(lk.srcX, lk.srcY + lk.srcH);
+          p.endShape(p.CLOSE);
+        }
+
+        function drawNode(n, intro) {
+          var on = isNodeOn(n);
+          p.noStroke();
+          p.fill(n.cor[0], n.cor[1], n.cor[2], (on ? 255 : 80) * intro);
+          p.rect(n.x, n.y, n.w, n.h, 3);
+          if (n.h < 13 && !on) return;
+          var rightSide = n.col >= 2;
+          var ax = rightSide ? n.x + n.w + 8 : n.x - 8;
+          p.textAlign(rightSide ? p.LEFT : p.RIGHT, p.CENTER);
+          p.fill(58, 64, 73, 255 * intro * (on ? 1 : 0.7));
+          p.textSize(12);
+          p.textStyle(p.BOLD);
+          p.text(n.label, ax, n.y + n.h / 2 - 7);
+          p.fill(140, 145, 150, 255 * intro * (on ? 1 : 0.7));
+          p.textSize(10);
+          p.textStyle(p.NORMAL);
+          p.text(fmtNum(n.value), ax, n.y + n.h / 2 + 8);
+        }
+
+        function drawTip(n) {
+          var lines = [n.label, fmtNum(n.value) + " clientes (" + ((n.value / total) * 100).toFixed(1) + "%)"];
+          if (n.pd != null) lines.push("PD media: " + (n.pd * 100).toFixed(1) + "%");
+          if (n.faixa) lines.push("Faixa de limite");
+          if (n.outros) lines.push("Demais clusters agregados");
+          _drawTooltip(p, lines);
+        }
+
+        p.draw = function () {
+          p.clear();
+          var raw = p.constrain((p.millis() - start) / INTRO, 0, 1);
+          introDone = raw >= 1;
+          function colIntro(col) {
+            return p.constrain((raw - col * 0.22) / 0.34, 0, 1);
+          }
+
+          hovN = null;
+          hovL = null;
+          if (introDone) {
+            for (var i = 0; i < nodes.length; i++) {
+              if (nodeContains(nodes[i], p.mouseX, p.mouseY)) {
+                hovN = nodes[i];
+                break;
+              }
+            }
+            if (!hovN) {
+              for (var j = 0; j < links.length; j++) {
+                if (linkContains(links[j], p.mouseX, p.mouseY)) {
+                  hovL = links[j];
+                  break;
+                }
+              }
+            }
+          }
+
+          // titulos das colunas + processos
+          p.noStroke();
+          p.textAlign(p.CENTER, p.TOP);
+          var colSp = (W - 180) / 3;
+          var titles = ["BASE TOTAL", "ELEGIBILIDADE", "CLUSTERS", "LIMITE"];
+          p.textSize(10);
+          p.textStyle(p.BOLD);
+          for (var c = 0; c < 4; c++) {
+            p.fill(150, 155, 162, 255 * ease(colIntro(c)));
+            p.text(titles[c], 90 + c * colSp, 30);
+          }
+          p.textSize(10);
+          p.textStyle(p.NORMAL);
+          var procs = ["Filtro por flag", "Clusterizacao (CART)", "Otimizacao (Simplex)"];
+          for (var pc = 0; pc < 3; pc++) {
+            p.fill(120, 150, 190, 230 * ease(colIntro(pc + 1)));
+            p.text(procs[pc], 90 + colSp * (pc + 0.5), 46);
+          }
+
+          links.forEach(function (lk) {
+            drawLink(lk, ease(colIntro(lk.dst.col)));
+          });
+          nodes.forEach(function (n) {
+            drawNode(n, ease(colIntro(n.col)));
+          });
+
+          var tip = hovN || (hovL ? hovL.dst : null);
+          if (tip && introDone) drawTip(tip);
+
+          if (lockN || lockL) {
+            p.noStroke();
+            p.fill(120, 130, 145);
+            p.textSize(10);
+            p.textStyle(p.NORMAL);
+            p.textAlign(p.LEFT, p.BOTTOM);
+            p.text("foco travado - clique no vazio para soltar", 90, H - 8);
+          }
+
+          p.cursor(hovN || hovL ? p.HAND : p.ARROW);
+        };
+
+        p.mousePressed = function () {
+          if (!introDone) return;
+          if (p.mouseX < 0 || p.mouseX > W || p.mouseY < 0 || p.mouseY > H) return;
+          if (hovN) {
+            lockN = lockN === hovN ? null : hovN;
+            lockL = null;
+          } else if (hovL) {
+            lockL = lockL === hovL ? null : hovL;
+            lockN = null;
+          } else {
+            lockN = null;
+            lockL = null;
+          }
+        };
+      };
+
+      var instance = new p5(sketch, node);
+      return function () {
+        instance.remove();
+      };
+    },
+    [dataKey],
+  );
+
+  if (!props.total || !(props.clusters || []).length) return null;
+
+  var btn = function (n) {
+    return (
+      <button
+        key={n}
+        onClick={function () {
+          setTopN(n);
+        }}
+        className={
+          "px-2.5 py-1 text-[11px] font-medium border transition-colors " +
+          (topN === n
+            ? "bg-[#2E6DA4] text-white border-[#2E6DA4]"
+            : "bg-white text-[#3B4049] border-[#E8EFF7] hover:bg-[#E2EAF4]")
+        }
+      >
+        Top {n}
+      </button>
+    );
+  };
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
+        <div className="flex items-center gap-3 text-[11px] text-[#9C9C9F]">
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-2.5 h-2.5" style={{ background: "#67DE98" }} /> baixo risco
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-2.5 h-2.5" style={{ background: "#FAE95D" }} /> medio
+          </span>
+          <span className="flex items-center gap-1">
+            <span className="inline-block w-2.5 h-2.5" style={{ background: "#FF5D5C" }} /> alto risco
+          </span>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <span className="text-[11px] text-[#9C9C9F] mr-1">Clusters:</span>
+          {[5, 8, 12].map(btn)}
+        </div>
+      </div>
+      <div ref={ref} style={{ width: "100%" }} />
+    </div>
+  );
+};
+
+// ============================================================================
 // Resultados
 // ============================================================================
 var Resultados = function (props) {
@@ -1365,6 +1836,22 @@ var Resultados = function (props) {
               })}
             </div>
           )}
+        </div>
+      )}
+      {/* Fluxo do pipeline (Sankey) */}
+      {selectedConsulta && clusters && clusters.length > 0 && (
+        <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+          <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
+            Fluxo do Pipeline
+          </div>
+          <div className="text-xs text-[#9C9C9F] mb-3">
+            Como a base de clientes flui da elegibilidade aos clusters e às faixas de limite
+          </div>
+          <SankeyPipelineP5
+            total={selectedConsulta.n_clientes_total}
+            elegiveis={selectedConsulta.n_clientes_elegiveis}
+            clusters={clusters}
+          />
         </div>
       )}
     </div>

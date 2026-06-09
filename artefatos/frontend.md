@@ -326,6 +326,24 @@ Cada gráfico implementa, programaticamente em p5.js:
 
 Todas as visualizações usam exclusivamente cores da paleta PAN: azul `#2E6DA4` como cor principal, `#E8EFF7` para linhas de grade, paleta terciária (verde/amarelo/vermelho) para status e risco.
 
+### 12.2 Fluxo do Pipeline (Sankey)
+
+O componente `SankeyPipelineP5` é um diagrama de Sankey, em p5.js, que mostra como a base de clientes flui pelas quatro etapas do pipeline até receber (ou não) um limite: **Base total → Elegibilidade (filtro por flag) → Clusters (CART) → Faixa de limite (Simplex)**. Aparece no final das telas Cockpit e Resultados.
+
+Como o volume real é muito maior que um exemplo didático (dezenas de clusters), o Sankey foi adaptado para escalar:
+
+- **Clusters (Top N + Outros):** mostra os N maiores clusters individualmente (controle Top 5 / 8 / 12) e agrega o restante em um nó "Outros", evitando poluição com muitas divisões.
+- **Limite em faixas:** em vez de um nó por cluster, a última coluna agrega os limites em faixas (Sem oferta / Até R$ 5k / R$ 5–15k / R$ 15k+), mantendo a leitura estável independentemente da quantidade de clusters.
+- **Cor como camada de informação:** os clusters e seus fluxos são coloridos pela faixa de risco (PD média), de verde (baixo) a vermelho (alto); as faixas de limite usam uma escala de azul crescente. Assim a relação risco → limite fica visível no próprio desenho.
+
+Interações (programadas em p5.js):
+
+- **Animação de entrada:** as colunas são reveladas em sequência, da esquerda para a direita, reforçando a ideia de fluxo pelo pipeline.
+- **Hover:** destaca o nó/fluxo sob o cursor (os demais esmaecem) e mostra um tooltip com volume, percentual da base e, para clusters, a PD média.
+- **Foco travado:** clicar em um nó ou fluxo fixa o destaque, permitindo inspecionar um grupo sem manter o mouse parado; clicar no vazio solta.
+
+Esta visualização foi adaptada a partir de um protótipo independente em p5.js, repensado para os dados reais e o volume da plataforma.
+
 ## 13. Telas Implementadas
 
 As capturas abaixo mostram as telas da aplicação efetivamente implementadas no front-end (`apps/frontend`), geradas a partir da versão entregue. Cada tela corresponde a um dos fluxos descritos nas seções anteriores e às User Stories priorizadas.
@@ -367,6 +385,12 @@ Modal de configuração dos parâmetros do modelo de otimização (`t`, `LGD`, `
 ![Modal de Configurações - parâmetros do modelo](figuras/frontend/06-configuracoes.png)
 
 > As capturas foram geradas automaticamente com Playwright sobre a aplicação implementada, com dados de exemplo representativos do pipeline de otimização.
+
+### 13.7 Fluxo do Pipeline (Sankey)
+
+Diagrama de Sankey no final do Cockpit e do Resultados: Base → Elegibilidade → Clusters (Top N + "Outros") → Faixas de limite, com cor por risco e interações de hover e foco travado.
+
+![Sankey do pipeline - Base, Elegibilidade, Clusters e Limite](figuras/frontend/07-sankey-pipeline.png)
 
 ## 14. Diferenças em Relação ao Protótipo
 
