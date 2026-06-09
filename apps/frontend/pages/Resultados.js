@@ -529,6 +529,101 @@ var PolicyFunnelSVG = function (props) {
 };
 
 // ============================================================================
+// ApprovalShareSVG - leitura direta do aprovado sobre a base total
+// ============================================================================
+var ApprovalShareSVG = function (props) {
+  var data = props.data || {};
+  var total = Math.max(0, data.total || 0);
+  var approved = Math.max(0, data.approved || 0);
+  var eligibleNoOffer = Math.max(0, data.eligibleNoOffer || 0);
+  var blocked = Math.max(0, data.blocked || 0);
+  var base = total || approved + eligibleNoOffer + blocked || 1;
+  var pctApproved = (approved / base) * 100;
+  var pctEligibleNoOffer = (eligibleNoOffer / base) * 100;
+  var pctBlocked = Math.max(0, 100 - pctApproved - pctEligibleNoOffer);
+
+  function fmtPct(v) {
+    return v.toFixed(1).replace(".", ",") + "%";
+  }
+
+  var segments = [
+    {
+      label: "Aprovado",
+      value: approved,
+      pct: pctApproved,
+      color: "#67DE98",
+    },
+    {
+      label: "Elegivel sem oferta",
+      value: eligibleNoOffer,
+      pct: pctEligibleNoOffer,
+      color: "#FAE95D",
+    },
+    {
+      label: "Bloqueado por politica",
+      value: blocked,
+      pct: pctBlocked,
+      color: "#B8D4EC",
+    },
+  ];
+
+  var x = 28;
+  var y = 112;
+  var w = 396;
+  var h = 24;
+  var cursor = x;
+
+  return (
+    <svg viewBox="0 0 460 220" width="100%">
+      <text x="28" y="34" fontSize="12" fontWeight="600" fill="#3B4049">
+        Aprovado sobre a base total
+      </text>
+      <text x="28" y="84" fontSize="42" fontWeight="700" fill="#0D1B2A">
+        {fmtPct(pctApproved)}
+      </text>
+      <text x="178" y="65" fontSize="11" fill="#9C9C9F">
+        clientes com limite
+      </text>
+      <text x="178" y="84" fontSize="16" fontWeight="700" fill="#0D1B2A">
+        {Number(approved).toLocaleString("pt-BR")}
+      </text>
+
+      <rect x={x} y={y} width={w} height={h} fill="#E8EFF7" />
+      {segments.map(function (s) {
+        var sw = Math.max(0, (w * s.pct) / 100);
+        var currentX = cursor;
+        cursor += sw;
+        return (
+          <rect
+            key={s.label}
+            x={currentX}
+            y={y}
+            width={sw}
+            height={h}
+            fill={s.color}
+          />
+        );
+      })}
+
+      {segments.map(function (s, i) {
+        var lx = 28 + i * 142;
+        return (
+          <g key={s.label}>
+            <rect x={lx} y="160" width="9" height="9" fill={s.color} />
+            <text x={lx + 14} y="168" fontSize="10" fontWeight="600" fill="#3B4049">
+              {s.label}
+            </text>
+            <text x={lx + 14} y="185" fontSize="10" fill="#9C9C9F">
+              {fmtPct(s.pct)} · {Number(s.value).toLocaleString("pt-BR")}
+            </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+};
+
+// ============================================================================
 // RiskReturnScatterSVG - retorno liquido esperado x risco medio do cluster
 // ============================================================================
 var RiskReturnScatterSVG = function (props) {
