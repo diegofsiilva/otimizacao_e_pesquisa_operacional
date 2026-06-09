@@ -8,420 +8,577 @@
 // mais recente. O seletor no topo permite alternar entre simulações passadas.
 //
 // Gráficos com dados reais:
-//   BarChartSVG  → top 15 clusters por limite_otimizado
-//   DonutChart   → distribuição de clientes (ofertado / elegível s/ limite / inelegível)
-//   LineChartSVG → evolução do z_otimo entre safras (quando há 2+ consultas)
-//   RiskHistSVG  → histograma de PD média por faixa de risco (clusters)
+//   BarChartP5  → top 15 clusters por limite_otimizado
+//   DonutChartP5   → distribuição de clientes (ofertado / elegível s/ limite / inelegível)
+//   LineChartP5 → evolução do z_otimo entre safras (quando há 2+ consultas)
+//   RiskHistP5  → histograma de PD média por faixa de risco (clusters)
 
 // ============================================================================
-// BarChartSVG - barras verticais, label em cada barra
+// Componentes de gráfico em p5.js (instance mode)
+// ----------------------------------------------------------------------------
+// Os quatro gráficos abaixo foram reescritos de SVG estático para p5.js,
+// atendendo ao requisito da disciplina de "canvas com animações e interações
+// programadas em p5.js". Cada componente:
+//   - desenha em um <canvas> próprio via `new p5(sketch, node)` (instance mode,
+//     sem poluir o escopo global);
+//   - executa uma animação de entrada (barras/linha/rosca crescem com easing);
+//   - reage ao mouse com DESTAQUE do elemento sob o cursor + TOOLTIP desenhado
+//     no próprio canvas.
+//
+// As props de cada componente são idênticas às versões SVG anteriores, então
+// os call sites (Resultados.js, GerarLimites.js, Clientes.js) não mudam de
+// contrato — apenas o nome passou de *SVG para *P5.
+//
+//   BarChartP5  → top 15 clusters por limite_otimizado          props: { data:[{label,value}] }
+//   LineChartP5 → evolução do z_otimo / séries temporais         props: { data:[{label,value}] }
+//   DonutChartP5→ distribuição de clientes                       props: { data:[{name,value,color}] }
+//   RiskHistP5  → histograma de PD média por faixa de risco      props: { clusters:[{pd_media}] }
 // ============================================================================
-var BarChartSVG = function (props) {
-  var data = props.data;
-  if (!data || data.length === 0) return null;
 
-  var w = 420;
-  var h = 200;
-  var pad = { top: 24, right: 10, bottom: 28, left: 52 };
-  var cw = w - pad.left - pad.right;
-  var ch = h - pad.top - pad.bottom;
-  var max =
-    Math.max.apply(
-      null,
-      data.map(function (d) {
-        return d.value;
-      }),
-    ) || 1;
-  var bw = Math.floor((cw / data.length) * 0.55);
+// ---- helpers compartilhados ------------------------------------------------
 
-  function fmtLabel(v) {
-    if (v === 0) return null;
-    if (v >= 1000000) return "R$" + (v / 1000000).toFixed(1) + "M";
-    if (v >= 1000) return "R$" + (v / 1000).toFixed(1) + "k";
-    return "R$" + v;
-  }
+// Easing suave para as animações de entrada (desacelera no fim).
+function _easeOutCubic(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
 
-  function fmtAxis(v) {
-    if (v >= 1000000) return "R$" + (v / 1000000).toFixed(0) + "M";
-    if (v >= 1000) return "R$" + (v / 1000).toFixed(0) + "k";
-    return "R$" + Math.round(v);
-  }
+// Formata valores em R$ de forma compacta (para rótulos curtos nos eixos/barras).
+function _fmtCompact(v) {
+  if (v >= 1000000) return "R$" + (v / 1000000).toFixed(1) + "M";
+  if (v >= 1000) return "R$" + (v / 1000).toFixed(1) + "k";
+  return "R$" + Math.round(v);
+}
+function _fmtAxis(v) {
+  if (v >= 1000000) return "R$" + (v / 1000000).toFixed(0) + "M";
+  if (v >= 1000) return "R$" + (v / 1000).toFixed(0) + "k";
+  return "R$" + Math.round(v);
+}
+// Valor monetário completo (usado nos tooltips).
+function _fmtFull(v) {
+  return "R$ " + Number(Math.round(v)).toLocaleString("pt-BR");
+}
 
-  return (
-    <svg
-      viewBox={"0 0 " + w + " " + h}
-      width="100%"
-      style={{ overflow: "visible" }}
-    >
-      {[0, 0.25, 0.5, 0.75, 1].map(function (f) {
-        var y = pad.top + ch * (1 - f);
-        return (
-          <g key={f}>
-            <line
-              x1={pad.left}
-              x2={pad.left + cw}
-              y1={y}
-              y2={y}
-              stroke="#E8EFF7"
-              strokeWidth="1"
-            />
-            {f > 0 && (
-              <text
-                x={pad.left - 6}
-                y={y + 4}
-                textAnchor="end"
-                fontSize="9"
-                fill="#9C9C9F"
-              >
-                {fmtAxis(max * f)}
-              </text>
-            )}
-          </g>
-        );
-      })}
-      {data.map(function (d, i) {
-        var x = pad.left + (cw / data.length) * i + (cw / data.length - bw) / 2;
-        var bh = d.value > 0 ? Math.max(ch * (d.value / max), 2) : 3;
-        var y = pad.top + ch - bh;
-        var lbl = fmtLabel(d.value);
-        return (
-          <g key={i}>
-            <rect
-              x={x}
-              y={y}
-              width={bw}
-              height={bh}
-              fill={d.value > 0 ? "#2E6DA4" : "#E8EFF7"}
-            />
-            {lbl && (
-              <text
-                x={x + bw / 2}
-                y={y - 5}
-                textAnchor="middle"
-                fontSize="8"
-                fontWeight="600"
-                fill="#3B4049"
-              >
-                {lbl}
-              </text>
-            )}
-            <text
-              x={x + bw / 2}
-              y={h - pad.bottom + 14}
-              textAnchor="middle"
-              fontSize="8"
-              fill="#9C9C9F"
-            >
-              {d.label}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
+// Desenha um tooltip seguindo o mouse, com as linhas de texto recebidas.
+// A primeira linha é exibida em negrito. O balão se reposiciona para não
+// vazar das bordas do canvas.
+function _drawTooltip(p, lines) {
+  p.push();
+  p.textSize(11);
+  var padIn = 8;
+  var lh = 15;
+  var boxW = 0;
+  lines.forEach(function (ln, idx) {
+    p.textStyle(idx === 0 ? p.BOLD : p.NORMAL);
+    boxW = Math.max(boxW, p.textWidth(ln));
+  });
+  boxW += padIn * 2;
+  var boxH = lines.length * lh + padIn * 2 - 3;
+  var x = p.mouseX + 14;
+  var y = p.mouseY + 14;
+  if (x + boxW > p.width) x = p.mouseX - boxW - 14;
+  if (y + boxH > p.height) y = p.mouseY - boxH - 14;
+  if (x < 2) x = 2;
+  if (y < 2) y = 2;
+  p.noStroke();
+  p.fill(13, 27, 42, 240); // #0D1B2A
+  p.rect(x, y, boxW, boxH, 6);
+  p.textAlign(p.LEFT, p.TOP);
+  lines.forEach(function (ln, idx) {
+    p.textStyle(idx === 0 ? p.BOLD : p.NORMAL);
+    if (idx === 0) p.fill(255);
+    else p.fill(205, 215, 228);
+    p.text(ln, x + padIn, y + padIn + idx * lh);
+  });
+  p.pop();
+}
+
+// ============================================================================
+// BarChartP5 - barras verticais animadas, com destaque + tooltip no hover
+// ============================================================================
+var BarChartP5 = function (props) {
+  var ref = React.useRef(null);
+  var dataKey = JSON.stringify(props.data || []);
+
+  React.useEffect(
+    function () {
+      var node = ref.current;
+      if (!node) return;
+      var data = (props.data || []).filter(function (d) {
+        return d != null;
+      });
+      if (data.length === 0) return;
+
+      var sketch = function (p) {
+        var W = 420;
+        var H = 220;
+        var padB = { top: 28, right: 12, bottom: 34, left: 56 };
+        var start = 0;
+        var DUR = 750;
+        var max =
+          Math.max.apply(
+            null,
+            data.map(function (d) {
+              return d.value;
+            }),
+          ) || 1;
+
+        p.setup = function () {
+          W = node.offsetWidth || 420;
+          p.createCanvas(W, H);
+          start = p.millis();
+          p.textFont("Inter, system-ui, sans-serif");
+        };
+        p.windowResized = function () {
+          W = node.offsetWidth || 420;
+          p.resizeCanvas(W, H);
+        };
+        p.draw = function () {
+          p.clear();
+          var cw = W - padB.left - padB.right;
+          var ch = H - padB.top - padB.bottom;
+          var t = _easeOutCubic(p.constrain((p.millis() - start) / DUR, 0, 1));
+
+          // gridlines + rótulos do eixo Y
+          [0, 0.25, 0.5, 0.75, 1].forEach(function (f) {
+            var y = padB.top + ch * (1 - f);
+            p.stroke("#E8EFF7");
+            p.strokeWeight(1);
+            p.line(padB.left, y, padB.left + cw, y);
+            if (f > 0) {
+              p.noStroke();
+              p.fill("#9C9C9F");
+              p.textSize(9);
+              p.textAlign(p.RIGHT, p.CENTER);
+              p.text(_fmtAxis(max * f), padB.left - 8, y);
+            }
+          });
+
+          var slot = cw / data.length;
+          var bw = Math.min(30, slot * 0.6);
+          var hover = -1;
+
+          for (var i = 0; i < data.length; i++) {
+            var x = padB.left + slot * i + (slot - bw) / 2;
+            var full =
+              data[i].value > 0 ? Math.max(ch * (data[i].value / max), 2) : 3;
+            var bh = full * t;
+            var y = padB.top + ch - bh;
+            var over =
+              p.mouseX >= x - 2 &&
+              p.mouseX <= x + bw + 2 &&
+              p.mouseY >= padB.top &&
+              p.mouseY <= padB.top + ch;
+            if (over) hover = i;
+
+            p.noStroke();
+            if (data[i].value > 0) p.fill(over ? "#1B4F82" : "#2E6DA4");
+            else p.fill("#E8EFF7");
+            p.rect(x, y, bw, bh, 2, 2, 0, 0);
+
+            // rótulo do valor no topo (aparece ao final da animação)
+            if (t > 0.85 && data[i].value > 0) {
+              p.fill("#3B4049");
+              p.textAlign(p.CENTER, p.BOTTOM);
+              p.textSize(8);
+              p.textStyle(p.BOLD);
+              p.text(_fmtCompact(data[i].value), x + bw / 2, y - 3);
+              p.textStyle(p.NORMAL);
+            }
+            // rótulo do eixo X
+            p.fill("#9C9C9F");
+            p.textAlign(p.CENTER, p.TOP);
+            p.textSize(8);
+            p.text(data[i].label, x + bw / 2, padB.top + ch + 6);
+          }
+
+          if (hover >= 0) {
+            _drawTooltip(p, [data[hover].label, _fmtFull(data[hover].value)]);
+            p.cursor(p.HAND);
+          } else {
+            p.cursor(p.ARROW);
+          }
+        };
+      };
+
+      var instance = new p5(sketch, node);
+      return function () {
+        instance.remove();
+      };
+    },
+    [dataKey],
   );
+
+  if (!props.data || props.data.length === 0) return null;
+  return <div ref={ref} style={{ width: "100%" }} />;
 };
 
 // ============================================================================
-// LineChartSVG - linha temporal com pontos e rótulos alternados
+// LineChartP5 - linha temporal com traçado animado, pontos e tooltip no hover
 // ============================================================================
-var LineChartSVG = function (props) {
-  var data = props.data;
-  if (!data || data.length < 2)
+var LineChartP5 = function (props) {
+  var ref = React.useRef(null);
+  var data = props.data || [];
+  var dataKey = JSON.stringify(data);
+
+  React.useEffect(
+    function () {
+      var node = ref.current;
+      if (!node) return;
+      if (!data || data.length < 2) return;
+
+      var sketch = function (p) {
+        var W = 420;
+        var H = 200;
+        var padL = { top: 26, right: 22, bottom: 28, left: 52 };
+        var start = 0;
+        var DUR = 900;
+        var max =
+          (Math.max.apply(
+            null,
+            data.map(function (d) {
+              return d.value;
+            }),
+          ) || 1) * 1.15;
+
+        function fmtVal(v) {
+          if (v >= 1000000) return "R$" + (v / 1000000).toFixed(1) + "M";
+          if (v >= 1000) return "R$" + (v / 1000).toFixed(0) + "k";
+          return v % 1 === 0 ? "R$" + v : "R$" + v.toFixed(2);
+        }
+
+        p.setup = function () {
+          W = node.offsetWidth || 420;
+          p.createCanvas(W, H);
+          start = p.millis();
+          p.textFont("Inter, system-ui, sans-serif");
+        };
+        p.windowResized = function () {
+          W = node.offsetWidth || 420;
+          p.resizeCanvas(W, H);
+        };
+        p.draw = function () {
+          p.clear();
+          var cw = W - padL.left - padL.right;
+          var ch = H - padL.top - padL.bottom;
+          var t = _easeOutCubic(p.constrain((p.millis() - start) / DUR, 0, 1));
+
+          var pts = data.map(function (d, i) {
+            return {
+              x: padL.left + (cw / (data.length - 1)) * i,
+              y: padL.top + ch - (ch * d.value) / max,
+              d: d,
+            };
+          });
+
+          // gridlines + eixo Y
+          [0, 0.5, 1].forEach(function (f) {
+            var y = padL.top + ch * (1 - f);
+            p.stroke("#E8EFF7");
+            p.strokeWeight(1);
+            p.line(padL.left, y, padL.left + cw, y);
+            if (f > 0) {
+              p.noStroke();
+              p.fill("#9C9C9F");
+              p.textSize(9);
+              p.textAlign(p.RIGHT, p.CENTER);
+              p.text(fmtVal(max * f), padL.left - 8, y);
+            }
+          });
+
+          // área sob a curva (cresce com a animação)
+          var nVis = t * (pts.length - 1);
+          p.noStroke();
+          p.fill(46, 109, 164, 22);
+          p.beginShape();
+          p.vertex(pts[0].x, padL.top + ch);
+          for (var i = 0; i < pts.length; i++) {
+            if (i <= nVis) {
+              p.vertex(pts[i].x, pts[i].y);
+            } else {
+              // ponto interpolado na fronteira da animação
+              var prev = pts[i - 1];
+              var frac = nVis - (i - 1);
+              p.vertex(
+                prev.x + (pts[i].x - prev.x) * frac,
+                prev.y + (pts[i].y - prev.y) * frac,
+              );
+              break;
+            }
+          }
+          var lastVisX =
+            nVis >= pts.length - 1
+              ? pts[pts.length - 1].x
+              : pts[Math.floor(nVis)].x +
+                (pts[Math.ceil(nVis)].x - pts[Math.floor(nVis)].x) *
+                  (nVis - Math.floor(nVis));
+          p.vertex(lastVisX, padL.top + ch);
+          p.endShape(p.CLOSE);
+
+          // linha (traçado progressivo)
+          p.noFill();
+          p.stroke("#2E6DA4");
+          p.strokeWeight(2.5);
+          p.strokeJoin(p.ROUND);
+          p.beginShape();
+          for (var j = 0; j < pts.length; j++) {
+            if (j <= nVis) {
+              p.vertex(pts[j].x, pts[j].y);
+            } else {
+              var pv = pts[j - 1];
+              var fr = nVis - (j - 1);
+              p.vertex(pv.x + (pts[j].x - pv.x) * fr, pv.y + (pts[j].y - pv.y) * fr);
+              break;
+            }
+          }
+          p.endShape();
+
+          // hover: ponto mais próximo no eixo X
+          var hover = -1;
+          var bestDx = 24;
+          for (var k = 0; k < pts.length; k++) {
+            var dx = Math.abs(p.mouseX - pts[k].x);
+            if (dx < bestDx && p.mouseY > padL.top - 10 && p.mouseY < padL.top + ch + 10) {
+              bestDx = dx;
+              hover = k;
+            }
+          }
+
+          // pontos + rótulos (aparecem conforme a linha avança)
+          for (var m = 0; m < pts.length; m++) {
+            if (m > nVis + 0.001) continue;
+            var isH = m === hover;
+            p.stroke("#fff");
+            p.strokeWeight(2);
+            p.fill(isH ? "#1B4F82" : "#2E6DA4");
+            p.circle(pts[m].x, pts[m].y, isH ? 11 : 8);
+            if (!isH) {
+              p.noStroke();
+              p.fill("#3B4049");
+              p.textSize(9);
+              p.textStyle(p.BOLD);
+              p.textAlign(p.CENTER, p.BOTTOM);
+              var ly = m % 2 === 0 ? pts[m].y - 9 : pts[m].y + 19;
+              p.text(fmtVal(pts[m].d.value), pts[m].x, ly);
+              p.textStyle(p.NORMAL);
+            }
+            // rótulo do eixo X
+            p.noStroke();
+            p.fill("#9C9C9F");
+            p.textSize(9);
+            p.textStyle(p.NORMAL);
+            p.textAlign(p.CENTER, p.TOP);
+            p.text(pts[m].d.label, pts[m].x, padL.top + ch + 8);
+          }
+
+          if (hover >= 0 && hover <= nVis + 0.001) {
+            // linha guia vertical
+            p.stroke(46, 109, 164, 90);
+            p.strokeWeight(1);
+            p.line(pts[hover].x, padL.top, pts[hover].x, padL.top + ch);
+            _drawTooltip(p, [
+              String(pts[hover].d.label),
+              _fmtFull(pts[hover].d.value),
+            ]);
+            p.cursor(p.HAND);
+          } else {
+            p.cursor(p.ARROW);
+          }
+        };
+      };
+
+      var instance = new p5(sketch, node);
+      return function () {
+        instance.remove();
+      };
+    },
+    [dataKey],
+  );
+
+  if (!data || data.length < 2) {
     return (
       <div className="flex items-center justify-center h-32 text-xs text-[#9C9C9F]">
         Necessário pelo menos 2 simulações para exibir a evolução.
       </div>
     );
-
-  var w = 420;
-  var h = 175;
-  var pad = { top: 24, right: 20, bottom: 24, left: 48 };
-  var cw = w - pad.left - pad.right;
-  var ch = h - pad.top - pad.bottom;
-  var max =
-    Math.max.apply(
-      null,
-      data.map(function (d) {
-        return d.value;
-      }),
-    ) * 1.15 || 1;
-
-  var pts = data.map(function (d, i) {
-    return [
-      pad.left + (cw / (data.length - 1)) * i,
-      pad.top + ch - (ch * d.value) / max,
-    ];
-  });
-
-  var polyline = pts
-    .map(function (p) {
-      return p[0] + "," + p[1];
-    })
-    .join(" ");
-
-  var area =
-    "M" +
-    pts[0][0] +
-    "," +
-    pts[0][1] +
-    pts
-      .slice(1)
-      .map(function (p) {
-        return " L" + p[0] + "," + p[1];
-      })
-      .join("") +
-    " L" +
-    pts[pts.length - 1][0] +
-    "," +
-    (pad.top + ch) +
-    " L" +
-    pts[0][0] +
-    "," +
-    (pad.top + ch) +
-    " Z";
-
-  function fmtVal(v) {
-    if (v >= 1000000) return "R$" + (v / 1000000).toFixed(1) + "M";
-    if (v >= 1000) return "R$" + (v / 1000).toFixed(0) + "k";
-    return "R$" + v.toFixed(0);
   }
+  return <div ref={ref} style={{ width: "100%" }} />;
+};
+
+// ============================================================================
+// DonutChartP5 - rosca com varredura animada, fatia destacada + tooltip
+// ============================================================================
+var DonutChartP5 = function (props) {
+  var ref = React.useRef(null);
+  var data = (props.data || []).filter(function (d) {
+    return d && d.value > 0;
+  });
+  var dataKey = JSON.stringify(props.data || []);
+
+  React.useEffect(
+    function () {
+      var node = ref.current;
+      if (!node || data.length === 0) return;
+
+      var sketch = function (p) {
+        var SIZE = 150;
+        var cx = SIZE / 2;
+        var cy = SIZE / 2;
+        var rOut = 60;
+        var rIn = 38;
+        var start = 0;
+        var DUR = 800;
+        var total =
+          data.reduce(function (s, d) {
+            return s + d.value;
+          }, 0) || 1;
+
+        p.setup = function () {
+          p.createCanvas(SIZE, SIZE);
+          start = p.millis();
+          p.textFont("Inter, system-ui, sans-serif");
+          p.angleMode(p.RADIANS);
+        };
+        p.draw = function () {
+          p.clear();
+          var t = _easeOutCubic(p.constrain((p.millis() - start) / DUR, 0, 1));
+
+          // ângulo do mouse relativo ao centro (para hover)
+          var mdx = p.mouseX - cx;
+          var mdy = p.mouseY - cy;
+          var mdist = Math.sqrt(mdx * mdx + mdy * mdy);
+          var mang = Math.atan2(mdy, mdx); // -PI..PI, 0 = direita
+          // normaliza para começar em -90° (topo), sentido horário, 0..2PI
+          var mNorm = mang + Math.PI / 2;
+          if (mNorm < 0) mNorm += Math.PI * 2;
+          var overRing = mdist >= rIn - 2 && mdist <= rOut + 8;
+
+          var ang = -Math.PI / 2;
+          var hover = -1;
+          var acc = 0;
+          // primeiro: descobrir fatia sob o mouse (na geometria completa)
+          for (var i = 0; i < data.length; i++) {
+            var sweepFull = (data[i].value / total) * Math.PI * 2;
+            if (overRing && mNorm >= acc && mNorm < acc + sweepFull) hover = i;
+            acc += sweepFull;
+          }
+
+          for (var j = 0; j < data.length; j++) {
+            var sweep = (data[j].value / total) * Math.PI * 2 * t;
+            if (sweep <= 0.0001) {
+              ang += (data[j].value / total) * Math.PI * 2 * t;
+              continue;
+            }
+            var isH = j === hover;
+            var ro = isH ? rOut + 6 : rOut;
+            // deslocamento da fatia destacada para fora
+            var mid = ang + sweep / 2;
+            var ox = isH ? Math.cos(mid) * 4 : 0;
+            var oy = isH ? Math.sin(mid) * 4 : 0;
+
+            p.push();
+            p.translate(ox, oy);
+            p.noStroke();
+            p.fill(data[j].color);
+            // setor em anel como um único polígono fechado (arco externo de ida
+            // + arco interno de volta) — evita costuras internas entre triângulos.
+            var steps = Math.max(2, Math.ceil((sweep / (Math.PI * 2)) * 96));
+            p.beginShape();
+            for (var s = 0; s <= steps; s++) {
+              var ao = ang + (sweep * s) / steps;
+              p.vertex(cx + Math.cos(ao) * ro, cy + Math.sin(ao) * ro);
+            }
+            for (var s2 = steps; s2 >= 0; s2--) {
+              var ai = ang + (sweep * s2) / steps;
+              p.vertex(cx + Math.cos(ai) * rIn, cy + Math.sin(ai) * rIn);
+            }
+            p.endShape(p.CLOSE);
+            p.pop();
+
+            ang += sweep;
+          }
+
+          // texto central: total ou valor da fatia em hover
+          p.noStroke();
+          p.textAlign(p.CENTER, p.CENTER);
+          if (hover >= 0) {
+            var pct = ((data[hover].value / total) * 100).toFixed(1);
+            p.fill("#0D1B2A");
+            p.textSize(17);
+            p.textStyle(p.BOLD);
+            p.text(pct + "%", cx, cy - 4);
+            p.textStyle(p.NORMAL);
+            p.fill("#9C9C9F");
+            p.textSize(8);
+            p.text(
+              Number(data[hover].value).toLocaleString("pt-BR"),
+              cx,
+              cy + 12,
+            );
+          } else {
+            p.fill("#0D1B2A");
+            p.textSize(16);
+            p.textStyle(p.BOLD);
+            p.text(Number(total).toLocaleString("pt-BR"), cx, cy - 3);
+            p.textStyle(p.NORMAL);
+            p.fill("#9C9C9F");
+            p.textSize(8);
+            p.text("total", cx, cy + 12);
+          }
+
+          if (hover >= 0) {
+            _drawTooltip(p, [
+              String(data[hover].name),
+              Number(data[hover].value).toLocaleString("pt-BR") +
+                " (" +
+                ((data[hover].value / total) * 100).toFixed(1) +
+                "%)",
+            ]);
+            p.cursor(p.HAND);
+          } else {
+            p.cursor(p.ARROW);
+          }
+        };
+      };
+
+      var instance = new p5(sketch, node);
+      return function () {
+        instance.remove();
+      };
+    },
+    [dataKey],
+  );
 
   return (
-    <svg
-      viewBox={"0 0 " + w + " " + h}
-      width="100%"
-      style={{ overflow: "visible" }}
-    >
-      {[0, 0.5, 1].map(function (f) {
-        var y = pad.top + ch * (1 - f);
-        return (
-          <g key={f}>
-            <line
-              x1={pad.left}
-              x2={pad.left + cw}
-              y1={y}
-              y2={y}
-              stroke="#E8EFF7"
-              strokeWidth="1"
-            />
-            {f > 0 && (
-              <text
-                x={pad.left - 6}
-                y={y + 4}
-                textAnchor="end"
-                fontSize="9"
-                fill="#9C9C9F"
-              >
-                {fmtVal(max * f)}
-              </text>
-            )}
-          </g>
-        );
-      })}
-      <path d={area} fill="#2E6DA4" fillOpacity="0.08" />
-      <polyline
-        points={polyline}
-        fill="none"
-        stroke="#2E6DA4"
-        strokeWidth="2.5"
-        strokeLinejoin="round"
-      />
-      {pts.map(function (p, i) {
-        var d = data[i];
-        var labelY = i % 2 === 0 ? p[1] - 10 : p[1] + 18;
-        return (
-          <g key={i}>
-            <circle
-              cx={p[0]}
-              cy={p[1]}
-              r="4"
-              fill="#2E6DA4"
-              stroke="#fff"
-              strokeWidth="2"
-            />
-            <text
-              x={p[0]}
-              y={labelY}
-              textAnchor="middle"
-              fontSize="9"
-              fontWeight="600"
-              fill="#3B4049"
-            >
-              {fmtVal(d.value)}
-            </text>
-            <text
-              x={p[0]}
-              y={h - pad.bottom + 14}
-              textAnchor="middle"
-              fontSize="9"
-              fill="#9C9C9F"
-            >
-              {d.label}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
+    <div
+      ref={ref}
+      style={{ width: 150, height: 150, flexShrink: 0 }}
+    />
   );
 };
 
 // ============================================================================
-// DonutChart - gráfico de rosca com legenda lateral
+// RiskHistP5 - histograma de PD média por faixa, com destaque + tooltip
 // ============================================================================
-var DonutChart = function (props) {
-  var data = props.data;
-  var r = 60;
-  var ri = 38;
-  var cx = 80;
-  var cy = 80;
-  var total =
-    data.reduce(function (s, d) {
-      return s + d.value;
-    }, 0) || 1;
-
-  var slices = [];
-  var angle = -90;
-  data.forEach(function (d) {
-    var sweep = (d.value / total) * 360;
-    if (sweep === 0) return;
-    var a1 = (angle * Math.PI) / 180;
-    var a2 = ((angle + sweep) * Math.PI) / 180;
-    var x1 = cx + r * Math.cos(a1);
-    var y1 = cy + r * Math.sin(a1);
-    var x2 = cx + r * Math.cos(a2);
-    var y2 = cy + r * Math.sin(a2);
-    var xi1 = cx + ri * Math.cos(a1);
-    var yi1 = cy + ri * Math.sin(a1);
-    var xi2 = cx + ri * Math.cos(a2);
-    var yi2 = cy + ri * Math.sin(a2);
-    var large = sweep > 180 ? 1 : 0;
-    slices.push({
-      path:
-        "M" +
-        x1 +
-        "," +
-        y1 +
-        " A" +
-        r +
-        "," +
-        r +
-        " 0 " +
-        large +
-        ",1 " +
-        x2 +
-        "," +
-        y2 +
-        " L" +
-        xi2 +
-        "," +
-        yi2 +
-        " A" +
-        ri +
-        "," +
-        ri +
-        " 0 " +
-        large +
-        ",0 " +
-        xi1 +
-        "," +
-        yi1 +
-        " Z",
-      color: d.color,
-    });
-    angle += sweep;
-  });
-
-  return (
-    <svg
-      viewBox="0 0 160 160"
-      width="140"
-      height="140"
-      style={{ flexShrink: 0 }}
-    >
-      {slices.map(function (s, i) {
-        return <path key={i} d={s.path} fill={s.color} />;
-      })}
-      <circle cx={cx} cy={cy} r={ri - 2} fill="white" />
-    </svg>
+var RiskHistP5 = function (props) {
+  var ref = React.useRef(null);
+  var clusters = props.clusters || [];
+  var dataKey = JSON.stringify(
+    clusters.map(function (c) {
+      return c.pd_media;
+    }),
   );
-};
 
-// ============================================================================
-// RiskHistSVG - histograma de distribuição de PD média por faixa
-// ============================================================================
-var RiskHistSVG = function (props) {
-  var clusters = props.clusters;
-  if (!clusters || clusters.length === 0) return null;
+  React.useEffect(
+    function () {
+      var node = ref.current;
+      if (!node || clusters.length === 0) return;
 
-  var bins = [
-    { label: "0–5%", min: 0, max: 0.05, count: 0 },
-    { label: "5–10%", min: 0.05, max: 0.1, count: 0 },
-    { label: "10–15%", min: 0.1, max: 0.15, count: 0 },
-    { label: "15–20%", min: 0.15, max: 0.2, count: 0 },
-    { label: "20–25%", min: 0.2, max: 0.25, count: 0 },
-    { label: "25%+", min: 0.25, max: Infinity, count: 0 },
-  ];
-
-  clusters.forEach(function (c) {
-    for (var i = 0; i < bins.length; i++) {
-      if (c.pd_media >= bins[i].min && c.pd_media < bins[i].max) {
-        bins[i].count++;
-        break;
-      }
-    }
-  });
-
-  var w = 420;
-  var h = 175;
-  var pad = { top: 24, right: 10, bottom: 28, left: 40 };
-  var cw = w - pad.left - pad.right;
-  var ch = h - pad.top - pad.bottom;
-  var max =
-    Math.max.apply(
-      null,
-      bins.map(function (b) {
-        return b.count;
-      }),
-    ) || 1;
-  var bw = Math.floor((cw / bins.length) * 0.65);
-
-  return (
-    <svg
-      viewBox={"0 0 " + w + " " + h}
-      width="100%"
-      style={{ overflow: "visible" }}
-    >
-      {[0, 0.5, 1].map(function (f) {
-        var y = pad.top + ch * (1 - f);
-        return (
-          <g key={f}>
-            <line
-              x1={pad.left}
-              x2={pad.left + cw}
-              y1={y}
-              y2={y}
-              stroke="#E8EFF7"
-              strokeWidth="1"
-            />
-            {f > 0 && (
-              <text
-                x={pad.left - 6}
-                y={y + 4}
-                textAnchor="end"
-                fontSize="9"
-                fill="#9C9C9F"
-              >
-                {Math.round(max * f)}
-              </text>
-            )}
-          </g>
-        );
-      })}
-      {bins.map(function (b, i) {
-        var x = pad.left + (cw / bins.length) * i + (cw / bins.length - bw) / 2;
-        var bh = b.count > 0 ? Math.max(ch * (b.count / max), 2) : 0;
-        var y = pad.top + ch - bh;
-        // Color by risk: green → yellow → red
+      var sketch = function (p) {
+        var W = 420;
+        var H = 200;
+        var padH = { top: 26, right: 12, bottom: 34, left: 44 };
+        var start = 0;
+        var DUR = 750;
         var colors = [
           "#67DE98",
           "#A8E6B0",
@@ -430,44 +587,120 @@ var RiskHistSVG = function (props) {
           "#FF8C6B",
           "#FF5D5C",
         ];
-        return (
-          <g key={i}>
-            {b.count > 0 && (
-              <rect
-                x={x}
-                y={y}
-                width={bw}
-                height={bh}
-                fill={colors[i]}
-                fillOpacity="0.9"
-              />
-            )}
-            {b.count > 0 && (
-              <text
-                x={x + bw / 2}
-                y={y - 5}
-                textAnchor="middle"
-                fontSize="9"
-                fontWeight="600"
-                fill="#3B4049"
-              >
-                {b.count}
-              </text>
-            )}
-            <text
-              x={x + bw / 2}
-              y={h - pad.bottom + 14}
-              textAnchor="middle"
-              fontSize="8"
-              fill="#9C9C9F"
-            >
-              {b.label}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
+        var bins = [
+          { label: "0–5%", min: 0, max: 0.05, count: 0 },
+          { label: "5–10%", min: 0.05, max: 0.1, count: 0 },
+          { label: "10–15%", min: 0.1, max: 0.15, count: 0 },
+          { label: "15–20%", min: 0.15, max: 0.2, count: 0 },
+          { label: "20–25%", min: 0.2, max: 0.25, count: 0 },
+          { label: "25%+", min: 0.25, max: Infinity, count: 0 },
+        ];
+        clusters.forEach(function (c) {
+          for (var i = 0; i < bins.length; i++) {
+            if (c.pd_media >= bins[i].min && c.pd_media < bins[i].max) {
+              bins[i].count++;
+              break;
+            }
+          }
+        });
+        var max =
+          Math.max.apply(
+            null,
+            bins.map(function (b) {
+              return b.count;
+            }),
+          ) || 1;
+
+        p.setup = function () {
+          W = node.offsetWidth || 420;
+          p.createCanvas(W, H);
+          start = p.millis();
+          p.textFont("Inter, system-ui, sans-serif");
+        };
+        p.windowResized = function () {
+          W = node.offsetWidth || 420;
+          p.resizeCanvas(W, H);
+        };
+        p.draw = function () {
+          p.clear();
+          var cw = W - padH.left - padH.right;
+          var ch = H - padH.top - padH.bottom;
+          var t = _easeOutCubic(p.constrain((p.millis() - start) / DUR, 0, 1));
+
+          [0, 0.5, 1].forEach(function (f) {
+            var y = padH.top + ch * (1 - f);
+            p.stroke("#E8EFF7");
+            p.strokeWeight(1);
+            p.line(padH.left, y, padH.left + cw, y);
+            if (f > 0) {
+              p.noStroke();
+              p.fill("#9C9C9F");
+              p.textSize(9);
+              p.textAlign(p.RIGHT, p.CENTER);
+              p.text(Math.round(max * f), padH.left - 8, y);
+            }
+          });
+
+          var slot = cw / bins.length;
+          var bw = Math.min(46, slot * 0.66);
+          var hover = -1;
+
+          for (var i = 0; i < bins.length; i++) {
+            var x = padH.left + slot * i + (slot - bw) / 2;
+            var full = bins[i].count > 0 ? Math.max(ch * (bins[i].count / max), 2) : 0;
+            var bh = full * t;
+            var y = padH.top + ch - bh;
+            var over =
+              p.mouseX >= x - 2 &&
+              p.mouseX <= x + bw + 2 &&
+              p.mouseY >= padH.top &&
+              p.mouseY <= padH.top + ch;
+            if (over) hover = i;
+
+            if (bins[i].count > 0) {
+              p.noStroke();
+              var col = p.color(colors[i]);
+              col.setAlpha(over ? 255 : 230);
+              p.fill(col);
+              p.rect(x, y, bw, bh, 2, 2, 0, 0);
+              if (t > 0.85) {
+                p.fill("#3B4049");
+                p.textAlign(p.CENTER, p.BOTTOM);
+                p.textSize(9);
+                p.textStyle(p.BOLD);
+                p.text(bins[i].count, x + bw / 2, y - 3);
+                p.textStyle(p.NORMAL);
+              }
+            }
+            p.noStroke();
+            p.fill("#9C9C9F");
+            p.textAlign(p.CENTER, p.TOP);
+            p.textSize(8);
+            p.text(bins[i].label, x + bw / 2, padH.top + ch + 6);
+          }
+
+          if (hover >= 0) {
+            _drawTooltip(p, [
+              "PD " + bins[hover].label,
+              bins[hover].count + (bins[hover].count === 1 ? " cluster" : " clusters"),
+            ]);
+            p.cursor(p.HAND);
+          } else {
+            p.cursor(p.ARROW);
+          }
+        };
+      };
+
+      var instance = new p5(sketch, node);
+      return function () {
+        instance.remove();
+      };
+    },
+    [dataKey],
   );
+
+  if (!clusters || clusters.length === 0) return null;
+  return <div ref={ref} style={{ width: "100%" }} />;
 };
 
 // ============================================================================
@@ -982,7 +1215,7 @@ var Resultados = function (props) {
                 Limite ótimo atribuído a cada cluster pelo Simplex (R$)
               </div>
               {barData.length > 0 ? (
-                <BarChartSVG data={barData} />
+                <BarChartP5 data={barData} />
               ) : (
                 <p className="text-xs text-[#9C9C9F]">Sem dados de clusters.</p>
               )}
@@ -998,7 +1231,7 @@ var Resultados = function (props) {
               </div>
               {donutData.length > 0 ? (
                 <div className="flex items-center gap-6">
-                  <DonutChart data={donutData} />
+                  <DonutChartP5 data={donutData} />
                   <div className="space-y-3 flex-1">
                     {donutData.map(function (d) {
                       return (
@@ -1039,7 +1272,7 @@ var Resultados = function (props) {
               <div className="text-xs text-[#9C9C9F] mb-4">
                 z ótimo (R$) ao longo das simulações concluídas
               </div>
-              <LineChartSVG data={evolucaoData} />
+              <LineChartP5 data={evolucaoData} />
             </div>
 
             {/* Histograma de risco */}
@@ -1051,7 +1284,7 @@ var Resultados = function (props) {
                 Número de clusters por faixa de PD média
               </div>
               {clusters.length > 0 ? (
-                <RiskHistSVG clusters={clusters} />
+                <RiskHistP5 clusters={clusters} />
               ) : (
                 <p className="text-xs text-[#9C9C9F]">Sem dados de clusters.</p>
               )}
