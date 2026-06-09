@@ -84,7 +84,7 @@ apps/frontend/
     ├── Navbar.js            # Navbar fixa com gradiente PAN
     ├── Cockpit.js           # Visão geral da última simulação concluída
     ├── GerarLimites.js      # Upload, monitoramento e resultados inline
-    ├── Resultados.js        # Componentes SVG de gráficos + página de histórico
+    ├── Resultados.js        # Componentes de gráficos em p5.js + página de histórico
     ├── Clientes.js          # Busca por token e histórico individual entre safras
     └── ConfigModal.js       # Modal de configuração dos parâmetros do modelo
 ```
@@ -252,10 +252,10 @@ Mesmos quatro campos de `ConsultaResponse`: `n_clusters`, `z_otimo`, `n_clientes
 
 | Componente     | Dados                                                                                   |
 | -------------- | --------------------------------------------------------------------------------------- |
-| `BarChartSVG`  | Top 15 clusters por `limite_otimizado`, ordenados decrescentemente                      |
-| `DonutChart`   | Distribuição de clientes: Com limite / Elegível sem limite / Inelegível                 |
-| `LineChartSVG` | Evolução do `z_otimo` entre consultas concluídas, ordenadas cronologicamente            |
-| `RiskHistSVG`  | Histograma de clusters por faixa de PD média: 0-5%, 5-10%, 10-15%, 15-20%, 20-25%, 25%+ |
+| `BarChartP5`   | Top 15 clusters por `limite_otimizado`, ordenados decrescentemente                      |
+| `DonutChartP5` | Distribuição de clientes: Com limite / Elegível sem limite / Inelegível                 |
+| `LineChartP5` | Evolução do `z_otimo` entre consultas concluídas, ordenadas cronologicamente            |
+| `RiskHistP5`   | Histograma de clusters por faixa de PD média: 0-5%, 5-10%, 10-15%, 15-20%, 20-25%, 25%+ |
 
 ### 9.4 Parâmetros utilizados
 
@@ -307,18 +307,68 @@ Grid de dois cards por linha exibindo os parâmetros fixados pela modelagem ou p
 
 ## 12. Visualizações de Dados
 
-Todos os gráficos são componentes SVG puros definidos em `Resultados.js` como variáveis globais (`var`), acessíveis por `GerarLimites.js` após o carregamento dos scripts. Não há bibliotecas externas de charting.
+Todos os gráficos são componentes **p5.js** (instance mode) definidos em `Resultados.js` como variáveis globais (`var`), acessíveis por `GerarLimites.js` e `Clientes.js` após o carregamento dos scripts. Cada componente cria seu próprio `<canvas>` via `new p5(sketch, node)` e desenha programaticamente, com animação de entrada e interações de mouse. A biblioteca p5.js é carregada por CDN no `index.html`.
 
-| Componente     | Tipo                | Descrição                                                                                                                                                             |
-| -------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BarChartSVG`  | Barras verticais    | Barras azul PAN para clusters com limite, cinza `#E8EFF7` para clusters sem solução. Rótulo de valor acima de cada barra. Eixo Y com escala automática em R$k ou R$M. |
-| `LineChartSVG` | Linha com área      | Área sombreada azul, pontos com rótulo de valor alternados. Requer no mínimo 2 pontos; exibe aviso quando há apenas uma consulta.                                     |
-| `DonutChart`   | Rosca               | Fatias calculadas a partir das contagens da `ConsultaResponse`. Legenda lateral com valores absolutos.                                                                |
-| `RiskHistSVG`  | Histograma de risco | Seis faixas de PD média com gradiente visual de verde (baixo risco) a vermelho (alto risco). Conta clusters por faixa.                                                |
+| Componente      | Tipo                | Descrição                                                                                                                                                                  |
+| --------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BarChartP5`    | Barras verticais    | Barras azul PAN para clusters com limite, cinza `#E8EFF7` para clusters sem solução. Rótulo de valor acima de cada barra. Eixo Y com escala automática em R$k ou R$M.     |
+| `LineChartP5`   | Linha com área      | Área sombreada azul, pontos com rótulo de valor alternados. Requer no mínimo 2 pontos; exibe aviso quando há apenas uma consulta.                                         |
+| `DonutChartP5`  | Rosca               | Fatias calculadas a partir das contagens da `ConsultaResponse`. Legenda lateral (React) com valores absolutos; centro mostra total ou o % da fatia em destaque.          |
+| `RiskHistP5`    | Histograma de risco | Seis faixas de PD média com gradiente visual de verde (baixo risco) a vermelho (alto risco). Conta clusters por faixa.                                                    |
+
+### 12.1 Animações e interações (p5.js)
+
+Cada gráfico implementa, programaticamente em p5.js:
+
+- **Animação de entrada** com easing (`easeOutCubic`): as barras e o histograma crescem da base ao topo, a linha é traçada progressivamente da esquerda para a direita (com a área preenchendo junto) e a rosca é desenhada por varredura angular.
+- **Tooltip no hover**: ao passar o mouse sobre um elemento, um balão desenhado no próprio canvas segue o cursor e exibe o rótulo e o valor formatado (`R$`, contagem ou `%`), reposicionando-se para não vazar das bordas.
+- **Destaque do elemento sob o cursor**: a barra/fatia em foco muda de tom (azul mais escuro `#1B4F82` / opacidade total); na rosca a fatia é deslocada radialmente para fora e o anel ganha raio extra; na linha o ponto cresce e surge uma linha-guia vertical.
 
 Todas as visualizações usam exclusivamente cores da paleta PAN: azul `#2E6DA4` como cor principal, `#E8EFF7` para linhas de grade, paleta terciária (verde/amarelo/vermelho) para status e risco.
 
-## 13. Diferenças em Relação ao Protótipo
+## 13. Telas Implementadas
+
+As capturas abaixo mostram as telas da aplicação efetivamente implementadas no front-end (`apps/frontend`), geradas a partir da versão entregue. Cada tela corresponde a um dos fluxos descritos nas seções anteriores e às User Stories priorizadas.
+
+### 13.1 Cockpit (Dashboard)
+
+Visão geral da última simulação: indicadores consolidados (total de clientes, clusters, elegíveis e valor objetivo *z*) com deltas em relação à safra anterior, e tabela de clusters com status de viabilidade.
+
+![Tela Cockpit - indicadores consolidados e tabela de clusters](figuras/frontend/01-cockpit.png)
+
+### 13.2 Gerar Limites
+
+Fluxo de criação de simulação: esquema das colunas esperadas no `.parquet`, área de upload, lista de simulações (com a simulação selecionada destacada) e a seção de resultados com gráfico de barras, rosca e tabela detalhada de clusters.
+
+![Tela Gerar Limites - upload, lista de simulações e resultados](figuras/frontend/02-gerar-limites.png)
+
+### 13.3 Resultados
+
+Painel analítico com os quatro gráficos em p5.js: Top 15 Clusters por Limite (barras), Distribuição de Clientes (rosca), Evolução do Valor Objetivo (linha) e Distribuição de Risco (histograma).
+
+![Tela Resultados - quatro gráficos em p5.js](figuras/frontend/03-resultados.png)
+
+### 13.4 Clientes
+
+Histórico individual por token: cards de evolução por safra e os gráficos de Evolução do Limite e Evolução da PD Calibrada ao longo das safras.
+
+![Tela Clientes - histórico individual por token](figuras/frontend/04-clientes.png)
+
+### 13.5 Interações nos gráficos (p5.js)
+
+Ao passar o mouse sobre os elementos dos gráficos, um tooltip desenhado no próprio canvas exibe os valores e o elemento em foco é destacado. No exemplo, a fatia "Com limite" da rosca é deslocada para fora e o tooltip mostra o valor absoluto e o percentual.
+
+![Interação nos gráficos - tooltip e destaque ao passar o mouse](figuras/frontend/05-resultados-interacao.png)
+
+### 13.6 Configurações
+
+Modal de configuração dos parâmetros do modelo de otimização (`t`, `LGD`, `u_bar`, `L_max`, `T`), além dos parâmetros não editáveis fixados pela modelagem.
+
+![Modal de Configurações - parâmetros do modelo](figuras/frontend/06-configuracoes.png)
+
+> As capturas foram geradas automaticamente com Playwright sobre a aplicação implementada, com dados de exemplo representativos do pipeline de otimização.
+
+## 14. Diferenças em Relação ao Protótipo
 
 A implementação do front-end manteve os fluxos centrais definidos no protótipo: carregamento da base, geração de limites, acompanhamento dos resultados, visualização analítica e configuração dos parâmetros do modelo. No entanto, durante a integração com o back-end e com o otimizador, algumas decisões de implementação foram ajustadas para refletir melhor a arquitetura real da solução e as necessidades técnicas do pipeline de otimização.
 
@@ -327,7 +377,7 @@ A implementação do front-end manteve os fluxos centrais definidos no protótip
 | Upload de arquivo CSV/XLSX simulando uma base parquet | Upload real de arquivo `.parquet` | O `.parquet` é o formato utilizado pelo pipeline de dados e pelo back-end. A alteração aproxima a interface da operação real esperada em produção e reduz inconsistências entre protótipo e execução técnica. |
 | Geração de limites apresentada como uma ação imediata após o upload | Execução assíncrona com criação de consulta, status pendente e acompanhamento por polling | O processo de otimização envolve leitura da base, calibração de PD, clusterização e execução do Simplex, etapas que podem demandar tempo. Por isso, a interface foi adaptada para acompanhar uma execução longa sem bloquear o uso da aplicação. |
 | Upload simples de arquivo único | Upload em chunks com barra de progresso | A estratégia em chunks melhora a robustez para arquivos grandes, evita falhas por limite de payload e oferece feedback visual mais adequado ao usuário durante o envio da base. |
-| Visualizações previstas de forma conceitual no protótipo | Gráficos SVG implementados no front-end: barras, rosca, linha temporal e histograma de risco | Os gráficos SVG funcionam como estrutura equivalente ao canvas, permitindo visualizações gráficas próprias, leves e sem dependência de bibliotecas externas de charting. A escolha também facilita o controle visual e a adaptação às métricas reais do modelo. |
+| Visualizações previstas de forma conceitual no protótipo | Gráficos em **p5.js** (canvas) no front-end: barras, rosca, linha temporal e histograma de risco | Os quatro gráficos são desenhados em canvas via p5.js, atendendo ao requisito da disciplina de canvas com animações e interações programadas. Cada gráfico tem animação de entrada com easing e interações de mouse (tooltip que segue o cursor + destaque do elemento em foco), mantendo as métricas reais do modelo e a paleta PAN. |
 | Tela de configurações com parâmetros gerais do modelo | Modal de configuração com os parâmetros utilizados pelo otimizador: `t`, `LGD`, `u_bar`, `L_max` e `T` | A implementação priorizou os parâmetros efetivamente consumidos pelo modelo de programação linear, garantindo consistência entre interface, back-end e otimizador. |
 | Resultados exibidos principalmente por cluster | Resultados por cluster, indicadores consolidados, histórico de simulações e exportação de clientes | A entrega expande a análise planejada no protótipo, oferecendo uma visão mais completa para acompanhamento das safras e reutilização dos resultados em outros sistemas. |
 | Não havia uma tela específica para análise individual de clientes | Inclusão da tela de busca por token e histórico do cliente | A nova tela melhora a capacidade de auditoria da solução, permitindo acompanhar a evolução de um cliente específico entre diferentes simulações e safras. |
