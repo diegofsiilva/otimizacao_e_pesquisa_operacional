@@ -152,7 +152,7 @@ $$
 T(n,m)=
 \Theta(mn)+
 T_{solver}(n,m)
-\]
+$$
 
 Portanto:
 
@@ -161,6 +161,7 @@ $$
 T(n,m)=\Theta(mn + T_{solver}(n,m))
 }
 $$
+
 
 ## 2.9 Complexidade de Espaço
 
@@ -343,3 +344,27 @@ Ao término da última iteração, quando $k = m$, o modelo contém:
 - todas as restrições do problema original.
 
 Portanto, o modelo construído é matematicamente equivalente ao problema de programação linear fornecido como entrada.
+
+## 3.4 Terminação
+
+O laço principal possui a forma:
+
+```python
+for i in range(m):
+```
+
+onde $m$ é o número de restrições do problema.
+
+Como:
+
+- $m$ é finito;
+- a variável de controle aumenta de uma unidade a cada iteração;
+- nenhuma instrução altera o valor de $m$;
+
+o número de iterações é exatamente igual a $m$.
+
+Assim, o laço termina após um número finito de passos.
+
+Além disso, as demais operações da implementação consistem apenas em construções de listas, criação de objetos e uma chamada ao solver.
+
+Portanto, a construção do modelo sempre termina.
