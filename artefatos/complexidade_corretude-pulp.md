@@ -38,8 +38,6 @@ $$
 T_1(n)=\Theta(n)
 $$
 
----
-
 ## 2.2 Construção da Função Objetivo
 
 A função objetivo é montada por:
@@ -56,8 +54,6 @@ O laço percorre todas as variáveis.
 $$
 T_2(n)=\Theta(n)
 $$
-
----
 
 ## 2.3 Construção das Restrições
 
@@ -78,8 +74,6 @@ Para cada uma das $m$ restrições são percorridas as $n$ variáveis.
 $$
 T_3(n,m)=\Theta(mn)
 $$
-
----
 
 ## 2.4 Resolução do Modelo
 
@@ -102,8 +96,6 @@ Denotando por $T_{solver}(n,m)$ o custo do solver:
 $$
 T_4(n,m)=T_{solver}(n,m)
 $$
-
----
 
 ## 2.5 Extração da Solução
 
@@ -132,8 +124,6 @@ $$
 \Omega(mn)
 $$
 
----
-
 ## 2.7 Pior Caso
 
 O pior caso ocorre quando o solver precisa explorar grande quantidade de bases ou nós internos para encontrar a solução ótima.
@@ -147,8 +137,6 @@ O(T_{solver}(n,m))
 $$
 
 onde, no pior caso, o custo pode ser exponencial.
-
----
 
 ## 2.8 Complexidade Total
 
@@ -215,3 +203,143 @@ $$
 - Todas as variáveis possuem limite inferior igual a zero.
 
 Essas condições garantem que o problema de programação linear está bem definido.
+
+## 3.2 Invariante do Laço Principal
+
+O principal laço da implementação é responsável pela inserção das restrições no modelo:
+
+```python
+for i in range(m):
+    modelo += (
+        pulp.lpSum(
+            problema.A[i][j] * x_vars[j]
+            for j in range(n)
+        ) <= problema.b[i]
+    )
+```
+
+### Invariante P
+
+Após a conclusão da iteração $k$ do laço, o modelo PuLP representa exatamente o problema composto por:
+
+- todas as variáveis originais;
+- a função objetivo original;
+- as primeiras $k$ restrições do problema original.
+
+Formalmente:
+
+$$
+Modelo_k =
+\{
+FO,\;
+R_1,\;
+R_2,\;
+\ldots,\;
+R_k
+\}
+$$
+
+onde:
+
+- $FO$ representa a função objetivo;
+- $R_i$ representa a restrição $i$ do problema original.
+
+Para facilitar a demonstração, dividimos o invariante nas seguintes propriedades.
+
+### P1
+
+Todas as variáveis do problema original já foram criadas no modelo.
+
+### P2
+
+A função objetivo do modelo é exatamente a função objetivo do problema original.
+
+### P3
+
+As primeiras $k$ restrições do problema original foram adicionadas corretamente ao modelo.
+
+### P4
+
+Nenhuma restrição previamente inserida foi removida ou modificada.
+
+
+## 3.3 Prova do Invariante por Indução
+
+### Caso Base
+
+Antes da primeira iteração ($k = 0$):
+
+- todas as variáveis já foram criadas;
+- a função objetivo já foi construída;
+- nenhuma restrição foi adicionada.
+
+Logo:
+
+- P1 é verdadeira;
+- P2 é verdadeira;
+- P3 é verdadeira, pois existem zero restrições inseridas;
+- P4 é verdadeira, pois nenhuma restrição existe ainda.
+
+Portanto, o invariante vale antes do início do laço.
+
+
+### Hipótese de Indução
+
+Suponha que após a iteração $k$ o invariante seja verdadeiro.
+
+Ou seja:
+
+- todas as variáveis continuam presentes;
+- a função objetivo permanece correta;
+- as primeiras $k$ restrições foram adicionadas corretamente;
+- nenhuma delas foi alterada.
+
+
+### Passo Indutivo
+
+Na iteração $k+1$, o algoritmo executa:
+
+```python
+modelo += (
+    pulp.lpSum(
+        problema.A[k][j] * x_vars[j]
+        for j in range(n)
+    ) <= problema.b[k]
+)
+```
+
+Essa instrução adiciona ao modelo exatamente a restrição $R_{k+1}$.
+
+Além disso:
+
+- nenhuma variável é removida;
+- a função objetivo não é alterada;
+- nenhuma restrição previamente inserida é modificada;
+- apenas uma nova restrição é acrescentada.
+
+Portanto:
+
+- P1 continua verdadeira;
+- P2 continua verdadeira;
+- P3 passa a valer para as primeiras $k+1$ restrições;
+- P4 continua verdadeira.
+
+Logo, o invariante permanece válido após a iteração $k+1$.
+
+
+### Conclusão da Indução
+
+Como:
+
+1. o invariante é verdadeiro no caso base;
+2. sua validade após uma iteração implica sua validade na próxima;
+
+segue pelo Princípio da Indução Matemática que o invariante é verdadeiro para todas as iterações do laço.
+
+Ao término da última iteração, quando $k = m$, o modelo contém:
+
+- todas as variáveis do problema;
+- a função objetivo original;
+- todas as restrições do problema original.
+
+Portanto, o modelo construído é matematicamente equivalente ao problema de programação linear fornecido como entrada.
