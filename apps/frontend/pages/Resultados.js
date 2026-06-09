@@ -1083,17 +1083,30 @@ var Resultados = function (props) {
 
   // Funil de decisão: da base total até a oferta final.
   var funnelData = [];
+  var approvalShareData = null;
+  var approvedRateTotal = 0;
+  var approvedRateEligible = 0;
   if (selectedConsulta) {
     var nOfer = selectedConsulta.n_clientes_ofertados || 0;
     var nEleg = selectedConsulta.n_clientes_elegiveis || 0;
     var nTotal = selectedConsulta.n_clientes_total || 0;
+    var nElegSemOferta = Math.max(0, nEleg - nOfer);
+    var nBloqueado = Math.max(0, nTotal - nEleg);
+    approvedRateTotal = nTotal ? (nOfer / nTotal) * 100 : 0;
+    approvedRateEligible = nEleg ? (nOfer / nEleg) * 100 : 0;
+    approvalShareData = {
+      total: nTotal,
+      approved: nOfer,
+      eligibleNoOffer: nElegSemOferta,
+      blocked: nBloqueado,
+    };
     funnelData = [
       { label: "Base total", value: nTotal, color: "#2E6DA4" },
       { label: "Elegiveis", value: nEleg, color: "#0B8AA5" },
       { label: "Com oferta", value: nOfer, color: "#67DE98" },
       {
         label: "Sem oferta",
-        value: Math.max(0, nEleg - nOfer),
+        value: nElegSemOferta,
         color: "#FF5D5C",
       },
     ];
@@ -1205,6 +1218,44 @@ var Resultados = function (props) {
           ? fmt(totalExposure / selectedConsulta.n_clientes_ofertados)
           : "-",
       sub: "limite médio ofertado",
+    },
+  ];
+
+  var understandingInsights = [
+    {
+      label: "Aprovado no total",
+      value: approvedRateTotal.toFixed(1).replace(".", ",") + "%",
+      sub:
+        (selectedConsulta && selectedConsulta.n_clientes_ofertados
+          ? Number(selectedConsulta.n_clientes_ofertados).toLocaleString("pt-BR")
+          : "0") + " clientes com limite",
+    },
+    {
+      label: "Aprovado nos elegiveis",
+      value: approvedRateEligible.toFixed(1).replace(".", ",") + "%",
+      sub:
+        viableClusters.length +
+        " clusters aceitos" +
+        (temComparacaoPulp ? " · PuLP: " + viableClustersPulp.length : ""),
+    },
+    {
+      label: "Exposicao aprovada",
+      value: fmt(totalExposure),
+      sub: "limite total colocado na carteira",
+    },
+    {
+      label: "Risco ofertado",
+      value:
+        totalExposure > 0
+          ? (
+              (viableClusters.reduce(function (s, c) {
+                return s + (c.pd_media || 0) * getExposure(c);
+              }, 0) /
+                totalExposure) *
+              100
+            ).toFixed(2) + "%"
+          : "-",
+      sub: "PD ponderada por exposicao",
     },
   ];
 
@@ -1415,7 +1466,7 @@ var Resultados = function (props) {
       {/* KPI cards */}
       {selectedConsulta && (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-          {policyInsights.map(function (k, idx) {
+          {understandingInsights.map(function (k, idx) {
             return (
               <div
                 key={k.label}
