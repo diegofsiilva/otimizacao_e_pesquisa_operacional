@@ -710,17 +710,20 @@ var RiskHistP5 = function (props) {
 //   Base total -> Elegibilidade -> Clusters -> Faixa de limite
 //
 // Adaptacoes para o volume real de dados (muitos clusters):
-//   - Clusters: Top N maiores individualmente + um no "Outros" (resto agregado).
-//   - Limite: agregado em FAIXAS (Sem oferta / ate R$5k / R$5-15k / R$15k+),
-//     em vez de um no por cluster - escala para qualquer quantidade.
+//   - Clusters: Top N maiores individualmente + um no "Outros" (resto agregado),
+//     empilhados por limite (maior no topo, "sem oferta" embaixo).
+//   - Limite: agregado em FAIXAS (R$15k+ / R$5-15k / ate R$5k / Sem oferta).
 //   - Cor = camada de informacao de RISCO (PD media): verde (baixo) -> vermelho.
 //
-// Interacoes (p5.js):
-//   - Hover: destaca o no/fluxo sob o cursor e mostra tooltip.
-//   - Clique: TRAVA o foco num no ou fluxo (clique de novo / no vazio destrava).
-//   - Animacao de entrada: as colunas sao reveladas em sequencia (da esquerda
-//     para a direita), dando a sensacao de "fluir" pelo pipeline.
-//   - Botoes Top 5 / 8 / 12 controlam quantos clusters aparecem individualmente.
+// Duas leituras (toggle):
+//   - CLIENTES: a largura das fitas = numero de pessoas que fluem.
+//   - CREDITO (R$): a largura = R$ concedido (limite x clientes). Nesse modo o
+//     diagrama representa literalmente o FLUXO DE CONCESSAO de credito; quem nao
+//     recebe oferta (limite 0) some, pois nao concede credito.
+//
+// Interacoes (p5.js): hover destaca o fluxo e mostra tooltip (clientes, %, PD e
+// R$ concedido); clique TRAVA o foco; animacao revela as colunas em sequencia.
+// No canto: total de credito concedido (soma de todos os clusters).
 //
 // props: { total, elegiveis, clusters:[{cluster_id,n_clientes,pd_media,limite_otimizado}], topN }
 // ============================================================================
@@ -748,22 +751,41 @@ var _SANKEY_FAIXA_META = [
   { label: "R$ 15k+", cor: [46, 109, 164] },
 ];
 
+function _sankeyFmtNum(n) {
+  if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
+  if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
+  return Math.round(n).toLocaleString("pt-BR");
+}
+function _sankeyFmtReais(v) {
+  if (v >= 1e9) return "R$ " + (v / 1e9).toFixed(2) + " bi";
+  if (v >= 1e6) return "R$ " + (v / 1e6).toFixed(1) + " mi";
+  if (v >= 1e3) return "R$ " + (v / 1e3).toFixed(0) + " mil";
+  return "R$ " + Math.round(v);
+}
+
 var SankeyPipelineP5 = function (props) {
   var ref = React.useRef(null);
-  var s = React.useState(props.topN || 8);
-  var topN = s[0];
-  var setTopN = s[1];
+  var sTop = React.useState(props.topN || 8);
+  var topN = sTop[0];
+  var setTopN = sTop[1];
+  var sMode = React.useState("clientes"); // "clientes" | "credito"
+  var mode = sMode[0];
+  var setMode = sMode[1];
 
   var total = props.total || 0;
   var elig = props.elegiveis || 0;
   var clusters = (props.clusters || []).filter(function (c) {
     return c && c.n_clientes > 0;
   });
+  var creditoTotal = clusters.reduce(function (sum, c) {
+    return sum + (c.limite_otimizado || 0) * c.n_clientes;
+  }, 0);
 
   var dataKey = JSON.stringify({
     total: total,
     elig: elig,
     topN: topN,
+    mode: mode,
     c: clusters.map(function (c) {
       return [c.cluster_id, c.n_clientes, c.pd_media, c.limite_otimizado];
     }),
@@ -786,87 +808,144 @@ var SankeyPipelineP5 = function (props) {
         var start = 0;
         var INTRO = 1100;
         var introDone = false;
+        var creditoTotal = 0;
+        var isCred = mode === "credito";
 
-        function fmtNum(n) {
-          if (n >= 1e6) return (n / 1e6).toFixed(1) + "M";
-          if (n >= 1e3) return (n / 1e3).toFixed(1) + "K";
-          return Math.round(n).toLocaleString("pt-BR");
-        }
         function ease(x) {
           return 1 - Math.pow(1 - x, 3);
+        }
+        // formata o valor "ativo" (clientes ou R$) conforme o modo
+        function fmtVal(v) {
+          return isCred ? _sankeyFmtReais(v) : _sankeyFmtNum(v);
+        }
+        // metrica ativa de um cluster
+        function metric(c) {
+          return isCred ? (c.limite_otimizado || 0) * c.n_clientes : c.n_clientes;
         }
 
         function build() {
           nodes = [];
           links = [];
-          var nonElig = Math.max(0, total - elig);
-          var nTotal = { id: "total", col: 0, label: "Clientes", value: total, cor: [100, 120, 160] };
-          var nElig = { id: "elig", col: 1, label: "Elegiveis", value: elig, cor: [60, 140, 200] };
-          var nNao = { id: "nao", col: 1, label: "Inelegiveis", value: nonElig, cor: [160, 160, 170] };
-          nodes.push(nTotal, nElig, nNao);
-          links.push({ src: nTotal, dst: nElig, val: elig, cor: nElig.cor });
-          if (nonElig > 0) links.push({ src: nTotal, dst: nNao, val: nonElig, cor: nNao.cor });
 
+          // total de credito concedido (todos os clusters) - usado no readout
+          creditoTotal = clusters.reduce(function (s, c) {
+            return s + (c.limite_otimizado || 0) * c.n_clientes;
+          }, 0);
+
+          // valor "ativo" dos nos de origem
+          var vTotal = isCred ? creditoTotal : total;
+          var vElig = isCred ? creditoTotal : elig; // todo o credito vem dos elegiveis
+          var vNao = isCred ? 0 : Math.max(0, total - elig);
+
+          var nTotal = { id: "total", col: 0, label: "Clientes", value: vTotal, cli: total, cred: creditoTotal, cor: [100, 120, 160] };
+          var nElig = { id: "elig", col: 1, label: "Elegiveis", value: vElig, cli: elig, cred: creditoTotal, cor: [60, 140, 200] };
+          nodes.push(nTotal, nElig);
+          links.push({ src: nTotal, dst: nElig, val: vElig, cor: nElig.cor });
+
+          if (vNao > 0) {
+            var nNao = { id: "nao", col: 1, label: "Inelegiveis", value: vNao, cli: Math.max(0, total - elig), cred: 0, cor: [160, 160, 170] };
+            nodes.push(nNao);
+            links.push({ src: nTotal, dst: nNao, val: vNao, cor: nNao.cor });
+          }
+
+          // Top N por tamanho; empilha por limite (maior no topo)
           var sorted = clusters.slice().sort(function (a, b) {
             return b.n_clientes - a.n_clientes;
           });
-          var top = sorted.slice(0, topN);
+          // Empilha por RISCO (PD media) crescente: menor risco (verde) no topo,
+          // maior risco (vermelho) embaixo. Cruzamentos ocasionais sao aceitaveis.
+          var top = sorted.slice(0, topN).sort(function (a, b) {
+            return (a.pd_media || 0) - (b.pd_media || 0);
+          });
           var rest = sorted.slice(topN);
 
-          var faixaNodes = {};
-          function getFaixa(idx) {
-            if (!faixaNodes[idx]) {
+          // Faixas COMPARTILHADAS pelos clusters do Top N...
+          var sharedFaixa = {};
+          function getShared(idx) {
+            if (!sharedFaixa[idx]) {
               var m = _SANKEY_FAIXA_META[idx];
-              faixaNodes[idx] = { id: "fx" + idx, col: 3, label: m.label, value: 0, cor: m.cor, faixa: true };
+              sharedFaixa[idx] = { id: "fxs" + idx, col: 3, label: m.label, value: 0, cli: 0, cred: 0, cor: m.cor, faixa: true };
             }
-            return faixaNodes[idx];
+            return sharedFaixa[idx];
+          }
+          // ...e faixas PROPRIAS do no "Outros" (separadas, ficam embaixo).
+          var outrosFaixa = {};
+          function getOutros(idx) {
+            if (!outrosFaixa[idx]) {
+              var m = _SANKEY_FAIXA_META[idx];
+              outrosFaixa[idx] = { id: "fxo" + idx, col: 3, label: m.label, value: 0, cli: 0, cred: 0, cor: m.cor, faixa: true, doOutros: true };
+            }
+            return outrosFaixa[idx];
           }
 
           top.forEach(function (c) {
+            var v = metric(c);
+            if (v <= 0) return; // no modo credito, clusters sem oferta somem
             var cor = _sankeyRiscoCor(c.pd_media);
             var nc = {
               id: "c" + c.cluster_id,
               col: 2,
               label: "CLU-" + c.cluster_id,
-              value: c.n_clientes,
+              value: v,
+              cli: c.n_clientes,
+              cred: (c.limite_otimizado || 0) * c.n_clientes,
               cor: cor,
               pd: c.pd_media,
               limite: c.limite_otimizado,
             };
             nodes.push(nc);
-            links.push({ src: nElig, dst: nc, val: c.n_clientes, cor: cor });
-            var fx = getFaixa(_sankeyFaixaLimite(c.limite_otimizado));
-            fx.value += c.n_clientes;
-            links.push({ src: nc, dst: fx, val: c.n_clientes, cor: cor });
+            links.push({ src: nElig, dst: nc, val: v, cor: cor });
+            var fx = getShared(_sankeyFaixaLimite(c.limite_otimizado));
+            fx.value += v;
+            fx.cli += c.n_clientes;
+            fx.cred += (c.limite_otimizado || 0) * c.n_clientes;
+            links.push({ src: nc, dst: fx, val: v, cor: cor });
           });
 
           if (rest.length > 0) {
-            var restTotal = rest.reduce(function (sum, c) {
-              return sum + c.n_clientes;
+            var restV = rest.reduce(function (s, c) {
+              return s + metric(c);
             }, 0);
-            var nOut = { id: "outros", col: 2, label: "Outros (" + rest.length + ")", value: restTotal, cor: [165, 170, 180], outros: true };
-            nodes.push(nOut);
-            links.push({ src: nElig, dst: nOut, val: restTotal, cor: [180, 185, 195] });
-            var byFaixa = {};
-            rest.forEach(function (c) {
-              var f = _sankeyFaixaLimite(c.limite_otimizado);
-              byFaixa[f] = (byFaixa[f] || 0) + c.n_clientes;
-            });
-            Object.keys(byFaixa).forEach(function (fk) {
-              var fx = getFaixa(parseInt(fk, 10));
-              fx.value += byFaixa[fk];
-              links.push({ src: nOut, dst: fx, val: byFaixa[fk], cor: [180, 185, 195] });
-            });
+            if (restV > 0) {
+              var restCli = rest.reduce(function (s, c) {
+                return s + c.n_clientes;
+              }, 0);
+              var restCred = rest.reduce(function (s, c) {
+                return s + (c.limite_otimizado || 0) * c.n_clientes;
+              }, 0);
+              var nOut = { id: "outros", col: 2, label: "Outros (" + rest.length + ")", value: restV, cli: restCli, cred: restCred, cor: [165, 170, 180], outros: true };
+              nodes.push(nOut);
+              links.push({ src: nElig, dst: nOut, val: restV, cor: [180, 185, 195] });
+              var byFaixa = {};
+              rest.forEach(function (c) {
+                var v = metric(c);
+                if (v <= 0) return;
+                var f = _sankeyFaixaLimite(c.limite_otimizado);
+                if (!byFaixa[f]) byFaixa[f] = { v: 0, cli: 0, cred: 0 };
+                byFaixa[f].v += v;
+                byFaixa[f].cli += c.n_clientes;
+                byFaixa[f].cred += (c.limite_otimizado || 0) * c.n_clientes;
+              });
+              Object.keys(byFaixa).forEach(function (fk) {
+                var fx = getOutros(parseInt(fk, 10));
+                fx.value += byFaixa[fk].v;
+                fx.cli += byFaixa[fk].cli;
+                fx.cred += byFaixa[fk].cred;
+                links.push({ src: nOut, dst: fx, val: byFaixa[fk].v, cor: [180, 185, 195] });
+              });
+            }
           }
 
-          Object.keys(faixaNodes)
+          // col3: faixas compartilhadas no topo (desc) e, abaixo, as faixas
+          // proprias do "Outros" (desc) - mantem os dois grupos separados.
+          Object.keys(sharedFaixa)
             .map(Number)
-            .sort(function (a, b) {
-              return a - b;
-            })
-            .forEach(function (k) {
-              nodes.push(faixaNodes[k]);
-            });
+            .sort(function (a, b) { return b - a; })
+            .forEach(function (k) { nodes.push(sharedFaixa[k]); });
+          Object.keys(outrosFaixa)
+            .map(Number)
+            .sort(function (a, b) { return b - a; })
+            .forEach(function (k) { nodes.push(outrosFaixa[k]); });
 
           layout();
         }
@@ -874,7 +953,7 @@ var SankeyPipelineP5 = function (props) {
         function layout() {
           var mTop = 86,
             mBot = 30,
-            mX = 90,
+            mX = 92,
             nW = 20,
             pad = 10;
           var uW = W - 2 * mX;
@@ -1019,18 +1098,34 @@ var SankeyPipelineP5 = function (props) {
           var rightSide = n.col >= 2;
           var ax = rightSide ? n.x + n.w + 8 : n.x - 8;
           p.textAlign(rightSide ? p.LEFT : p.RIGHT, p.CENTER);
-          p.fill(58, 64, 73, 255 * intro * (on ? 1 : 0.7));
+          var fade = intro * (on ? 1 : 0.7);
+          // faixas (col 3): mostram a metrica ativa + a outra em linha menor
+          var extra = n.col === 3 ? (isCred ? _sankeyFmtNum(n.cli) : _sankeyFmtReais(n.cred)) : null;
+          var midY = n.y + n.h / 2;
+          p.fill(58, 64, 73, 255 * fade);
           p.textSize(12);
           p.textStyle(p.BOLD);
-          p.text(n.label, ax, n.y + n.h / 2 - 7);
-          p.fill(140, 145, 150, 255 * intro * (on ? 1 : 0.7));
+          p.text(n.label, ax, midY - (extra ? 12 : 7));
+          p.fill(120, 128, 138, 255 * fade);
           p.textSize(10);
           p.textStyle(p.NORMAL);
-          p.text(fmtNum(n.value), ax, n.y + n.h / 2 + 8);
+          p.text(fmtVal(n.value), ax, midY + (extra ? -0 : 8));
+          if (extra) {
+            p.fill(150, 156, 164, 255 * fade);
+            p.textSize(9);
+            p.text(extra, ax, midY + 12);
+          }
         }
 
         function drawTip(n) {
-          var lines = [n.label, fmtNum(n.value) + " clientes (" + ((n.value / total) * 100).toFixed(1) + "%)"];
+          var lines = [n.label];
+          var pct = isCred
+            ? creditoTotal > 0
+              ? ((n.cred / creditoTotal) * 100).toFixed(1)
+              : "0"
+            : ((n.cli / total) * 100).toFixed(1);
+          lines.push(_sankeyFmtNum(n.cli) + " clientes (" + pct + "%)");
+          if (n.cred > 0) lines.push(_sankeyFmtReais(n.cred) + " concedido");
           if (n.pd != null) lines.push("PD media: " + (n.pd * 100).toFixed(1) + "%");
           if (n.faixa) lines.push("Faixa de limite");
           if (n.outros) lines.push("Demais clusters agregados");
@@ -1067,20 +1162,20 @@ var SankeyPipelineP5 = function (props) {
           // titulos das colunas + processos
           p.noStroke();
           p.textAlign(p.CENTER, p.TOP);
-          var colSp = (W - 180) / 3;
+          var colSp = (W - 184) / 3;
           var titles = ["BASE TOTAL", "ELEGIBILIDADE", "CLUSTERS", "LIMITE"];
           p.textSize(10);
           p.textStyle(p.BOLD);
           for (var c = 0; c < 4; c++) {
             p.fill(150, 155, 162, 255 * ease(colIntro(c)));
-            p.text(titles[c], 90 + c * colSp, 30);
+            p.text(titles[c], 92 + c * colSp, 30);
           }
           p.textSize(10);
           p.textStyle(p.NORMAL);
-          var procs = ["Filtro por flag", "Clusterizacao (CART)", "Otimizacao (Simplex)"];
+          var procs = ["Filtro de elegibilidade", "Clusterizacao (CART)", "Otimizacao (Simplex)"];
           for (var pc = 0; pc < 3; pc++) {
             p.fill(120, 150, 190, 230 * ease(colIntro(pc + 1)));
-            p.text(procs[pc], 90 + colSp * (pc + 0.5), 46);
+            p.text(procs[pc], 92 + colSp * (pc + 0.5), 46);
           }
 
           links.forEach(function (lk) {
@@ -1099,7 +1194,7 @@ var SankeyPipelineP5 = function (props) {
             p.textSize(10);
             p.textStyle(p.NORMAL);
             p.textAlign(p.LEFT, p.BOTTOM);
-            p.text("foco travado - clique no vazio para soltar", 90, H - 8);
+            p.text("foco travado - clique no vazio para soltar", 92, H - 8);
           }
 
           p.cursor(hovN || hovL ? p.HAND : p.ARROW);
@@ -1131,7 +1226,7 @@ var SankeyPipelineP5 = function (props) {
 
   if (!props.total || !(props.clusters || []).length) return null;
 
-  var btn = function (n) {
+  var topBtn = function (n) {
     return (
       <button
         key={n}
@@ -1149,24 +1244,58 @@ var SankeyPipelineP5 = function (props) {
       </button>
     );
   };
+  var modeBtn = function (key, label) {
+    return (
+      <button
+        key={key}
+        onClick={function () {
+          setMode(key);
+        }}
+        className={
+          "px-2.5 py-1 text-[11px] font-medium border transition-colors " +
+          (mode === key
+            ? "bg-[#0D1B2A] text-white border-[#0D1B2A]"
+            : "bg-white text-[#3B4049] border-[#E8EFF7] hover:bg-[#E2EAF4]")
+        }
+      >
+        {label}
+      </button>
+    );
+  };
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-        <div className="flex items-center gap-3 text-[11px] text-[#9C9C9F]">
-          <span className="flex items-center gap-1">
-            <span className="inline-block w-2.5 h-2.5" style={{ background: "#67DE98" }} /> baixo risco
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="inline-block w-2.5 h-2.5" style={{ background: "#FAE95D" }} /> medio
-          </span>
-          <span className="flex items-center gap-1">
-            <span className="inline-block w-2.5 h-2.5" style={{ background: "#FF5D5C" }} /> alto risco
-          </span>
+      <div className="flex items-center justify-between mb-2 flex-wrap gap-3">
+        <div className="flex items-center gap-3 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            {modeBtn("clientes", "Clientes")}
+            {modeBtn("credito", "Crédito (R$)")}
+          </div>
+          <div className="flex items-center gap-3 text-[11px] text-[#9C9C9F]">
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-2.5 h-2.5" style={{ background: "#67DE98" }} /> baixo risco
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-2.5 h-2.5" style={{ background: "#FAE95D" }} /> medio
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="inline-block w-2.5 h-2.5" style={{ background: "#FF5D5C" }} /> alto risco
+            </span>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[11px] text-[#9C9C9F] mr-1">Clusters:</span>
-          {[5, 8, 12].map(btn)}
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="text-right leading-tight">
+            <div className="text-[10px] text-[#9C9C9F] uppercase tracking-wide">
+              Crédito concedido
+            </div>
+            <div className="text-sm font-bold text-[#2E6DA4]">
+              {_sankeyFmtReais(creditoTotal)}
+            </div>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="text-[11px] text-[#9C9C9F] mr-1">Clusters:</span>
+            {[5, 8, 12].map(topBtn)}
+          </div>
         </div>
       </div>
       <div ref={ref} style={{ width: "100%" }} />

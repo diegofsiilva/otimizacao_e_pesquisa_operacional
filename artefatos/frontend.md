@@ -336,8 +336,16 @@ Como o volume real é muito maior que um exemplo didático (dezenas de clusters)
 - **Limite em faixas:** em vez de um nó por cluster, a última coluna agrega os limites em faixas (Sem oferta / Até R$ 5k / R$ 5–15k / R$ 15k+), mantendo a leitura estável independentemente da quantidade de clusters.
 - **Cor como camada de informação:** os clusters e seus fluxos são coloridos pela faixa de risco (PD média), de verde (baixo) a vermelho (alto); as faixas de limite usam uma escala de azul crescente. Assim a relação risco → limite fica visível no próprio desenho.
 
+**Duas leituras (toggle Clientes ⇄ Crédito R$):**
+
+- No modo **Clientes**, a largura das fitas é o número de pessoas que fluem por cada etapa.
+- No modo **Crédito (R$)**, a largura passa a representar o R$ concedido (limite × clientes). Assim o diagrama vira literalmente o *fluxo de concessão de crédito*: os Inelegíveis e a faixa "Sem oferta" desaparecem (não concedem crédito), e os clusters aparecem proporcionais ao crédito que geram.
+
+Além disso, o canto superior direito mostra o **crédito concedido total** (Σ limite × clientes ≈ valor objetivo *z*) e cada **faixa de limite exibe o R$** total concedido, não só o número de clientes.
+
 Interações (programadas em p5.js):
 
+- **Organização das colunas:** os clusters são empilhados por faixa de risco (PD média) — menor risco (verde) no topo, maior risco (vermelho) embaixo. O nó "Outros" fica sempre no fim e recebe seus **próprios** nós de limite, separados das faixas compartilhadas pelos clusters do Top N; isso agrupa os fluxos e reduz cruzamentos (que, quando ocorrem, são aceitáveis).
 - **Animação de entrada:** as colunas são reveladas em sequência, da esquerda para a direita, reforçando a ideia de fluxo pelo pipeline.
 - **Hover:** destaca o nó/fluxo sob o cursor (os demais esmaecem) e mostra um tooltip com volume, percentual da base e, para clusters, a PD média.
 - **Foco travado:** clicar em um nó ou fluxo fixa o destaque, permitindo inspecionar um grupo sem manter o mouse parado; clicar no vazio solta.
