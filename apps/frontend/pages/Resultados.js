@@ -1514,18 +1514,18 @@ var Resultados = function (props) {
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            {/* Risco x retorno */}
+            {/* Aprovacao sobre total */}
             <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
               <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
-                Risco x Retorno por Cluster
+                Quanto foi aprovado
               </div>
               <div className="text-xs text-[#9C9C9F] mb-4">
-                Bolhas maiores representam mais clientes; linha vermelha marca retorno zero
+                Leitura direta da oferta aprovada em relacao ao total processado
               </div>
-              {policyPoints.length > 0 ? (
-                <RiskReturnScatterSVG points={policyPoints} />
+              {approvalShareData ? (
+                <ApprovalShareSVG data={approvalShareData} />
               ) : (
-                <p className="text-xs text-[#9C9C9F]">Sem dados de clusters.</p>
+                <p className="text-xs text-[#9C9C9F]">Sem dados de aprovacao.</p>
               )}
             </div>
 
@@ -1581,14 +1581,30 @@ var Resultados = function (props) {
           </div>
 
           {/* Gráficos - linha 3 */}
-          <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
-            <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
-              Evolução do Valor Objetivo
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+              <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
+                Risco x Retorno por Cluster
+              </div>
+              <div className="text-xs text-[#9C9C9F] mb-4">
+                Diagnostico fino: bolhas maiores representam mais clientes
+              </div>
+              {policyPoints.length > 0 ? (
+                <RiskReturnScatterSVG points={policyPoints} />
+              ) : (
+                <p className="text-xs text-[#9C9C9F]">Sem dados de clusters.</p>
+              )}
             </div>
-            <div className="text-xs text-[#9C9C9F] mb-4">
-              Mantém a trilha histórica das simulações para comparação de safras
+
+            <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+              <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
+                Evolução do Valor Objetivo
+              </div>
+              <div className="text-xs text-[#9C9C9F] mb-4">
+                Mantém a trilha histórica das simulações para comparação de safras
+              </div>
+              <LineChartSVG data={evolucaoData} />
             </div>
-            <LineChartSVG data={evolucaoData} />
           </div>
         </div>
       )}
