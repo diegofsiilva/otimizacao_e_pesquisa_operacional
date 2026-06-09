@@ -68,7 +68,7 @@ var PARAMS_EDITAVEIS = [
   {
     key: "T",
     label: "Horizonte de uso do limite (meses)",
-    value: 22,
+    value: 15,
     min: 6,
     max: 60,
     step: 1,
