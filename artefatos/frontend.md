@@ -392,8 +392,6 @@ Modal de configuração dos parâmetros do modelo de otimização (`t`, `LGD`, `
 
 ![Modal de Configurações - parâmetros do modelo](figuras/frontend/06-configuracoes.png)
 
-> As capturas foram geradas automaticamente com Playwright sobre a aplicação implementada, com dados de exemplo representativos do pipeline de otimização.
-
 ### 13.7 Fluxo do Pipeline (Sankey)
 
 Diagrama de Sankey no final do Cockpit e do Resultados: Base → Elegibilidade → Clusters (Top N + "Outros") → Faixas de limite, com cor por risco e interações de hover e foco travado.
@@ -410,6 +408,7 @@ A implementação do front-end manteve os fluxos centrais definidos no protótip
 | Geração de limites apresentada como uma ação imediata após o upload | Execução assíncrona com criação de consulta, status pendente e acompanhamento por polling | O processo de otimização envolve leitura da base, calibração de PD, clusterização e execução do Simplex, etapas que podem demandar tempo. Por isso, a interface foi adaptada para acompanhar uma execução longa sem bloquear o uso da aplicação. |
 | Upload simples de arquivo único | Upload em chunks com barra de progresso | A estratégia em chunks melhora a robustez para arquivos grandes, evita falhas por limite de payload e oferece feedback visual mais adequado ao usuário durante o envio da base. |
 | Visualizações previstas de forma conceitual no protótipo | Gráficos em **p5.js** (canvas) no front-end: barras, rosca, linha temporal e histograma de risco | Os quatro gráficos são desenhados em canvas via p5.js, atendendo ao requisito da disciplina de canvas com animações e interações programadas. Cada gráfico tem animação de entrada com easing e interações de mouse (tooltip que segue o cursor + destaque do elemento em foco), mantendo as métricas reais do modelo e a paleta PAN. |
+| O protótipo não previa uma visão do fluxo do pipeline | Diagrama de **Sankey** ("Fluxo do Pipeline") em p5.js no Cockpit e no Resultados, com leitura alternável por nº de clientes ou por crédito concedido (R$) | Camada analítica nova (não prevista no protótipo) que torna explícito como a base flui da elegibilidade → clusters (CART) → faixas de limite (Simplex). Foi adaptada ao volume real de dados (Top N clusters + nó "Outros" com faixas próprias, cor por faixa de risco) e traz hover, foco travado por clique e animação de entrada. |
 | Tela de configurações com parâmetros gerais do modelo | Modal de configuração com os parâmetros utilizados pelo otimizador: `t`, `LGD`, `u_bar`, `L_max` e `T` | A implementação priorizou os parâmetros efetivamente consumidos pelo modelo de programação linear, garantindo consistência entre interface, back-end e otimizador. |
 | Resultados exibidos principalmente por cluster | Resultados por cluster, indicadores consolidados, histórico de simulações e exportação de clientes | A entrega expande a análise planejada no protótipo, oferecendo uma visão mais completa para acompanhamento das safras e reutilização dos resultados em outros sistemas. |
 | Não havia uma tela específica para análise individual de clientes | Inclusão da tela de busca por token e histórico do cliente | A nova tela melhora a capacidade de auditoria da solução, permitindo acompanhar a evolução de um cliente específico entre diferentes simulações e safras. |
