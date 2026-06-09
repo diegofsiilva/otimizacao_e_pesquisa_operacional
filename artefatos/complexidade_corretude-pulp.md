@@ -173,3 +173,45 @@ $$
 T(n,m)=\Theta(mn + T_{solver}(n,m))
 }
 $$
+
+## 2.9 Complexidade de Espaço
+
+O modelo armazena:
+
+- $n$ variáveis;
+- $m$ restrições;
+- matriz $A$ com $m \times n$ coeficientes.
+
+Logo:
+
+$$
+\boxed{
+S(n,m)=\Theta(mn)
+}
+$$
+
+# 3. Corretude
+
+A corretude da implementação com PuLP será demonstrada em duas etapas:
+
+1. Corretude da construção do modelo de Programação Linear;
+2. Corretude da solução retornada pelo solver.
+
+Como o módulo `simplex_pulp.py` não implementa diretamente um algoritmo de otimização, mas sim constrói um modelo matemático e o envia para um solver externo, o objetivo da prova é demonstrar que o modelo construído é exatamente equivalente ao problema original.
+
+## 3.1 Pré-condição
+
+Antes da execução do algoritmo, assume-se que a instância do problema satisfaz as seguintes condições:
+
+- A matriz $A$ possui $m$ linhas e $n$ colunas;
+- O vetor $b$ possui $m$ componentes;
+- O vetor $c$ possui $n$ componentes;
+- Todas as restrições estão definidas na forma
+
+$$
+Ax \le b
+$$
+
+- Todas as variáveis possuem limite inferior igual a zero.
+
+Essas condições garantem que o problema de programação linear está bem definido.
