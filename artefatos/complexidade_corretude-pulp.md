@@ -27,7 +27,7 @@ As variáveis são criadas pelo trecho:
 
 ```python
 x_vars = [
-    pulp.LpVariable(f"x_{j}", lowBound=0.0)
+    pulp.LpVariable(f"x_{j}", lowBound=0.0, cat=pulp.LpContinuous)
     for j in range(n)
 ]
 ```
@@ -75,6 +75,12 @@ $$
 T_3(n,m)=\Theta(mn)
 $$
 
+Para o PL específico do projeto, $n = K$ e $m = 2K + 1$, de modo que a construção do modelo é:
+
+$$
+T_3(K)=\Theta(K\cdot(2K+1)) = \Theta(K^2).
+$$
+
 ## 2.4 Resolução do Modelo
 
 O trecho:
@@ -85,13 +91,18 @@ modelo.solve(solver)
 
 transfere o problema para o solver externo.
 
-O custo desta etapa depende do algoritmo interno utilizado pelo solver selecionado.
+O custo desta etapa depende do solver que for selecionado em tempo de execução. O código tenta, na ordem:
 
-No caso do CBC (solver padrão), o método utilizado é baseado em variantes do Simplex e Branch-and-Bound.
+- CBC (`PULP_CBC_CMD`);
+- HiGHS via `highspy` (`HiGHS`);
+- HiGHS externo (`HiGHS_CMD`);
+- GLPK externo (`GLPK_CMD`).
 
-Assim, não é possível determinar uma complexidade exata apenas analisando o código Python.
+Para o problema contínuo modelado em `simplex_pulp.py`, o solver não aciona o Branch-and-Bound, pois não há variáveis inteiras. O CBC e o GLPK resolvem o PL contínuo por métodos baseados em Simplex/pivoteamento; o HiGHS pode usar algoritmos de pontos interiores ou simplex, e por isso tem regimes de pior caso diferentes.
 
-Denotando por $T_{solver}(n,m)$ o custo do solver:
+Assim, não é possível determinar uma única complexidade exata apenas analisando o código Python: o custo real depende do solver disponível no ambiente.
+
+Denotando por $T_{solver}(n,m)$ o custo do solver selecionado:
 
 $$
 T_4(n,m)=T_{solver}(n,m)
@@ -105,7 +116,20 @@ Após a resolução, os valores são copiados para listas Python:
 x = [float(pulp.value(v)) for v in x_vars]
 ```
 
-O custo é proporcional ao número de variáveis.
+O valor da função objetivo também é extraído:
+
+```python
+z = float(pulp.value(modelo.objective))
+```
+
+Além disso, o status do solver é lido e mapeado para o vocabulário do projeto:
+
+- `Optimal` → `otimo`;
+- `Unbounded` → `ilimitado`;
+- `Infeasible` → `inviavel`;
+- outros status → `erro`.
+
+O custo dessa extração é dominado pela leitura das $n$ variáveis e pela avaliação do objetivo.
 
 $$
 T_5(n)=\Theta(n)
@@ -126,19 +150,34 @@ $$
 
 ## 2.7 Pior Caso
 
-O pior caso ocorre quando o solver precisa explorar grande quantidade de bases ou nós internos para encontrar a solução ótima.
+O pior caso depende do solver selecionado para o ambiente.
 
-Como o CBC utiliza algoritmos derivados do Simplex, seu pior caso teórico continua sendo exponencial.
+- Se o solver usado for CBC ou GLPK, o modelo contínuo é resolvido por métodos baseados em Simplex/pivoteamento, cujo pior caso teórico pode ser exponencial em $n+m$.
+- Se o solver usado for HiGHS, ele pode empregar algoritmos de pontos interiores em vez de Simplex puro, o que muda o regime teórico do pior caso para uma classe polinomial de métodos de programação linear.
+
+Para este projeto, o código não escolhe um único regime: ele tenta CBC primeiro e usa o primeiro solver disponível entre CBC, HiGHS, HiGHS_CMD e GLPK_CMD.
+
+Branch-and-Bound só seria relevante se o modelo contivesse variáveis inteiras, o que não ocorre aqui. Portanto, a afirmação de que o solver externo faz Branch-and-Bound aplica-se apenas a casos inteiros, não à formulação contínua usada em `simplex_pulp.py`.
 
 Assim:
 
 $$
-O(T_{solver}(n,m))
+T_{solver}(n,m)
 $$
 
-onde, no pior caso, o custo pode ser exponencial.
+onde o pior caso pode ser exponencial para solvers baseados em Simplex, enquanto o uso de HiGHS pode levar a um regime teórico polinomial.
 
-## 2.8 Complexidade Total
+## 2.8 Regimes de Solver
+
+| Solver | Regime teórico principal | Observação |
+| ------ | ------------------------ | ---------- |
+| CBC | Simplex / pivoteamento | para LP contínuo; não aciona Branch-and-Bound aqui |
+| GLPK | Simplex / pivoteamento | para LP contínuo; não aciona Branch-and-Bound aqui |
+| HiGHS | pontos interiores / simplex | fallback com potencial regime polinomial |
+
+Branch-and-Bound só se aplicaria se o modelo tivesse variáveis inteiras; em `simplex_pulp.py` o modelo é contínuo.
+
+## 2.9 Complexidade Total
 
 A construção do modelo possui custo:
 
@@ -162,8 +201,15 @@ T(n,m)=\Theta(mn + T_{solver}(n,m))
 }
 $$
 
+## 2.9 Quadro-resumo de Complexidade
 
-## 2.9 Complexidade de Espaço
+| Etapa | Complexidade | Nota |
+| ------ | ------------ | ---- |
+| Construção do modelo | $\Theta(mn)$ | $\Theta(K^2)$ para $n=K$, $m=2K+1$ |
+| Resolução pelo solver | $T_{solver}(n,m)$ | depende do solver selecionado no ambiente |
+| Extração de $x$, $z$ e status | $\Theta(n)$ | custo linear no número de variáveis |
+
+## 2.10 Complexidade de Espaço
 
 O modelo armazena:
 
@@ -218,6 +264,8 @@ for i in range(m):
         ) <= problema.b[i]
     )
 ```
+
+Esse é o laço principal a ser analisado neste módulo porque a otimização em si é delegada ao solver externo.
 
 ### Invariante P
 
@@ -373,6 +421,8 @@ Portanto, a construção do modelo sempre termina.
 
 Pela demonstração do invariante, ao final do laço o modelo PuLP é exatamente equivalente ao problema original.
 
+Essa análise assume explicitamente que o solver externo resolve corretamente o problema contínuo de programação linear. Essa é a mesma premissa de corretude do Simplex e da dualidade em Dantzig (1963) para LP contínuo.
+
 Consequentemente:
 
 - toda solução viável do modelo corresponde a uma solução viável do problema original;
@@ -402,3 +452,29 @@ Assim, a implementação com PuLP é correta.
 $$
 \boxed{\text{A implementação é correta}}
 $$
+
+# 4. Referências
+
+BAZARAA, Mokhtar S.; JARVIS, John J.; SHERALI, Hanif D. Linear Programming and Network Flows. 4. ed. Hoboken: John Wiley & Sons, 2010.
+
+BRASIL. Associação Brasileira de Normas Técnicas. ABNT NBR 6023: Informação e documentação – Referências – Elaboração. Rio de Janeiro: ABNT, 2018.
+
+BRASIL. Associação Brasileira de Normas Técnicas. ABNT NBR 10520: Informação e documentação – Citações em documentos – Apresentação. Rio de Janeiro: ABNT, 2023.
+
+COIN-OR FOUNDATION. PuLP: a Linear Programming Toolkit for Python. [S. l.], 2025. Disponível em: https://coin-or.github.io/pulp/. Acesso em: 09 jun. 2026.
+
+CORMEN, Thomas H.; LEISERSON, Charles E.; RIVEST, Ronald L.; STEIN, Clifford. Algoritmos: Teoria e Prática. 3. ed. Rio de Janeiro: Elsevier, 2012.
+
+HILLIER, Frederick S.; LIEBERMAN, Gerald J. Introduction to Operations Research. 11. ed. New York: McGraw-Hill Education, 2021.
+
+KLEINBERG, Jon; TARDOS, Éva. Algorithm Design. Boston: Pearson Addison-Wesley, 2006.
+
+MITCHELL, Stuart; DEDMAN, Franco; KEARNES, Daniel. PuLP Documentation. COIN-OR Foundation, 2025. Disponível em: https://coin-or.github.io/pulp/guides/index.html. Acesso em: 09 jun. 2026.
+
+ROSEN, Kenneth H. Discrete Mathematics and Its Applications. 8. ed. New York: McGraw-Hill Education, 2019.
+
+SIPSER, Michael. Introdução à Teoria da Computação. 3. ed. São Paulo: Cengage Learning, 2013.
+
+SKIENA, Steven S. The Algorithm Design Manual. 3. ed. Cham: Springer, 2020.
+
+TAHA, Hamdy A. Pesquisa Operacional. 8. ed. São Paulo: Pearson Prentice Hall, 2008.
