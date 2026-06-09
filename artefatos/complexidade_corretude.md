@@ -1,4 +1,22 @@
-# Complexidade e Corretude do Algoritmo Simplex
+# Complexidade e Corretude
+
+## Introdução
+
+Este artefato analisa formalmente a **complexidade computacional** e a **corretude** de duas implementações que resolvem o mesmo problema de Programação Linear do projeto — a alocação ótima de limites de crédito por cluster de clientes do Banco Pan, na forma canônica de maximização:
+
+$$
+\max \; z = c^\top x \qquad \text{sujeito a} \qquad A x \le b, \quad x \ge 0.
+$$
+
+A primeira é o **Simplex implementado do zero pelo grupo** (`apps/algoritmo_simplex/simplex.py`): um método de *tableau* denso, com variáveis de folga e a regra anticiclagem de Bland. A segunda é a **implementação de referência com a biblioteca PuLP** (`apps/algoritmo_simplex/simplex_pulp.py`), que constrói o modelo e delega a otimização a um solver externo (CBC, HiGHS ou GLPK).
+
+As duas foram desenvolvidas em paralelo e validadas cruzadamente por um *golden test* ([`comparacao_simplex.md`](./comparacao_simplex.md)): convergem ao mesmo ótimo dentro de $10^{-6}$. Para cada implementação apresentamos a análise de complexidade de pior e melhor caso (com notação $O$, $\Omega$, $\Theta$), o invariante do laço principal e a demonstração de corretude por **indução sobre esse invariante**. A Parte III compara as duas abordagens e discute os *trade-offs*.
+
+> **Observação de leitura.** As Partes I e II preservam a numeração interna de seções de cada análise original. As referências de cada parte estão consolidadas ao final do documento.
+
+---
+
+# Parte I — Simplex implementado pelo grupo
 
 Este artefato analisa formalmente a **complexidade computacional** e a **corretude** da implementação do método Simplex desenvolvida pelo grupo em `apps/algoritmo_simplex/simplex.py`. A análise toma como objeto exatamente o código implementado (e não uma versão idealizada de livro-texto), explicita quais partes vêm das fontes clássicas do método, e discute o impacto das adaptações feitas pelo grupo sobre o custo e a correção do algoritmo.
 
@@ -291,4 +309,532 @@ A implementação do grupo é o **Simplex clássico de Dantzig com a regra antic
 
 **Complexidade.** O custo por iteração é $\Theta\big(m(n+m)\big)$ e o custo total de uma instância resolvida em $p$ pivôs é $\Theta\big((p+1)\,m(n+m)\big)$. O pior caso é exponencial ($p \le \binom{n+m}{m}-1$), o melhor caso é $\Theta\big(m(n+m)\big)$ (origem ótima, $p=0$), e o piso universal é $\Omega\big(m(n+m)\big)$. Para o PL do parceiro ($n=K$, $m=2K+1$), isso é $\Theta(K^2)$ por pivô e, com os $p=O(K)$ pivôs observados empiricamente, $O(K^3)$ na prática — confirmando viabilidade tanto para $K=7$ quanto para a meta de $K\ge100$.
 
-**Corretude.** Provou-se, por indução sobre o invariante do laço, que o tableau mantém sempre uma SBF (corretude parcial); a regra de entrada de Bland garante a terminação (com a ressalva da Seção 3.4 sobre o desempate da saínte, que recomenda um ajuste $O(m)$ para garantia teórica plena); e a condição de parada (todos os custos reduzidos $\le 0$) implica otimalidade global pelo Lema da Seção 3.5. Os casos ilimitado e de múltiplas soluções sã
+**Corretude.** Provou-se, por indução sobre o invariante do laço, que o tableau mantém sempre uma SBF (corretude parcial); a regra de entrada de Bland garante a terminação (com a ressalva da Seção 3.4 sobre o desempate da saínte, que recomenda um ajuste $O(m)$ para garantia teórica plena); e a condição de parada (todos os custos reduzidos $\le 0$) implica otimalidade global pelo Lema da Seção 3.5. Os casos ilimitado e de múltiplas soluções são tratados corretamente pela implementação (Seções 3.6), preservando a corretude global.
+
+---
+
+# Parte II — Implementação com PuLP
+
+## 1. Notação
+
+Considere:
+
+- $n$: número de variáveis de decisão;
+- $m$: número de restrições;
+- $A \in \mathbb{R}^{m \times n}$: matriz de coeficientes;
+- $c \in \mathbb{R}^{n}$: vetor da função objetivo;
+- $b \in \mathbb{R}^{m}$: vetor dos lados direitos das restrições.
+
+O algoritmo implementado em `simplex_pulp.py` executa as seguintes etapas:
+
+1. Criação do modelo de programação linear;
+2. Criação das variáveis de decisão;
+3. Construção da função objetivo;
+4. Construção das restrições;
+5. Chamada do solver externo;
+6. Extração da solução ótima.
+
+## 2. Análise de Complexidade
+
+### 2.1 Construção das Variáveis
+
+As variáveis são criadas pelo trecho:
+
+```python
+x_vars = [
+    pulp.LpVariable(f"x_{j}", lowBound=0.0, cat=pulp.LpContinuous)
+    for j in range(n)
+]
+```
+
+São criadas exatamente $n$ variáveis.
+
+$$
+T_1(n)=\Theta(n)
+$$
+
+### 2.2 Construção da Função Objetivo
+
+A função objetivo é montada por:
+
+```python
+modelo += pulp.lpSum(
+    problema.c[j] * x_vars[j]
+    for j in range(n)
+)
+```
+
+O laço percorre todas as variáveis.
+
+$$
+T_2(n)=\Theta(n)
+$$
+
+### 2.3 Construção das Restrições
+
+As restrições são adicionadas por:
+
+```python
+for i in range(m):
+    modelo += (
+        pulp.lpSum(
+            problema.A[i][j] * x_vars[j]
+            for j in range(n)
+        ) <= problema.b[i]
+    )
+```
+
+Para cada uma das $m$ restrições são percorridas as $n$ variáveis.
+
+$$
+T_3(n,m)=\Theta(mn)
+$$
+
+Para o PL específico do projeto, $n = K$ e $m = 2K + 1$, de modo que a construção do modelo é:
+
+$$
+T_3(K)=\Theta(K\cdot(2K+1)) = \Theta(K^2).
+$$
+
+### 2.4 Resolução do Modelo
+
+O trecho:
+
+```python
+modelo.solve(solver)
+```
+
+transfere o problema para o solver externo.
+
+O custo desta etapa depende do solver que for selecionado em tempo de execução. O código tenta, na ordem:
+
+- CBC (`PULP_CBC_CMD`);
+- HiGHS via `highspy` (`HiGHS`);
+- HiGHS externo (`HiGHS_CMD`);
+- GLPK externo (`GLPK_CMD`).
+
+Para o problema contínuo modelado em `simplex_pulp.py`, o solver não aciona o Branch-and-Bound, pois não há variáveis inteiras. O CBC e o GLPK resolvem o PL contínuo por métodos baseados em Simplex/pivoteamento; o HiGHS pode usar algoritmos de pontos interiores ou simplex, e por isso tem regimes de pior caso diferentes.
+
+Assim, não é possível determinar uma única complexidade exata apenas analisando o código Python: o custo real depende do solver disponível no ambiente.
+
+Denotando por $T_{solver}(n,m)$ o custo do solver selecionado:
+
+$$
+T_4(n,m)=T_{solver}(n,m)
+$$
+
+### 2.5 Extração da Solução
+
+Após a resolução, os valores são copiados para listas Python:
+
+```python
+x = [float(pulp.value(v)) for v in x_vars]
+```
+
+O valor da função objetivo também é extraído:
+
+```python
+z = float(pulp.value(modelo.objective))
+```
+
+Além disso, o status do solver é lido e mapeado para o vocabulário do projeto:
+
+- `Optimal` → `otimo`;
+- `Unbounded` → `ilimitado`;
+- `Infeasible` → `inviavel`;
+- outros status → `erro`.
+
+O custo dessa extração é dominado pela leitura das $n$ variáveis e pela avaliação do objetivo.
+
+$$
+T_5(n)=\Theta(n)
+$$
+
+### 2.6 Melhor Caso
+
+O melhor caso ocorre quando:
+
+- a construção do modelo é realizada normalmente;
+- o solver encontra rapidamente uma solução ótima.
+
+Como a etapa de construção das restrições precisa sempre percorrer toda a matriz $A$, existe um limite inferior:
+
+$$
+\Omega(mn)
+$$
+
+### 2.7 Pior Caso
+
+O pior caso depende do solver selecionado para o ambiente.
+
+- Se o solver usado for CBC ou GLPK, o modelo contínuo é resolvido por métodos baseados em Simplex/pivoteamento, cujo pior caso teórico pode ser exponencial em $n+m$.
+- Se o solver usado for HiGHS, ele pode empregar algoritmos de pontos interiores em vez de Simplex puro, o que muda o regime teórico do pior caso para uma classe polinomial de métodos de programação linear.
+
+Para este projeto, o código não escolhe um único regime: ele tenta CBC primeiro e usa o primeiro solver disponível entre CBC, HiGHS, HiGHS_CMD e GLPK_CMD.
+
+Branch-and-Bound só seria relevante se o modelo contivesse variáveis inteiras, o que não ocorre aqui. Portanto, a afirmação de que o solver externo faz Branch-and-Bound aplica-se apenas a casos inteiros, não à formulação contínua usada em `simplex_pulp.py`.
+
+Assim:
+
+$$
+T_{solver}(n,m)
+$$
+
+onde o pior caso pode ser exponencial para solvers baseados em Simplex, enquanto o uso de HiGHS pode levar a um regime teórico polinomial.
+
+### 2.8 Regimes de Solver
+
+| Solver | Regime teórico principal | Observação |
+| ------ | ------------------------ | ---------- |
+| CBC | Simplex / pivoteamento | para LP contínuo; não aciona Branch-and-Bound aqui |
+| GLPK | Simplex / pivoteamento | para LP contínuo; não aciona Branch-and-Bound aqui |
+| HiGHS | pontos interiores / simplex | fallback com potencial regime polinomial |
+
+Branch-and-Bound só se aplicaria se o modelo tivesse variáveis inteiras; em `simplex_pulp.py` o modelo é contínuo.
+
+### 2.9 Complexidade Total
+
+A construção do modelo possui custo:
+
+$$
+\Theta(mn)
+$$
+
+A resolução é dominada pelo solver:
+
+$$
+T(n,m)=
+\Theta(mn)+
+T_{solver}(n,m)
+$$
+
+Portanto:
+
+$$
+\boxed{
+T(n,m)=\Theta(mn + T_{solver}(n,m))
+}
+$$
+
+### 2.9 Quadro-resumo de Complexidade
+
+| Etapa | Complexidade | Nota |
+| ------ | ------------ | ---- |
+| Construção do modelo | $\Theta(mn)$ | $\Theta(K^2)$ para $n=K$, $m=2K+1$ |
+| Resolução pelo solver | $T_{solver}(n,m)$ | depende do solver selecionado no ambiente |
+| Extração de $x$, $z$ e status | $\Theta(n)$ | custo linear no número de variáveis |
+
+### 2.10 Complexidade de Espaço
+
+O modelo armazena:
+
+- $n$ variáveis;
+- $m$ restrições;
+- matriz $A$ com $m \times n$ coeficientes.
+
+Logo:
+
+$$
+\boxed{
+S(n,m)=\Theta(mn)
+}
+$$
+
+## 3. Corretude
+
+A corretude da implementação com PuLP será demonstrada em duas etapas:
+
+1. Corretude da construção do modelo de Programação Linear;
+2. Corretude da solução retornada pelo solver.
+
+Como o módulo `simplex_pulp.py` não implementa diretamente um algoritmo de otimização, mas sim constrói um modelo matemático e o envia para um solver externo, o objetivo da prova é demonstrar que o modelo construído é exatamente equivalente ao problema original.
+
+### 3.1 Pré-condição
+
+Antes da execução do algoritmo, assume-se que a instância do problema satisfaz as seguintes condições:
+
+- A matriz $A$ possui $m$ linhas e $n$ colunas;
+- O vetor $b$ possui $m$ componentes;
+- O vetor $c$ possui $n$ componentes;
+- Todas as restrições estão definidas na forma
+
+$$
+Ax \le b
+$$
+
+- Todas as variáveis possuem limite inferior igual a zero.
+
+Essas condições garantem que o problema de programação linear está bem definido.
+
+### 3.2 Invariante do Laço Principal
+
+O principal laço da implementação é responsável pela inserção das restrições no modelo:
+
+```python
+for i in range(m):
+    modelo += (
+        pulp.lpSum(
+            problema.A[i][j] * x_vars[j]
+            for j in range(n)
+        ) <= problema.b[i]
+    )
+```
+
+Esse é o laço principal a ser analisado neste módulo porque a otimização em si é delegada ao solver externo.
+
+#### Invariante P
+
+Após a conclusão da iteração $k$ do laço, o modelo PuLP representa exatamente o problema composto por:
+
+- todas as variáveis originais;
+- a função objetivo original;
+- as primeiras $k$ restrições do problema original.
+
+Formalmente:
+
+$$
+Modelo_k =
+\{
+FO,\;
+R_1,\;
+R_2,\;
+\ldots,\;
+R_k
+\}
+$$
+
+onde:
+
+- $FO$ representa a função objetivo;
+- $R_i$ representa a restrição $i$ do problema original.
+
+Para facilitar a demonstração, dividimos o invariante nas seguintes propriedades.
+
+#### P1
+
+Todas as variáveis do problema original já foram criadas no modelo.
+
+#### P2
+
+A função objetivo do modelo é exatamente a função objetivo do problema original.
+
+#### P3
+
+As primeiras $k$ restrições do problema original foram adicionadas corretamente ao modelo.
+
+#### P4
+
+Nenhuma restrição previamente inserida foi removida ou modificada.
+
+
+### 3.3 Prova do Invariante por Indução
+
+#### Caso Base
+
+Antes da primeira iteração ($k = 0$):
+
+- todas as variáveis já foram criadas;
+- a função objetivo já foi construída;
+- nenhuma restrição foi adicionada.
+
+Logo:
+
+- P1 é verdadeira;
+- P2 é verdadeira;
+- P3 é verdadeira, pois existem zero restrições inseridas;
+- P4 é verdadeira, pois nenhuma restrição existe ainda.
+
+Portanto, o invariante vale antes do início do laço.
+
+
+#### Hipótese de Indução
+
+Suponha que após a iteração $k$ o invariante seja verdadeiro.
+
+Ou seja:
+
+- todas as variáveis continuam presentes;
+- a função objetivo permanece correta;
+- as primeiras $k$ restrições foram adicionadas corretamente;
+- nenhuma delas foi alterada.
+
+
+#### Passo Indutivo
+
+Na iteração $k+1$, o algoritmo executa:
+
+```python
+modelo += (
+    pulp.lpSum(
+        problema.A[k][j] * x_vars[j]
+        for j in range(n)
+    ) <= problema.b[k]
+)
+```
+
+Essa instrução adiciona ao modelo exatamente a restrição $R_{k+1}$.
+
+Além disso:
+
+- nenhuma variável é removida;
+- a função objetivo não é alterada;
+- nenhuma restrição previamente inserida é modificada;
+- apenas uma nova restrição é acrescentada.
+
+Portanto:
+
+- P1 continua verdadeira;
+- P2 continua verdadeira;
+- P3 passa a valer para as primeiras $k+1$ restrições;
+- P4 continua verdadeira.
+
+Logo, o invariante permanece válido após a iteração $k+1$.
+
+
+#### Conclusão da Indução
+
+Como:
+
+1. o invariante é verdadeiro no caso base;
+2. sua validade após uma iteração implica sua validade na próxima;
+
+segue pelo Princípio da Indução Matemática que o invariante é verdadeiro para todas as iterações do laço.
+
+Ao término da última iteração, quando $k = m$, o modelo contém:
+
+- todas as variáveis do problema;
+- a função objetivo original;
+- todas as restrições do problema original.
+
+Portanto, o modelo construído é matematicamente equivalente ao problema de programação linear fornecido como entrada.
+
+### 3.4 Terminação
+
+O laço principal possui a forma:
+
+```python
+for i in range(m):
+```
+
+onde $m$ é o número de restrições do problema.
+
+Como:
+
+- $m$ é finito;
+- a variável de controle aumenta de uma unidade a cada iteração;
+- nenhuma instrução altera o valor de $m$;
+
+o número de iterações é exatamente igual a $m$.
+
+Assim, o laço termina após um número finito de passos.
+
+Além disso, as demais operações da implementação consistem apenas em construções de listas, criação de objetos e uma chamada ao solver.
+
+Portanto, a construção do modelo sempre termina.
+
+### 3.5 Corretude Parcial
+
+Pela demonstração do invariante, ao final do laço o modelo PuLP é exatamente equivalente ao problema original.
+
+Essa análise assume explicitamente que o solver externo resolve corretamente o problema contínuo de programação linear. Essa é a mesma premissa de corretude do Simplex e da dualidade em Dantzig (1963) para LP contínuo.
+
+Consequentemente:
+
+- toda solução viável do modelo corresponde a uma solução viável do problema original;
+- toda solução ótima do modelo corresponde a uma solução ótima do problema original.
+
+Logo, caso o solver retorne uma solução ótima, essa solução é correta para o problema originalmente recebido pela implementação.
+
+### 3.6 Corretude Total
+
+A corretude total exige:
+
+1. Corretude parcial;
+2. Terminação.
+
+A corretude parcial foi demonstrada na Seção 3.5.
+
+A terminação foi demonstrada na Seção 3.4.
+
+Portanto, conclui-se que:
+
+- o modelo construído representa corretamente o problema original;
+- a construção do modelo sempre termina;
+- a solução retornada corresponde à solução do problema modelado.
+
+Assim, a implementação com PuLP é correta.
+
+$$
+\boxed{\text{A implementação é correta}}
+$$
+
+---
+
+# Parte III — Conclusão: comparação e reflexões
+
+As Partes I e II analisaram duas implementações que resolvem **o mesmo** problema de PL do projeto. Esta parte sintetiza as diferenças de complexidade, contrasta as duas estratégias de prova de corretude e discute os *trade-offs* de engenharia entre **implementar o algoritmo do zero** e **delegar a uma biblioteca**.
+
+## 1. Complexidade — quadro comparativo
+
+Sejam $n$ o número de variáveis de decisão, $m$ o número de restrições e, no PL do parceiro, $n = K$ e $m = 2K+1$ (logo $m(n+m) = \Theta(K^2)$). No Simplex do grupo, $N = n+m$ é o número total de variáveis (decisão + folga) e $p$ é o número de pivôs.
+
+| Aspecto | Simplex (grupo) | PuLP (biblioteca) |
+| ------- | --------------- | ----------------- |
+| Construção / estrutura de dados | *build* do tableau $\Theta(mN) = \Theta(K^2)$ | *build* do modelo $\Theta(mn) = \Theta(K^2)$ |
+| Custo da otimização | $(p+1)\,\Theta(mN)$ — número de pivôs $p$ **explícito** | $T_{solver}(n,m)$ — **caixa-preta** do solver |
+| Melhor caso | $\Theta(K^2)$ (origem já ótima, $p=0$) | $\Omega(mn) = \Omega(K^2)$ (sempre percorre $A$) |
+| Pior caso | exponencial, $p \le \binom{n+m}{m}-1$ | depende do solver: exponencial (CBC/GLPK, simplex) ou polinomial (HiGHS, pontos interiores) |
+| Caso prático | $O(K^3)$ com $p = O(K)$ medido | dominado pelo solver, tipicamente eficiente |
+| Espaço | $\Theta(mN) = \Theta(K^2)$ | $\Theta(mn) = \Theta(K^2)$ |
+
+Ambas compartilham o **piso $\Theta(K^2)$** de construção e memória. A diferença essencial está em **onde mora o custo da otimização**: no Simplex do grupo ele é explícito e contável (o número de pivôs $p$), enquanto no PuLP fica encapsulado em $T_{solver}$, fora do código Python.
+
+Um ponto que merece reflexão: o **pior caso teórico do PuLP pode ser melhor que o do nosso Simplex**. Se o ambiente usar HiGHS com pontos interiores, o pior caso é polinomial, ao passo que o nosso Simplex com regra de Bland permanece exponencial no pior caso. Na prática, porém, a estrutura quase-separável do problema (restrições-caixa R2/R3 acopladas apenas pela restrição agregada R1) mantém $p$ pequeno ($p = O(K)$), e o nosso Simplex roda em $O(K^3)$ — perfeitamente viável tanto para $K=7$ quanto para a meta de $K \ge 100$.
+
+## 2. Corretude — duas estratégias de prova diferentes
+
+Embora ambas as provas usem **indução sobre o invariante do laço principal**, elas provam coisas distintas, porque o "laço principal" de cada implementação é diferente:
+
+- **Simplex do grupo.** O invariante é sobre o estado do *algoritmo de otimização*: a cada iteração do `while`, o tableau mantém uma **solução básica factível (SBF)**. A indução prova que cada pivô preserva a factibilidade (corretude parcial); a regra de Bland garante a terminação; e a condição de parada (todos os custos reduzidos $\le 0$) implica otimalidade global. Ou seja, **prova-se que o algoritmo de fato encontra o ótimo**.
+
+- **PuLP.** O invariante é sobre o laço de *construção do modelo*: após $k$ iterações, o modelo contém exatamente as $k$ primeiras restrições. A indução prova que o modelo construído é **equivalente** ao problema original. A otimalidade da solução é **delegada ao solver** e assumida como premissa (corretude do Simplex e da dualidade, Dantzig 1963; solvers consolidados CBC/HiGHS/GLPK).
+
+Em uma frase: **nós provamos que o nosso algoritmo resolve o problema; no PuLP, provamos que modelamos o problema corretamente e confiamos num solver já provado.** Essa é a diferença inerente entre *implementar* e *delegar* — e é a razão de os dois invariantes (e os dois laços principais) serem distintos, ainda que a técnica de prova seja a mesma.
+
+## 3. Trade-offs e reflexões de engenharia
+
+**Transparência × robustez.** O Simplex próprio é *white-box*: cada regra de entrada/saída e cada pivô é inspecionável, o que importa para explicar ao parceiro **como** o limite de cada cluster foi decidido — requisito relevante num contexto de crédito. O PuLP é *black-box* no núcleo, mas é maduro, testado em produção há anos e trata casos de borda (degeneração, mau condicionamento) que a nossa implementação cobre apenas parcialmente — por exemplo, o desempate da variável saínte na regra de Bland está incompleto no nosso código (Parte I, Seção 3.4).
+
+**Dependência externa.** O nosso Simplex não exige solver externo: não precisa de CBC/GLPK instalado nem sofre com o bug do CBC quando o caminho do Windows tem espaços — bug que a implementação PuLP teve de contornar com diretório temporário e cadeia de *fallback*. O PuLP carrega essa fragilidade de ambiente, mitigada (mas não eliminada) pelo *fallback* CBC -> HiGHS -> HiGHS_CMD -> GLPK_CMD.
+
+**Papéis complementares.** A forma como o grupo usa as duas implementações é a mais sensata: o **Simplex próprio como motor de produção** (transparente, sem dependência) e o **PuLP como oráculo de validação** (*golden test*). A concordância dentro de $10^{-6}$ dá confiança empírica de que a prova de corretude da Parte I se reflete na prática.
+
+**Escala.** Para a entrega final ($K \ge 100$, $m \approx 201$), ambas são viáveis — o custo por pivô fica na casa de dezenas de milhares de operações. Se o problema crescesse muito ou ficasse numericamente mal condicionado, o PuLP (ou um Simplex revisado mantendo apenas $B^{-1}$) seria preferível por robustez numérica.
+
+## 4. Síntese final
+
+Resolver o mesmo PL de dois jeitos — implementando e delegando — mostra os dois lados da moeda. Implementar do zero **força entender** o invariante, a terminação e a otimalidade (o *porquê* de o algoritmo funcionar). Usar uma biblioteca **desloca o ônus** da corretude para duas tarefas diferentes: modelar fielmente o problema e confiar num solver já provado. A validação cruzada amarra os dois: a teoria (as provas) e a prática (a concordância numérica) convergem para a mesma solução.
+
+Para este projeto, a recomendação é manter o **Simplex próprio como motor**, pela transparência exigida no contexto de crédito do Banco Pan, com o **PuLP como rede de segurança** de validação — exatamente o arranjo adotado pelo grupo.
+
+---
+
+# Referências
+
+As referências abaixo consolidam as fontes das Partes I e II.
+
+DANTZIG, George B. *Linear Programming and Extensions*. Princeton: Princeton University Press, 1963.
+
+BLAND, Robert G. New finite pivoting rules for the simplex method. *Mathematics of Operations Research*, v. 2, n. 2, p. 103-107, 1977.
+
+KLEE, Victor; MINTY, George J. How good is the simplex algorithm? In: SHISHA, O. (ed.). *Inequalities III*. New York: Academic Press, 1972. p. 159-175.
+
+BORGWARDT, Karl Heinz. *The Simplex Method: A Probabilistic Analysis*. Berlin: Springer-Verlag, 1987.
+
+SPIELMAN, Daniel A.; TENG, Shang-Hua. Smoothed analysis of algorithms: why the simplex algorithm usually takes polynomial time. *Journal of the ACM*, v. 51, n. 3, p. 385-463, 2004.
+
+HUANGFU, Qi; HALL, Julian A. J. Parallelizing the dual revised simplex method. *Mathematical Programming Computation*, v. 10, n. 1, p. 119-142, 2018.
+
+BAZARAA, Mokhtar S.; JARVIS, John J.; SHERALI, Hanif D. *Linear Programming and Network Flows*. 4. ed. Hoboken: John Wiley & Sons, 2010.
+
+COIN-OR FOUNDATION. *PuLP: a Linear Programming Toolkit for Python*. Disponível em: https://coin-or.github.io/pulp/. Acesso em: 09 jun. 2026.
