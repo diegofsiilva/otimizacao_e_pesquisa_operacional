@@ -368,3 +368,37 @@ Assim, o laço termina após um número finito de passos.
 Além disso, as demais operações da implementação consistem apenas em construções de listas, criação de objetos e uma chamada ao solver.
 
 Portanto, a construção do modelo sempre termina.
+
+## 3.5 Corretude Parcial
+
+Pela demonstração do invariante, ao final do laço o modelo PuLP é exatamente equivalente ao problema original.
+
+Consequentemente:
+
+- toda solução viável do modelo corresponde a uma solução viável do problema original;
+- toda solução ótima do modelo corresponde a uma solução ótima do problema original.
+
+Logo, caso o solver retorne uma solução ótima, essa solução é correta para o problema originalmente recebido pela implementação.
+
+## 3.6 Corretude Total
+
+A corretude total exige:
+
+1. Corretude parcial;
+2. Terminação.
+
+A corretude parcial foi demonstrada na Seção 3.5.
+
+A terminação foi demonstrada na Seção 3.4.
+
+Portanto, conclui-se que:
+
+- o modelo construído representa corretamente o problema original;
+- a construção do modelo sempre termina;
+- a solução retornada corresponde à solução do problema modelado.
+
+Assim, a implementação com PuLP é correta.
+
+$$
+\boxed{\text{A implementação é correta}}
+$$
