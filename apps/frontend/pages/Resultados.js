@@ -8,11 +8,11 @@
 // mais recente. O seletor no topo permite alternar entre simulações passadas.
 //
 // Gráficos com dados reais:
-//   RiskReturnScatterSVG → retorno líquido esperado x PD média
-//   PolicyFunnelSVG      → funil de elegibilidade/oferta
-//   ExposureParetoSVG    → concentração acumulada de exposição
-//   RiskBandAllocationSVG → exposição aprovada por faixa de PD
-//   LineChartSVG         → evolução do z_otimo entre safras
+//   RiskReturnScatterP5   → retorno líquido esperado x PD média
+//   PolicyFunnelP5        → funil de elegibilidade/oferta
+//   ExposureParetoP5      → concentração acumulada de exposição
+//   RiskBandAllocationP5  → exposição aprovada por faixa de PD
+//   LineChartP5           → evolução do z_otimo entre safras
 
 // ============================================================================
 // BarChartSVG - barras verticais, label em cada barra
@@ -1487,6 +1487,10 @@ var Resultados = function (props) {
   var showParams = s8[0];
   var setShowParams = s8[1];
 
+  var s9 = React.useState("simplex");
+  var comparisonMode = s9[0];
+  var setComparisonMode = s9[1];
+
   // -------------------------------------------------------------------------
   // Carrega consultas + safras ao montar
   // -------------------------------------------------------------------------
@@ -1609,28 +1613,31 @@ var Resultados = function (props) {
   var uBar = modelParams.u_bar != null ? modelParams.u_bar : 0.75;
   var T = modelParams.T != null ? modelParams.T : 22;
 
-  function getExposure(c) {
-    return (
-      Math.max(0, c.limite_otimizado || 0) *
-      Math.max(0, c.n_clientes || 0)
-    );
-  }
-
-  function getNetPerClient(c) {
-    var limit = Math.max(0, c.limite_otimizado || 0);
-    if (limit === 0) return 0;
-    var takeRate = c.pi_media != null ? c.pi_media : 1;
-    var revenue = takeRate * t * uBar * T * limit;
-    var loss = takeRate * (c.pd_media || 0) * LGD * limit;
-    return revenue - loss;
-  }
-
   function getLimitePulp(c) {
     if (!c) return null;
     if (c.limite_pulp != null) return c.limite_pulp;
     if (c.limite_pulp_otimizado != null) return c.limite_pulp_otimizado;
     if (c.pulp_limite_otimizado != null) return c.pulp_limite_otimizado;
     return null;
+  }
+
+  function getDecisionLimit(c) {
+    var pulp = getLimitePulp(c);
+    if (comparisonMode === "pulp" && pulp != null) return pulp;
+    return c.limite_otimizado || 0;
+  }
+
+  function getExposure(c) {
+    return Math.max(0, getDecisionLimit(c)) * Math.max(0, c.n_clientes || 0);
+  }
+
+  function getNetPerClient(c) {
+    var limit = Math.max(0, getDecisionLimit(c));
+    if (limit === 0) return 0;
+    var takeRate = c.pi_media != null ? c.pi_media : 1;
+    var revenue = takeRate * t * uBar * T * limit;
+    var loss = takeRate * (c.pd_media || 0) * LGD * limit;
+    return revenue - loss;
   }
 
   // Funil de decisão: da base total até a oferta final.
@@ -1665,7 +1672,7 @@ var Resultados = function (props) {
   }
 
   var viableClusters = clusters.filter(function (c) {
-    return c.limite_otimizado > 0;
+    return getDecisionLimit(c) > 0;
   });
   var viableClustersPulp = clusters.filter(function (c) {
     return getLimitePulp(c) > 0;
@@ -1673,6 +1680,7 @@ var Resultados = function (props) {
   var temComparacaoPulp = clusters.some(function (c) {
     return getLimitePulp(c) != null;
   });
+  var comparisonLabel = comparisonMode === "pulp" ? "PuLP" : "Simplex";
   var totalExposure = viableClusters.reduce(function (s, c) {
     return s + getExposure(c);
   }, 0);
@@ -1687,7 +1695,7 @@ var Resultados = function (props) {
         id: c.cluster_id,
         pd: c.pd_media || 0,
         clients: c.n_clientes || 0,
-        limit: c.limite_otimizado || 0,
+        limit: getDecisionLimit(c),
         netPerClient: getNetPerClient(c),
         rank: 99,
       };
@@ -1722,7 +1730,7 @@ var Resultados = function (props) {
       return (c.pd_media || 0) >= b.min && (c.pd_media || 0) < b.max;
     });
     var offered = bucket.filter(function (c) {
-      return c.limite_otimizado > 0;
+      return getDecisionLimit(c) > 0;
     });
     var exposure = offered.reduce(function (s, c) {
       return s + getExposure(c);
@@ -1793,7 +1801,7 @@ var Resultados = function (props) {
     {
       label: "Exposicao aprovada",
       value: fmt(totalExposure),
-      sub: "limite total colocado na carteira",
+      sub: "limite total colocado · " + comparisonLabel,
     },
     {
       label: "Risco ofertado",
@@ -1807,7 +1815,7 @@ var Resultados = function (props) {
               100
             ).toFixed(2) + "%"
           : "-",
-      sub: "PD ponderada por exposicao",
+      sub: "PD ponderada por exposicao · " + comparisonLabel,
     },
   ];
 
@@ -1825,6 +1833,15 @@ var Resultados = function (props) {
 
   // Parâmetros da consulta selecionada
   var params = selectedConsulta ? selectedConsulta.parametros : null;
+
+  React.useEffect(
+    function () {
+      if (comparisonMode === "pulp" && !temComparacaoPulp) {
+        setComparisonMode("simplex");
+      }
+    },
+    [comparisonMode, temComparacaoPulp],
+  );
 
   // -------------------------------------------------------------------------
   // Render - carregando
@@ -1959,6 +1976,32 @@ var Resultados = function (props) {
         </div>
 
         <div className="flex items-center gap-2 flex-shrink-0">
+          <div className="relative">
+            <select
+              value={comparisonMode}
+              onChange={function (e) {
+                setComparisonMode(e.target.value);
+              }}
+              className="appearance-none pl-3 pr-8 py-2 text-xs font-semibold border border-[#E8EFF7] bg-white text-[#3B4049] focus:outline-none focus:border-[#2E6DA4] cursor-pointer"
+            >
+              <option value="simplex">Simplex</option>
+              <option value="pulp" disabled={!temComparacaoPulp}>
+                PuLP
+              </option>
+            </select>
+            <svg
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none"
+              width="11"
+              height="11"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="#9C9C9F"
+              strokeWidth="2.5"
+            >
+              <polyline points="6 9 12 15 18 9" />
+            </svg>
+          </div>
+
           {/* Seletor de simulação */}
           <div className="relative">
             <select
@@ -2075,7 +2118,7 @@ var Resultados = function (props) {
                 Leitura direta da oferta aprovada em relacao ao total processado
               </div>
               {approvalShareData ? (
-                <ApprovalShareSVG data={approvalShareData} />
+                <ApprovalShareP5 data={approvalShareData} />
               ) : (
                 <p className="text-xs text-[#9C9C9F]">Sem dados de aprovacao.</p>
               )}
@@ -2090,7 +2133,7 @@ var Resultados = function (props) {
                 Passagem da base total para elegibilidade e oferta efetiva
               </div>
               {funnelData.length > 0 ? (
-                <PolicyFunnelSVG data={funnelData} />
+                <PolicyFunnelP5 data={funnelData} />
               ) : (
                 <p className="text-xs text-[#9C9C9F]">
                   Sem dados de distribuição.
@@ -2110,7 +2153,7 @@ var Resultados = function (props) {
                 Barras mostram exposição por cluster; linha vermelha é acumulado
               </div>
               {paretoData.length > 0 ? (
-                <ExposureParetoSVG data={paretoData} />
+                <ExposureParetoP5 data={paretoData} />
               ) : (
                 <p className="text-xs text-[#9C9C9F]">Sem clusters ofertados.</p>
               )}
@@ -2125,7 +2168,7 @@ var Resultados = function (props) {
                 Exposição aprovada por risco, com taxa de oferta por faixa
               </div>
               {clusters.length > 0 ? (
-                <RiskBandAllocationSVG bands={riskBands} />
+                <RiskBandAllocationP5 bands={riskBands} />
               ) : (
                 <p className="text-xs text-[#9C9C9F]">Sem dados de clusters.</p>
               )}
@@ -2142,7 +2185,7 @@ var Resultados = function (props) {
                 Diagnostico fino: bolhas maiores representam mais clientes
               </div>
               {policyPoints.length > 0 ? (
-                <RiskReturnScatterSVG points={policyPoints} />
+                <RiskReturnScatterP5 points={policyPoints} />
               ) : (
                 <p className="text-xs text-[#9C9C9F]">Sem dados de clusters.</p>
               )}
@@ -2155,7 +2198,7 @@ var Resultados = function (props) {
               <div className="text-xs text-[#9C9C9F] mb-4">
                 Mantém a trilha histórica das simulações para comparação de safras
               </div>
-              <LineChartSVG data={evolucaoData} />
+              <LineChartP5 data={evolucaoData} />
             </div>
           </div>
         </div>

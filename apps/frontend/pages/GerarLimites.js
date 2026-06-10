@@ -1,6 +1,6 @@
 // pages/GerarLimites.js
 // Deps globais: Api (api.js), fmt, fmtZ (data.js)
-// Deps de render: BarChartSVG, DonutChart (definidos em Resultados.js, carregado depois)
+// Deps de render: BarChartP5, DonutChartP5 (definidos em Resultados.js, carregado depois)
 //
 // Fluxo:
 //   1. Usuário faz upload de um .parquet (drag & drop ou clique)
@@ -1545,7 +1545,7 @@ var GerarLimites = function (props) {
                 <div className="text-xs text-[#9C9C9F] mb-4">
                   Limite ótimo atribuído a cada cluster pelo Simplex (R$)
                 </div>
-                <BarChartSVG data={barData} />
+                <BarChartP5 data={barData} />
               </div>
 
               <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
@@ -1556,7 +1556,7 @@ var GerarLimites = function (props) {
                   Proporção por elegibilidade e oferta de limite
                 </div>
                 <div className="flex items-center gap-6">
-                  <DonutChart data={donutData} />
+                  <DonutChartP5 data={donutData} />
                   <div className="space-y-3 flex-1">
                     {donutData.map(function (d) {
                       return (
