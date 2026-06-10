@@ -126,7 +126,7 @@ var BarChartP5 = function (props) {
           W = node.offsetWidth || 420;
           p.createCanvas(W, H);
           start = p.millis();
-          p.textFont("Inter, system-ui, sans-serif");
+          p.textFont("Circular, Arial, sans-serif");
         };
         p.windowResized = function () {
           W = node.offsetWidth || 420;
@@ -250,7 +250,7 @@ var LineChartP5 = function (props) {
           W = node.offsetWidth || 420;
           p.createCanvas(W, H);
           start = p.millis();
-          p.textFont("Inter, system-ui, sans-serif");
+          p.textFont("Circular, Arial, sans-serif");
         };
         p.windowResized = function () {
           W = node.offsetWidth || 420;
@@ -435,7 +435,7 @@ var DonutChartP5 = function (props) {
         p.setup = function () {
           p.createCanvas(SIZE, SIZE);
           start = p.millis();
-          p.textFont("Inter, system-ui, sans-serif");
+          p.textFont("Circular, Arial, sans-serif");
           p.angleMode(p.RADIANS);
         };
         p.draw = function () {
@@ -615,7 +615,7 @@ var RiskHistP5 = function (props) {
           W = node.offsetWidth || 420;
           p.createCanvas(W, H);
           start = p.millis();
-          p.textFont("Inter, system-ui, sans-serif");
+          p.textFont("Circular, Arial, sans-serif");
         };
         p.windowResized = function () {
           W = node.offsetWidth || 420;
@@ -1021,7 +1021,7 @@ var SankeyPipelineP5 = function (props) {
         p.setup = function () {
           W = node.offsetWidth || 960;
           p.createCanvas(W, H);
-          p.textFont("Inter, system-ui, sans-serif");
+          p.textFont("Circular, Arial, sans-serif");
           start = p.millis();
           build();
         };
