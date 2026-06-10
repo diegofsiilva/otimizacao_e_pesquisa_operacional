@@ -98,6 +98,8 @@ def montar_problema(clusters: pd.DataFrame, params: dict, df: pd.DataFrame) -> P
         R1: teto de inadimplência financeira (uma restrição para a carteira inteira)
         R2: capacidade de pagamento com alavancagem (uma restrição por cluster)
         R3: teto máximo de limite (uma restrição por cluster)
+
+        As demais restrições serão pós-otimização
     """
     pd_fin_atual = calcular_pd_fin_atual(df)
     t = params["t"]
