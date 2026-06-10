@@ -74,6 +74,9 @@ out/
 .turbo/
 .vite/
 
+# Config local gerada por apps/backend/run_server.py
+apps/frontend/runtime-config.js
+
 # Arquivos de lock - escolha apenas um para versionar (o do seu gerenciador)
 # e ignore os demais para evitar conflitos entre npm, yarn e pnpm
 # Descomente a linha do gerenciador que NÃO for usar:
