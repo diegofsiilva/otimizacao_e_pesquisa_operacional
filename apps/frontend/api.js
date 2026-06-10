@@ -17,10 +17,17 @@
 //   POST   /api/uploads/{id}/chunk?index=N        (multipart, um chunk por vez)
 //   POST   /api/uploads/{id}/finalizar            (remonta e dispara pipeline)
 
-var API_BASE_URL =
+function normalizarApiBaseUrl(value) {
+  var base = String(value || "").replace(/\/+$/, "");
+  if (!base) return "http://127.0.0.1:8000/api";
+  return /\/api$/i.test(base) ? base : base + "/api";
+}
+
+var API_BASE_URL = normalizarApiBaseUrl(
   window.API_BASE_URL ||
-  localStorage.getItem("API_BASE_URL") ||
-  "http://127.0.0.1:8000/api";
+    localStorage.getItem("API_BASE_URL") ||
+    "http://127.0.0.1:8000/api",
+);
 
 var Api = {
   // -------------------------------------------------------------------------

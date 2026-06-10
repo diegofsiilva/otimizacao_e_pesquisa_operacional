@@ -126,7 +126,7 @@ var BarChartP5 = function (props) {
           W = node.offsetWidth || 420;
           p.createCanvas(W, H);
           start = p.millis();
-          p.textFont("Inter, system-ui, sans-serif");
+          p.textFont("Circular, Arial, sans-serif");
         };
         p.windowResized = function () {
           W = node.offsetWidth || 420;
@@ -250,7 +250,7 @@ var LineChartP5 = function (props) {
           W = node.offsetWidth || 420;
           p.createCanvas(W, H);
           start = p.millis();
-          p.textFont("Inter, system-ui, sans-serif");
+          p.textFont("Circular, Arial, sans-serif");
         };
         p.windowResized = function () {
           W = node.offsetWidth || 420;
@@ -435,7 +435,7 @@ var DonutChartP5 = function (props) {
         p.setup = function () {
           p.createCanvas(SIZE, SIZE);
           start = p.millis();
-          p.textFont("Inter, system-ui, sans-serif");
+          p.textFont("Circular, Arial, sans-serif");
           p.angleMode(p.RADIANS);
         };
         p.draw = function () {
@@ -615,7 +615,7 @@ var RiskHistP5 = function (props) {
           W = node.offsetWidth || 420;
           p.createCanvas(W, H);
           start = p.millis();
-          p.textFont("Inter, system-ui, sans-serif");
+          p.textFont("Circular, Arial, sans-serif");
         };
         p.windowResized = function () {
           W = node.offsetWidth || 420;
@@ -700,6 +700,137 @@ var RiskHistP5 = function (props) {
   );
 
   if (!clusters || clusters.length === 0) return null;
+  return <div ref={ref} style={{ width: "100%" }} />;
+};
+
+// ============================================================================
+// PulpSimplexCompareP5 - compara limite Simplex x PuLP por cluster
+// ============================================================================
+var PulpSimplexCompareP5 = function (props) {
+  var ref = React.useRef(null);
+  var data = props.data || [];
+  var dataKey = JSON.stringify(data);
+
+  React.useEffect(
+    function () {
+      var node = ref.current;
+      if (!node || !data.length) return;
+
+      var sketch = function (p) {
+        var W = 520;
+        var H = 260;
+        var start = 0;
+        var DUR = 800;
+        var pad = { top: 28, right: 22, bottom: 38, left: 58 };
+        var max =
+          Math.max.apply(
+            null,
+            data.map(function (d) {
+              return Math.max(d.simplex, d.pulp);
+            }),
+          ) || 1;
+
+        p.setup = function () {
+          W = node.offsetWidth || 520;
+          p.createCanvas(W, H);
+          start = p.millis();
+          p.textFont("Circular, Arial, sans-serif");
+        };
+
+        p.windowResized = function () {
+          W = node.offsetWidth || 520;
+          p.resizeCanvas(W, H);
+        };
+
+        p.draw = function () {
+          p.clear();
+          var cw = W - pad.left - pad.right;
+          var ch = H - pad.top - pad.bottom;
+          var t = _easeOutCubic(p.constrain((p.millis() - start) / DUR, 0, 1));
+
+          [0, 0.25, 0.5, 0.75, 1].forEach(function (f) {
+            var y = pad.top + ch * (1 - f);
+            p.stroke("#E8EFF7");
+            p.strokeWeight(1);
+            p.line(pad.left, y, pad.left + cw, y);
+            if (f > 0) {
+              p.noStroke();
+              p.fill("#9C9C9F");
+              p.textSize(9);
+              p.textAlign(p.RIGHT, p.CENTER);
+              p.text(_fmtAxis(max * f), pad.left - 8, y);
+            }
+          });
+
+          var slot = cw / data.length;
+          var bw = Math.min(16, slot * 0.28);
+          var hover = null;
+
+          data.forEach(function (d, i) {
+            var cx = pad.left + slot * i + slot / 2;
+            var x1 = cx - bw - 2;
+            var x2 = cx + 2;
+            var h1 = Math.max(2, ch * (d.simplex / max) * t);
+            var h2 = Math.max(2, ch * (d.pulp / max) * t);
+            var y1 = pad.top + ch - h1;
+            var y2 = pad.top + ch - h2;
+
+            var over =
+              p.mouseX >= cx - slot / 2 &&
+              p.mouseX <= cx + slot / 2 &&
+              p.mouseY >= pad.top &&
+              p.mouseY <= pad.top + ch;
+            if (over) hover = d;
+
+            p.noStroke();
+            p.fill(over ? "#1B4F82" : "#2E6DA4");
+            p.rect(x1, y1, bw, h1, 2, 2, 0, 0);
+            p.fill(over ? "#C6B514" : "#FAE95D");
+            p.rect(x2, y2, bw, h2, 2, 2, 0, 0);
+
+            p.fill("#9C9C9F");
+            p.textAlign(p.CENTER, p.TOP);
+            p.textSize(8);
+            p.text(d.label, cx, pad.top + ch + 8);
+          });
+
+          p.noStroke();
+          [
+            { label: "Simplex", color: "#2E6DA4", x: pad.left },
+            { label: "PuLP", color: "#FAE95D", x: pad.left + 76 },
+          ].forEach(function (item) {
+            p.fill(item.color);
+            p.rect(item.x, H - 14, 10, 10, 2);
+            p.fill("#3B4049");
+            p.textAlign(p.LEFT, p.CENTER);
+            p.textSize(10);
+            p.text(item.label, item.x + 14, H - 9);
+          });
+
+          if (hover) {
+            var delta = hover.pulp - hover.simplex;
+            _drawTooltip(p, [
+              hover.label,
+              "Simplex: " + _fmtFull(hover.simplex),
+              "PuLP: " + _fmtFull(hover.pulp),
+              "Dif.: " + (delta >= 0 ? "+" : "-") + _fmtFull(Math.abs(delta)),
+            ]);
+            p.cursor(p.HAND);
+          } else {
+            p.cursor(p.ARROW);
+          }
+        };
+      };
+
+      var instance = new p5(sketch, node);
+      return function () {
+        instance.remove();
+      };
+    },
+    [dataKey],
+  );
+
+  if (!data.length) return null;
   return <div ref={ref} style={{ width: "100%" }} />;
 };
 
@@ -1021,7 +1152,7 @@ var SankeyPipelineP5 = function (props) {
         p.setup = function () {
           W = node.offsetWidth || 960;
           p.createCanvas(W, H);
-          p.textFont("Inter, system-ui, sans-serif");
+          p.textFont("Circular, Arial, sans-serif");
           start = p.millis();
           build();
         };
@@ -1461,6 +1592,33 @@ var Resultados = function (props) {
       break;
     }
   }
+
+  function getLimitePulp(c) {
+    if (!c) return null;
+    if (c.limite_pulp != null) return c.limite_pulp;
+    if (c.limite_pulp_otimizado != null) return c.limite_pulp_otimizado;
+    if (c.pulp_limite_otimizado != null) return c.pulp_limite_otimizado;
+    return null;
+  }
+
+  var pulpSimplexData = clusters
+    .filter(function (c) {
+      return getLimitePulp(c) != null;
+    })
+    .slice()
+    .sort(function (a, b) {
+      var diffA = Math.abs(getLimitePulp(a) - (a.limite_otimizado || 0));
+      var diffB = Math.abs(getLimitePulp(b) - (b.limite_otimizado || 0));
+      return diffB - diffA;
+    })
+    .slice(0, 12)
+    .map(function (c) {
+      return {
+        label: "CLU-" + c.cluster_id,
+        simplex: c.limite_otimizado || 0,
+        pulp: getLimitePulp(c) || 0,
+      };
+    });
 
   // Top 15 clusters por limite (bar chart)
   var barData = clusters
@@ -1916,6 +2074,18 @@ var Resultados = function (props) {
               )}
             </div>
           </div>
+
+          {pulpSimplexData.length > 0 && (
+            <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+              <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
+                Comparação PuLP x Simplex
+              </div>
+              <div className="text-xs text-[#9C9C9F] mb-4">
+                Top 12 clusters com maior diferença de limite otimizado
+              </div>
+              <PulpSimplexCompareP5 data={pulpSimplexData} />
+            </div>
+          )}
 
           {/* Gráficos - linha 2 */}
           <div className="grid grid-cols-2 gap-4">

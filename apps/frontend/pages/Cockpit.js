@@ -128,6 +128,14 @@ var Cockpit = function (props) {
     return { label: label, trend: d > 0 ? "up" : "down" };
   }
 
+  function getLimitePulp(c) {
+    if (!c) return null;
+    if (c.limite_pulp != null) return c.limite_pulp;
+    if (c.limite_pulp_otimizado != null) return c.limite_pulp_otimizado;
+    if (c.pulp_limite_otimizado != null) return c.pulp_limite_otimizado;
+    return null;
+  }
+
   // -------------------------------------------------------------------------
   // Exportar clusters como CSV (gerado no browser)
   // -------------------------------------------------------------------------
@@ -140,9 +148,14 @@ var Cockpit = function (props) {
       "Score Cross Médio",
       "Fator Alavancagem",
       "Limite Otimizado (R$)",
+      "Limite PuLP (R$)",
+      "Delta vs PuLP (R$)",
       "Status",
     ];
     var rows = clusters.map(function (c) {
+      var limitePulp = getLimitePulp(c);
+      var deltaPulp =
+        limitePulp == null ? "" : (c.limite_otimizado || 0) - limitePulp;
       return [
         "CLU-" + c.cluster_id,
         c.n_clientes,
@@ -150,6 +163,8 @@ var Cockpit = function (props) {
         Math.round(c.score_credito_cross_medio),
         c.fator_alavancagem.toFixed(2),
         c.limite_otimizado || "",
+        limitePulp == null ? "" : limitePulp,
+        deltaPulp,
         c.limite_otimizado > 0 ? "Viável" : "Sem Solução",
       ];
     });
@@ -191,6 +206,12 @@ var Cockpit = function (props) {
   var nViavel = clusters.filter(function (c) {
     return c.limite_otimizado > 0;
   }).length;
+  var nViavelPulp = clusters.filter(function (c) {
+    return getLimitePulp(c) > 0;
+  }).length;
+  var temComparacaoPulp = clusters.some(function (c) {
+    return getLimitePulp(c) != null;
+  });
 
   // -------------------------------------------------------------------------
   // KPI cards - dados reais com delta vs consulta anterior
@@ -583,6 +604,11 @@ var Cockpit = function (props) {
               <rect x="2" y="5" width="20" height="4" />
             </svg>
             Clusters
+            {temComparacaoPulp && (
+              <span className="text-[11px] font-normal text-[#9C9C9F]">
+                PuLP: {nViavelPulp}
+              </span>
+            )}
             {clusters.length > 0 && (
               <span className="text-[11px] font-normal text-[#9C9C9F]">
                 - {nViavel} viáveis · {clusters.length - nViavel} sem solução
@@ -648,6 +674,8 @@ var Cockpit = function (props) {
                   "Score Cross Médio",
                   "Fator Alavancagem",
                   "Limite Otimizado",
+                  "Limite PuLP",
+                  "Delta",
                   "Status",
                 ].map(function (h) {
                   return (
@@ -665,7 +693,7 @@ var Cockpit = function (props) {
               {clustersPaginados.length === 0 ? (
                 <tr>
                   <td
-                    colSpan="7"
+                    colSpan="9"
                     className="px-4 py-10 text-center text-sm text-[#9C9C9F]"
                   >
                     Nenhum cluster encontrado
@@ -674,6 +702,9 @@ var Cockpit = function (props) {
               ) : (
                 clustersPaginados.map(function (c, i) {
                   var viavel = c.limite_otimizado > 0;
+                  var limitePulp = getLimitePulp(c);
+                  var deltaPulp =
+                    limitePulp == null ? null : c.limite_otimizado - limitePulp;
                   return (
                     <tr
                       key={c.cluster_id}
@@ -699,6 +730,20 @@ var Cockpit = function (props) {
                       </td>
                       <td className="px-4 py-3 font-semibold text-[#0D1B2A]">
                         {viavel ? fmt(c.limite_otimizado) : "-"}
+                      </td>
+                      <td className="px-4 py-3 font-semibold text-[#3B4049]">
+                        {limitePulp != null && limitePulp > 0
+                          ? fmt(limitePulp)
+                          : limitePulp === 0
+                            ? "-"
+                            : "N/D"}
+                      </td>
+                      <td className="px-4 py-3 text-[#3B4049]">
+                        {deltaPulp == null
+                          ? "N/D"
+                          : deltaPulp === 0
+                            ? "="
+                            : (deltaPulp > 0 ? "+" : "") + fmt(deltaPulp)}
                       </td>
                       <td className="px-4 py-3">
                         {viavel ? (

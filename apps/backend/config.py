@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from urllib.parse import urlsplit
 
 BASE_DIR = Path(__file__).resolve().parent
 
@@ -29,6 +30,13 @@ def _csv_env(name: str, default: str) -> list[str]:
 def _path_env(name: str, default: Path) -> Path:
     p = Path(os.getenv(name, str(default)))
     return p if p.is_absolute() else BASE_DIR / p
+
+
+def _origin_with_port(base_url: str, port: int) -> str:
+    parsed = urlsplit(base_url)
+    scheme = parsed.scheme or "http"
+    host = parsed.hostname or base_url.split("://", 1)[-1].split(":", 1)[0]
+    return f"{scheme}://{host}:{port}"
 
 
 # ---------------------------------------------------------------------------
@@ -67,7 +75,13 @@ else:
     if FRONTEND_PORT in (80, 443):
         FRONTEND_ORIGINS = [APP_HOST]
     else:
-        FRONTEND_ORIGINS = [f"{APP_HOST}:{FRONTEND_PORT}"]
+        local_origins = {_origin_with_port(APP_HOST, FRONTEND_PORT)}
+        host = urlsplit(APP_HOST).hostname
+        if host == "127.0.0.1":
+            local_origins.add(f"http://localhost:{FRONTEND_PORT}")
+        elif host == "localhost":
+            local_origins.add(f"http://127.0.0.1:{FRONTEND_PORT}")
+        FRONTEND_ORIGINS = sorted(local_origins)
 
 # ---------------------------------------------------------------------------
 # Persistencia local
