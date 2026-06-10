@@ -893,6 +893,558 @@ var RiskBandAllocationSVG = function (props) {
 };
 
 // ============================================================================
+// Componentes p5.js - canvas em instance mode, alinhados ao branch P5
+// ============================================================================
+function _p5Ctor() {
+  if (typeof window !== "undefined" && window.p5) return window.p5;
+  if (typeof p5 !== "undefined") return p5;
+  return null;
+}
+
+function _p5Ease(t) {
+  return 1 - Math.pow(1 - t, 3);
+}
+
+function _p5Money(v) {
+  if (Math.abs(v) >= 1000000000) return "R$" + (v / 1000000000).toFixed(1) + "B";
+  if (Math.abs(v) >= 1000000) return "R$" + (v / 1000000).toFixed(1) + "M";
+  if (Math.abs(v) >= 1000) return "R$" + (v / 1000).toFixed(0) + "k";
+  return "R$" + Math.round(v);
+}
+
+function _p5Pct(v) {
+  return Number(v || 0).toFixed(1).replace(".", ",") + "%";
+}
+
+var P5Canvas = function (props) {
+  var ref = React.useRef(null);
+  var height = props.height || 220;
+  var chartKey = props.chartKey || "";
+
+  React.useEffect(
+    function () {
+      var node = ref.current;
+      var P5 = _p5Ctor();
+      if (!node || !P5) return;
+
+      var sketch = function (p) {
+        var W = 420;
+        var H = height;
+        var start = 0;
+
+        p.setup = function () {
+          W = node.offsetWidth || 420;
+          H = height;
+          p.createCanvas(W, H);
+          start = p.millis();
+          p.textFont("Circular, Arial, sans-serif");
+        };
+
+        p.windowResized = function () {
+          W = node.offsetWidth || 420;
+          p.resizeCanvas(W, H);
+        };
+
+        p.draw = function () {
+          p.clear();
+          var progress = _p5Ease(p.constrain((p.millis() - start) / 700, 0, 1));
+          props.draw(p, W, H, progress);
+        };
+      };
+
+      var instance = new P5(sketch, node);
+      return function () {
+        instance.remove();
+      };
+    },
+    [chartKey, height],
+  );
+
+  if (!_p5Ctor()) {
+    return (
+      <div className="flex items-center justify-center h-32 text-xs text-[#9C9C9F]">
+        p5.js nao carregado.
+      </div>
+    );
+  }
+
+  return <div ref={ref} style={{ width: "100%" }} />;
+};
+
+var ApprovalShareP5 = function (props) {
+  var data = props.data || {};
+  var chartKey = JSON.stringify(data);
+
+  return (
+    <P5Canvas
+      height={220}
+      chartKey={chartKey}
+      draw={function (p, W, H, t) {
+        var total = Math.max(0, data.total || 0);
+        var approved = Math.max(0, data.approved || 0);
+        var eligibleNoOffer = Math.max(0, data.eligibleNoOffer || 0);
+        var blocked = Math.max(0, data.blocked || 0);
+        var base = total || approved + eligibleNoOffer + blocked || 1;
+        var segments = [
+          { label: "Aprovado", value: approved, color: "#67DE98" },
+          { label: "Elegivel sem oferta", value: eligibleNoOffer, color: "#FAE95D" },
+          { label: "Bloqueado", value: blocked, color: "#B8D4EC" },
+        ];
+        var pctApproved = (approved / base) * 100;
+        var x = 24;
+        var y = 112;
+        var barW = W - 48;
+        var cursor = x;
+
+        p.noStroke();
+        p.fill("#3B4049");
+        p.textSize(12);
+        p.textStyle(p.BOLD);
+        p.text("Aprovado sobre a base total", x, 32);
+        p.fill("#0D1B2A");
+        p.textSize(40);
+        p.text(_p5Pct(pctApproved), x, 82);
+        p.textSize(13);
+        p.fill("#3B4049");
+        p.text(Number(approved).toLocaleString("pt-BR") + " clientes com limite", x + 150, 70);
+
+        p.fill("#E8EFF7");
+        p.rect(x, y, barW, 24, 4);
+        segments.forEach(function (s) {
+          var sw = barW * (s.value / base) * t;
+          p.fill(s.color);
+          p.rect(cursor, y, sw, 24, 4);
+          cursor += sw;
+        });
+
+        segments.forEach(function (s, i) {
+          var lx = x + i * Math.max(118, barW / 3);
+          var pct = (s.value / base) * 100;
+          p.fill(s.color);
+          p.rect(lx, 160, 9, 9, 2);
+          p.fill("#3B4049");
+          p.textSize(10);
+          p.textStyle(p.BOLD);
+          p.text(s.label, lx + 14, 168);
+          p.fill("#9C9C9F");
+          p.textStyle(p.NORMAL);
+          p.text(_p5Pct(pct) + " · " + Number(s.value).toLocaleString("pt-BR"), lx + 14, 185);
+        });
+      }}
+    />
+  );
+};
+
+var PolicyFunnelP5 = function (props) {
+  var data = props.data || [];
+  var chartKey = JSON.stringify(data);
+  if (data.length === 0) return null;
+
+  return (
+    <P5Canvas
+      height={180}
+      chartKey={chartKey}
+      draw={function (p, W, H, t) {
+        var left = 126;
+        var right = 20;
+        var max =
+          Math.max.apply(
+            null,
+            data.map(function (d) {
+              return d.value;
+            }),
+          ) || 1;
+        var barW = W - left - right;
+        data.forEach(function (d, i) {
+          var y = 18 + i * 36;
+          var bw = Math.max(4, barW * (d.value / max) * t);
+          var pct = data[0] && data[0].value ? (d.value / data[0].value) * 100 : 0;
+          p.noStroke();
+          p.fill("#3B4049");
+          p.textSize(11);
+          p.textStyle(p.BOLD);
+          p.textAlign(p.RIGHT, p.CENTER);
+          p.text(d.label, left - 10, y + 10);
+          p.fill("#E8EFF7");
+          p.rect(left, y, barW, 20, 4);
+          p.fill(d.color);
+          p.rect(left, y, bw, 20, 4);
+          p.fill(bw > 100 ? "#fff" : "#0D1B2A");
+          p.textAlign(bw > 100 ? p.RIGHT : p.LEFT, p.CENTER);
+          p.textSize(10);
+          p.text(
+            Number(d.value).toLocaleString("pt-BR") + " (" + _p5Pct(pct) + ")",
+            left + (bw > 100 ? bw - 8 : bw + 8),
+            y + 10,
+          );
+        });
+      }}
+    />
+  );
+};
+
+var ExposureParetoP5 = function (props) {
+  var data = props.data || [];
+  var chartKey = JSON.stringify(data);
+  if (data.length === 0) return null;
+
+  return (
+    <P5Canvas
+      height={220}
+      chartKey={chartKey}
+      draw={function (p, W, H, t) {
+        var pad = { top: 24, right: 42, bottom: 36, left: 58 };
+        var cw = W - pad.left - pad.right;
+        var ch = H - pad.top - pad.bottom;
+        var max =
+          Math.max.apply(
+            null,
+            data.map(function (d) {
+              return d.exposure;
+            }),
+          ) || 1;
+        var total =
+          data.reduce(function (s, d) {
+            return s + d.exposure;
+          }, 0) || 1;
+        p.textSize(9);
+        [0, 0.5, 1].forEach(function (f) {
+          var y = pad.top + ch * (1 - f);
+          p.stroke("#E8EFF7");
+          p.line(pad.left, y, pad.left + cw, y);
+          p.noStroke();
+          p.fill("#9C9C9F");
+          p.textAlign(p.RIGHT, p.CENTER);
+          if (f > 0) p.text(_p5Money(max * f), pad.left - 8, y);
+          p.textAlign(p.LEFT, p.CENTER);
+          p.text((f * 100).toFixed(0) + "%", pad.left + cw + 8, y);
+        });
+
+        var slot = cw / data.length;
+        var bw = Math.min(26, slot * 0.55);
+        var running = 0;
+        var pts = [];
+        data.forEach(function (d, i) {
+          var x = pad.left + slot * i + (slot - bw) / 2;
+          var bh = Math.max(2, ch * (d.exposure / max) * t);
+          var y = pad.top + ch - bh;
+          running += d.exposure;
+          pts.push({
+            x: pad.left + slot * i + slot / 2,
+            y: pad.top + ch - (running / total) * ch * t,
+          });
+          p.noStroke();
+          p.fill("#2E6DA4");
+          p.rect(x, y, bw, bh, 3);
+          p.fill("#9C9C9F");
+          p.textAlign(p.CENTER, p.TOP);
+          p.textSize(8);
+          p.text(d.label, x + bw / 2, pad.top + ch + 8);
+        });
+        p.noFill();
+        p.stroke("#DC2F37");
+        p.strokeWeight(2.5);
+        p.beginShape();
+        pts.forEach(function (pt) {
+          p.vertex(pt.x, pt.y);
+        });
+        p.endShape();
+      }}
+    />
+  );
+};
+
+var RiskBandAllocationP5 = function (props) {
+  var bands = props.bands || [];
+  var chartKey = JSON.stringify(bands);
+  if (bands.length === 0) return null;
+
+  return (
+    <P5Canvas
+      height={210}
+      chartKey={chartKey}
+      draw={function (p, W, H, t) {
+        var colors = ["#0B8AA5", "#67DE98", "#FAE95D", "#FF8C6B", "#FF5D5C"];
+        var pad = { top: 24, right: 18, bottom: 48, left: 58 };
+        var cw = W - pad.left - pad.right;
+        var ch = H - pad.top - pad.bottom;
+        var max =
+          Math.max.apply(
+            null,
+            bands.map(function (b) {
+              return b.exposure;
+            }),
+          ) || 1;
+        [0, 0.5, 1].forEach(function (f) {
+          var y = pad.top + ch * (1 - f);
+          p.stroke("#E8EFF7");
+          p.line(pad.left, y, pad.left + cw, y);
+          if (f > 0) {
+            p.noStroke();
+            p.fill("#9C9C9F");
+            p.textSize(9);
+            p.textAlign(p.RIGHT, p.CENTER);
+            p.text(_p5Money(max * f), pad.left - 8, y);
+          }
+        });
+        var slot = cw / bands.length;
+        var bw = Math.min(48, slot * 0.6);
+        bands.forEach(function (b, i) {
+          var x = pad.left + slot * i + (slot - bw) / 2;
+          var bh = b.exposure > 0 ? Math.max(2, ch * (b.exposure / max) * t) : 0;
+          var y = pad.top + ch - bh;
+          p.noStroke();
+          p.fill(colors[i] || "#2E6DA4");
+          p.rect(x, y, bw, bh, 3);
+          p.fill("#3B4049");
+          p.textAlign(p.CENTER, p.BOTTOM);
+          p.textStyle(p.BOLD);
+          p.textSize(9);
+          p.text(b.clusters, x + bw / 2, y - 5);
+          p.textStyle(p.NORMAL);
+          p.fill("#9C9C9F");
+          p.textAlign(p.CENTER, p.TOP);
+          p.text(b.label, x + bw / 2, pad.top + ch + 8);
+          p.text(b.approval.toFixed(0) + "% ofert.", x + bw / 2, pad.top + ch + 22);
+        });
+      }}
+    />
+  );
+};
+
+var RiskReturnScatterP5 = function (props) {
+  var points = props.points || [];
+  var chartKey = JSON.stringify(points);
+  if (points.length === 0) return null;
+
+  return (
+    <P5Canvas
+      height={230}
+      chartKey={chartKey}
+      draw={function (p, W, H, t) {
+        var pad = { top: 24, right: 22, bottom: 38, left: 60 };
+        var cw = W - pad.left - pad.right;
+        var ch = H - pad.top - pad.bottom;
+        var maxPd =
+          Math.max.apply(
+            null,
+            points.map(function (pt) {
+              return pt.pd;
+            }),
+          ) || 0.01;
+        var minReturn = Math.min.apply(
+          null,
+          points.map(function (pt) {
+            return pt.netPerClient;
+          }),
+        );
+        var maxReturn = Math.max.apply(
+          null,
+          points.map(function (pt) {
+            return pt.netPerClient;
+          }),
+        );
+        var yMin = Math.min(0, minReturn);
+        var yMax = Math.max(1, maxReturn);
+        var maxClients =
+          Math.max.apply(
+            null,
+            points.map(function (pt) {
+              return pt.clients;
+            }),
+          ) || 1;
+        function sx(pd) {
+          return pad.left + (pd / maxPd) * cw;
+        }
+        function sy(v) {
+          return pad.top + ch - ((v - yMin) / (yMax - yMin || 1)) * ch;
+        }
+        [0, 0.5, 1].forEach(function (f) {
+          var y = pad.top + ch * (1 - f);
+          p.stroke("#E8EFF7");
+          p.line(pad.left, y, pad.left + cw, y);
+          p.noStroke();
+          p.fill("#9C9C9F");
+          p.textSize(9);
+          p.textAlign(p.RIGHT, p.CENTER);
+          p.text(_p5Money(yMin + (yMax - yMin) * f), pad.left - 8, y);
+        });
+        var zeroY = sy(0);
+        p.stroke("#DC2F37");
+        p.drawingContext.setLineDash([4, 4]);
+        p.line(pad.left, zeroY, pad.left + cw, zeroY);
+        p.drawingContext.setLineDash([]);
+        points.forEach(function (pt) {
+          var r = (4 + 10 * Math.sqrt(pt.clients / maxClients)) * t;
+          var color = pt.limit > 0 && pt.netPerClient >= 0 ? "#0B8AA5" : pt.limit > 0 ? "#FAE95D" : "#FF5D5C";
+          p.noStroke();
+          p.fill(color);
+          p.circle(sx(pt.pd), sy(pt.netPerClient), r * 2);
+          if (pt.rank <= 5 && t > 0.9) {
+            p.fill("#3B4049");
+            p.textAlign(p.CENTER, p.BOTTOM);
+            p.textSize(8);
+            p.textStyle(p.BOLD);
+            p.text("CLU-" + pt.id, sx(pt.pd), sy(pt.netPerClient) - r - 4);
+            p.textStyle(p.NORMAL);
+          }
+        });
+        p.fill("#9C9C9F");
+        p.textAlign(p.CENTER, p.BOTTOM);
+        p.textSize(10);
+        p.text("PD media do cluster", pad.left + cw / 2, H - 2);
+      }}
+    />
+  );
+};
+
+var LineChartP5 = function (props) {
+  var data = props.data || [];
+  var chartKey = JSON.stringify(data);
+  if (!data || data.length < 2)
+    return (
+      <div className="flex items-center justify-center h-32 text-xs text-[#9C9C9F]">
+        Necessario pelo menos 2 simulacoes para exibir a evolucao.
+      </div>
+    );
+
+  return (
+    <P5Canvas
+      height={205}
+      chartKey={chartKey}
+      draw={function (p, W, H, t) {
+        var pad = { top: 26, right: 22, bottom: 32, left: 54 };
+        var cw = W - pad.left - pad.right;
+        var ch = H - pad.top - pad.bottom;
+        var max =
+          (Math.max.apply(
+            null,
+            data.map(function (d) {
+              return d.value;
+            }),
+          ) || 1) * 1.15;
+        var pts = data.map(function (d, i) {
+          return {
+            x: pad.left + (cw / (data.length - 1)) * i,
+            y: pad.top + ch - (ch * d.value) / max,
+            d: d,
+          };
+        });
+        [0, 0.5, 1].forEach(function (f) {
+          var y = pad.top + ch * (1 - f);
+          p.stroke("#E8EFF7");
+          p.line(pad.left, y, pad.left + cw, y);
+          if (f > 0) {
+            p.noStroke();
+            p.fill("#9C9C9F");
+            p.textSize(9);
+            p.textAlign(p.RIGHT, p.CENTER);
+            p.text(_p5Money(max * f), pad.left - 8, y);
+          }
+        });
+        p.noFill();
+        p.stroke("#2E6DA4");
+        p.strokeWeight(2.5);
+        p.beginShape();
+        var last = Math.max(1, Math.floor((pts.length - 1) * t));
+        for (var i = 0; i <= last; i++) p.vertex(pts[i].x, pts[i].y);
+        p.endShape();
+        pts.forEach(function (pt) {
+          p.noStroke();
+          p.fill("#2E6DA4");
+          p.circle(pt.x, pt.y, 7);
+          p.fill("#9C9C9F");
+          p.textSize(9);
+          p.textAlign(p.CENTER, p.TOP);
+          p.text(pt.d.label, pt.x, pad.top + ch + 9);
+        });
+      }}
+    />
+  );
+};
+
+var BarChartP5 = function (props) {
+  var data = props.data || [];
+  var chartKey = JSON.stringify(data);
+  if (data.length === 0) return null;
+  return (
+    <P5Canvas
+      height={220}
+      chartKey={chartKey}
+      draw={function (p, W, H, t) {
+        var pad = { top: 28, right: 12, bottom: 36, left: 56 };
+        var cw = W - pad.left - pad.right;
+        var ch = H - pad.top - pad.bottom;
+        var max =
+          Math.max.apply(
+            null,
+            data.map(function (d) {
+              return d.value;
+            }),
+          ) || 1;
+        var slot = cw / data.length;
+        var bw = Math.min(30, slot * 0.6);
+        [0, 0.25, 0.5, 0.75, 1].forEach(function (f) {
+          var y = pad.top + ch * (1 - f);
+          p.stroke("#E8EFF7");
+          p.line(pad.left, y, pad.left + cw, y);
+          if (f > 0) {
+            p.noStroke();
+            p.fill("#9C9C9F");
+            p.textSize(9);
+            p.textAlign(p.RIGHT, p.CENTER);
+            p.text(_p5Money(max * f), pad.left - 8, y);
+          }
+        });
+        data.forEach(function (d, i) {
+          var x = pad.left + slot * i + (slot - bw) / 2;
+          var bh = Math.max(2, ch * (d.value / max) * t);
+          var y = pad.top + ch - bh;
+          p.noStroke();
+          p.fill(d.value > 0 ? "#2E6DA4" : "#E8EFF7");
+          p.rect(x, y, bw, bh, 3);
+          p.fill("#9C9C9F");
+          p.textSize(8);
+          p.textAlign(p.CENTER, p.TOP);
+          p.text(d.label, x + bw / 2, pad.top + ch + 8);
+        });
+      }}
+    />
+  );
+};
+
+var DonutChartP5 = function (props) {
+  var data = props.data || [];
+  var chartKey = JSON.stringify(data);
+  if (data.length === 0) return null;
+  return (
+    <P5Canvas
+      height={150}
+      chartKey={chartKey}
+      draw={function (p, W, H, t) {
+        var total =
+          data.reduce(function (s, d) {
+            return s + d.value;
+          }, 0) || 1;
+        var cx = Math.min(W / 2, 78);
+        var cy = 75;
+        var r = 58;
+        var angle = -p.HALF_PI;
+        p.noStroke();
+        data.forEach(function (d) {
+          var sweep = (d.value / total) * p.TWO_PI * t;
+          p.fill(d.color);
+          p.arc(cx, cy, r * 2, r * 2, angle, angle + sweep, p.PIE);
+          angle += sweep;
+        });
+        p.fill("#fff");
+        p.circle(cx, cy, 76);
+      }}
+    />
+  );
+};
+
+// ============================================================================
 // Resultados
 // ============================================================================
 var Resultados = function (props) {
