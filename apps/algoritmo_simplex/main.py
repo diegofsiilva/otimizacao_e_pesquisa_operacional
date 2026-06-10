@@ -20,6 +20,7 @@ import numpy as np
 import pandas as pd
 from models import Problema
 from simplex import simplex
+from simplex_pulp import simplex_pulp
 
 # calibrar_pd está em scripts/ - adicionado ao path uma única vez no nível do módulo
 _SCRIPTS_DIR = str(Path(__file__).resolve().parent.parent.parent / "scripts")
@@ -172,11 +173,14 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
     Retorna:
         status              : status do Simplex ("otimo" ou "multiplas_solucoes")
         z                   : valor ótimo da função objetivo
-        clusters            : lista de dicts com os parâmetros de cada cluster
-                              e o limite otimizado
+        clusters            : lista de dicts com os parâmetros de cada cluster,
+                              o limite otimizado (simplex) e o limite_pulp (PuLP)
         parquet_com_cluster : path do parquet _com_cluster gerado pelo clustering,
                               usado pelo backend para persistir a atribuição de
                               cada cliente ao seu cluster
+        z_pulp              : valor ótimo retornado pelo PuLP (referência)
+        status_pulp         : status retornado pelo PuLP
+        delta_z_pct         : diferença relativa entre z e z_pulp em % (0.0 se z_pulp == 0)
     """
     json_dir = Path(__file__).resolve().parent / "input"
     json_temp = json_dir / "_params_temp.json"
@@ -192,11 +196,26 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
         if json_temp.exists():
             json_temp.unlink()
 
+    import copy
+
     problema = montar_problema(clusters, params, df)
-    x, z, status = simplex(problema)
+    x, z, status = simplex(copy.deepcopy(problema))
+
+    # comparação com PuLP — falha silenciosa para não bloquear o pipeline
+    try:
+        x_pulp, z_pulp, status_pulp = simplex_pulp(copy.deepcopy(problema))
+    except Exception:
+        x_pulp = [0.0] * len(x)
+        z_pulp = 0.0
+        status_pulp = "erro"
+
+    delta_z_pct = abs(z - z_pulp) / abs(z_pulp) * 100 if z_pulp != 0.0 else 0.0
 
     x_arr = np.array(x)
     limites = np.where(x_arr >= 200, (x_arr / 50).round().astype(int) * 50, 0)
+
+    x_pulp_arr = np.array(x_pulp)
+    limites_pulp = np.where(x_pulp_arr >= 200, (x_pulp_arr / 50).round().astype(int) * 50, 0)
 
     resultado_clusters = [
         {
@@ -209,6 +228,7 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
             "ck_medio": float(clusters["ck_medio"].iloc[i]),
             "fator_alavancagem": float(clusters["m_k"].iloc[i]),
             "limite_otimizado": int(limites[i]),
+            "limite_otimizado_pulp": int(limites_pulp[i]),
         }
         for i in range(len(clusters))
     ]
@@ -222,6 +242,9 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
         "z": z,
         "clusters": resultado_clusters,
         "parquet_com_cluster": parquet_com_cluster,
+        "z_pulp": z_pulp,
+        "status_pulp": status_pulp,
+        "delta_z_pct": delta_z_pct,
     }
 
 

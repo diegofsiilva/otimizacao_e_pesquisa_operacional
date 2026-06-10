@@ -1787,6 +1787,61 @@ var Resultados = function (props) {
         </div>
       )}
 
+      {/* Validação PuLP */}
+      {selectedConsulta && selectedConsulta.z_pulp != null && (
+        <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+          <div className="flex items-center gap-2 mb-4">
+            <div className="text-sm font-semibold text-[#0D1B2A]">Validação PuLP</div>
+            {selectedConsulta.delta_z_pct != null && (
+              <span
+                className={
+                  "text-xs font-semibold px-2 py-0.5 " +
+                  (selectedConsulta.delta_z_pct < 0.01
+                    ? "bg-[#67DE98]/20 text-[#1A7A40]"
+                    : selectedConsulta.delta_z_pct < 1
+                    ? "bg-[#FAE95D]/30 text-[#7A6010]"
+                    : "bg-[#FF5D5C]/15 text-[#DC2F37]")
+                }
+              >
+                Δz = {selectedConsulta.delta_z_pct.toFixed(4)}%
+              </span>
+            )}
+          </div>
+          <div className="grid grid-cols-3 gap-px bg-[#E8EFF7]">
+            {[
+              {
+                label: "z · Simplex (projeto)",
+                value: selectedConsulta.z_otimo != null ? fmtZ(selectedConsulta.z_otimo) : "-",
+                sub: selectedConsulta.status_lp || "-",
+              },
+              {
+                label: "z · PuLP / CBC",
+                value: fmtZ(selectedConsulta.z_pulp),
+                sub: selectedConsulta.status_lp_pulp || "-",
+              },
+              {
+                label: "Diferença relativa",
+                value:
+                  selectedConsulta.delta_z_pct != null
+                    ? selectedConsulta.delta_z_pct.toFixed(6) + "%"
+                    : "-",
+                sub: selectedConsulta.delta_z_pct < 0.01 ? "✓ dentro da tolerância" : "⚠ verificar",
+              },
+            ].map(function (k) {
+              return (
+                <div key={k.label} className="bg-white px-5 py-4">
+                  <div className="text-[10px] font-medium text-[#9C9C9F] uppercase tracking-wide mb-1">
+                    {k.label}
+                  </div>
+                  <div className="text-lg font-bold text-[#0D1B2A] leading-tight">{k.value}</div>
+                  <div className="text-xs text-[#9C9C9F] mt-1">{k.sub}</div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Gráficos - linha 1 */}
       {loadingClusters ? (
         <div className="flex items-center justify-center py-16 gap-2 text-sm text-[#9C9C9F] bg-white border border-[#E8EFF7]">
@@ -1806,13 +1861,13 @@ var Resultados = function (props) {
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            {/* Limites por cluster */}
+            {/* Limites por cluster — Simplex vs PuLP */}
             <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
               <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
                 Top 15 Clusters por Limite
               </div>
-              <div className="text-xs text-[#9C9C9F] mb-4">
-                Limite ótimo atribuído a cada cluster pelo Simplex (R$)
+              <div className="text-xs text-[#9C9C9F] mb-3">
+                Simplex vs PuLP — limite ótimo por cluster (R$)
               </div>
               {barData.length > 0 ? (
                 <BarChartP5 data={barData} />

@@ -90,7 +90,8 @@ var Api = {
   // GET /api/consultas
   // Retorna: ConsultaResponse[] (ordenado por criado_em DESC)
   //   { id, safra_id, nome_arquivo_parquet, parametros, status_consulta,
-  //     status_lp, z_otimo, n_clientes_total, n_clientes_elegiveis,
+  //     status_lp, z_otimo, z_pulp, status_lp_pulp, delta_z_pct,
+  //     n_clientes_total, n_clientes_elegiveis,
   //     n_clientes_ofertados, n_clusters, criado_em, iniciado_em,
   //     concluido_em, erro_etapa, erro_mensagem }
   listConsultas: function () {
@@ -98,7 +99,7 @@ var Api = {
   },
 
   // GET /api/consultas/{id}
-  // Retorna: ConsultaResponse
+  // Retorna: ConsultaResponse (mesmos campos de listConsultas)
   getConsulta: function (consultaId) {
     return Api.request("/consultas/" + encodeURIComponent(consultaId));
   },
@@ -229,7 +230,8 @@ var Api = {
   // GET /api/consultas/{id}/clusters
   // Retorna: ClusterResultadoResponse[]
   //   { cluster_id, n_clientes, pd_media, pi_media, cp_percentil5,
-  //     score_credito_cross_medio, ck_medio, fator_alavancagem, limite_otimizado }
+  //     score_credito_cross_medio, ck_medio, fator_alavancagem,
+  //     limite_otimizado, limite_otimizado_pulp }
   getClusters: function (consultaId) {
     return Api.request(
       "/consultas/" + encodeURIComponent(consultaId) + "/clusters",
