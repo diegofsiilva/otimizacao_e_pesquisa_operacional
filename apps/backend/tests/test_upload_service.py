@@ -74,6 +74,9 @@ class UploadServiceTestCase(unittest.TestCase):
         self.assertEqual(destino.read_bytes(), b"OK")
 
     def test_recusa_nome_com_barra_invertida_windows(self) -> None:
+        if sys.platform != "win32":
+            self.skipTest("Separador invertido é específico do Windows")
+
         with self.assertRaisesRegex(ValueError, "Nome de arquivo"):
             upload_service.iniciar_upload(r"pastas\base.parquet")
 
