@@ -1,0 +1,11 @@
+{
+  "id": "g04-backend-environment-example",
+  "name": "G04 Backend Env (EXAMPLE)",
+  "values": [
+    { "key": "API_BASE_URL", "value": "http://127.0.0.1:8000/api", "enabled": true },
+    { "key": "consulta_id", "value": "", "enabled": true },
+    { "key": "upload_id", "value": "", "enabled": true },
+    { "key": "token", "value": "", "enabled": true }
+  ],
+  "_postman_variable_scope": "environment"
+}

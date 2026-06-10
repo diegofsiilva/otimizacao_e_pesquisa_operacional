@@ -1,0 +1,9 @@
+curl -sS -X PUT "${API_BASE_URL}/config" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "t": 0.0175,
+    "LGD": 0.8,
+    "u_bar": 0.75,
+    "L_max": 25000.0,
+    "T": 22.0
+  }'

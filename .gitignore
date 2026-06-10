@@ -142,3 +142,12 @@ temp/
 # ==============================
 .dvc/cache
 .dvc/tmp
+
+# ==============================
+# BRUNO - TESTE DA API
+# ==============================
+
+apps/backend/uploads/
+apps/backend/bruno/backend/environment.postman.json
+!apps/backend/bruno/backend/collection.postman.json
+!apps/backend/bruno/backend/environment.example.postman.json

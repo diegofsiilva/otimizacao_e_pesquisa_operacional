@@ -1,0 +1,142 @@
+{
+  "info": {
+    "name": "G04 Backend API",
+    "_postman_id": "g04-backend-collection",
+    "description": "Coleção para testar a API do backend (health, config, consultas, uploads, clientes).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Health",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{API_BASE_URL}}/health", "host": ["{{API_BASE_URL}}"], "path": ["health"] }
+      }
+    },
+    {
+      "name": "Config / Get",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{API_BASE_URL}}/config", "host": ["{{API_BASE_URL}}"], "path": ["config"] }
+      }
+    },
+    {
+      "name": "Config / Put",
+      "request": {
+        "method": "PUT",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\\n  \"t\": 0.0175,\\n  \"LGD\": 0.8,\\n  \"u_bar\": 0.75,\\n  \"L_max\": 25000.0,\\n  \"T\": 22.0\\n}"
+        },
+        "url": { "raw": "{{API_BASE_URL}}/config", "host": ["{{API_BASE_URL}}"], "path": ["config"] }
+      }
+    },
+    {
+      "name": "Consultas / List",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{API_BASE_URL}}/consultas", "host": ["{{API_BASE_URL}}"], "path": ["consultas"] }
+      }
+    },
+    {
+      "name": "Consultas / Create (upload file)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": {
+          "mode": "formdata",
+          "formdata": [
+            { "key": "file", "type": "file", "src": "" }
+          ]
+        },
+        "url": {
+          "raw": "{{API_BASE_URL}}/consultas?safra_numero=1&usar_safra_existente=true&t=0.02",
+          "host": ["{{API_BASE_URL}}"],
+          "path": ["consultas"],
+          "query": [
+            { "key": "safra_numero", "value": "1" },
+            { "key": "usar_safra_existente", "value": "true" },
+            { "key": "t", "value": "0.02" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Consultas / Detail",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{API_BASE_URL}}/consultas/{{consulta_id}}", "host": ["{{API_BASE_URL}}"], "path": ["consultas","{{consulta_id}}"] }
+      }
+    },
+    {
+      "name": "Consultas / Clusters",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{API_BASE_URL}}/consultas/{{consulta_id}}/clusters", "host": ["{{API_BASE_URL}}"], "path": ["consultas","{{consulta_id}}","clusters"] }
+      }
+    },
+    {
+      "name": "Consultas / Clientes (paginated)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": {
+          "raw": "{{API_BASE_URL}}/consultas/{{consulta_id}}/clientes?limit=100&offset=0",
+          "host": ["{{API_BASE_URL}}"],
+          "path": ["consultas","{{consulta_id}}","clientes"],
+          "query": [
+            { "key": "limit", "value": "100" },
+            { "key": "offset", "value": "0" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Consultas / Clientes Export (CSV)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{API_BASE_URL}}/consultas/{{consulta_id}}/clientes/export", "host": ["{{API_BASE_URL}}"], "path": ["consultas","{{consulta_id}}","clientes","export"] }
+      }
+    },
+    {
+      "name": "Uploads / Iniciar",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": { "raw": "{{API_BASE_URL}}/uploads/iniciar?nome_arquivo=base.parquet", "host": ["{{API_BASE_URL}}"], "path": ["uploads","iniciar"], "query": [{ "key":"nome_arquivo","value":"base.parquet" }] }
+      }
+    },
+    {
+      "name": "Uploads / Chunk (send part)",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "body": { "mode": "formdata", "formdata": [{ "key":"file","type":"file","src":"" }] },
+        "url": { "raw": "{{API_BASE_URL}}/uploads/{{upload_id}}/chunk?index=0", "host": ["{{API_BASE_URL}}"], "path": ["uploads","{{upload_id}}","chunk"], "query":[{"key":"index","value":"0"}] }
+      }
+    },
+    {
+      "name": "Uploads / Finalizar",
+      "request": {
+        "method": "POST",
+        "header": [],
+        "url": { "raw": "{{API_BASE_URL}}/uploads/{{upload_id}}/finalizar?usar_safra_existente=true&LGD=0.8", "host": ["{{API_BASE_URL}}"], "path": ["uploads","{{upload_id}}","finalizar"], "query":[{"key":"usar_safra_existente","value":"true"}, {"key":"LGD","value":"0.8"}] }
+      }
+    },
+    {
+      "name": "Clientes / Historico",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": { "raw": "{{API_BASE_URL}}/clientes/{{token}}", "host": ["{{API_BASE_URL}}"], "path": ["clientes","{{token}}"] }
+      }
+    }
+  ]
+}
