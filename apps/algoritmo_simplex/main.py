@@ -33,7 +33,7 @@ def calcular_pd_fin_atual(df: pd.DataFrame) -> float:
     Calcula a inadimplência financeira atual da carteira
     como média de pd_calibrada dos clientes elegíveis (flag_filtros == 0).
     """
-    pd_fin_atual = df[df["flag_filtros"] == 0]["pd_calibrada"].mean()
+    pd_fin_atual = df.query("flag_filtros == 0")["pd_calibrada"].mean()
     print(f"PD_fin_atual: {pd_fin_atual:.4f}")
     return pd_fin_atual
 
@@ -98,6 +98,8 @@ def montar_problema(clusters: pd.DataFrame, params: dict, df: pd.DataFrame) -> P
         R1: teto de inadimplência financeira (uma restrição para a carteira inteira)
         R2: capacidade de pagamento com alavancagem (uma restrição por cluster)
         R3: teto máximo de limite (uma restrição por cluster)
+
+        As demais restrições serão pós-otimização
     """
     pd_fin_atual = calcular_pd_fin_atual(df)
     t = params["t"]
@@ -125,7 +127,7 @@ def montar_problema(clusters: pd.DataFrame, params: dict, df: pd.DataFrame) -> P
 
     # R3: teto máximo de limite (uma restrição por cluster)
     A_r3 = np.eye(n).tolist()
-    b_r3 = [float(L_max)] * n
+    b_r3 = np.full(n, float(L_max)).tolist()
 
     return Problema(
         c=c,
@@ -156,7 +158,7 @@ def exibir_resultado(
         clusters["n_k"].astype(int),
         limites,
     ):
-        print(f"  Cluster {cluster_id}: R$ {limite} (n={n_clientes})")
+        print("  Cluster {}: R$ {} (n={})".format(cluster_id, limite, n_clientes))
 
 
 def executar_pipeline(parquet_path: Path, params: dict) -> dict:

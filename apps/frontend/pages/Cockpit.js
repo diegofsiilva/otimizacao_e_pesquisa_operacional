@@ -852,6 +852,22 @@ var Cockpit = function (props) {
           )}
         </div>
       </div>
+      {/* Fluxo do pipeline (Sankey) */}
+      {consultaAtual && clusters && clusters.length > 0 && (
+        <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+          <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
+            Fluxo do Pipeline
+          </div>
+          <div className="text-xs text-[#9C9C9F] mb-3">
+            Como a base de clientes flui da elegibilidade aos clusters e às faixas de limite
+          </div>
+          <SankeyPipelineP5
+            total={consultaAtual.n_clientes_total}
+            elegiveis={consultaAtual.n_clientes_elegiveis}
+            clusters={clusters}
+          />
+        </div>
+      )}
     </div>
   );
 };

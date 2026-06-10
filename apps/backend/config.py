@@ -22,13 +22,14 @@ _load_env_file(BASE_DIR / ".env")
 
 
 def _csv_env(name: str, default: str) -> list[str]:
-    value = os.getenv(name, default)
-    return [item.strip() for item in value.split(",") if item.strip()]
+    raw = os.getenv(name, default)
+    parts = raw.split(",")
+    return [p.strip() for p in parts if p.strip()]
 
 
 def _path_env(name: str, default: Path) -> Path:
-    value = Path(os.getenv(name, str(default)))
-    return value if value.is_absolute() else BASE_DIR / value
+    p = Path(os.getenv(name, str(default)))
+    return p if p.is_absolute() else BASE_DIR / p
 
 
 def _origin_with_port(base_url: str, port: int) -> str:

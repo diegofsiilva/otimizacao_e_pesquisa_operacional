@@ -82,14 +82,10 @@
 
       var App = function () {
         // Página ativa. Possíveis valores: "dashboard" | "gerar" | "resultados" | "clientes"
-        var s1 = React.useState("dashboard");
-        var page = s1[0];
-        var setPage = s1[1];
+        var [page, setPage] = React.useState("dashboard");
 
         // Controla a abertura do modal de configurações
-        var s2 = React.useState(false);
-        var cfgOpen = s2[0];
-        var setCfgOpen = s2[1];
+        var [cfgOpen, setCfgOpen] = React.useState(false);
 
         // Renderiza a página correspondente à chave ativa.
         // key={page} no ErrorBoundary garante que o componente é remontado a

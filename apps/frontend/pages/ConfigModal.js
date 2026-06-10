@@ -164,7 +164,7 @@ var ConfigModal = function (props) {
       onClick={handleOverlay}
     >
       <div
-        className="bg-white shadow-2xl w-full max-w-lg modal-enter border border-[#E8EFF7]"
+        className="bg-white shadow-2xl w-full max-w-3xl modal-enter border border-[#E8EFF7]"
         onClick={function (e) {
           e.stopPropagation();
         }}
@@ -218,7 +218,7 @@ var ConfigModal = function (props) {
             <p className="text-[11px] font-semibold text-[#9C9C9F] uppercase tracking-wide mb-3">
               Parâmetros Editáveis
             </p>
-            <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3 items-start">
               {PARAMS_EDITAVEIS.map(function (p) {
                 var isEditing = editing === p.key;
                 return (

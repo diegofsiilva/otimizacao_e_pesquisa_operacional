@@ -13,15 +13,10 @@ var fmt = function (v) {
 
 // Formata um número como moeda brasileira com duas casas decimais.
 // Ex: 34182456.78 → "R$ 34.182.456,78"
-var fmtZ = function (v) {
-  return (
-    "R$ " +
-    Number(v).toLocaleString("pt-BR", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
-  );
-};
+function fmtZ(v) {
+  var opts = { minimumFractionDigits: 2, maximumFractionDigits: 2 };
+  return "R$ " + Number(v).toLocaleString("pt-BR", opts);
+}
 
 // -------------------------------------------------------------------------
 // Metadados de UI - parâmetros editáveis do modelo
@@ -68,7 +63,7 @@ var PARAMS_EDITAVEIS = [
   {
     key: "T",
     label: "Horizonte de uso do limite (meses)",
-    value: 22,
+    value: 15,
     min: 6,
     max: 60,
     step: 1,
