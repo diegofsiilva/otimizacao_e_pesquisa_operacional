@@ -18,9 +18,9 @@ As duas foram desenvolvidas em paralelo e validadas cruzadamente por um *golden 
 
 # Parte I — Simplex implementado pelo grupo
 
-Este artefato analisa formalmente a **complexidade computacional** e a **corretude** da implementação do método Simplex desenvolvida pelo grupo em `apps/algoritmo_simplex/simplex.py`. A análise toma como objeto exatamente o código implementado (e não uma versão idealizada de livro-texto), explicita quais partes vêm das fontes clássicas do método, e discute o impacto das adaptações feitas pelo grupo sobre o custo e a correção do algoritmo.
+Este artefato analisa a **complexidade computacional** e a **corretude** da implementação do método Simplex em `apps/algoritmo_simplex/simplex.py`. Cada cota de complexidade é derivada dos laços e operações do arquivo (com referência a linhas e funções), e cada passo da prova de corretude refere-se às variáveis e ao estado que o código mantém. Onde o código difere da formulação clássica do método — por exemplo, no início direto na origem sem Fase I ou no critério de desempate da regra de Bland —, a diferença é apontada no ponto em que aparece e seu efeito sobre custo e corretude é analisado.
 
-A análise é consistente com os demais artefatos do projeto: a descrição do algoritmo em [`algoritmo_simplex.md`](./algoritmo_simplex.md), a validação cruzada com a biblioteca PuLP/CBC em [`comparacao_simplex.md`](./comparacao_simplex.md) e a fundamentação teórica do artigo em [`artigo.md`](./artigo.md). O método base — tableau, variáveis de folga, critérios de entrada/saída, teste da razão, condição de otimalidade e teorema da dualidade — é o **Simplex clássico de Dantzig** (DANTZIG, 1951; DANTZIG, 1963, cap. 5 e 6); a única adaptação na regra de pivoteamento é a **regra de Bland (1977)**, adotada para garantir a finitude do método sob degeneração. Ao longo do texto, as afirmações sobre "o Simplex original" são ancoradas em páginas específicas dessas fontes (ver Seção 6).
+A análise é consistente com os demais artefatos do projeto: a descrição do algoritmo em [`algoritmo_simplex.md`](./algoritmo_simplex.md), a validação cruzada com a biblioteca PuLP/CBC em [`comparacao_simplex.md`](./comparacao_simplex.md) e a fundamentação teórica do artigo em [`artigo.md`](./artigo.md). O método base — tableau, variáveis de folga, critérios de entrada/saída, teste da razão, condição de otimalidade e teorema da dualidade — é o **Simplex clássico de Dantzig** (DANTZIG, 1951; DANTZIG, 1963, cap. 5 e 6); a única adaptação na regra de pivoteamento é a **regra de Bland (1977)**, adotada para garantir a finitude do método sob degeneração. Ao longo do texto, as afirmações sobre "o Simplex original" são ancoradas em páginas específicas dessas fontes (ver Seção 4 e as Referências ao final).
 
 ---
 
@@ -34,7 +34,7 @@ $$
 A x \le b, \quad x \ge 0,
 $$
 
-com a pré-condição $b \ge 0$ (justificada na Seção 5.1). Define-se:
+com a pré-condição $b \ge 0$ (justificada na Seção 3.1). Define-se:
 
 | Símbolo | Significado | No código | No problema do parceiro |
 | ------- | ----------- | --------- | ----------------------- |
@@ -89,13 +89,15 @@ $$
 
 Toda a análise de pior/melhor/médio caso reduz-se, portanto, a **limitar $p$**.
 
-**Cota superior universal sobre $p$.** Cada base corresponde à escolha de $m$ variáveis básicas dentre $N$, logo existem no máximo $\binom{N}{m} = \binom{n+m}{m}$ bases. A **regra de Bland (1977)** garante que nenhuma base se repete (Seção 5.4), portanto cada iteração visita uma base inédita e
+**Cota superior universal sobre $p$.** Cada base corresponde à escolha de $m$ variáveis básicas dentre $N$, logo existem no máximo $\binom{N}{m} = \binom{n+m}{m}$ bases — note-se que essa é uma cota sobre o número de *escolhas de colunas básicas*, e nem toda escolha gera uma base válida (submatriz invertível), de modo que o número de bases é, na verdade, no máximo $\binom{n+m}{m}$. A **regra de Bland (1977)** garante que nenhuma base se repete (Seção 3.4), portanto cada iteração visita uma base inédita e
 
 $$
 p \;\le\; \binom{n+m}{m} - 1 .
 $$
 
 Esse limite é finito — o que prova a terminação — mas é **exponencial** em $n+m$.
+
+> **Pressuposto desta cota.** A finitude acima depende da regra de Bland estar implementada em *ambas* as suas cláusulas (entrante e saínte por menor índice de variável). Como discutido na ressalva de rigor da Seção 3.4, a implementação cobre integralmente a cláusula da entrante e apenas parcialmente a da saínte (desempate por posição de linha). Sob essa ressalva, a cota $p \le \binom{n+m}{m}-1$ vale formalmente para a regra de Bland plena e empiricamente para a implementação atual (nenhuma ciclagem observada, Seção 2.6); o ajuste $O(m)$ recomendado na Seção 3.4 a torna formalmente garantida também para o código.
 
 ### 2.4 Pior caso
 
@@ -105,7 +107,9 @@ $$
 T_{\text{pior}}(n,m) \;=\; O\!\left( \binom{n+m}{m} \cdot m\,(n+m) \right),
 $$
 
-um custo **exponencial**. Essa cota não é um artefato da análise: existem famílias de instâncias (do tipo *cubo de Klee–Minty* e suas variantes para regras anticiclagem) que forçam o Simplex a visitar uma fração exponencial dos vértices, estabelecendo também uma cota inferior $\Omega(\cdot)$ exponencial para o método no pior caso. Não se conhece nenhuma regra de pivoteamento que torne o Simplex polinomial no pior caso; a escolha da regra de Bland prioriza **robustez (terminação garantida)** e não complexidade de pior caso.
+um custo **exponencial**. Essa cota superior não é um artefato da análise: existem famílias de instâncias que forçam o Simplex a visitar uma fração exponencial dos vértices, estabelecendo um **limite inferior exponencial para o tempo de pior caso**. O exemplo clássico é o *cubo de Klee–Minty* (KLEE; MINTY, 1972), construído especificamente para a **regra de Dantzig** (maior custo reduzido), que percorre todos os $2^d$ vértices de um cubo deformado em dimensão $d$. Para outras regras de pivoteamento determinísticas — incluindo a **regra de Bland** efetivamente usada aqui — também se conhecem construções que forçam comportamento exponencial; não se conhece nenhuma regra de pivoteamento que torne o Simplex polinomial no pior caso. A escolha da regra de Bland prioriza, portanto, **robustez (terminação garantida sob degeneração)**, e não complexidade de pior caso.
+
+Vale registrar que a cota superior $\binom{n+m}{m}$ (número de bases) e o limite inferior do tipo Klee–Minty (da ordem de $2^{\min(n,m)}$) são **funções exponenciais distintas**: elas não coincidem. Logo, o pior caso é corretamente classificado como **exponencial**, mas não está fechado num $\Theta$ exato — temos um teto $O\!\big(\binom{n+m}{m}\,m(n+m)\big)$ e um piso $\Omega(\cdot)$ exponencial, sem que ambos colapsem na mesma expressão.
 
 ### 2.5 Melhor caso
 
@@ -119,9 +123,11 @@ Como qualquer execução precisa, no mínimo, construir o tableau e verificar ot
 
 ### 2.6 Caso médio / prático
 
-Para o PL deste projeto, $p$ é muito pequeno por causa da **estrutura quase-separável** das restrições: R2 e R3 são restrições-caixa ($L_k \le m_k CP_k$ e $L_k \le L^{max}$), e o único acoplamento entre clusters é a restrição agregada R1. Na origem, só entram na base clusters com custo reduzido positivo ($c_k > 0$); clusters com $c_k \le 0$ nunca são candidatos pela regra de Bland e permanecem em $L_k = 0$. Assim, $p$ é da ordem do número de clusters rentáveis, e empiricamente $p = O(K)$.
+Para o PL deste projeto, $p$ é muito pequeno por causa da **estrutura quase-separável** das restrições: R2 e R3 são restrições-caixa ($L_k \le m_k CP_k$ e $L_k \le L^{max}$), e o único acoplamento entre clusters é a restrição agregada R1 — de modo que o modelo é, na prática, um *knapsack contínuo* com uma única restrição de acoplamento e caixas por variável. Na origem, só entram na base clusters com custo reduzido positivo ($c_k > 0$); clusters com $c_k \le 0$ nunca são candidatos pela regra de Bland e permanecem em $L_k = 0$. Esse é um **argumento estrutural heurístico** que sugere que o número de pivôs deve ser da ordem do número de clusters rentáveis.
 
-Medições com instâncias geradas no formato do projeto ($n = K$, $m = 2K+1$, $b \ge 0$, 20 sementes por tamanho) confirmam esse comportamento sublinear–linear:
+> **Importante (distinção entre observação empírica e cota provada).** Não afirmamos $p = O(K)$ como complexidade assintótica do algoritmo: um limite obtido em instâncias testadas não é, por si só, uma cota de pior caso (o pior caso permanece exponencial, Seção 2.4). O que afirmamos é que, **nas instâncias geradas no formato do projeto**, $p$ permanece pequeno e cresce de forma sublinear–linear em $K$. A justificativa *teórica* para essa eficiência típica — e não o ajuste empírico — está na análise de **caso médio** (BORGWARDT, 1987) e na **análise suavizada** (SPIELMAN; TENG, 2004), discutidas ao final desta seção.
+
+Medições com instâncias geradas no formato do projeto ($n = K$, $m = 2K+1$, $b \ge 0$) ilustram esse comportamento sublinear–linear:
 
 | $K$ | $n$ | $m = 2K+1$ | pivôs médios | pivôs máx |
 | --- | --- | ---------- | ------------ | --------- |
@@ -132,13 +138,15 @@ Medições com instâncias geradas no formato do projeto ($n = K$, $m = 2K+1$, $
 | 40  | 40  | 81  | 3,1 | 6 |
 | 80  | 80  | 161 | 5,0 | 8 |
 
-Com $p = O(K)$ e $m(n+m) = \Theta(K^2)$ (Seção 2.7), o custo prático é
+> **Reprodutibilidade (estado atual × evolução).** Esses números vêm de medições sobre instâncias aleatórias no formato do projeto. No código atual, `simplex.py` não instrumenta a contagem de pivôs; a tabela serve como evidência empírica do comportamento típico, não como artefato reexecutável. Como evolução planejada, pretendemos adicionar um pequeno *benchmark* que conte os pivôs por execução e regenere esta tabela de forma determinística (por semente), tornando a evidência reproduzível e versionável junto ao código.
+
+Tomando o $p$ pequeno observado (da ordem de $K$ nas instâncias testadas) e $m(n+m) = \Theta(K^2)$ (Seção 2.7), o custo total por instância $\Theta\big((p+1)\,m(n+m)\big)$ escala, **nessas instâncias**, como
 
 $$
-T_{\text{prático}} \;=\; O\!\big(K \cdot K^2\big) \;=\; O(K^3).
+T_{\text{prático}} \;=\; \Theta\big(p \cdot K^2\big) \;\sim\; K^3 \quad \text{(comportamento medido, não cota de pior caso).}
 $$
 
-Esse resultado é coerente com a teoria do caso médio do Simplex (análise probabilística de Borgwardt e análise *smoothed* de Spielman–Teng), que explica por que o método é eficiente na prática apesar do pior caso exponencial.
+Reforça-se que a notação $\Theta$ acima se refere ao custo *por instância em função de $p$* (resultado exato da Seção 2.3); o "$\sim K^3$" é a tradução do $p$ pequeno observado e **não** uma cota assintótica provada sobre o número de pivôs. Esse comportamento típico é coerente com a teoria do caso médio do Simplex — a análise probabilística de Borgwardt (BORGWARDT, 1987) e a análise suavizada de Spielman–Teng (SPIELMAN; TENG, 2004) —, que explica por que o método é eficiente na prática apesar do pior caso exponencial.
 
 ### 2.7 Especialização para o problema do parceiro
 
@@ -152,7 +160,7 @@ Logo, para o problema do Banco Pan:
 
 - **Custo por pivô:** $\Theta(K^2)$.
 - **Melhor caso (origem ótima):** $\Theta(K^2)$.
-- **Custo prático (com $p = O(K)$ pivôs):** $O(K^3)$.
+- **Custo prático (com os $p$ pequenos observados, da ordem de $K$):** da ordem de $K^3$ nas instâncias testadas — comportamento medido, não cota de pior caso.
 - **Pior caso teórico:** exponencial em $K$.
 
 Para a entrega final ($K \ge 100$ clusters, base de mais de um milhão de clientes), $m \approx 201$ e o custo por pivô $\Theta(K^2)$ permanece pequeno (dezenas de milhares de operações por pivô). O número de clientes ($>10^6$) **não** entra na complexidade do Simplex: ele afeta apenas a etapa de clusterização (K-Means) e a agregação por cluster, anteriores ao PL. O Simplex opera somente sobre os $K$ clusters agregados.
@@ -170,7 +178,7 @@ $$
 | Cenário | Cota sobre $p$ | Complexidade de tempo | Notação | No problema ($n=K,\,m=2K+1$) |
 | ------- | -------------- | --------------------- | ------- | ----------------------------- |
 | Melhor caso | $p = 0$ | $m(n+m)$ | $\Theta\big(m(n+m)\big)$ | $\Theta(K^2)$ |
-| Caso prático | $p = O(K)$ | $K\cdot m(n+m)$ | $O(K^3)$ | $O(K^3)$ |
+| Caso prático (medido) | $p \sim K$ (empírico) | $\Theta(p\,m(n+m))$ | comportamento medido ($\sim K^3$), não-assintótico | $\sim K^3$ medido |
 | Pior caso | $p \le \binom{n+m}{m}-1$ | $\binom{n+m}{m}\,m(n+m)$ | $O(\cdot)$ exponencial | exponencial em $K$ |
 | Piso universal | — | $m(n+m)$ | $\Omega\big(m(n+m)\big)$ | $\Omega(K^2)$ |
 | Por instância (genérica) | $p$ pivôs | $(p+1)\,m(n+m)$ | $\Theta\big(p\,m(n+m)\big)$ | $\Theta(p\,K^2)$ |
@@ -210,7 +218,7 @@ $$
 com elemento pivô $p = \texttt{col}[i^*] > 0$. (Se nenhum $\texttt{col}[i] > 0$, cai-se no caso ilimitado da Seção 3.6.) O pivoteamento normaliza a linha $i^*$ por $p$ e elimina a coluna $j_e$ das demais linhas. Verifica-se que $\mathcal{P}$ se mantém:
 
 - **(P1).** Após o pivô, a coluna $j_e$ vira $e_{i^*}$ (vale $1$ na linha $i^*$ e $0$ nas demais). Para qualquer outra coluna básica $e_q$ ($q \ne i^*$), sua entrada na linha $i^*$ já era $0$; logo a normalização da linha $i^*$ e as eliminações `linha_i -= col[i]·linha_{i^*}` não a alteram, e ela permanece unitária. A nova base (igual à anterior com $j_e$ no lugar de `base`$[i^*]$) tem, portanto, colunas unitárias. Ela é de fato uma base porque trocar a coluna `base`$[i^*]$ por $j_e$ preserva a invertibilidade — possível justamente porque a entrada pivô $p \ne 0$. Assim o tableau passa a ser $B'^{-1}[A\mid I]$ para a nova base $B'$. $\checkmark$
-- **(P2) — esta é a razão de ser do teste da razão mínima.** A nova linha pivô: $\texttt{values}[i^*] \leftarrow \texttt{values}[i^*]/p \ge 0$ (ambos $\ge 0$, $p>0$). Para $i \ne i^*$: $\texttt{values}[i] \leftarrow \texttt{values}[i] - \texttt{col}[i]\cdot \dfrac{\texttt{values}[i^*]}{p}$.
+- **(P2) — garantida pelo teste da razão mínima.** A nova linha pivô: $\texttt{values}[i^*] \leftarrow \texttt{values}[i^*]/p \ge 0$ (ambos $\ge 0$, $p>0$). Para $i \ne i^*$: $\texttt{values}[i] \leftarrow \texttt{values}[i] - \texttt{col}[i]\cdot \dfrac{\texttt{values}[i^*]}{p}$.
   - Se $\texttt{col}[i] \le 0$: subtrai-se um termo $\le 0$, logo `values`$[i]$ **não diminui** e permanece $\ge 0$.
   - Se $\texttt{col}[i] > 0$: $\texttt{values}[i] \leftarrow \texttt{col}[i]\left(\dfrac{\texttt{values}[i]}{\texttt{col}[i]} - \dfrac{\texttt{values}[i^*]}{p}\right) \ge 0$, pois $\dfrac{\texttt{values}[i^*]}{p}$ é o **mínimo** das razões, $\le \dfrac{\texttt{values}[i]}{\texttt{col}[i]}$.
   
@@ -224,15 +232,20 @@ Por indução, $\mathcal{P}$ vale no início de **toda** iteração. $\blacksqua
 
 > **Lema (Bland, 1977).** Se, em todo pivô, (i) a variável **entrante** é a de menor índice com custo reduzido positivo **e** (ii) entre as linhas que empatam no teste da razão mínima escolhe-se como **saínte** a variável básica de menor índice, então nenhuma base se repete ao longo da execução; em particular, não há ciclagem.
 
-A implementação aplica **integralmente a cláusula (i)**: `indice_entra` é o primeiro $j$ com `todos_cj_zj[j] > 0`, e como os índices globais $0,\dots,n-1$ correspondem a $x_1,\dots,x_n$ e $n,\dots,n+m-1$ às folgas $s_1,\dots,s_m$, "primeiro $j$" é exatamente "menor índice de variável". Pelo Lema, como há no máximo $\binom{n+m}{m}$ bases e cada iteração produz uma base inédita (Seção 3.3 garante que cada iteração resulta numa base válida), o laço executa um número finito de iterações e **termina**. Esse é o motivo de a regra de Bland ser adotada em vez da regra de Dantzig (maior custo reduzido): a regra de Dantzig pode **ciclar** sob degeneração, que é frequente neste PL — R2 e R3 impõem dois tetos sobre a mesma variável $L_k$, gerando empates no teste da razão. O próprio Dantzig tratou a finitude sob degeneração por um **método de perturbação** dos lados direitos (DANTZIG, 1963, cap. 10, "Finiteness of the Simplex Method Under Perturbation"); o grupo optou pela alternativa combinatória de Bland (1977), mais simples de implementar por ser apenas uma regra de desempate por índice, sem alterar os dados do problema. A terminação aqui **não é cosmética**: depende criticamente de Bland (1977), fonte citada em [`artigo.md`](./artigo.md).
+A implementação aplica **integralmente a cláusula (i)**: `indice_entra` é o primeiro $j$ com `todos_cj_zj[j] > 0`, e como os índices globais $0,\dots,n-1$ correspondem a $x_1,\dots,x_n$ e $n,\dots,n+m-1$ às folgas $s_1,\dots,s_m$, "primeiro $j$" é exatamente "menor índice de variável". Pelo Lema, como há no máximo $\binom{n+m}{m}$ bases e cada iteração produz uma base inédita (Seção 3.3 garante que cada iteração resulta numa base válida), o laço executa um número finito de iterações e **termina**. Esse é o motivo de a regra de Bland ser adotada em vez da regra de Dantzig (maior custo reduzido): a regra de Dantzig pode **ciclar** sob degeneração, que é frequente neste PL — R2 e R3 impõem dois tetos sobre a mesma variável $L_k$, gerando empates no teste da razão. O próprio Dantzig tratou a finitude sob degeneração por um **método de perturbação** dos lados direitos (DANTZIG, 1963, cap. 10, "Finiteness of the Simplex Method Under Perturbation"); o grupo optou pela alternativa combinatória de Bland (1977), mais simples de implementar por ser apenas uma regra de desempate por índice, sem alterar os dados do problema. A terminação depende criticamente de Bland (1977), fonte citada em [`artigo.md`](./artigo.md): sem essa regra, a regra de Dantzig poderia ciclar no PL degenerado descrito acima.
 
-> **Ressalva de rigor (diferença implementação × teoria).** A cláusula (ii) é implementada apenas **parcialmente**. O teste da razão em `simplex.py` (linhas 145–150) usa desempate estrito (`razao < menor_razao`), de modo que, entre razões empatadas, mantém a **primeira linha** encontrada — ou seja, o **menor índice de linha** $i$, e não a variável básica de menor índice `tableau.base[i]`. Como `base` deixa de ser ordenado após o primeiro pivô, esses dois critérios podem divergir. Estritamente, o teorema de finitude de Bland (1977) pressupõe a cláusula (ii) por **índice de variável**; com desempate por posição de linha, a garantia formal anticiclagem não está plenamente coberta pela fonte. Na prática, nenhuma ciclagem foi observada nos casos testados (Seção 3.5 e [`comparacao_simplex.md`](./comparacao_simplex.md)), e o número de pivôs manteve-se baixo (Seção 2.6); ainda assim, **para uma garantia teórica completa**, recomenda-se ajustar o desempate da saínte para o menor `tableau.base[i]` entre as razões mínimas. Esse ajuste é $O(m)$ e não altera a complexidade.
+> **Ressalva de rigor (diferença implementação × teoria).** A cláusula (ii) é implementada apenas **parcialmente**. O teste da razão em `simplex.py` (linhas 145–150) usa desempate estrito (`razao < menor_razao`), de modo que, entre razões empatadas, mantém a **primeira linha** encontrada — ou seja, o **menor índice de linha** $i$, e não a variável básica de menor índice `tableau.base[i]`. Como `base` deixa de ser ordenado após o primeiro pivô, esses dois critérios podem divergir. Estritamente, o teorema de finitude de Bland (1977) pressupõe a cláusula (ii) por **índice de variável**; com desempate por posição de linha, a garantia formal anticiclagem não está plenamente coberta pela fonte. Na prática, nenhuma ciclagem foi observada nos casos testados (Seção 3.5 e [`comparacao_simplex.md`](./comparacao_simplex.md)), e o número de pivôs manteve-se baixo (Seção 2.6).
+>
+> **Estado atual × evolução planejada.** Esta diferença delimita o alcance da prova de terminação no código *atual*:
+> - **Estado atual (o que o código faz).** O desempate da saínte é por posição de linha. Com isso, a *corretude parcial* (Seção 3.3) permanece intacta — cada pivô preserva a SBF independentemente do critério de desempate —, mas a *garantia formal de terminação* de Bland (1977) cobre plenamente apenas instâncias sem empates degenerados; sob degeneração, a finitude é sustentada empiricamente (ausência de ciclagem em todos os testes), não pela letra do teorema.
+> - **Impacto em complexidade.** Nenhum no caso típico: o desempate não altera o custo $\Theta(mN)$ por pivô nem o nº de pivôs observado. No limite teórico, sem a cláusula (ii) completa, a cota $p \le \binom{n+m}{m}-1$ da Seção 2.3 não é formalmente garantida (ciclagem não está descartada por teorema).
+> - **Evolução planejada (o que pretendemos fazer).** Substituir o desempate por "menor `tableau.base[i]` entre as razões mínimas", completando a cláusula (ii) de Bland. O ajuste é $O(m)$, **não altera a complexidade** e fecha formalmente a prova de terminação — alinhando o código à garantia teórica. Fica registrado como melhoria de robustez para a próxima iteração, não como correção de um defeito que afete os resultados atuais (validados em [`comparacao_simplex.md`](./comparacao_simplex.md)).
 
 ### 3.5 Corretude parcial: condição de otimalidade
 
 > **Lema (otimalidade — Simplex clássico).** Para qualquer ponto factível $y$ do PL, vale a identidade
 > $$ z(y) \;=\; z(y^*) \;+\; \sum_{j \in \mathcal{N}} (c_j - z_j)\, y_j, $$
-> onde $y^*$ é a SBF corrente, $\mathcal{N}$ é o conjunto de variáveis não-básicas e $c_j - z_j$ é o custo reduzido (exatamente o que `calcular_cj_zj` computa, pois $z_j = \sum_i \texttt{contributions}[i]\cdot \texttt{col}_j[i]$). Essa identidade e o critério dela derivado ($c_j - z_j \le 0\ \forall j \Rightarrow$ ótimo) constituem o resultado central do Simplex original, cuja prova formal — junto ao teorema da dualidade — está em Dantzig (1963, cap. 6, "Proof of the Simplex Algorithm and the Duality Theorem", p. 120–146).
+> onde $y^*$ é a SBF corrente, $\mathcal{N}$ é o conjunto de variáveis não-básicas e $c_j - z_j$ é o custo reduzido (exatamente o que `calcular_cj_zj` computa, pois $z_j = \sum_i \texttt{contributions}[i]\cdot \texttt{col}_j[i]$). Essa identidade e o critério dela derivado ($c_j - z_j \le 0\ \forall j \Rightarrow$ ótimo) constituem o resultado central do Simplex original, cuja prova formal — junto ao teorema da dualidade — está em Dantzig (1963, cap. 6, "Proof of the Simplex Algorithm and the Duality Theorem", p. 120–146); uma exposição moderna equivalente, com a mesma identidade do custo reduzido e o critério de otimalidade, encontra-se em Bazaraa, Jarvis e Sherali (2010, cap. 3–4).
 
 *Dedução.* Particionando $y = (y_B, y_N)$, de $[A\mid I]y = b$ vem $y_B = B^{-1}b - B^{-1}N\,y_N$. Substituindo na função objetivo:
 
@@ -254,7 +267,7 @@ A prova é coerente com a validação empírica de [`comparacao_simplex.md`](./c
 
 **Problema ilimitado.** Se em alguma iteração existe entrante $j_e$ com custo reduzido $> 0$ mas $\texttt{col}[i] \le 0$ para toda linha $i$, então a semirreta $y(\theta) = y^* + \theta d$ (que aumenta $y_{j_e}$ em $\theta$ e ajusta as básicas em $-\theta\,\texttt{col}[i] \ge 0$) é factível para todo $\theta \ge 0$, e $z(y(\theta)) = z(y^*) + \theta\,(c_{j_e} - z_{j_e}) \to +\infty$. O PL é genuinamente ilimitado e a implementação corretamente lança `ValueError("O problema é ilimitado.")`. $\checkmark$
 
-**Múltiplas soluções.** Ao atingir a otimalidade, se alguma variável **não-básica** $j$ tem custo reduzido exatamente $0$, então mover-se nessa direção mantém $z$ constante (o termo correspondente no Lema da Seção 3.5 é nulo), gerando um ótimo alternativo. A implementação sinaliza isso com o status `multiplas_solucoes`. A sinalização é **correta** quanto à *existência* de uma direção ótima alternativa, mas há duas diferenças em relação à teoria, discutidas na Seção 5: (i) ela não enumera nem parametriza a face ótima — retorna apenas um vértice e o status; (ii) usa comparação exata `== 0.0`, numericamente frágil.
+**Múltiplas soluções.** Ao atingir a otimalidade, se alguma variável **não-básica** $j$ tem custo reduzido exatamente $0$, então mover-se nessa direção mantém $z$ constante (o termo correspondente no Lema da Seção 3.5 é nulo), gerando um ótimo alternativo. A implementação sinaliza isso com o status `multiplas_solucoes`. A sinalização é **correta** quanto à *existência* de uma direção ótima alternativa, mas há duas diferenças em relação à teoria, discutidas na Seção 4.3: (i) ela não enumera nem parametriza a face ótima — retorna apenas um vértice e o status; (ii) usa comparação exata `== 0.0`, numericamente frágil.
 
 ---
 
@@ -280,7 +293,7 @@ A formulação original resolve PLs gerais via **duas fases** (Fase I encontra u
 
 ### 4.2 Regra de Bland
 
-Adotada de Bland (1977). É o que sustenta a **terminação** (Seção 3.4) num PL estruturalmente degenerado (dois tetos por cluster). A cláusula da variável entrante é implementada integralmente; a do desempate da saínte é parcial (por posição de linha, não por índice de variável — ver ressalva na Seção 3.4), o que recomenda um pequeno ajuste para garantia teórica plena. O custo é não ter a melhor velocidade de pivoteamento possível — a regra de Bland costuma exigir mais pivôs que a de Dantzig e seu pior caso permanece exponencial — mas, dada a estrutura quase-separável do problema, o número de pivôs medido é pequeno ($p = O(K)$, Seção 2.6), de modo que o trade-off robustez × velocidade é favorável aqui.
+Adotada de Bland (1977). É o que sustenta a **terminação** (Seção 3.4) num PL estruturalmente degenerado (dois tetos por cluster). A cláusula da variável entrante é implementada integralmente; a do desempate da saínte é parcial (por posição de linha, não por índice de variável — ver ressalva na Seção 3.4), o que recomenda um pequeno ajuste para garantia teórica plena. O custo é não ter a melhor velocidade de pivoteamento possível — a regra de Bland costuma exigir mais pivôs que a de Dantzig e seu pior caso permanece exponencial — mas, dada a estrutura quase-separável do problema, o número de pivôs medido é pequeno (da ordem de $K$ nas instâncias testadas, Seção 2.6 — observação empírica, não cota de pior caso), de modo que o trade-off robustez × velocidade é favorável aqui.
 
 ### 4.3 Detecção de múltiplas soluções — diferença implementação × teoria
 
@@ -291,7 +304,7 @@ Adotada de Bland (1977). É o que sustenta a **terminação** (Seção 3.4) num 
 
 ### 4.4 Tableau denso × Simplex revisado
 
-A escolha do tableau denso (manter e atualizar todas as colunas) é deliberada e alinhada à justificativa do [`artigo.md`](./artigo.md): **transparência e auditabilidade** das regras de entrada/saída e do pivoteamento. A consequência é custo $\Theta(mN)$ por pivô e memória $\Theta(mN)$. Um **Simplex revisado** (mantendo apenas $B^{-1}$ em forma-produto) reduziria o trabalho por iteração e o consumo de memória em problemas esparsos e grandes. Para a escala atual ($K = 7$) e mesmo para a entrega final ($K \ge 100$, $m \approx 201$), o tableau denso é perfeitamente viável; a migração para Simplex revisado (ou para um solver consolidado como `scipy.optimize.linprog` / PuLP) só se justificaria em escalas substancialmente maiores. **A corretude é idêntica** — a diferença é puramente de eficiência, pois a álgebra subjacente é a mesma.
+A escolha do tableau denso (manter e atualizar todas as colunas) é deliberada e alinhada à justificativa do [`artigo.md`](./artigo.md): **transparência e auditabilidade** das regras de entrada/saída e do pivoteamento. A consequência é custo $\Theta(mN)$ por pivô e memória $\Theta(mN)$. Um **Simplex revisado** (mantendo apenas $B^{-1}$ em forma-produto) reduziria o trabalho por iteração e o consumo de memória em problemas esparsos e grandes. Para a escala atual ($K = 7$) e para a entrega final ($K \ge 100$, $m \approx 201$), o custo por pivô $\Theta(K^2)$ fica na casa de dezenas de milhares de operações, dentro do orçamento da aplicação; a migração para Simplex revisado (ou para um solver consolidado como `scipy.optimize.linprog` / PuLP) só se justificaria em escalas substancialmente maiores. A corretude não muda com a escolha — a álgebra subjacente é a mesma —, de modo que a diferença é apenas de eficiência.
 
 ### 4.5 Cópia defensiva de `b` (correção de aliasing)
 
@@ -307,9 +320,19 @@ O arredondamento dos limites (zerar abaixo de R\$200, arredondar para múltiplo 
 
 A implementação do grupo é o **Simplex clássico de Dantzig com a regra anticiclagem de Bland (1977)**, operando sobre um tableau denso na forma canônica de maximização. A análise estabelece:
 
-**Complexidade.** O custo por iteração é $\Theta\big(m(n+m)\big)$ e o custo total de uma instância resolvida em $p$ pivôs é $\Theta\big((p+1)\,m(n+m)\big)$. O pior caso é exponencial ($p \le \binom{n+m}{m}-1$), o melhor caso é $\Theta\big(m(n+m)\big)$ (origem ótima, $p=0$), e o piso universal é $\Omega\big(m(n+m)\big)$. Para o PL do parceiro ($n=K$, $m=2K+1$), isso é $\Theta(K^2)$ por pivô e, com os $p=O(K)$ pivôs observados empiricamente, $O(K^3)$ na prática — confirmando viabilidade tanto para $K=7$ quanto para a meta de $K\ge100$.
+**Complexidade.** O custo por iteração é $\Theta\big(m(n+m)\big)$ e o custo total de uma instância resolvida em $p$ pivôs é $\Theta\big((p+1)\,m(n+m)\big)$. O pior caso é exponencial ($p \le \binom{n+m}{m}-1$), o melhor caso é $\Theta\big(m(n+m)\big)$ (origem ótima, $p=0$), e o piso universal é $\Omega\big(m(n+m)\big)$. Para o PL do parceiro ($n=K$, $m=2K+1$), isso é $\Theta(K^2)$ por pivô e, com o $p$ pequeno observado empiricamente (da ordem de $K$), tempo da ordem de $K^3$ nas instâncias testadas — comportamento empírico, não cota de pior caso — confirmando viabilidade tanto para $K=7$ quanto para a meta de $K\ge100$.
 
 **Corretude.** Provou-se, por indução sobre o invariante do laço, que o tableau mantém sempre uma SBF (corretude parcial); a regra de entrada de Bland garante a terminação (com a ressalva da Seção 3.4 sobre o desempate da saínte, que recomenda um ajuste $O(m)$ para garantia teórica plena); e a condição de parada (todos os custos reduzidos $\le 0$) implica otimalidade global pelo Lema da Seção 3.5. Os casos ilimitado e de múltiplas soluções são tratados corretamente pela implementação (Seções 3.6), preservando a corretude global.
+
+**Limitações conhecidas do código atual e evolução planejada.** Esta análise avalia o algoritmo *como implementado hoje*. A tabela abaixo lista onde o código atual diverge da formulação teórica fechada, o impacto de cada divergência e a evolução prevista. Nenhum dos itens altera os resultados validados em [`comparacao_simplex.md`](./comparacao_simplex.md):
+
+| Estado atual (código) | Impacto em complexidade/corretude | Evolução planejada |
+| --------------------- | --------------------------------- | ------------------ |
+| Desempate da saínte por posição de linha (cláusula (ii) de Bland parcial) | Corretude parcial intacta; terminação formal de Bland não plenamente coberta sob degeneração (Seção 3.4) | Desempate por menor `base[i]` — $O(m)$, sem mudar a complexidade, fecha a terminação |
+| Pré-condição $b \ge 0$ não verificada em runtime | Correto por construção neste PL; falharia em silêncio se o modelo evoluísse para restrições $\ge$ (Seção 4.1) | Adicionar `assert all(bi >= 0 ...)` para falha explícita |
+| Detecção de múltiplas soluções por `== 0.0` exato | Apenas informativa; não afeta $x$ nem $z$ (Seção 4.3) | Teste por tolerância (`abs(cj_zj) <= eps`) coerente com o $10^{-6}$ do golden test |
+| Contagem de pivôs não instrumentada | Tabela empírica (Seção 2.6) não reexecutável | *Benchmark* que conta pivôs por semente e regenera a tabela |
+| Tableau denso (todas as colunas mantidas) | $\Theta(mN)$ por pivô e de memória — escolha deliberada por auditabilidade (Seção 4.4) | Simplex revisado (manter só $B^{-1}$) se a escala crescer muito |
 
 ---
 
@@ -424,7 +447,7 @@ O custo desta etapa depende do solver que for selecionado em tempo de execução
 - HiGHS externo (`HiGHS_CMD`);
 - GLPK externo (`GLPK_CMD`).
 
-Para o problema contínuo modelado em `simplex_pulp.py`, o solver não aciona o Branch-and-Bound, pois não há variáveis inteiras. O CBC e o GLPK resolvem o PL contínuo por métodos baseados em Simplex/pivoteamento; o HiGHS pode usar algoritmos de pontos interiores ou simplex, e por isso tem regimes de pior caso diferentes.
+Para o problema contínuo modelado em `simplex_pulp.py`, o solver não aciona o Branch-and-Bound, pois não há variáveis inteiras. O CBC e o GLPK resolvem o PL contínuo por métodos baseados em Simplex/pivoteamento; o HiGHS implementa um *dual revised simplex* de alto desempenho e também algoritmos de pontos interiores (HUANGFU; HALL, 2018), e por isso tem regimes de pior caso diferentes conforme o método selecionado.
 
 Assim, não é possível determinar uma única complexidade exata apenas analisando o código Python: o custo real depende do solver disponível no ambiente.
 
@@ -553,12 +576,12 @@ $$
 
 ## 3. Corretude
 
+> **Escopo desta prova.** A demonstração de corretude *completa* — incluindo a prova de que o algoritmo de otimização encontra o ótimo global — é a da **Parte I** (Simplex do grupo), via indução sobre o invariante da SBF. Aqui o objeto é diferente: `simplex_pulp.py` **não implementa um algoritmo de otimização**, apenas **constrói um modelo** e o delega a um solver externo já provado. Portanto, o que se prova nesta Parte II é (i) que o laço de construção produz um modelo **exatamente equivalente** ao problema original e (ii) que, **assumindo** a corretude do solver (premissa padrão: corretude do Simplex e da dualidade, Dantzig 1963, herdada pelos solvers consolidados CBC/HiGHS/GLPK), a solução retornada é ótima para o problema original. A otimalidade não é reprovada aqui; é *delegada*. Essa distinção é retomada na Parte III, Seção 2.
+
 A corretude da implementação com PuLP será demonstrada em duas etapas:
 
 1. Corretude da construção do modelo de Programação Linear;
 2. Corretude da solução retornada pelo solver.
-
-Como o módulo `simplex_pulp.py` não implementa diretamente um algoritmo de otimização, mas sim constrói um modelo matemático e o envia para um solver externo, o objetivo da prova é demonstrar que o modelo construído é exatamente equivalente ao problema original.
 
 ### 3.1 Pré-condição
 
@@ -799,18 +822,18 @@ Sejam $n$ o número de variáveis de decisão, $m$ o número de restrições e, 
 | Custo da otimização | $(p+1)\,\Theta(mN)$ — número de pivôs $p$ **explícito** | $T_{solver}(n,m)$ — **caixa-preta** do solver |
 | Melhor caso | $\Theta(K^2)$ (origem já ótima, $p=0$) | $\Omega(mn) = \Omega(K^2)$ (sempre percorre $A$) |
 | Pior caso | exponencial, $p \le \binom{n+m}{m}-1$ | depende do solver: exponencial (CBC/GLPK, simplex) ou polinomial (HiGHS, pontos interiores) |
-| Caso prático | $O(K^3)$ com $p = O(K)$ medido | dominado pelo solver, tipicamente eficiente |
+| Caso prático | $\sim K^3$ com $p$ pequeno medido ($\sim K$) — comportamento empírico, não cota de pior caso | dominado pelo solver, tipicamente eficiente |
 | Espaço | $\Theta(mN) = \Theta(K^2)$ | $\Theta(mn) = \Theta(K^2)$ |
 
 Ambas compartilham o **piso $\Theta(K^2)$** de construção e memória. A diferença essencial está em **onde mora o custo da otimização**: no Simplex do grupo ele é explícito e contável (o número de pivôs $p$), enquanto no PuLP fica encapsulado em $T_{solver}$, fora do código Python.
 
-Um ponto que merece reflexão: o **pior caso teórico do PuLP pode ser melhor que o do nosso Simplex**. Se o ambiente usar HiGHS com pontos interiores, o pior caso é polinomial, ao passo que o nosso Simplex com regra de Bland permanece exponencial no pior caso. Na prática, porém, a estrutura quase-separável do problema (restrições-caixa R2/R3 acopladas apenas pela restrição agregada R1) mantém $p$ pequeno ($p = O(K)$), e o nosso Simplex roda em $O(K^3)$ — perfeitamente viável tanto para $K=7$ quanto para a meta de $K \ge 100$.
+Um ponto que merece reflexão: o **pior caso teórico do PuLP pode ser melhor que o do nosso Simplex**. Se o ambiente usar HiGHS com pontos interiores, o pior caso é polinomial, ao passo que o nosso Simplex com regra de Bland permanece exponencial no pior caso. Na prática, porém, a estrutura quase-separável do problema (restrições-caixa R2/R3 acopladas apenas pela restrição agregada R1) mantém $p$ pequeno nas instâncias testadas (da ordem de $K$), e o nosso Simplex roda em tempo da ordem de $K^3$ nessas instâncias — viável tanto para $K=7$ quanto para a meta de $K \ge 100$. Reforça-se que esse "$\sim K^3$" é comportamento empírico/típico (justificado pela análise de caso médio e suavizada, Seção 2.6 da Parte I), e não uma cota de pior caso, que permanece exponencial.
 
 ## 2. Corretude — duas estratégias de prova diferentes
 
 Embora ambas as provas usem **indução sobre o invariante do laço principal**, elas provam coisas distintas, porque o "laço principal" de cada implementação é diferente:
 
-- **Simplex do grupo.** O invariante é sobre o estado do *algoritmo de otimização*: a cada iteração do `while`, o tableau mantém uma **solução básica factível (SBF)**. A indução prova que cada pivô preserva a factibilidade (corretude parcial); a regra de Bland garante a terminação; e a condição de parada (todos os custos reduzidos $\le 0$) implica otimalidade global. Ou seja, **prova-se que o algoritmo de fato encontra o ótimo**.
+- **Simplex do grupo.** O invariante é sobre o estado do *algoritmo de otimização*: a cada iteração do `while`, o tableau mantém uma **solução básica factível (SBF)**. A indução prova que cada pivô preserva a factibilidade (corretude parcial); a regra de Bland garante a terminação; e a condição de parada (todos os custos reduzidos $\le 0$) implica otimalidade global. A prova, portanto, cobre o algoritmo de otimização em si: ele encontra o ótimo.
 
 - **PuLP.** O invariante é sobre o laço de *construção do modelo*: após $k$ iterações, o modelo contém exatamente as $k$ primeiras restrições. A indução prova que o modelo construído é **equivalente** ao problema original. A otimalidade da solução é **delegada ao solver** e assumida como premissa (corretude do Simplex e da dualidade, Dantzig 1963; solvers consolidados CBC/HiGHS/GLPK).
 
@@ -822,7 +845,7 @@ Em uma frase: **nós provamos que o nosso algoritmo resolve o problema; no PuLP,
 
 **Dependência externa.** O nosso Simplex não exige solver externo: não precisa de CBC/GLPK instalado nem sofre com o bug do CBC quando o caminho do Windows tem espaços — bug que a implementação PuLP teve de contornar com diretório temporário e cadeia de *fallback*. O PuLP carrega essa fragilidade de ambiente, mitigada (mas não eliminada) pelo *fallback* CBC -> HiGHS -> HiGHS_CMD -> GLPK_CMD.
 
-**Papéis complementares.** A forma como o grupo usa as duas implementações é a mais sensata: o **Simplex próprio como motor de produção** (transparente, sem dependência) e o **PuLP como oráculo de validação** (*golden test*). A concordância dentro de $10^{-6}$ dá confiança empírica de que a prova de corretude da Parte I se reflete na prática.
+**Papéis complementares.** As duas implementações cumprem funções distintas no projeto: o **Simplex próprio** atua como motor de produção (sem dependência de solver externo e com cada pivô inspecionável) e o **PuLP** como oráculo de validação (*golden test*). A concordância dentro de $10^{-6}$ entre os dois (Caso 4 de [`comparacao_simplex.md`](./comparacao_simplex.md), $|\Delta z| \approx 1{,}5\times10^{-8}$) liga a prova de corretude da Parte I ao comportamento observado.
 
 **Escala.** Para a entrega final ($K \ge 100$, $m \approx 201$), ambas são viáveis — o custo por pivô fica na casa de dezenas de milhares de operações. Se o problema crescesse muito ou ficasse numericamente mal condicionado, o PuLP (ou um Simplex revisado mantendo apenas $B^{-1}$) seria preferível por robustez numérica.
 
@@ -830,7 +853,7 @@ Em uma frase: **nós provamos que o nosso algoritmo resolve o problema; no PuLP,
 
 Resolver o mesmo PL de dois jeitos — implementando e delegando — mostra os dois lados da moeda. Implementar do zero **força entender** o invariante, a terminação e a otimalidade (o *porquê* de o algoritmo funcionar). Usar uma biblioteca **desloca o ônus** da corretude para duas tarefas diferentes: modelar fielmente o problema e confiar num solver já provado. A validação cruzada amarra os dois: a teoria (as provas) e a prática (a concordância numérica) convergem para a mesma solução.
 
-Para este projeto, a recomendação é manter o **Simplex próprio como motor**, pela transparência exigida no contexto de crédito do Banco Pan, com o **PuLP como rede de segurança** de validação — exatamente o arranjo adotado pelo grupo.
+Para este projeto, mantém-se o **Simplex próprio como motor**, pela inspecionabilidade exigida no contexto de crédito do Banco Pan, com o **PuLP como rede de segurança** de validação.
 
 ---
 
@@ -838,18 +861,20 @@ Para este projeto, a recomendação é manter o **Simplex próprio como motor**,
 
 As referências abaixo consolidam as fontes das Partes I e II.
 
-DANTZIG, George B. *Linear Programming and Extensions*. Princeton: Princeton University Press, 1963.
+BAZARAA, Mokhtar S.; JARVIS, John J.; SHERALI, Hanif D. *Linear Programming and Network Flows*. 4. ed. Hoboken: John Wiley & Sons, 2010.
 
-BLAND, Robert G. New finite pivoting rules for the simplex method. *Mathematics of Operations Research*, v. 2, n. 2, p. 103-107, 1977.
-
-KLEE, Victor; MINTY, George J. How good is the simplex algorithm? In: SHISHA, O. (ed.). *Inequalities III*. New York: Academic Press, 1972. p. 159-175.
+BLAND, Robert G. New finite pivoting rules for the simplex method. *Mathematics of Operations Research*, v. 2, n. 2, p. 103-107, 1977. DOI: 10.1287/moor.2.2.103.
 
 BORGWARDT, Karl Heinz. *The Simplex Method: A Probabilistic Analysis*. Berlin: Springer-Verlag, 1987.
 
-SPIELMAN, Daniel A.; TENG, Shang-Hua. Smoothed analysis of algorithms: why the simplex algorithm usually takes polynomial time. *Journal of the ACM*, v. 51, n. 3, p. 385-463, 2004.
+COIN-OR FOUNDATION. *PuLP: a Linear Programming Toolkit for Python*. Disponível em: https://coin-or.github.io/pulp/. Acesso em: 09 jun. 2026.
+
+DANTZIG, George B. Maximization of a linear function of variables subject to linear inequalities. In: KOOPMANS, Tjalling C. (ed.). *Activity Analysis of Production and Allocation*. New York: John Wiley & Sons, 1951. p. 339-347.
+
+DANTZIG, George B. *Linear Programming and Extensions*. Princeton: Princeton University Press, 1963.
 
 HUANGFU, Qi; HALL, Julian A. J. Parallelizing the dual revised simplex method. *Mathematical Programming Computation*, v. 10, n. 1, p. 119-142, 2018.
 
-BAZARAA, Mokhtar S.; JARVIS, John J.; SHERALI, Hanif D. *Linear Programming and Network Flows*. 4. ed. Hoboken: John Wiley & Sons, 2010.
+KLEE, Victor; MINTY, George J. How good is the simplex algorithm? In: SHISHA, O. (ed.). *Inequalities III*. New York: Academic Press, 1972. p. 159-175.
 
-COIN-OR FOUNDATION. *PuLP: a Linear Programming Toolkit for Python*. Disponível em: https://coin-or.github.io/pulp/. Acesso em: 09 jun. 2026.
+SPIELMAN, Daniel A.; TENG, Shang-Hua. Smoothed analysis of algorithms: why the simplex algorithm usually takes polynomial time. *Journal of the ACM*, v. 51, n. 3, p. 385-463, 2004.
