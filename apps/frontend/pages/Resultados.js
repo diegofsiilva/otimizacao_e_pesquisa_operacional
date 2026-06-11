@@ -1435,6 +1435,166 @@ var SankeyPipelineP5 = function (props) {
 };
 
 // ============================================================================
+// ScatterSVG - Simplex vs PuLP por cluster
+// ============================================================================
+var ScatterSVG = function (props) {
+  var clusters = props.clusters;
+  if (!clusters || clusters.length === 0) return null;
+
+  var hasPulp = clusters.some(function (c) {
+    return c.limite_otimizado_pulp != null;
+  });
+  if (!hasPulp) {
+    return (
+      <p className="text-xs text-[#9C9C9F]">
+        Dados PuLP indisponíveis para esta simulação.
+      </p>
+    );
+  }
+
+  var w = 420;
+  var h = 260;
+  var pad = { top: 16, right: 16, bottom: 44, left: 56 };
+  var cw = w - pad.left - pad.right;
+  var ch = h - pad.top - pad.bottom;
+
+  var maxVal =
+    Math.max.apply(
+      null,
+      clusters.reduce(function (acc, c) {
+        acc.push(c.limite_otimizado || 0);
+        if (c.limite_otimizado_pulp != null) acc.push(c.limite_otimizado_pulp);
+        return acc;
+      }, [1]),
+    ) * 1.05;
+
+  function scaleX(v) {
+    return pad.left + (v / maxVal) * cw;
+  }
+  function scaleY(v) {
+    return pad.top + ch - (v / maxVal) * ch;
+  }
+
+  function fmtAxis(v) {
+    if (v >= 1000) return "R$" + (v / 1000).toFixed(0) + "k";
+    return "R$" + v;
+  }
+
+  var ticks = [0, 0.25, 0.5, 0.75, 1];
+
+  // classifica por divergência para colorir
+  function classify(c) {
+    if (c.limite_otimizado_pulp == null) return "na";
+    var diff = Math.abs(c.limite_otimizado - c.limite_otimizado_pulp);
+    if (diff < 50) return "match";
+    if (diff < 500) return "small";
+    return "large";
+  }
+
+  var colorMap = { match: "#22c55e", small: "#f59e0b", large: "#ef4444", na: "#cbd5e1" };
+
+  // ordena: divergentes por cima para facilitar leitura
+  var sorted = clusters.slice().sort(function (a, b) {
+    var order = { match: 0, small: 1, large: 2, na: -1 };
+    return order[classify(a)] - order[classify(b)];
+  });
+
+  // contagens para legenda
+  var nMatch = clusters.filter(function (c) { return classify(c) === "match"; }).length;
+  var nSmall = clusters.filter(function (c) { return classify(c) === "small"; }).length;
+  var nLarge = clusters.filter(function (c) { return classify(c) === "large"; }).length;
+
+  return (
+    <div>
+      <svg viewBox={"0 0 " + w + " " + h} width="100%" style={{ overflow: "visible" }}>
+        {/* grid lines */}
+        {ticks.map(function (f) {
+          var x = pad.left + f * cw;
+          var y = pad.top + ch - f * ch;
+          return (
+            <g key={f}>
+              <line x1={x} x2={x} y1={pad.top} y2={pad.top + ch} stroke="#E8EFF7" strokeWidth="1" />
+              <line x1={pad.left} x2={pad.left + cw} y1={y} y2={y} stroke="#E8EFF7" strokeWidth="1" />
+              {f > 0 && (
+                <g>
+                  <text x={x} y={pad.top + ch + 14} textAnchor="middle" fontSize="8" fill="#9C9C9F">
+                    {fmtAxis(maxVal * f)}
+                  </text>
+                  <text x={pad.left - 6} y={y + 3} textAnchor="end" fontSize="8" fill="#9C9C9F">
+                    {fmtAxis(maxVal * f)}
+                  </text>
+                </g>
+              )}
+            </g>
+          );
+        })}
+
+        {/* diagonal de referência y = x */}
+        <line
+          x1={scaleX(0)} y1={scaleY(0)}
+          x2={scaleX(maxVal)} y2={scaleY(maxVal)}
+          stroke="#2E6DA4" strokeWidth="1" strokeDasharray="4 3" opacity="0.4"
+        />
+
+        {/* pontos */}
+        {sorted.map(function (c, i) {
+          if (c.limite_otimizado_pulp == null) return null;
+          var cls = classify(c);
+          return (
+            <circle
+              key={i}
+              cx={scaleX(c.limite_otimizado)}
+              cy={scaleY(c.limite_otimizado_pulp)}
+              r="2.5"
+              fill={colorMap[cls]}
+              fillOpacity="0.75"
+            />
+          );
+        })}
+
+        {/* labels dos eixos */}
+        <text
+          x={pad.left + cw / 2}
+          y={h - 4}
+          textAnchor="middle"
+          fontSize="9"
+          fill="#9C9C9F"
+        >
+          Simplex (R$)
+        </text>
+        <text
+          x={10}
+          y={pad.top + ch / 2}
+          textAnchor="middle"
+          fontSize="9"
+          fill="#9C9C9F"
+          transform={"rotate(-90, 10, " + (pad.top + ch / 2) + ")"}
+        >
+          PuLP (R$)
+        </text>
+      </svg>
+
+      {/* legenda */}
+      <div className="flex items-center gap-4 mt-1">
+        {[
+          { color: "#22c55e", label: "Match (Δ < R$50)", n: nMatch },
+          { color: "#f59e0b", label: "Δ R$50–500", n: nSmall },
+          { color: "#ef4444", label: "Δ > R$500", n: nLarge },
+        ].map(function (l) {
+          return (
+            <div key={l.label} className="flex items-center gap-1.5 text-[10px] text-[#9C9C9F]">
+              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: l.color }} />
+              {l.label}
+              <span className="font-semibold text-[#3B4049]">{l.n}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+// ============================================================================
 // Resultados
 // ============================================================================
 var Resultados = function (props) {
@@ -1595,10 +1755,7 @@ var Resultados = function (props) {
 
   function getLimitePulp(c) {
     if (!c) return null;
-    if (c.limite_pulp != null) return c.limite_pulp;
-    if (c.limite_pulp_otimizado != null) return c.limite_pulp_otimizado;
-    if (c.pulp_limite_otimizado != null) return c.pulp_limite_otimizado;
-    return null;
+    return c.limite_otimizado_pulp != null ? c.limite_otimizado_pulp : null;
   }
 
   var pulpSimplexData = clusters
@@ -1880,6 +2037,14 @@ var Resultados = function (props) {
                   ? "Múltiplas soluções"
                   : "Solução ótima · Simplex",
               highlight: true,
+              pulpOk:
+                selectedConsulta.z_pulp != null && selectedConsulta.delta_z_pct != null
+                  ? selectedConsulta.delta_z_pct < 0.01
+                  : null,
+              pulpDelta:
+                selectedConsulta.delta_z_pct != null
+                  ? selectedConsulta.delta_z_pct
+                  : null,
             },
             {
               label: "Clientes Elegíveis",
@@ -1939,6 +2104,26 @@ var Resultados = function (props) {
                   {k.value}
                 </div>
                 <div className="text-xs text-[#9C9C9F]">{k.sub}</div>
+                {k.pulpOk !== null && k.pulpOk !== undefined && (
+                  <div className="flex items-center gap-1.5 mt-2">
+                    <div
+                      className={
+                        "w-1.5 h-1.5 rounded-full flex-shrink-0 " +
+                        (k.pulpOk ? "bg-[#22c55e]" : "bg-[#f59e0b]")
+                      }
+                    />
+                    <span
+                      className={
+                        "text-[10px] font-semibold " +
+                        (k.pulpOk ? "text-[#15803d]" : "text-[#92400e]")
+                      }
+                    >
+                      {k.pulpOk
+                        ? "PuLP confirma"
+                        : "Δ " + k.pulpDelta.toFixed(4) + "%"}
+                    </span>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -2019,16 +2204,16 @@ var Resultados = function (props) {
       ) : (
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-4">
-            {/* Limites por cluster — Simplex vs PuLP */}
+            {/* Scatter Simplex vs PuLP */}
             <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
               <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
-                Top 15 Clusters por Limite
+                Simplex vs PuLP por Cluster
               </div>
               <div className="text-xs text-[#9C9C9F] mb-3">
-                Simplex vs PuLP — limite ótimo por cluster (R$)
+                Cada ponto é um cluster — na diagonal significa concordância perfeita
               </div>
-              {barData.length > 0 ? (
-                <BarChartP5 data={barData} />
+              {clusters.length > 0 ? (
+                <ScatterSVG clusters={clusters} />
               ) : (
                 <p className="text-xs text-[#9C9C9F]">Sem dados de clusters.</p>
               )}
