@@ -377,6 +377,63 @@ Limites ótimos por cluster:
 
 O algoritmo convergiu para o ótimo. Os clusters que receberam limite zero apresentam $c_k \leq 0$, ou seja, para esses perfis a perda esperada por inadimplência supera a receita esperada de interchange - o modelo corretamente indica que não devem receber oferta. Os clusters com limite positivo concentram os perfis com melhor relação risco-retorno.
 
+### Teste 5: O Simplex não muta o problema de entrada
+
+**Entrada:**
+
+```python
+Problema(
+    c=[1.0, 1.0],
+    A=[[1.0, 0.0], [0.0, 1.0]],
+    b=[5.0, 7.0],
+)
+
+```
+
+**Validação realizada:**
+
+```python
+
+b_antes = list(problema.b)
+simplex(problema)
+assert problema.b == b_antes
+
+```
+
+**Resultato observado:**
+
+O vetor b permanece inalterado após a execução do algoritmo.
+
+Esse teste garante que o Simplex trabalha sobre uma cópia interna dos dados e não corrompe o problema original, o que é essencial para permitir reutilização da mesma instância em validações cruzadas e chamadas sequenciais.
+
+### Teste 6: Tableau inicial com folgas em identidade
+
+**Entrada:**
+
+```python
+Problema(
+    c=[1.0, 2.0],
+    A=[[1.0, 0.0], [3.0, 4.0], [0.0, 5.0]],
+    b=[10.0, 20.0, 30.0],
+)
+
+```
+
+**Validação realizada:**
+
+```python
+tableau = construir_tableau_inicial(problema)
+assert tableau.base == [2, 3, 4]
+assert tableau.contributions == [0.0, 0.0, 0.0]
+assert tableau.values == [10.0, 20.0, 30.0]
+```
+
+**Resultado observado:**
+
+s variáveis de folga entram corretamente na base inicial, com matriz identidade nas colunas de folga e valores iniciais iguais ao vetor b.
+
+Esse teste valida a montagem do tableau antes do primeiro pivoteamento, que é a base estrutural do algoritmo.
+
 ## Conclusões
 
 O algoritmo Simplex foi implementado do zero, sem uso de bibliotecas de otimização, e validado contra problemas com solução analítica conhecida. O pipeline completo, desde a leitura dos dados até a exibição dos limites otimizados por cluster, está funcional e documentado.

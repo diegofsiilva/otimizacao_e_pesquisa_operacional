@@ -223,6 +223,10 @@ python -m unittest discover -s apps/backend/tests -p "test_*.py"
 
 Os testes cobrem o Simplex, contratos das rotas, upload em chunks, integração HTTP e execução do worker em background.
 
+#### 6. Testar API via Bruno
+
+As instruções para a utilização do Bruno estão presentes no arquivo README.md na pasta apps/backend/bruno/backend/.
+
 ### Pipeline do otimizador via terminal
 
 ### Pré-requisitos

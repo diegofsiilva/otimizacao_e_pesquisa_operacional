@@ -1,0 +1,3 @@
+# envie cada chunk sequencialmente (index=0,1,...)
+curl -sS -X POST "${API_BASE_URL}/uploads/${upload_id}/chunk?index=0" \
+  -F "file=@/path/to/chunk0.bin"
