@@ -430,7 +430,113 @@ Reconhece-se que a abordagem proposta tem limitações próprias: a qualidade da
 
 ## 4. RESULTADOS
 
-_(A ser entregue na Sprint 4.)_
+Esta seção apresenta os resultados da execução do pipeline sobre as bases reais fornecidas pelo parceiro. A organização segue a questão central do trabalho: verificar se a otimização por programação linear produz limites que elevam o retorno líquido esperado e, ao mesmo tempo, mantêm o risco da carteira sob controle, frente à política de oferta vigente do parceiro (campo `limite_ofertado`). Os resultados são reportados primeiro para a safra M1 — a solução ótima e sua aderência às restrições (Seção 4.1) e a comparação com a política vigente (Seção 4.2) —, depois replicados na safra M3 para avaliar estabilidade (Seção 4.3), encerrando com a validação numérica do resolvedor (Seção 4.4). Salvo indicação contrária, os valores foram obtidos com os parâmetros operacionais da Tabela 2 ($T = 22$ meses, $t = 1{,}75\%$, $\bar{u} = 0{,}75$, $\mathrm{LGD} = 0{,}80$, $L^{max} = \text{R\$ }25.000$) e com $K = 800$ clusters.
+
+### 4.1 Solução ótima e aderência às restrições (safra M1)
+
+A partir dos 1.836.085 clientes elegíveis da safra M1, o pipeline gerou 800 clusters e montou um Problema de Programação Linear com 800 variáveis de decisão e 1.601 restrições (uma de risco agregado, 800 de capacidade e 800 de teto operacional). O problema foi resolvido até a otimalidade, com a solução e os agregados de carteira resumidos na Tabela 3.
+
+**Tabela 3 - Resultado da otimização (safra M1)**
+
+| Indicador                                            | Valor                       |
+| :-------------------------------------------------- | :-------------------------- |
+| Clientes elegíveis                                  | 1.836.085                   |
+| Número de clusters ($K$)                            | 800                         |
+| Retorno líquido esperado $Z^*$ (horizonte $T$)      | R\$ 36,2 milhões            |
+| Exposição total recomendada $E$                     | R\$ 1,12 bilhão             |
+| Clusters com oferta ($L_k^{final} \ge$ R\$ 200)     | 382 de 800                  |
+| Clientes cobertos                                   | 876.520 (47,7% dos elegíveis) |
+| Limite médio recomendado por cliente                | R\$ 607                     |
+| Status da solução                                   | ótimo                       |
+
+_Fonte: Elaboração própria (2026)._
+
+O valor de $Z^*$ apresentado é o ótimo contínuo do PL; após a discretização operacional descrita na Seção 2.4 (arredondamento a múltiplos de R\$ 50 e corte de limites abaixo de R\$ 200), o retorno líquido esperado da carteira efetivamente recomendada é de R\$ 32,9 milhões. A queda em relação ao ótimo contínuo é o custo dessa aderência operacional, e não uma perda de otimalidade do resolvedor.
+
+A Tabela 4 detalha o comportamento de cada restrição na solução ótima. O resultado mais relevante é que a restrição ativa - aquela que efetivamente limita a solução - é a de capacidade de pagamento (R2), e não o teto de risco agregado (R1). A inadimplência financeira ponderada por exposição da carteira otimizada ficou em 0,0674, bem abaixo do teto $\overline{PD}_{fin}^{atual} = 0{,}1968$ derivado da base elegível, deixando R1 com folga. O teto operacional (R3) não foi atingido por nenhum cluster, e a verificação de concentração pós-otimização (R4) acusou participação máxima de 3,6% para um único cluster, dentro do limite de 5%.
+
+**Tabela 4 - Aderência às restrições na solução ótima (safra M1)**
+
+| Restrição                            | Critério                                       | Resultado                          |
+| :----------------------------------- | :--------------------------------------------- | :--------------------------------- |
+| R1 - teto de risco financeiro        | PD ponderada $\le \overline{PD}_{fin}^{atual}=0{,}1968$ | 0,0674 - folga, não ativa          |
+| R2 - capacidade / alavancagem        | $L_k \le m_k \cdot CP_k$                        | ativa em 677 de 800 clusters       |
+| R3 - teto operacional                | $L_k \le$ R\$ 25.000                            | nenhum cluster atinge o teto       |
+| R4 - concentração (pós-otimização)   | $n_k \cdot L_k^{final} \le 5\% \cdot E$         | máx. 3,6% - respeitada             |
+
+_Fonte: Elaboração própria (2026)._
+
+A folga de R1 tem explicação econômica direta na função objetivo. O coeficiente unitário $c_k = \pi_k(\bar{u}\,t\,T - PD_k\cdot\mathrm{LGD})$ torna-se negativo quando $PD_k$ ultrapassa o limiar $\bar{u}\,t\,T/\mathrm{LGD} = 0{,}361$; clusters acima desse risco destroem valor a cada real de limite e recebem $L_k = 0$ como solução natural. Na safra M1, 123 dos 800 clusters ficaram nessa faixa e foram zerados pela própria otimização, antes que o teto agregado de risco precisasse atuar. A Figura 2 evidencia esse comportamento: à esquerda, o limite cai conforme o risco do cluster aumenta e se anula a partir do limiar de rentabilidade; à direita, para os clusters rentáveis o limite recomendado coincide exatamente com o teto de capacidade $m_k \cdot CP_k$ (correlação de 0,996), confirmando que R2 é o fator que governa a solução.
+
+**Figura 2 - Sanidade econômica da solução (800 clusters, safra M1)**
+
+![Figura 2 - Sanidade econômica da solução](figuras/resultado_sanidade_solucao.png)
+
+_Fonte: Elaboração própria (2026)._
+
+### 4.2 Comparação com a política vigente (baseline)
+
+Para isolar o efeito da política de limites, o modelo foi confrontado com a oferta vigente do parceiro sobre exatamente a mesma população: os 117.367 clientes elegíveis da safra M1 que possuem `limite_ofertado` registrado. Para cada cliente desse subconjunto, comparou-se o retorno líquido esperado e o risco sob o limite atualmente ofertado e sob o limite recomendado pelo modelo (herdado de seu cluster). A Tabela 5 sintetiza o confronto.
+
+**Tabela 5 - Modelo vs. política vigente na subpopulação com oferta (safra M1; 117.367 clientes)**
+
+| Métrica                            | Política vigente (`limite_ofertado`) | Modelo        | Variação      |
+| :--------------------------------- | :----------------------------------- | :------------ | :------------ |
+| Retorno líquido esperado           | R\$ 4,90 milhões                     | R\$ 5,06 milhões | +3,4%      |
+| Limite médio                       | R\$ 1.178                            | R\$ 1.504     | +27,6%        |
+| PD ponderada por exposição         | 0,0467                               | 0,0486        | +0,2 p.p.     |
+| Cobertura da subpopulação          | 100% (por construção)                | 97,6%         | -             |
+
+_Fonte: Elaboração própria (2026)._
+
+Na mesma população, o modelo elevou o retorno líquido esperado em 3,4%, mantendo o risco da carteira praticamente inalterado (a PD ponderada por exposição passou de 0,0467 para 0,0486, variação de 0,2 ponto percentual). O ganho de retorno vem acompanhado de uma realocação de limite mais aderente ao perfil de risco. A Figura 3 mostra o limite médio por decil de risco: tanto a política vigente quanto o modelo reduzem o limite à medida que o risco cresce, mas o modelo aplica uma diferenciação mais acentuada, ampliando o limite sobretudo nos decis de risco baixo e intermediário (D3 a D6) e mantendo limites contidos nos decis de maior risco.
+
+**Figura 3 - Limite médio por decil de risco: política vigente vs. modelo (safra M1)**
+
+![Figura 3 - Limite por decil de risco](figuras/resultado_limite_por_decil.png)
+
+_Fonte: Elaboração própria (2026)._
+
+É preciso qualificar a magnitude desse ganho. A subpopulação que recebeu oferta na política vigente é fortemente selecionada: sua PD calibrada média é de 0,060, contra 0,197 da base elegível completa - ou seja, o parceiro já direciona oferta a seus melhores clientes, justamente o segmento em que há menos espaço para ganho. O ganho de 3,4% deve, portanto, ser lido como um piso conservador, restrito ao recorte mais favorável ao baseline. O valor incremental mais expressivo do modelo aparece na cobertura: enquanto a política vigente alcança apenas 6,4% dos clientes elegíveis, o modelo estende oferta a 47,7% deles (876.520 clientes), respeitando o mesmo teto de risco da carteira. A Figura 4 contrasta esse alcance e apresenta a distribuição dos limites recomendados.
+
+**Figura 4 - Alcance sobre a base elegível e distribuição dos limites recomendados (safra M1)**
+
+![Figura 4 - Alcance e distribuição dos limites](figuras/resultado_alcance_distribuicao.png)
+
+_Fonte: Elaboração própria (2026)._
+
+### 4.3 Estabilidade entre safras (backtest M3)
+
+Para avaliar se o comportamento observado em M1 é estável, o mesmo pipeline e os mesmos parâmetros foram aplicados à safra M3, que possui um universo elegível maior (3.137.258 clientes). A Tabela 6 compara as duas safras.
+
+**Tabela 6 - Resultados do pipeline por safra**
+
+| Indicador                              | Safra M1          | Safra M3          |
+| :------------------------------------- | :---------------- | :---------------- |
+| Clientes elegíveis                     | 1.836.085         | 3.137.258         |
+| Retorno líquido esperado $Z^*$         | R\$ 36,2 milhões  | R\$ 60,8 milhões  |
+| Exposição total recomendada $E$        | R\$ 1,12 bilhão   | R\$ 1,53 bilhão   |
+| Cobertura (clientes com oferta)        | 47,7%             | 55,9%             |
+| Limite médio recomendado por cliente   | R\$ 607           | R\$ 486           |
+| R1: PD da carteira / teto              | 0,067 / 0,197     | 0,095 / 0,209     |
+| R2: clusters com restrição ativa       | 677 de 800        | 693 de 800        |
+| R4: concentração máxima por cluster    | 3,6%              | 2,6%              |
+
+_Fonte: Elaboração própria (2026)._
+
+O padrão qualitativo se repete nas duas safras: a capacidade de pagamento (R2) é a restrição que governa a solução, o teto de risco financeiro (R1) permanece com folga, e a concentração por cluster fica confortavelmente abaixo do limite de 5%. A consistência entre M1 e M3 - safras de tamanhos diferentes e separadas no tempo - indica que o pipeline não depende de particularidades de uma única extração de dados.
+
+### 4.4 Validação numérica do Simplex e custo computacional
+
+A corretude da implementação própria do Simplex foi verificada por comparação cruzada com o solver CBC, acessado via biblioteca PuLP, sobre instâncias idênticas. Nos três problemas didáticos de referência - solução única, problema ilimitado e múltiplas soluções ótimas -, os dois resolvedores produziram o mesmo valor da função objetivo e o mesmo status. Na instância real do projeto, os valores ótimos coincidiram dentro da tolerância numérica adotada ($|\Delta z| \le 10^{-6}$), com diferença residual da ordem de $10^{-8}$, atribuível ao acúmulo de erros de ponto flutuante. Essa comparação cumpre o papel de teste de sanidade do resolvedor e, durante o desenvolvimento, revelou e ajudou a corrigir um defeito de aliasing no `simplex.py` que corrompia o vetor de restrições entre execuções.
+
+A validação foi reexecutada em escala plena na safra M1 ($K = 800$; 800 variáveis de decisão e 1.601 restrições), agora por meio do pipeline completo de backend. O Simplex próprio e o CBC produziram limites por cluster **idênticos nos 800 clusters** e a mesma exposição total recomendada (R\$ 1.115.394.250). Esse resultado confirma que a implementação própria atinge o mesmo ótimo do solver de referência também na instância de produção, e não apenas nos casos didáticos, reforçando a confiabilidade do resolvedor antes do uso operacional.
+
+A comparação também expôs um limite prático da implementação própria. Por ser codada do zero em Python puro, o custo de execução do Simplex cresce de forma acentuada com o número de clusters: a varredura de $K$ (Figura 5, painel à direita) registra tempos da ordem de dezenas de segundos para algumas centenas de clusters e de minutos ao se aproximar de $K = 500$. Em contrapartida, o painel à esquerda mostra que o retorno ótimo da carteira estabiliza bem antes disso - os incrementos marginais de retorno caem abaixo de 0,5% a partir de poucas centenas de clusters -, o que sustenta a escolha de $K = 800$ como ponto de operação e justifica adotar o CBC como resolvedor de referência nas execuções em escala plena, preservando o Simplex próprio pela transparência do método.
+
+**Figura 5 - Retorno ótimo e custo computacional em função do número de clusters $K$**
+
+![Figura 5 - Retorno e custo vs K](figuras/z_vs_k.png)
 
 ---
 
