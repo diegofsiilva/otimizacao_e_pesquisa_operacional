@@ -1,5 +1,6 @@
 fastapi
 pulp
+highspy
 uvicorn[standard]
 pandas
 python-multipart
@@ -9,3 +10,4 @@ scikit-learn
 numpy
 asyncpg
 httpx
+
