@@ -14,25 +14,25 @@ Os Rascunhos iniciais representam a fase de baixa fidelidade do projeto, onde as
 
 ### Rascunho da Home (Dashboard)
 
-![Rascunho da Home](/artefatos/assets/ux/rascunho_home.png)
+![Rascunho da Home](assets/ux/rascunho_home.png)
 
 Este rascunho ilustra a disposição inicial dos elementos na tela principal, focando na apresentação de um resumo de dados e uma tabela de clientes.
 
 ### Rascunho de Carregamento de Dados
 
-![Rascunho de Carregamento de Base](/artefatos/assets/ux/rascunho_carregar.png)
+![Rascunho de Carregamento de Base](assets/ux/rascunho_carregar.png)
 
 Representa a estrutura para a funcionalidade de upload de arquivos, com uma área dedicada para o carregamento da base de dados e uma pré-visualização em formato de tabela.
 
 ### Rascunho de Configurações
 
-![Rascunho de Configurações](/artefatos/assets/ux/rascunho_config.png)
+![Rascunho de Configurações](assets/ux/rascunho_config.png)
 
 Detalha a organização dos parâmetros editáveis e não editáveis, com campos claros para a inserção e visualização de configurações do modelo.
 
 ### Rascunho de Resultados
 
-![Rascunho de Resultados](/artefatos/assets/ux/rascunho_resultados.jpg)
+![Rascunho de Resultados](assets/ux/rascunho_resultados.jpg)
 
 Detalha os resultados gerados pelo modelo, utilizando visualizações gráficas e indicadores de performance para facilitar a interpretação estratégica dos dados processados.
 
@@ -126,7 +126,7 @@ Esta seção detalha cada uma das telas do protótipo, descrevendo seus elemento
 
 ### Dashboard (Home)
 
-![Tela Dashboard](/artefatos/assets/ux/home.png)
+![Tela Dashboard](assets/ux/home.png)
 
 A tela de Dashboard serve como a página inicial do sistema, oferecendo uma visão consolidada dos principais indicadores de desempenho relacionados aos clusters e limites de crédito. Inclui:
 
@@ -135,13 +135,13 @@ A tela de Dashboard serve como a página inicial do sistema, oferecendo uma vis�
 
 ### Gerar Limites
 
-![Tela Gerar Limites](/artefatos/assets/ux/Gerar%20limite.png)
+![Tela Gerar Limites](assets/ux/Gerar limite.png)
 
 Esta tela é o ponto de entrada para a funcionalidade de carregamento de dados e geração de limites, conforme a **US01 - Carregar base de dados**.
 
 - **Área de Upload:** Uma interface intuitiva para arrastar e soltar arquivos (CSV, XLSX) ou selecionar manualmente. Esta área é crucial para a ingestão da base de dados que será utilizada na otimização dos limites.
 
-![Tela Visualizar Geração de Limites](/artefatos/assets/ux/Visualizar%20a%20geração%20de%20limites.png)
+![Tela Visualizar Geração de Limites](assets/ux/Visualizar a geração de limites.png)
 
 Após o carregamento da base, esta tela apresenta os resultados da geração de limites, abordando a **US04 - Gerar limite por cluster** e parte da **US05 - Consultar restrições ativas**.
 
@@ -150,7 +150,7 @@ Após o carregamento da base, esta tela apresenta os resultados da geração de 
 
 ### Resultados
 
-![Tela Resultados](/artefatos/assets/ux/resultados.png)
+![Tela Resultados](assets/ux/resultados.png)
 
 A tela de Resultados é dedicada à visualização analítica dos limites gerados, diretamente ligada à **US06 - Visualizar distribuição dos limites**.
 
@@ -163,14 +163,14 @@ A tela de Resultados é dedicada à visualização analítica dos limites gerado
 
 ### Configurações
 
-![Tela Configurações](/artefatos/assets/ux/tela-config.png)
+![Tela Configurações](assets/ux/tela-config.png)
 
 Esta tela permite o gerenciamento dos parâmetros do sistema, atendendo às **US02 - Ajustar clusterização** e **US03 - Configurar metas de produção**.
 
 - **Parâmetros Editáveis:** Lista de configurações que podem ser ajustadas pelo usuário, como "Taxa de Interchange", "Loss Given Default", "Utilização esperada do Limite" e "Teto máximo de Limite". Cada parâmetro possui um ícone de edição.
 - **Parâmetros Não Editáveis:** Seção para parâmetros fixos do sistema.
 
-![Tela Edição de Configuração](/artefatos/assets/ux/config-edicao.png)
+![Tela Edição de Configuração](assets/ux/config-edicao.png)
 
 Ao clicar no ícone de edição de um parâmetro, um modal ou área de edição é exibida, como esta para a "Taxa de Interchange".
 
