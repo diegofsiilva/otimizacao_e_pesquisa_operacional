@@ -89,9 +89,13 @@ class PipelineBackgroundTestCase(unittest.TestCase):
                         "ck_medio": 0.1,
                         "fator_alavancagem": 1.2,
                         "limite_otimizado": 500,
+                        "limite_otimizado_pulp": 500,
                     }
                 ],
                 "parquet_com_cluster": parquet_com_cluster,
+                "z_pulp": 123.45,
+                "status_pulp": "otimo",
+                "delta_z_pct": 0.0,
             }
 
             clientes = pd.DataFrame(
