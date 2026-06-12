@@ -31,7 +31,7 @@
 
 ## 3. Telas Implementadas
 
-### 3.1. Cockpits
+### 3.1. Clientes
 
 &nbsp;&nbsp;&nbsp;&nbsp; Tela inicial da aplicação. Lista todas as consultas de otimização registradas, com suporte a busca e filtro por safra ou data. O operador pode criar uma nova consulta via botão "Nova Consulta", que abre o fluxo de upload de arquivo Parquet.
 
