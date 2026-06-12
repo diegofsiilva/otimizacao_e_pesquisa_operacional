@@ -198,6 +198,8 @@ O PL do projeto a satisfaz **por construção** (ver `montar_problema`): R1 tem 
 
 ### 3.2 Invariante principal do laço
 
+A escolha do invariante é central para a prova de corretude. Manter uma Solução Básica Factível (SBF) a cada iteração garante duas coisas: (a) que a busca nunca sai da região factível (as restrições $x \ge 0$ e $Ax \le b$ são sempre satisfeitas), e (b) que o tableau sempre representa corretamente o sistema do PL em relação à base corrente. É esse segundo ponto que liga o invariante à condição de otimalidade: quando os custos reduzidos — calculados sobre uma SBF válida — são todos não-positivos, a conclusão de otimalidade é matematicamente válida.
+
 > **Invariante $\mathcal{P}$.** No início de cada iteração do laço `while`, o tableau representa uma **solução básica factível (SBF)** do PL. Formalmente, sendo $B$ a submatriz das colunas de $[A\mid I]$ indexadas por `base`:
 >
 > - **(P1) Base válida em forma canônica.** Os $m$ índices de `base` são distintos e as colunas correspondentes de $[A\mid I]$ são linearmente independentes (formam uma base $B$). No tableau, cada coluna básica é o vetor unitário da sua linha; equivalentemente, o tableau armazena $B^{-1}[A\mid I]$ e `values` $= B^{-1}b$.
@@ -237,15 +239,19 @@ A implementação aplica **integralmente a cláusula (i)**: `indice_entra` é o 
 > **Ressalva de rigor (diferença implementação × teoria).** A cláusula (ii) é implementada apenas **parcialmente**. O teste da razão em `simplex.py` (linhas 145–150) usa desempate estrito (`razao < menor_razao`), de modo que, entre razões empatadas, mantém a **primeira linha** encontrada — ou seja, o **menor índice de linha** $i$, e não a variável básica de menor índice `tableau.base[i]`. Como `base` deixa de ser ordenado após o primeiro pivô, esses dois critérios podem divergir. Estritamente, o teorema de finitude de Bland (1977) pressupõe a cláusula (ii) por **índice de variável**; com desempate por posição de linha, a garantia formal anticiclagem não está plenamente coberta pela fonte. Na prática, nenhuma ciclagem foi observada nos casos testados (Seção 3.5 e [`comparacao_simplex.md`](./comparacao_simplex.md)), e o número de pivôs manteve-se baixo (Seção 2.6).
 >
 > **Estado atual × evolução planejada.** Esta diferença delimita o alcance da prova de terminação no código *atual*:
-> - **Estado atual (o que o código faz).** O desempate da saínte é por posição de linha. Com isso, a *corretude parcial* (Seção 3.3) permanece intacta — cada pivô preserva a SBF independentemente do critério de desempate —, mas a *garantia formal de terminação* de Bland (1977) cobre plenamente apenas instâncias sem empates degenerados; sob degeneração, a finitude é sustentada empiricamente (ausência de ciclagem em todos os testes), não pela letra do teorema.
+> - **Estado atual (o que o código faz).** O desempate da saínte é por posição de linha. Com isso, a *corretude parcial* (Seção 3.3) permanece intacta — cada pivô preserva a SBF independentemente do critério de desempate —, mas a *garantia formal de terminação* de Bland (1977) cobre plenamente apenas instâncias sem empates degenerados; sob degeneração, a finitude é sustentada empiricamente (ausência de ciclagem em todos os testes), não pela letra do teorema. Em termos de prova, isso significa que a demonstração de terminação desta seção é válida para o algoritmo *na forma que deveria ser implementado* (com a cláusula ii completa), e não para o código *exatamente como está hoje*; a prova cobre o código atual apenas sob a hipótese empírica de ausência de ciclagem.
 > - **Impacto em complexidade.** Nenhum no caso típico: o desempate não altera o custo $\Theta(mN)$ por pivô nem o nº de pivôs observado. No limite teórico, sem a cláusula (ii) completa, a cota $p \le \binom{n+m}{m}-1$ da Seção 2.3 não é formalmente garantida (ciclagem não está descartada por teorema).
 > - **Evolução planejada (o que pretendemos fazer).** Substituir o desempate por "menor `tableau.base[i]` entre as razões mínimas", completando a cláusula (ii) de Bland. O ajuste é $O(m)$, **não altera a complexidade** e fecha formalmente a prova de terminação — alinhando o código à garantia teórica. Fica registrado como melhoria de robustez para a próxima iteração, não como correção de um defeito que afete os resultados atuais (validados em [`comparacao_simplex.md`](./comparacao_simplex.md)).
 
 ### 3.5 Corretude parcial: condição de otimalidade
 
+As três peças da prova de corretude total se conectam aqui. O invariante do laço (Seção 3.3) garante que em toda iteração temos uma Solução Básica Factível (SBF). A regra de Bland (Seção 3.4) garante que o laço termina. Ao término, a condição `todos_nao_positivos` do código implica que todos os custos reduzidos são $\le 0$. A identidade do Lema abaixo mostra que, nesse momento, nenhuma direção de melhora existe a partir da SBF corrente, que é, portanto, uma solução ótima global.
+
 > **Lema (otimalidade — Simplex clássico).** Para qualquer ponto factível $y$ do PL, vale a identidade
 > $$ z(y) \;=\; z(y^*) \;+\; \sum_{j \in \mathcal{N}} (c_j - z_j)\, y_j, $$
 > onde $y^*$ é a SBF corrente, $\mathcal{N}$ é o conjunto de variáveis não-básicas e $c_j - z_j$ é o custo reduzido (exatamente o que `calcular_cj_zj` computa, pois $z_j = \sum_i \texttt{contributions}[i]\cdot \texttt{col}_j[i]$). Essa identidade e o critério dela derivado ($c_j - z_j \le 0\ \forall j \Rightarrow$ ótimo) constituem o resultado central do Simplex original, cuja prova formal — junto ao teorema da dualidade — está em Dantzig (1963, cap. 6, "Proof of the Simplex Algorithm and the Duality Theorem", p. 120–146); uma exposição moderna equivalente, com a mesma identidade do custo reduzido e o critério de otimalidade, encontra-se em Bazaraa, Jarvis e Sherali (2010, cap. 3–4).
+
+Intuitivamente: um custo reduzido $(c_j - z_j) > 0$ significa que aumentar a variável $j$ (atualmente não-básica, em zero) elevaria o valor da função objetivo — ou seja, existiria uma direção de melhora. Quando todos os custos reduzidos são $\le 0$, nenhuma direção de melhora existe a partir da SBF corrente, e ela é, portanto, um máximo global do PL.
 
 *Dedução.* Particionando $y = (y_B, y_N)$, de $[A\mid I]y = b$ vem $y_B = B^{-1}b - B^{-1}N\,y_N$. Substituindo na função objetivo:
 
@@ -601,6 +607,8 @@ $$
 Essas condições garantem que o problema de programação linear está bem definido.
 
 ### 3.2 Invariante do Laço Principal
+
+O laço principal desta implementação não é um laço de otimização, mas de construção do modelo; consequentemente, o invariante a seguir diz respeito à fidelidade do modelo sendo construído em relação ao problema original, e não ao progresso de uma busca pelo ótimo — a otimalidade da solução é delegada ao solver externo e assumida como premissa (conforme escopo declarado no início desta Parte II).
 
 O principal laço da implementação é responsável pela inserção das restrições no modelo:
 
