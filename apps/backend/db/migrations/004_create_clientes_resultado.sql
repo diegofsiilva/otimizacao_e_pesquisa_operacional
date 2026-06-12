@@ -4,7 +4,7 @@
 -- Contém apenas clientes elegíveis (flag_filtros == 0), vindos de _com_cluster.parquet.
 -- Todos os campos originais do parquet são preservados para rastreabilidade completa,
 -- além dos campos derivados pelo pipeline (pd_calibrada, pi_normalizado, cp_proxy)
--- e dos campos de atribuição (cluster_id, limite_otimizado).
+-- e dos campos de atribuição (segmento_id, limite_otimizado).
 -- =============================================================================
 
 CREATE TABLE IF NOT EXISTS clientes_resultado (
@@ -34,7 +34,7 @@ CREATE TABLE IF NOT EXISTS clientes_resultado (
     cp_proxy                        REAL        NOT NULL,
 
     -- atribuição pelo clustering e LP
-    cluster_id                      INTEGER     NOT NULL,
+    segmento_id                      INTEGER     NOT NULL,
     limite_otimizado                INTEGER     NOT NULL,
 
     CONSTRAINT pk_clientes_resultado
@@ -43,8 +43,8 @@ CREATE TABLE IF NOT EXISTS clientes_resultado (
         FOREIGN KEY (consulta_id) REFERENCES consultas (id)
         ON DELETE CASCADE,
     CONSTRAINT fk_clientes_resultado_cluster
-        FOREIGN KEY (consulta_id, cluster_id)
-        REFERENCES clusters_resultado (consulta_id, cluster_id),
+        FOREIGN KEY (consulta_id, segmento_id)
+        REFERENCES clusters_resultado (consulta_id, segmento_id),
     CONSTRAINT ck_clientes_resultado_pd_produto
         CHECK (pd_produto BETWEEN 0 AND 1),
     CONSTRAINT ck_clientes_resultado_pd_calibrada
@@ -73,7 +73,7 @@ CREATE INDEX IF NOT EXISTS idx_clientes_resultado_consulta_ofertados
 
 -- filtro por cluster dentro de uma consulta (detalhamento de cluster)
 CREATE INDEX IF NOT EXISTS idx_clientes_resultado_consulta_cluster
-    ON clientes_resultado (consulta_id, cluster_id);
+    ON clientes_resultado (consulta_id, segmento_id);
 
 -- análise de risco por consulta (ordenação por pd_calibrada)
 CREATE INDEX IF NOT EXISTS idx_clientes_resultado_consulta_pd

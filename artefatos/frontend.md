@@ -173,7 +173,7 @@ Quando não há consulta anterior, o badge de delta não é exibido.
 
 Exibe os dados de `ClusterResultadoResponse` da consulta mais recente. Colunas: Cluster ID, Clientes, PD Média, Score Cross Médio, Fator de Alavancagem, Limite Otimizado e Status (Viável / Sem Solução).
 
-- Busca filtra por `CLU-{cluster_id}` em tempo real
+- Busca filtra por `CLU-{segmento_id}` em tempo real
 - Paginação de 15 registros por página
 - Exportar gera `clusters_{safra}.csv` no browser via `Blob`, sem chamar a API
 
@@ -254,7 +254,7 @@ Mesmos quatro campos de `ConsultaResponse`: `n_clusters`, `z_otimo`, `n_clientes
 | -------------- | --------------------------------------------------------------------------------------- |
 | `BarChartP5`   | Top 15 clusters por `limite_otimizado`, ordenados decrescentemente                      |
 | `DonutChartP5` | Distribuição de clientes: Com limite / Elegível sem limite / Inelegível                 |
-| `LineChartP5` | Evolução do `z_otimo` entre consultas concluídas, ordenadas cronologicamente            |
+| `LineChartP5`  | Evolução do `z_otimo` entre consultas concluídas, ordenadas cronologicamente            |
 | `RiskHistP5`   | Histograma de clusters por faixa de PD média: 0-5%, 5-10%, 10-15%, 15-20%, 20-25%, 25%+ |
 
 ### 9.4 Parâmetros utilizados
@@ -309,12 +309,12 @@ Grid de dois cards por linha exibindo os parâmetros fixados pela modelagem ou p
 
 Todos os gráficos são componentes **p5.js** (instance mode) definidos em `Resultados.js` como variáveis globais (`var`), acessíveis por `GerarLimites.js` e `Clientes.js` após o carregamento dos scripts. Cada componente cria seu próprio `<canvas>` via `new p5(sketch, node)` e desenha programaticamente, com animação de entrada e interações de mouse. A biblioteca p5.js é carregada por CDN no `index.html`.
 
-| Componente      | Tipo                | Descrição                                                                                                                                                                  |
-| --------------- | ------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `BarChartP5`    | Barras verticais    | Barras azul PAN para clusters com limite, cinza `#E8EFF7` para clusters sem solução. Rótulo de valor acima de cada barra. Eixo Y com escala automática em R$k ou R$M.     |
-| `LineChartP5`   | Linha com área      | Área sombreada azul, pontos com rótulo de valor alternados. Requer no mínimo 2 pontos; exibe aviso quando há apenas uma consulta.                                         |
-| `DonutChartP5`  | Rosca               | Fatias calculadas a partir das contagens da `ConsultaResponse`. Legenda lateral (React) com valores absolutos; centro mostra total ou o % da fatia em destaque.          |
-| `RiskHistP5`    | Histograma de risco | Seis faixas de PD média com gradiente visual de verde (baixo risco) a vermelho (alto risco). Conta clusters por faixa.                                                    |
+| Componente     | Tipo                | Descrição                                                                                                                                                             |
+| -------------- | ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `BarChartP5`   | Barras verticais    | Barras azul PAN para clusters com limite, cinza `#E8EFF7` para clusters sem solução. Rótulo de valor acima de cada barra. Eixo Y com escala automática em R$k ou R$M. |
+| `LineChartP5`  | Linha com área      | Área sombreada azul, pontos com rótulo de valor alternados. Requer no mínimo 2 pontos; exibe aviso quando há apenas uma consulta.                                     |
+| `DonutChartP5` | Rosca               | Fatias calculadas a partir das contagens da `ConsultaResponse`. Legenda lateral (React) com valores absolutos; centro mostra total ou o % da fatia em destaque.       |
+| `RiskHistP5`   | Histograma de risco | Seis faixas de PD média com gradiente visual de verde (baixo risco) a vermelho (alto risco). Conta clusters por faixa.                                                |
 
 ### 12.1 Animações e interações (p5.js)
 
@@ -339,9 +339,9 @@ Como o volume real é muito maior que um exemplo didático (dezenas de clusters)
 **Duas leituras (toggle Clientes ⇄ Crédito R$):**
 
 - No modo **Clientes**, a largura das fitas é o número de pessoas que fluem por cada etapa.
-- No modo **Crédito (R$)**, a largura passa a representar o R$ concedido (limite × clientes). Assim o diagrama vira literalmente o *fluxo de concessão de crédito*: os Inelegíveis e a faixa "Sem oferta" desaparecem (não concedem crédito), e os clusters aparecem proporcionais ao crédito que geram.
+- No modo **Crédito (R$)**, a largura passa a representar o R$ concedido (limite × clientes). Assim o diagrama vira literalmente o _fluxo de concessão de crédito_: os Inelegíveis e a faixa "Sem oferta" desaparecem (não concedem crédito), e os clusters aparecem proporcionais ao crédito que geram.
 
-Além disso, o canto superior direito mostra o **crédito concedido total** (Σ limite × clientes ≈ valor objetivo *z*) e cada **faixa de limite exibe o R$** total concedido, não só o número de clientes.
+Além disso, o canto superior direito mostra o **crédito concedido total** (Σ limite × clientes ≈ valor objetivo _z_) e cada **faixa de limite exibe o R$** total concedido, não só o número de clientes.
 
 Interações (programadas em p5.js):
 
@@ -358,7 +358,7 @@ As capturas abaixo mostram as telas da aplicação efetivamente implementadas no
 
 ### 13.1 Cockpit (Dashboard)
 
-Visão geral da última simulação: indicadores consolidados (total de clientes, clusters, elegíveis e valor objetivo *z*) com deltas em relação à safra anterior, e tabela de clusters com status de viabilidade.
+Visão geral da última simulação: indicadores consolidados (total de clientes, clusters, elegíveis e valor objetivo _z_) com deltas em relação à safra anterior, e tabela de clusters com status de viabilidade.
 
 ![Tela Cockpit - indicadores consolidados e tabela de clusters](figuras/frontend/01-cockpit.png)
 
@@ -402,16 +402,16 @@ Diagrama de Sankey no final do Cockpit e do Resultados: Base → Elegibilidade �
 
 A implementação do front-end manteve os fluxos centrais definidos no protótipo: carregamento da base, geração de limites, acompanhamento dos resultados, visualização analítica e configuração dos parâmetros do modelo. No entanto, durante a integração com o back-end e com o otimizador, algumas decisões de implementação foram ajustadas para refletir melhor a arquitetura real da solução e as necessidades técnicas do pipeline de otimização.
 
-| Item no protótipo | Implementação entregue | Justificativa |
-| ----------------- | ---------------------- | ------------- |
-| Upload de arquivo CSV/XLSX simulando uma base parquet | Upload real de arquivo `.parquet` | O `.parquet` é o formato utilizado pelo pipeline de dados e pelo back-end. A alteração aproxima a interface da operação real esperada em produção e reduz inconsistências entre protótipo e execução técnica. |
-| Geração de limites apresentada como uma ação imediata após o upload | Execução assíncrona com criação de consulta, status pendente e acompanhamento por polling | O processo de otimização envolve leitura da base, calibração de PD, clusterização e execução do Simplex, etapas que podem demandar tempo. Por isso, a interface foi adaptada para acompanhar uma execução longa sem bloquear o uso da aplicação. |
-| Upload simples de arquivo único | Upload em chunks com barra de progresso | A estratégia em chunks melhora a robustez para arquivos grandes, evita falhas por limite de payload e oferece feedback visual mais adequado ao usuário durante o envio da base. |
-| Visualizações previstas de forma conceitual no protótipo | Gráficos em **p5.js** (canvas) no front-end: barras, rosca, linha temporal e histograma de risco | Os quatro gráficos são desenhados em canvas via p5.js, atendendo ao requisito da disciplina de canvas com animações e interações programadas. Cada gráfico tem animação de entrada com easing e interações de mouse (tooltip que segue o cursor + destaque do elemento em foco), mantendo as métricas reais do modelo e a paleta PAN. |
-| O protótipo não previa uma visão do fluxo do pipeline | Diagrama de **Sankey** ("Fluxo do Pipeline") em p5.js no Cockpit e no Resultados, com leitura alternável por nº de clientes ou por crédito concedido (R$) | Camada analítica nova (não prevista no protótipo) que torna explícito como a base flui da elegibilidade → clusters (CART) → faixas de limite (Simplex). Foi adaptada ao volume real de dados (Top N clusters + nó "Outros" com faixas próprias, cor por faixa de risco) e traz hover, foco travado por clique e animação de entrada. |
-| Tela de configurações com parâmetros gerais do modelo | Modal de configuração com os parâmetros utilizados pelo otimizador: `t`, `LGD`, `u_bar`, `L_max` e `T` | A implementação priorizou os parâmetros efetivamente consumidos pelo modelo de programação linear, garantindo consistência entre interface, back-end e otimizador. |
-| Resultados exibidos principalmente por cluster | Resultados por cluster, indicadores consolidados, histórico de simulações e exportação de clientes | A entrega expande a análise planejada no protótipo, oferecendo uma visão mais completa para acompanhamento das safras e reutilização dos resultados em outros sistemas. |
-| Não havia uma tela específica para análise individual de clientes | Inclusão da tela de busca por token e histórico do cliente | A nova tela melhora a capacidade de auditoria da solução, permitindo acompanhar a evolução de um cliente específico entre diferentes simulações e safras. |
-| Protótipo focado na experiência visual da jornada | Front-end integrado aos contratos reais da API | A implementação deixou de ser apenas demonstrativa e passou a consumir os endpoints reais do back-end, aumentando a fidelidade técnica da entrega parcial. |
+| Item no protótipo                                                   | Implementação entregue                                                                                                                                    | Justificativa                                                                                                                                                                                                                                                                                                                         |
+| ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Upload de arquivo CSV/XLSX simulando uma base parquet               | Upload real de arquivo `.parquet`                                                                                                                         | O `.parquet` é o formato utilizado pelo pipeline de dados e pelo back-end. A alteração aproxima a interface da operação real esperada em produção e reduz inconsistências entre protótipo e execução técnica.                                                                                                                         |
+| Geração de limites apresentada como uma ação imediata após o upload | Execução assíncrona com criação de consulta, status pendente e acompanhamento por polling                                                                 | O processo de otimização envolve leitura da base, calibração de PD, clusterização e execução do Simplex, etapas que podem demandar tempo. Por isso, a interface foi adaptada para acompanhar uma execução longa sem bloquear o uso da aplicação.                                                                                      |
+| Upload simples de arquivo único                                     | Upload em chunks com barra de progresso                                                                                                                   | A estratégia em chunks melhora a robustez para arquivos grandes, evita falhas por limite de payload e oferece feedback visual mais adequado ao usuário durante o envio da base.                                                                                                                                                       |
+| Visualizações previstas de forma conceitual no protótipo            | Gráficos em **p5.js** (canvas) no front-end: barras, rosca, linha temporal e histograma de risco                                                          | Os quatro gráficos são desenhados em canvas via p5.js, atendendo ao requisito da disciplina de canvas com animações e interações programadas. Cada gráfico tem animação de entrada com easing e interações de mouse (tooltip que segue o cursor + destaque do elemento em foco), mantendo as métricas reais do modelo e a paleta PAN. |
+| O protótipo não previa uma visão do fluxo do pipeline               | Diagrama de **Sankey** ("Fluxo do Pipeline") em p5.js no Cockpit e no Resultados, com leitura alternável por nº de clientes ou por crédito concedido (R$) | Camada analítica nova (não prevista no protótipo) que torna explícito como a base flui da elegibilidade → clusters (CART) → faixas de limite (Simplex). Foi adaptada ao volume real de dados (Top N clusters + nó "Outros" com faixas próprias, cor por faixa de risco) e traz hover, foco travado por clique e animação de entrada.  |
+| Tela de configurações com parâmetros gerais do modelo               | Modal de configuração com os parâmetros utilizados pelo otimizador: `t`, `LGD`, `u_bar`, `L_max` e `T`                                                    | A implementação priorizou os parâmetros efetivamente consumidos pelo modelo de programação linear, garantindo consistência entre interface, back-end e otimizador.                                                                                                                                                                    |
+| Resultados exibidos principalmente por cluster                      | Resultados por cluster, indicadores consolidados, histórico de simulações e exportação de clientes                                                        | A entrega expande a análise planejada no protótipo, oferecendo uma visão mais completa para acompanhamento das safras e reutilização dos resultados em outros sistemas.                                                                                                                                                               |
+| Não havia uma tela específica para análise individual de clientes   | Inclusão da tela de busca por token e histórico do cliente                                                                                                | A nova tela melhora a capacidade de auditoria da solução, permitindo acompanhar a evolução de um cliente específico entre diferentes simulações e safras.                                                                                                                                                                             |
+| Protótipo focado na experiência visual da jornada                   | Front-end integrado aos contratos reais da API                                                                                                            | A implementação deixou de ser apenas demonstrativa e passou a consumir os endpoints reais do back-end, aumentando a fidelidade técnica da entrega parcial.                                                                                                                                                                            |
 
 Essas diferenças foram incorporadas como melhorias de viabilidade técnica e aderência ao funcionamento real da aplicação. Assim, a entrega preserva a intenção original do protótipo, mas adapta a experiência para um cenário mais próximo da execução em produção, considerando arquivos grandes, processamento assíncrono, persistência dos resultados e integração com o otimizador.

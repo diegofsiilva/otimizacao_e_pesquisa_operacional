@@ -473,7 +473,7 @@ var GerarLimites = function (props) {
       return b.limite_otimizado - a.limite_otimizado;
     });
     barData = sorted.slice(0, 15).map(function (c) {
-      return { label: "CLU-" + c.cluster_id, value: c.limite_otimizado };
+      return { label: "CLU-" + c.segmento_id, value: c.limite_otimizado };
     });
   }
 
@@ -1369,7 +1369,6 @@ var GerarLimites = function (props) {
           </div>
         )}
       </div>
-
     </div>
   );
 };

@@ -409,7 +409,7 @@ var Clientes = function (props) {
                       <div className="flex justify-between text-xs">
                         <span className="text-[#9C9C9F]">Cluster</span>
                         <span className="font-semibold text-[#2E6DA4]">
-                          CLU-{h.cluster_id}
+                          CLU-{h.segmento_id}
                         </span>
                       </div>
                     </div>
@@ -496,7 +496,7 @@ var Clientes = function (props) {
                           </span>
                         </td>
                         <td className="px-3 py-2.5 font-mono font-semibold text-[#2E6DA4]">
-                          CLU-{h.cluster_id}
+                          CLU-{h.segmento_id}
                         </td>
                         <td
                           className={

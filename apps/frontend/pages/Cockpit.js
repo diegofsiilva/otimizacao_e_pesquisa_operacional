@@ -157,7 +157,7 @@ var Cockpit = function (props) {
       var deltaPulp =
         limitePulp == null ? "" : (c.limite_otimizado || 0) - limitePulp;
       return [
-        "CLU-" + c.cluster_id,
+        "CLU-" + c.segmento_id,
         c.n_clientes,
         (c.pd_media * 100).toFixed(2),
         Math.round(c.score_credito_cross_medio),
@@ -192,7 +192,8 @@ var Cockpit = function (props) {
 
   var filtered = clusters.filter(function (c) {
     return (
-      ("CLU-" + c.cluster_id).toLowerCase().indexOf(search.toLowerCase()) !== -1
+      ("CLU-" + c.segmento_id).toLowerCase().indexOf(search.toLowerCase()) !==
+      -1
     );
   });
 
@@ -707,14 +708,14 @@ var Cockpit = function (props) {
                     limitePulp == null ? null : c.limite_otimizado - limitePulp;
                   return (
                     <tr
-                      key={c.cluster_id}
+                      key={c.segmento_id}
                       className={
                         "border-b border-[#E2EAF4] hover:bg-[#E2EAF4] transition-colors " +
                         (i % 2 === 0 ? "" : "bg-[#F7FAFD]")
                       }
                     >
                       <td className="px-4 py-3 font-mono font-semibold text-[#2E6DA4]">
-                        CLU-{c.cluster_id}
+                        CLU-{c.segmento_id}
                       </td>
                       <td className="px-4 py-3 font-medium text-[#0D1B2A]">
                         {Number(c.n_clientes).toLocaleString("pt-BR")}
@@ -859,7 +860,8 @@ var Cockpit = function (props) {
             Fluxo do Pipeline
           </div>
           <div className="text-xs text-[#9C9C9F] mb-3">
-            Como a base de clientes flui da elegibilidade aos clusters e às faixas de limite
+            Como a base de clientes flui da elegibilidade aos clusters e às
+            faixas de limite
           </div>
           <SankeyPipelineP5
             total={consultaAtual.n_clientes_total}

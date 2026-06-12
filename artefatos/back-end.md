@@ -1,6 +1,5 @@
 # Otimizador e Back-end
 
-
 ## Contextualização
 
 O Banco Pan oferece cartões de crédito pré-aprovados a clientes correntistas. A decisão de qual limite de crédito oferecer a cada cliente é hoje tomada com base em tabelas fixas, que não consideram a heterogeneidade entre perfis e não controlam o risco agregado da carteira.
@@ -843,7 +842,7 @@ A documentação interativa dos endpoints fica disponível em `{APP_HOST}:{APP_P
 **Fluxo:**
 
 ```bash
-# 1. Iniciar 
+# 1. Iniciar
 curl -X POST "http://127.0.0.1:8000/api/uploads/iniciar?nome_arquivo=base_ref_M1_v2.parquet"
 # -> {"upload_id": "abc123..."}
 
@@ -878,7 +877,7 @@ Pipeline completo executado com sucesso. Status transitou de `pendente` → `exe
 curl "http://127.0.0.1:8000/api/consultas/3cf613e8-.../clusters"
 ```
 
-Retornou 150 clusters com todos os campos (`cluster_id`, `n_clientes`, `pd_media`, `pi_media`, `cp_percentil5`, `score_credito_cross_medio`, `ck_medio`, `fator_alavancagem`, `limite_otimizado`).
+Retornou 150 clusters com todos os campos (`segmento_id`, `n_clientes`, `pd_media`, `pi_media`, `cp_percentil5`, `score_credito_cross_medio`, `ck_medio`, `fator_alavancagem`, `limite_otimizado`).
 
 #### Teste 3: Listagem paginada de clientes
 

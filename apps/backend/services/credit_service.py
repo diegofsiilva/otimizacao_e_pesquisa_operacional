@@ -96,7 +96,7 @@ def _row_para_cliente(row) -> ClienteResultadoResponse:
         pd_calibrada=row["pd_calibrada"],
         pi_normalizado=row["pi_normalizado"],
         cp_proxy=row["cp_proxy"],
-        cluster_id=row["cluster_id"],
+        segmento_id=row["segmento_id"],
         limite_otimizado=row["limite_otimizado"],
     )
 
@@ -175,7 +175,7 @@ async def _pipeline_background(
             await conn.executemany(
                 """
                 INSERT INTO clusters_resultado (
-                    consulta_id, cluster_id, n_clientes, pd_media, pi_media,
+                    consulta_id, segmento_id, n_clientes, pd_media, pi_media,
                     cp_percentil5, score_credito_cross_medio, ck_medio,
                     fator_alavancagem, limite_otimizado, limite_otimizado_pulp
                 ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
@@ -183,7 +183,7 @@ async def _pipeline_background(
                 [
                     (
                         consulta_id,
-                        c["cluster_id"],
+                        c["segmento_id"],
                         c["n_clientes"],
                         c["pd_media"],
                         c["pi_media"],
@@ -201,10 +201,10 @@ async def _pipeline_background(
         # 4. persiste clientes_resultado via bulk insert
         df_cc = pd.read_parquet(parquet_cc)
 
-        # mapa de limite por cluster_id para desnormalizar em clientes_resultado
-        limite_por_cluster = {c["cluster_id"]: c["limite_otimizado"] for c in clusters}
+        # mapa de limite por segmento_id para desnormalizar em clientes_resultado
+        limite_por_cluster = {c["segmento_id"]: c["limite_otimizado"] for c in clusters}
         df_cc["limite_otimizado"] = (
-            df_cc["cluster_id"].map(limite_por_cluster).fillna(0).astype(int)
+            df_cc["segmento_id"].map(limite_por_cluster).fillna(0).astype(int)
         )
 
         # funções de conversão explícita para cada tipo esperado pelo asyncpg.
@@ -243,7 +243,7 @@ async def _pipeline_background(
                 [_rf(v) for v in df_cc["pd_calibrada"]],
                 [_rf(v) for v in df_cc["pi"]],
                 [_rf(v) for v in df_cc["cp_proxy"]],
-                [_ri(v) for v in df_cc["cluster_id"]],
+                [_ri(v) for v in df_cc["segmento_id"]],
                 [_ri(v) for v in df_cc["limite_otimizado"]],
             )
         )
@@ -273,7 +273,7 @@ async def _pipeline_background(
                     "pd_calibrada",
                     "pi_normalizado",
                     "cp_proxy",
-                    "cluster_id",
+                    "segmento_id",
                     "limite_otimizado",
                 ],
             )
@@ -544,7 +544,7 @@ async def criar_consulta(
 
 async def get_clusters(consulta_id: UUID) -> list[ClusterResultadoResponse] | None:
     """
-    Retorna os clusters de uma consulta ordenados pelo cluster_id.
+    Retorna os clusters de uma consulta ordenados pelo segmento_id.
     Retorna None se a consulta não existir.
     """
     pool = get_pool()
@@ -557,19 +557,19 @@ async def get_clusters(consulta_id: UUID) -> list[ClusterResultadoResponse] | No
 
         rows = await conn.fetch(
             """
-            SELECT cluster_id, n_clientes, pd_media, pi_media, cp_percentil5,
+            SELECT segmento_id, n_clientes, pd_media, pi_media, cp_percentil5,
                    score_credito_cross_medio, ck_medio, fator_alavancagem,
                    limite_otimizado, limite_otimizado_pulp
             FROM clusters_resultado
             WHERE consulta_id = $1
-            ORDER BY cluster_id ASC
+            ORDER BY segmento_id ASC
             """,
             str(consulta_id),
         )
 
     return [
         ClusterResultadoResponse(
-            cluster_id=row["cluster_id"],
+            segmento_id=row["segmento_id"],
             n_clientes=row["n_clientes"],
             pd_media=row["pd_media"],
             pi_media=row["pi_media"],

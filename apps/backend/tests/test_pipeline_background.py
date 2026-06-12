@@ -80,7 +80,7 @@ class PipelineBackgroundTestCase(unittest.TestCase):
                 "z": 123.45,
                 "clusters": [
                     {
-                        "cluster_id": 0,
+                        "segmento_id": 0,
                         "n_clientes": 1,
                         "pd_media": 0.02,
                         "pi_media": 0.5,
@@ -120,7 +120,7 @@ class PipelineBackgroundTestCase(unittest.TestCase):
                         "pd_calibrada": 0.02,
                         "pi": 0.5,
                         "cp_proxy": 1000.0,
-                        "cluster_id": 0,
+                        "segmento_id": 0,
                     }
                 ]
             )

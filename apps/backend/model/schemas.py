@@ -107,7 +107,7 @@ class ConsultaResponse(BaseModel):
 class ClusterResultadoResponse(BaseModel):
     """Representação de um cluster com seus parâmetros agregados e limite otimizado."""
 
-    cluster_id: int
+    segmento_id: int
     n_clientes: int
     pd_media: float
     pi_media: float
@@ -166,7 +166,7 @@ class ClienteResultadoResponse(BaseModel):
     cp_proxy: float
 
     # atribuição pelo clustering e LP
-    cluster_id: int
+    segmento_id: int
     limite_otimizado: int
 
 

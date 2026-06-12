@@ -65,12 +65,12 @@ A.append([row["n_k"] * (row["PD_k"] - pd_fin_atual) for _, row in clusters.iterr
 b.append(0.0)
 for _, row in clusters.iterrows():
     linha = [0.0] * len(clusters)
-    linha[int(row["cluster_id"])] = 1.0
+    linha[int(row["segmento_id"])] = 1.0
     A.append(linha)
     b.append(row["m_k"] * row["CP_k"])
 for _, row in clusters.iterrows():
     linha = [0.0] * len(clusters)
-    linha[int(row["cluster_id"])] = 1.0
+    linha[int(row["segmento_id"])] = 1.0
     A.append(linha)
     b.append(L_max)
 

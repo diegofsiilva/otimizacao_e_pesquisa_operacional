@@ -12,7 +12,7 @@ Entrada:
     - parametros.json          : parametros do modelo (padrao: parametros.json)
 
 Saida:
-    - <nome>_calibrado_com_cluster.parquet : base com cluster_id adicionada
+    - <nome>_calibrado_com_cluster.parquet : base com segmento_id adicionada
     - <nome>_calibrado_clusters.parquet    : tabela agregada por cluster para o LP
 
 Arquivos parquet de entrada devem estar em data/cache/
@@ -171,14 +171,14 @@ def main(
     folhas_raw = arvore.apply(X)
     folhas_unicas = np.unique(folhas_raw)
     mapa_folha = {folha: idx for idx, folha in enumerate(folhas_unicas)}
-    df["cluster_id"] = np.vectorize(mapa_folha.get)(folhas_raw)
+    df["segmento_id"] = np.vectorize(mapa_folha.get)(folhas_raw)
 
     print("\nAgregando parametros por cluster...")
 
     def p5(x: pd.Series) -> float:
         return float(np.nanquantile(x.astype(float), 0.05))
 
-    clusters = df.groupby("cluster_id", as_index=False).agg(
+    clusters = df.groupby("segmento_id", as_index=False).agg(
         n_k=("token", "count"),
         PD_k=("pd_calibrada", "mean"),
         pi_k=("pi", "mean"),

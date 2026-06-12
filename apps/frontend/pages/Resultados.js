@@ -326,7 +326,10 @@ var LineChartP5 = function (props) {
             } else {
               var pv = pts[j - 1];
               var fr = nVis - (j - 1);
-              p.vertex(pv.x + (pts[j].x - pv.x) * fr, pv.y + (pts[j].y - pv.y) * fr);
+              p.vertex(
+                pv.x + (pts[j].x - pv.x) * fr,
+                pv.y + (pts[j].y - pv.y) * fr,
+              );
               break;
             }
           }
@@ -337,7 +340,11 @@ var LineChartP5 = function (props) {
           var bestDx = 24;
           for (var k = 0; k < pts.length; k++) {
             var dx = Math.abs(p.mouseX - pts[k].x);
-            if (dx < bestDx && p.mouseY > padL.top - 10 && p.mouseY < padL.top + ch + 10) {
+            if (
+              dx < bestDx &&
+              p.mouseY > padL.top - 10 &&
+              p.mouseY < padL.top + ch + 10
+            ) {
               bestDx = dx;
               hover = k;
             }
@@ -548,12 +555,7 @@ var DonutChartP5 = function (props) {
     [dataKey],
   );
 
-  return (
-    <div
-      ref={ref}
-      style={{ width: 150, height: 150, flexShrink: 0 }}
-    />
-  );
+  return <div ref={ref} style={{ width: 150, height: 150, flexShrink: 0 }} />;
 };
 
 // ============================================================================
@@ -647,7 +649,8 @@ var RiskHistP5 = function (props) {
 
           for (var i = 0; i < bins.length; i++) {
             var x = padH.left + slot * i + (slot - bw) / 2;
-            var full = bins[i].count > 0 ? Math.max(ch * (bins[i].count / max), 2) : 0;
+            var full =
+              bins[i].count > 0 ? Math.max(ch * (bins[i].count / max), 2) : 0;
             var bh = full * t;
             var y = padH.top + ch - bh;
             var over =
@@ -682,7 +685,8 @@ var RiskHistP5 = function (props) {
           if (hover >= 0) {
             _drawTooltip(p, [
               "PD " + bins[hover].label,
-              bins[hover].count + (bins[hover].count === 1 ? " cluster" : " clusters"),
+              bins[hover].count +
+                (bins[hover].count === 1 ? " cluster" : " clusters"),
             ]);
             p.cursor(p.HAND);
           } else {
@@ -856,7 +860,7 @@ var PulpSimplexCompareP5 = function (props) {
 // R$ concedido); clique TRAVA o foco; animacao revela as colunas em sequencia.
 // No canto: total de credito concedido (soma de todos os clusters).
 //
-// props: { total, elegiveis, clusters:[{cluster_id,n_clientes,pd_media,limite_otimizado}], topN }
+// props: { total, elegiveis, clusters:[{segmento_id,n_clientes,pd_media,limite_otimizado}], topN }
 // ============================================================================
 
 // paleta de risco por PD media (mesma do histograma RiskHistP5)
@@ -918,7 +922,7 @@ var SankeyPipelineP5 = function (props) {
     topN: topN,
     mode: mode,
     c: clusters.map(function (c) {
-      return [c.cluster_id, c.n_clientes, c.pd_media, c.limite_otimizado];
+      return [c.segmento_id, c.n_clientes, c.pd_media, c.limite_otimizado];
     }),
   });
 
@@ -951,7 +955,9 @@ var SankeyPipelineP5 = function (props) {
         }
         // metrica ativa de um cluster
         function metric(c) {
-          return isCred ? (c.limite_otimizado || 0) * c.n_clientes : c.n_clientes;
+          return isCred
+            ? (c.limite_otimizado || 0) * c.n_clientes
+            : c.n_clientes;
         }
 
         function build() {
@@ -968,13 +974,37 @@ var SankeyPipelineP5 = function (props) {
           var vElig = isCred ? creditoTotal : elig; // todo o credito vem dos elegiveis
           var vNao = isCred ? 0 : Math.max(0, total - elig);
 
-          var nTotal = { id: "total", col: 0, label: "Clientes", value: vTotal, cli: total, cred: creditoTotal, cor: [100, 120, 160] };
-          var nElig = { id: "elig", col: 1, label: "Elegiveis", value: vElig, cli: elig, cred: creditoTotal, cor: [60, 140, 200] };
+          var nTotal = {
+            id: "total",
+            col: 0,
+            label: "Clientes",
+            value: vTotal,
+            cli: total,
+            cred: creditoTotal,
+            cor: [100, 120, 160],
+          };
+          var nElig = {
+            id: "elig",
+            col: 1,
+            label: "Elegiveis",
+            value: vElig,
+            cli: elig,
+            cred: creditoTotal,
+            cor: [60, 140, 200],
+          };
           nodes.push(nTotal, nElig);
           links.push({ src: nTotal, dst: nElig, val: vElig, cor: nElig.cor });
 
           if (vNao > 0) {
-            var nNao = { id: "nao", col: 1, label: "Inelegiveis", value: vNao, cli: Math.max(0, total - elig), cred: 0, cor: [160, 160, 170] };
+            var nNao = {
+              id: "nao",
+              col: 1,
+              label: "Inelegiveis",
+              value: vNao,
+              cli: Math.max(0, total - elig),
+              cred: 0,
+              cor: [160, 160, 170],
+            };
             nodes.push(nNao);
             links.push({ src: nTotal, dst: nNao, val: vNao, cor: nNao.cor });
           }
@@ -995,7 +1025,16 @@ var SankeyPipelineP5 = function (props) {
           function getShared(idx) {
             if (!sharedFaixa[idx]) {
               var m = _SANKEY_FAIXA_META[idx];
-              sharedFaixa[idx] = { id: "fxs" + idx, col: 3, label: m.label, value: 0, cli: 0, cred: 0, cor: m.cor, faixa: true };
+              sharedFaixa[idx] = {
+                id: "fxs" + idx,
+                col: 3,
+                label: m.label,
+                value: 0,
+                cli: 0,
+                cred: 0,
+                cor: m.cor,
+                faixa: true,
+              };
             }
             return sharedFaixa[idx];
           }
@@ -1004,7 +1043,17 @@ var SankeyPipelineP5 = function (props) {
           function getOutros(idx) {
             if (!outrosFaixa[idx]) {
               var m = _SANKEY_FAIXA_META[idx];
-              outrosFaixa[idx] = { id: "fxo" + idx, col: 3, label: m.label, value: 0, cli: 0, cred: 0, cor: m.cor, faixa: true, doOutros: true };
+              outrosFaixa[idx] = {
+                id: "fxo" + idx,
+                col: 3,
+                label: m.label,
+                value: 0,
+                cli: 0,
+                cred: 0,
+                cor: m.cor,
+                faixa: true,
+                doOutros: true,
+              };
             }
             return outrosFaixa[idx];
           }
@@ -1014,9 +1063,9 @@ var SankeyPipelineP5 = function (props) {
             if (v <= 0) return; // no modo credito, clusters sem oferta somem
             var cor = _sankeyRiscoCor(c.pd_media);
             var nc = {
-              id: "c" + c.cluster_id,
+              id: "c" + c.segmento_id,
               col: 2,
-              label: "CLU-" + c.cluster_id,
+              label: "CLU-" + c.segmento_id,
               value: v,
               cli: c.n_clientes,
               cred: (c.limite_otimizado || 0) * c.n_clientes,
@@ -1044,9 +1093,23 @@ var SankeyPipelineP5 = function (props) {
               var restCred = rest.reduce(function (s, c) {
                 return s + (c.limite_otimizado || 0) * c.n_clientes;
               }, 0);
-              var nOut = { id: "outros", col: 2, label: "Outros (" + rest.length + ")", value: restV, cli: restCli, cred: restCred, cor: [165, 170, 180], outros: true };
+              var nOut = {
+                id: "outros",
+                col: 2,
+                label: "Outros (" + rest.length + ")",
+                value: restV,
+                cli: restCli,
+                cred: restCred,
+                cor: [165, 170, 180],
+                outros: true,
+              };
               nodes.push(nOut);
-              links.push({ src: nElig, dst: nOut, val: restV, cor: [180, 185, 195] });
+              links.push({
+                src: nElig,
+                dst: nOut,
+                val: restV,
+                cor: [180, 185, 195],
+              });
               var byFaixa = {};
               rest.forEach(function (c) {
                 var v = metric(c);
@@ -1062,7 +1125,12 @@ var SankeyPipelineP5 = function (props) {
                 fx.value += byFaixa[fk].v;
                 fx.cli += byFaixa[fk].cli;
                 fx.cred += byFaixa[fk].cred;
-                links.push({ src: nOut, dst: fx, val: byFaixa[fk].v, cor: [180, 185, 195] });
+                links.push({
+                  src: nOut,
+                  dst: fx,
+                  val: byFaixa[fk].v,
+                  cor: [180, 185, 195],
+                });
               });
             }
           }
@@ -1071,12 +1139,20 @@ var SankeyPipelineP5 = function (props) {
           // proprias do "Outros" (desc) - mantem os dois grupos separados.
           Object.keys(sharedFaixa)
             .map(Number)
-            .sort(function (a, b) { return b - a; })
-            .forEach(function (k) { nodes.push(sharedFaixa[k]); });
+            .sort(function (a, b) {
+              return b - a;
+            })
+            .forEach(function (k) {
+              nodes.push(sharedFaixa[k]);
+            });
           Object.keys(outrosFaixa)
             .map(Number)
-            .sort(function (a, b) { return b - a; })
-            .forEach(function (k) { nodes.push(outrosFaixa[k]); });
+            .sort(function (a, b) {
+              return b - a;
+            })
+            .forEach(function (k) {
+              nodes.push(outrosFaixa[k]);
+            });
 
           layout();
         }
@@ -1163,7 +1239,9 @@ var SankeyPipelineP5 = function (props) {
         };
 
         function nodeContains(n, mx, my) {
-          return mx >= n.x - 2 && mx <= n.x + n.w + 2 && my >= n.y && my <= n.y + n.h;
+          return (
+            mx >= n.x - 2 && mx <= n.x + n.w + 2 && my >= n.y && my <= n.y + n.h
+          );
         }
         function linkContains(lk, mx, my) {
           if (mx < lk.srcX || mx > lk.dstX) return false;
@@ -1187,7 +1265,9 @@ var SankeyPipelineP5 = function (props) {
             return (
               n === fn ||
               links.some(function (l) {
-                return (l.src === fn && l.dst === n) || (l.dst === fn && l.src === n);
+                return (
+                  (l.src === fn && l.dst === n) || (l.dst === fn && l.src === n)
+                );
               })
             );
           return fl.src === n || fl.dst === n;
@@ -1209,12 +1289,21 @@ var SankeyPipelineP5 = function (props) {
           p.beginShape();
           p.vertex(lk.srcX, lk.srcY);
           for (var t = 0; t <= 1.0001; t += 0.05)
-            p.vertex(p.bezierPoint(lk.srcX, cpX, cpX, lk.dstX, t), p.bezierPoint(lk.srcY, lk.srcY, lk.dstY, lk.dstY, t));
+            p.vertex(
+              p.bezierPoint(lk.srcX, cpX, cpX, lk.dstX, t),
+              p.bezierPoint(lk.srcY, lk.srcY, lk.dstY, lk.dstY, t),
+            );
           p.vertex(lk.dstX, lk.dstY + lk.dstH);
           for (var u = 1; u >= -0.0001; u -= 0.05)
             p.vertex(
               p.bezierPoint(lk.srcX, cpX, cpX, lk.dstX, u),
-              p.bezierPoint(lk.srcY + lk.srcH, lk.srcY + lk.srcH, lk.dstY + lk.dstH, lk.dstY + lk.dstH, u),
+              p.bezierPoint(
+                lk.srcY + lk.srcH,
+                lk.srcY + lk.srcH,
+                lk.dstY + lk.dstH,
+                lk.dstY + lk.dstH,
+                u,
+              ),
             );
           p.vertex(lk.srcX, lk.srcY + lk.srcH);
           p.endShape(p.CLOSE);
@@ -1231,7 +1320,12 @@ var SankeyPipelineP5 = function (props) {
           p.textAlign(rightSide ? p.LEFT : p.RIGHT, p.CENTER);
           var fade = intro * (on ? 1 : 0.7);
           // faixas (col 3): mostram a metrica ativa + a outra em linha menor
-          var extra = n.col === 3 ? (isCred ? _sankeyFmtNum(n.cli) : _sankeyFmtReais(n.cred)) : null;
+          var extra =
+            n.col === 3
+              ? isCred
+                ? _sankeyFmtNum(n.cli)
+                : _sankeyFmtReais(n.cred)
+              : null;
           var midY = n.y + n.h / 2;
           p.fill(58, 64, 73, 255 * fade);
           p.textSize(12);
@@ -1257,7 +1351,8 @@ var SankeyPipelineP5 = function (props) {
             : ((n.cli / total) * 100).toFixed(1);
           lines.push(_sankeyFmtNum(n.cli) + " clientes (" + pct + "%)");
           if (n.cred > 0) lines.push(_sankeyFmtReais(n.cred) + " concedido");
-          if (n.pd != null) lines.push("PD media: " + (n.pd * 100).toFixed(1) + "%");
+          if (n.pd != null)
+            lines.push("PD media: " + (n.pd * 100).toFixed(1) + "%");
           if (n.faixa) lines.push("Faixa de limite");
           if (n.outros) lines.push("Demais clusters agregados");
           _drawTooltip(p, lines);
@@ -1303,7 +1398,11 @@ var SankeyPipelineP5 = function (props) {
           }
           p.textSize(10);
           p.textStyle(p.NORMAL);
-          var procs = ["Filtro de elegibilidade", "Clusterizacao (CART)", "Otimizacao (Simplex)"];
+          var procs = [
+            "Filtro de elegibilidade",
+            "Clusterizacao (CART)",
+            "Otimizacao (Simplex)",
+          ];
           for (var pc = 0; pc < 3; pc++) {
             p.fill(120, 150, 190, 230 * ease(colIntro(pc + 1)));
             p.text(procs[pc], 92 + colSp * (pc + 0.5), 46);
@@ -1333,7 +1432,8 @@ var SankeyPipelineP5 = function (props) {
 
         p.mousePressed = function () {
           if (!introDone) return;
-          if (p.mouseX < 0 || p.mouseX > W || p.mouseY < 0 || p.mouseY > H) return;
+          if (p.mouseX < 0 || p.mouseX > W || p.mouseY < 0 || p.mouseY > H)
+            return;
           if (hovN) {
             lockN = lockN === hovN ? null : hovN;
             lockL = null;
@@ -1404,13 +1504,25 @@ var SankeyPipelineP5 = function (props) {
           </div>
           <div className="flex items-center gap-3 text-[11px] text-[#9C9C9F]">
             <span className="flex items-center gap-1">
-              <span className="inline-block w-2.5 h-2.5" style={{ background: "#67DE98" }} /> baixo risco
+              <span
+                className="inline-block w-2.5 h-2.5"
+                style={{ background: "#67DE98" }}
+              />{" "}
+              baixo risco
             </span>
             <span className="flex items-center gap-1">
-              <span className="inline-block w-2.5 h-2.5" style={{ background: "#FAE95D" }} /> medio
+              <span
+                className="inline-block w-2.5 h-2.5"
+                style={{ background: "#FAE95D" }}
+              />{" "}
+              medio
             </span>
             <span className="flex items-center gap-1">
-              <span className="inline-block w-2.5 h-2.5" style={{ background: "#FF5D5C" }} /> alto risco
+              <span
+                className="inline-block w-2.5 h-2.5"
+                style={{ background: "#FF5D5C" }}
+              />{" "}
+              alto risco
             </span>
           </div>
         </div>
@@ -1461,11 +1573,15 @@ var ScatterSVG = function (props) {
   var maxVal =
     Math.max.apply(
       null,
-      clusters.reduce(function (acc, c) {
-        acc.push(c.limite_otimizado || 0);
-        if (c.limite_otimizado_pulp != null) acc.push(c.limite_otimizado_pulp);
-        return acc;
-      }, [1]),
+      clusters.reduce(
+        function (acc, c) {
+          acc.push(c.limite_otimizado || 0);
+          if (c.limite_otimizado_pulp != null)
+            acc.push(c.limite_otimizado_pulp);
+          return acc;
+        },
+        [1],
+      ),
     ) * 1.05;
 
   function scaleX(v) {
@@ -1491,7 +1607,12 @@ var ScatterSVG = function (props) {
     return "large";
   }
 
-  var colorMap = { match: "#22c55e", small: "#f59e0b", large: "#ef4444", na: "#cbd5e1" };
+  var colorMap = {
+    match: "#22c55e",
+    small: "#f59e0b",
+    large: "#ef4444",
+    na: "#cbd5e1",
+  };
 
   // ordena: divergentes por cima para facilitar leitura
   var sorted = clusters.slice().sort(function (a, b) {
@@ -1500,27 +1621,63 @@ var ScatterSVG = function (props) {
   });
 
   // contagens para legenda
-  var nMatch = clusters.filter(function (c) { return classify(c) === "match"; }).length;
-  var nSmall = clusters.filter(function (c) { return classify(c) === "small"; }).length;
-  var nLarge = clusters.filter(function (c) { return classify(c) === "large"; }).length;
+  var nMatch = clusters.filter(function (c) {
+    return classify(c) === "match";
+  }).length;
+  var nSmall = clusters.filter(function (c) {
+    return classify(c) === "small";
+  }).length;
+  var nLarge = clusters.filter(function (c) {
+    return classify(c) === "large";
+  }).length;
 
   return (
     <div>
-      <svg viewBox={"0 0 " + w + " " + h} width="100%" style={{ overflow: "visible" }}>
+      <svg
+        viewBox={"0 0 " + w + " " + h}
+        width="100%"
+        style={{ overflow: "visible" }}
+      >
         {/* grid lines */}
         {ticks.map(function (f) {
           var x = pad.left + f * cw;
           var y = pad.top + ch - f * ch;
           return (
             <g key={f}>
-              <line x1={x} x2={x} y1={pad.top} y2={pad.top + ch} stroke="#E8EFF7" strokeWidth="1" />
-              <line x1={pad.left} x2={pad.left + cw} y1={y} y2={y} stroke="#E8EFF7" strokeWidth="1" />
+              <line
+                x1={x}
+                x2={x}
+                y1={pad.top}
+                y2={pad.top + ch}
+                stroke="#E8EFF7"
+                strokeWidth="1"
+              />
+              <line
+                x1={pad.left}
+                x2={pad.left + cw}
+                y1={y}
+                y2={y}
+                stroke="#E8EFF7"
+                strokeWidth="1"
+              />
               {f > 0 && (
                 <g>
-                  <text x={x} y={pad.top + ch + 14} textAnchor="middle" fontSize="8" fill="#9C9C9F">
+                  <text
+                    x={x}
+                    y={pad.top + ch + 14}
+                    textAnchor="middle"
+                    fontSize="8"
+                    fill="#9C9C9F"
+                  >
                     {fmtAxis(maxVal * f)}
                   </text>
-                  <text x={pad.left - 6} y={y + 3} textAnchor="end" fontSize="8" fill="#9C9C9F">
+                  <text
+                    x={pad.left - 6}
+                    y={y + 3}
+                    textAnchor="end"
+                    fontSize="8"
+                    fill="#9C9C9F"
+                  >
                     {fmtAxis(maxVal * f)}
                   </text>
                 </g>
@@ -1531,9 +1688,14 @@ var ScatterSVG = function (props) {
 
         {/* diagonal de referência y = x */}
         <line
-          x1={scaleX(0)} y1={scaleY(0)}
-          x2={scaleX(maxVal)} y2={scaleY(maxVal)}
-          stroke="#2E6DA4" strokeWidth="1" strokeDasharray="4 3" opacity="0.4"
+          x1={scaleX(0)}
+          y1={scaleY(0)}
+          x2={scaleX(maxVal)}
+          y2={scaleY(maxVal)}
+          stroke="#2E6DA4"
+          strokeWidth="1"
+          strokeDasharray="4 3"
+          opacity="0.4"
         />
 
         {/* pontos */}
@@ -1582,8 +1744,14 @@ var ScatterSVG = function (props) {
           { color: "#ef4444", label: "Δ > R$500", n: nLarge },
         ].map(function (l) {
           return (
-            <div key={l.label} className="flex items-center gap-1.5 text-[10px] text-[#9C9C9F]">
-              <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ background: l.color }} />
+            <div
+              key={l.label}
+              className="flex items-center gap-1.5 text-[10px] text-[#9C9C9F]"
+            >
+              <div
+                className="w-2 h-2 rounded-full flex-shrink-0"
+                style={{ background: l.color }}
+              />
               {l.label}
               <span className="font-semibold text-[#3B4049]">{l.n}</span>
             </div>
@@ -1771,7 +1939,7 @@ var Resultados = function (props) {
     .slice(0, 12)
     .map(function (c) {
       return {
-        label: "CLU-" + c.cluster_id,
+        label: "CLU-" + c.segmento_id,
         simplex: c.limite_otimizado || 0,
         pulp: getLimitePulp(c) || 0,
       };
@@ -1785,7 +1953,7 @@ var Resultados = function (props) {
     })
     .slice(0, 15)
     .map(function (c) {
-      return { label: "CLU-" + c.cluster_id, value: c.limite_otimizado };
+      return { label: "CLU-" + c.segmento_id, value: c.limite_otimizado };
     });
 
   // Donut: distribuição de clientes
@@ -2038,7 +2206,8 @@ var Resultados = function (props) {
                   : "Solução ótima · Simplex",
               highlight: true,
               pulpOk:
-                selectedConsulta.z_pulp != null && selectedConsulta.delta_z_pct != null
+                selectedConsulta.z_pulp != null &&
+                selectedConsulta.delta_z_pct != null
                   ? selectedConsulta.delta_z_pct < 0.01
                   : null,
               pulpDelta:
@@ -2134,7 +2303,9 @@ var Resultados = function (props) {
       {selectedConsulta && selectedConsulta.z_pulp != null && (
         <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
           <div className="flex items-center gap-2 mb-4">
-            <div className="text-sm font-semibold text-[#0D1B2A]">Validação PuLP</div>
+            <div className="text-sm font-semibold text-[#0D1B2A]">
+              Validação PuLP
+            </div>
             {selectedConsulta.delta_z_pct != null && (
               <span
                 className={
@@ -2142,8 +2313,8 @@ var Resultados = function (props) {
                   (selectedConsulta.delta_z_pct < 0.01
                     ? "bg-[#67DE98]/20 text-[#1A7A40]"
                     : selectedConsulta.delta_z_pct < 1
-                    ? "bg-[#FAE95D]/30 text-[#7A6010]"
-                    : "bg-[#FF5D5C]/15 text-[#DC2F37]")
+                      ? "bg-[#FAE95D]/30 text-[#7A6010]"
+                      : "bg-[#FF5D5C]/15 text-[#DC2F37]")
                 }
               >
                 Δz = {selectedConsulta.delta_z_pct.toFixed(4)}%
@@ -2154,7 +2325,10 @@ var Resultados = function (props) {
             {[
               {
                 label: "z · Simplex (projeto)",
-                value: selectedConsulta.z_otimo != null ? fmtZ(selectedConsulta.z_otimo) : "-",
+                value:
+                  selectedConsulta.z_otimo != null
+                    ? fmtZ(selectedConsulta.z_otimo)
+                    : "-",
                 sub: selectedConsulta.status_lp || "-",
               },
               {
@@ -2168,7 +2342,10 @@ var Resultados = function (props) {
                   selectedConsulta.delta_z_pct != null
                     ? selectedConsulta.delta_z_pct.toFixed(6) + "%"
                     : "-",
-                sub: selectedConsulta.delta_z_pct < 0.01 ? "✓ dentro da tolerância" : "⚠ verificar",
+                sub:
+                  selectedConsulta.delta_z_pct < 0.01
+                    ? "✓ dentro da tolerância"
+                    : "⚠ verificar",
               },
             ].map(function (k) {
               return (
@@ -2176,7 +2353,9 @@ var Resultados = function (props) {
                   <div className="text-[10px] font-medium text-[#9C9C9F] uppercase tracking-wide mb-1">
                     {k.label}
                   </div>
-                  <div className="text-lg font-bold text-[#0D1B2A] leading-tight">{k.value}</div>
+                  <div className="text-lg font-bold text-[#0D1B2A] leading-tight">
+                    {k.value}
+                  </div>
                   <div className="text-xs text-[#9C9C9F] mt-1">{k.sub}</div>
                 </div>
               );
@@ -2210,7 +2389,8 @@ var Resultados = function (props) {
                 Simplex vs PuLP por Cluster
               </div>
               <div className="text-xs text-[#9C9C9F] mb-3">
-                Cada ponto é um cluster — na diagonal significa concordância perfeita
+                Cada ponto é um cluster — na diagonal significa concordância
+                perfeita
               </div>
               {clusters.length > 0 ? (
                 <ScatterSVG clusters={clusters} />
@@ -2384,7 +2564,8 @@ var Resultados = function (props) {
             Fluxo do Pipeline
           </div>
           <div className="text-xs text-[#9C9C9F] mb-3">
-            Como a base de clientes flui da elegibilidade aos clusters e às faixas de limite
+            Como a base de clientes flui da elegibilidade aos clusters e às
+            faixas de limite
           </div>
           <SankeyPipelineP5
             total={selectedConsulta.n_clientes_total}

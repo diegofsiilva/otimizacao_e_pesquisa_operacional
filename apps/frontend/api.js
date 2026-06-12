@@ -236,7 +236,7 @@ var Api = {
 
   // GET /api/consultas/{id}/clusters
   // Retorna: ClusterResultadoResponse[]
-  //   { cluster_id, n_clientes, pd_media, pi_media, cp_percentil5,
+  //   { segmento_id, n_clientes, pd_media, pi_media, cp_percentil5,
   //     score_credito_cross_medio, ck_medio, fator_alavancagem,
   //     limite_otimizado, limite_otimizado_pulp }
   getClusters: function (consultaId) {

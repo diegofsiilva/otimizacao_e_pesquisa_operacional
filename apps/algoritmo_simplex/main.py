@@ -154,12 +154,12 @@ def exibir_resultado(
         0,
     )
 
-    for cluster_id, n_clientes, limite in zip(
-        clusters["cluster_id"].astype(int),
+    for segmento_id, n_clientes, limite in zip(
+        clusters["segmento_id"].astype(int),
         clusters["n_k"].astype(int),
         limites,
     ):
-        print("  Cluster {}: R$ {} (n={})".format(cluster_id, limite, n_clientes))
+        print("  Cluster {}: R$ {} (n={})".format(segmento_id, limite, n_clientes))
 
 
 def executar_pipeline(parquet_path: Path, params: dict) -> dict:
@@ -219,7 +219,7 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
 
     resultado_clusters = [
         {
-            "cluster_id": int(clusters["cluster_id"].iloc[i]),
+            "segmento_id": int(clusters["segmento_id"].iloc[i]),
             "n_clientes": int(clusters["n_k"].iloc[i]),
             "pd_media": float(clusters["PD_k"].iloc[i]),
             "pi_media": float(clusters["pi_k"].iloc[i]),
