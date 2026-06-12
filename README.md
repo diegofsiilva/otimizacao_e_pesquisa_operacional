@@ -96,6 +96,7 @@ g04/
 │   ├── frontend.md               # documentacao do frontend
 │   ├── entendimento_negocio.md
 │   ├── entendimento_ux.md
+│   ├── aplicacao.md
 │   ├── modelagem_matematica.md
 │   ├── prototipo_frontend.md
 │   └── comparacao_simplex.md
@@ -299,7 +300,9 @@ Os arquivos JSON de parâmetros devem estar em `apps/algoritmo_simplex/input/`.
 
 - 0.3.0 - 29/05/2026
   - Sprint 3 - Clusterização do algoritmo, desenvolvimento do front-end, back-end e artigo
-- 0.4.0 - xx/xx/xxxx
+
+- 0.4.0 - 12/06/2026
+  - Sprint 4 - Refinamento da aplicação, artigo e corretude do algoritmo
 
 - 0.5.0 - xx/xx/xxxx
 
