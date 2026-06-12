@@ -17,10 +17,17 @@
 //   POST   /api/uploads/{id}/chunk?index=N        (multipart, um chunk por vez)
 //   POST   /api/uploads/{id}/finalizar            (remonta e dispara pipeline)
 
-var API_BASE_URL =
+function normalizarApiBaseUrl(value) {
+  var base = String(value || "").replace(/\/+$/, "");
+  if (!base) return "http://127.0.0.1:8000/api";
+  return /\/api$/i.test(base) ? base : base + "/api";
+}
+
+var API_BASE_URL = normalizarApiBaseUrl(
   window.API_BASE_URL ||
-  localStorage.getItem("API_BASE_URL") ||
-  "http://127.0.0.1:8000/api";
+    localStorage.getItem("API_BASE_URL") ||
+    "http://127.0.0.1:8000/api",
+);
 
 var Api = {
   // -------------------------------------------------------------------------
@@ -90,7 +97,8 @@ var Api = {
   // GET /api/consultas
   // Retorna: ConsultaResponse[] (ordenado por criado_em DESC)
   //   { id, safra_id, nome_arquivo_parquet, parametros, status_consulta,
-  //     status_lp, z_otimo, n_clientes_total, n_clientes_elegiveis,
+  //     status_lp, z_otimo, z_pulp, status_lp_pulp, delta_z_pct,
+  //     n_clientes_total, n_clientes_elegiveis,
   //     n_clientes_ofertados, n_clusters, criado_em, iniciado_em,
   //     concluido_em, erro_etapa, erro_mensagem }
   listConsultas: function () {
@@ -98,7 +106,7 @@ var Api = {
   },
 
   // GET /api/consultas/{id}
-  // Retorna: ConsultaResponse
+  // Retorna: ConsultaResponse (mesmos campos de listConsultas)
   getConsulta: function (consultaId) {
     return Api.request("/consultas/" + encodeURIComponent(consultaId));
   },
@@ -132,8 +140,8 @@ var Api = {
 
             if (onUpdate) onUpdate(consulta);
 
-            var s = consulta.status_consulta;
-            if (s === "concluido" || s === "erro") {
+            var consultaStatus = consulta.status_consulta;
+            if (consultaStatus === "concluido" || consultaStatus === "erro") {
               resolve(consulta);
             } else {
               // ainda "pendente" ou "executando" - agenda próximo tick
@@ -171,10 +179,8 @@ var Api = {
   // POST /api/uploads/iniciar?nome_arquivo={nome}
   // Retorna: { upload_id }
   iniciarUpload: function (nomeArquivo) {
-    return Api.request(
-      "/uploads/iniciar?nome_arquivo=" + encodeURIComponent(nomeArquivo),
-      { method: "POST" },
-    );
+    var qs = "nome_arquivo=" + encodeURIComponent(nomeArquivo);
+    return Api.request("/uploads/iniciar?" + qs, { method: "POST" });
   },
 
   // POST /api/uploads/{id}/chunk?index={n}  (multipart com o blob do chunk)
@@ -230,8 +236,9 @@ var Api = {
 
   // GET /api/consultas/{id}/clusters
   // Retorna: ClusterResultadoResponse[]
-  //   { cluster_id, n_clientes, pd_media, pi_media, cp_percentil5,
-  //     score_credito_cross_medio, ck_medio, fator_alavancagem, limite_otimizado }
+  //   { segmento_id, n_clientes, pd_media, pi_media, cp_percentil5,
+  //     score_credito_cross_medio, ck_medio, fator_alavancagem,
+  //     limite_otimizado, limite_otimizado_pulp }
   getClusters: function (consultaId) {
     return Api.request(
       "/consultas/" + encodeURIComponent(consultaId) + "/clusters",

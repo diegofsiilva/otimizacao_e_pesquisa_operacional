@@ -80,7 +80,7 @@ class PipelineBackgroundTestCase(unittest.TestCase):
                 "z": 123.45,
                 "clusters": [
                     {
-                        "cluster_id": 0,
+                        "segmento_id": 0,
                         "n_clientes": 1,
                         "pd_media": 0.02,
                         "pi_media": 0.5,
@@ -89,9 +89,13 @@ class PipelineBackgroundTestCase(unittest.TestCase):
                         "ck_medio": 0.1,
                         "fator_alavancagem": 1.2,
                         "limite_otimizado": 500,
+                        "limite_otimizado_pulp": 500,
                     }
                 ],
                 "parquet_com_cluster": parquet_com_cluster,
+                "z_pulp": 123.45,
+                "status_pulp": "otimo",
+                "delta_z_pct": 0.0,
             }
 
             clientes = pd.DataFrame(
@@ -116,7 +120,7 @@ class PipelineBackgroundTestCase(unittest.TestCase):
                         "pd_calibrada": 0.02,
                         "pi": 0.5,
                         "cp_proxy": 1000.0,
-                        "cluster_id": 0,
+                        "segmento_id": 0,
                     }
                 ]
             )

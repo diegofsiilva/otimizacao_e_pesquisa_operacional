@@ -13,6 +13,7 @@ from pydantic import BaseModel, Field
 
 StatusConsulta = Literal["pendente", "executando", "concluido", "erro"]
 StatusLP = Literal["otimo", "multiplas_solucoes"]
+StatusLPPulp = Literal["otimo", "ilimitado", "inviavel", "erro"]
 ErroEtapa = Literal["calibracao", "clustering", "otimizacao"]
 
 
@@ -89,6 +90,9 @@ class ConsultaResponse(BaseModel):
     status_consulta: StatusConsulta
     status_lp: StatusLP | None = None
     z_otimo: float | None = None
+    z_pulp: float | None = None
+    status_lp_pulp: StatusLPPulp | None = None
+    delta_z_pct: float | None = None
     n_clientes_total: int | None = None
     n_clientes_elegiveis: int | None = None
     n_clientes_ofertados: int | None = None
@@ -103,7 +107,7 @@ class ConsultaResponse(BaseModel):
 class ClusterResultadoResponse(BaseModel):
     """Representação de um cluster com seus parâmetros agregados e limite otimizado."""
 
-    cluster_id: int
+    segmento_id: int
     n_clientes: int
     pd_media: float
     pi_media: float
@@ -112,6 +116,7 @@ class ClusterResultadoResponse(BaseModel):
     ck_medio: float
     fator_alavancagem: float
     limite_otimizado: int
+    limite_otimizado_pulp: int | None = None
 
 
 class PaginacaoParams(BaseModel):
@@ -161,7 +166,7 @@ class ClienteResultadoResponse(BaseModel):
     cp_proxy: float
 
     # atribuição pelo clustering e LP
-    cluster_id: int
+    segmento_id: int
     limite_otimizado: int
 
 

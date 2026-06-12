@@ -1,6 +1,5 @@
 # Otimizador e Back-end
 
-
 ## Contextualização
 
 O Banco Pan oferece cartões de crédito pré-aprovados a clientes correntistas. A decisão de qual limite de crédito oferecer a cada cliente é hoje tomada com base em tabelas fixas, que não consideram a heterogeneidade entre perfis e não controlam o risco agregado da carteira.
@@ -843,7 +842,7 @@ A documentação interativa dos endpoints fica disponível em `{APP_HOST}:{APP_P
 **Fluxo:**
 
 ```bash
-# 1. Iniciar 
+# 1. Iniciar
 curl -X POST "http://127.0.0.1:8000/api/uploads/iniciar?nome_arquivo=base_ref_M1_v2.parquet"
 # -> {"upload_id": "abc123..."}
 
@@ -878,7 +877,7 @@ Pipeline completo executado com sucesso. Status transitou de `pendente` → `exe
 curl "http://127.0.0.1:8000/api/consultas/3cf613e8-.../clusters"
 ```
 
-Retornou 150 clusters com todos os campos (`cluster_id`, `n_clientes`, `pd_media`, `pi_media`, `cp_percentil5`, `score_credito_cross_medio`, `ck_medio`, `fator_alavancagem`, `limite_otimizado`).
+Retornou 150 clusters com todos os campos (`segmento_id`, `n_clientes`, `pd_media`, `pi_media`, `cp_percentil5`, `score_credito_cross_medio`, `ck_medio`, `fator_alavancagem`, `limite_otimizado`).
 
 #### Teste 3: Listagem paginada de clientes
 
@@ -903,6 +902,88 @@ curl "http://127.0.0.1:8000/api/clientes/0"
 ```
 
 Retornou `404 Not Found` - token 0 é inelegível (`flag_filtros != 0`) e não foi persistido, comportamento correto.
+
+#### Teste 6: Contratos da API expostos para o front-end
+
+**Validação realizada:**
+
+```python
+for rota in [
+    '@router.get("/health")',
+    '@router.get("/safras"',
+    '@router.get("/consultas"',
+    '@router.post("/consultas"',
+    '@router.get("/consultas/{consulta_id}"',
+    '"/consultas/{consulta_id}/clusters"',
+    '"/consultas/{consulta_id}/clientes"',
+    '"/consultas/{consulta_id}/clientes/export"',
+    '@router.get("/clientes/{token}"',
+    '@router.get("/config"',
+    '@router.put("/config"',
+]:
+    assert rota in routes
+
+```
+
+**Resultado observado:**
+
+As rotas principais consumidas pelo front-end estão expostas e compatíveis com o contrato esperado.
+
+#### Teste 7: Upload em chunks com remontagem e limpeza temporária
+
+**Validação realizada:**
+
+```python
+assert upload_service.remonta_chunks_em_ordem()
+assert upload_service.limpa_temporarios()
+```
+
+**Resultado observado:**
+
+O upload fragmentado é remontado na ordem correta e os diretórios temporários são removidos após a finalização.
+
+#### Teste 8: Regras de validação do upload
+
+**Validação realizada:**
+
+```python
+assert upload_service.recusa_extensao_nao_parquet()
+assert upload_service.aceita_extensao_parquet_em_maiusculo()
+assert upload_service.recusa_nome_com_caminho()
+assert upload_service.recusa_nome_com_barra_invertida_windows()
+```
+
+**Resultado observado:**
+
+O serviço aceita apenas nomes de arquivo seguros e extensões válidas, evitando entradas inválidas ou ambíguas.
+
+#### Teste 9: Integração da API com erros esperados
+
+**Validação realizada:**
+
+```python
+assert api_integration.retorna_404_quando_upload_nao_existe()
+assert api_integration.retorna_422_quando_parametro_eh_invalido()
+assert api_integration.cria_consulta_no_upload_direto()
+```
+
+**Resultado observado:**
+
+A API retorna os códigos corretos para falhas de entrada e mantém o fluxo normal de criação de consulta quando o upload é válido.
+
+#### Teste 10: Pipeline assíncrono fora do event loop
+
+**Validação realizada:**
+
+```python
+assert "background_tasks.add_task" in credit_service
+assert "asyncio.get_running_loop()" in credit_service
+assert "run_in_executor" in credit_service
+```
+
+**Resultado observado:**
+
+O pipeline é disparado de forma assíncrona e não bloqueia o event loop da API.
 
 ---
 

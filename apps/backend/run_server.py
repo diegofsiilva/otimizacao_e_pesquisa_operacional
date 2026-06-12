@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import atexit
+import json
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import urlsplit, urlunsplit
 
 import uvicorn
 
@@ -11,12 +13,32 @@ from config import APP_HOST, APP_HOST_BIND, APP_PORT, FRONTEND_PORT
 
 BACKEND_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BACKEND_DIR.parent / "frontend"
+RUNTIME_CONFIG_PATH = FRONTEND_DIR / "runtime-config.js"
+
+
+def _backend_api_url() -> str:
+    parsed = urlsplit(APP_HOST)
+    scheme = parsed.scheme or "http"
+    host = parsed.hostname or APP_HOST.split("://", 1)[-1].split(":", 1)[0]
+    port = parsed.port or APP_PORT
+    netloc = f"{host}:{port}"
+    return urlunsplit((scheme, netloc, "/api", "", ""))
+
+
+def _write_frontend_runtime_config() -> None:
+    api_url = _backend_api_url()
+    RUNTIME_CONFIG_PATH.write_text(
+        "window.API_BASE_URL = " + json.dumps(api_url) + ";\n",
+        encoding="utf-8",
+    )
 
 
 def _start_frontend() -> subprocess.Popen | None:
     if not FRONTEND_DIR.exists():
         print(f"[warn] frontend directory not found: {FRONTEND_DIR}")
         return None
+
+    _write_frontend_runtime_config()
 
     proc = subprocess.Popen(
         [

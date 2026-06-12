@@ -16,6 +16,9 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
+    <!-- p5.js: renderização dos gráficos em canvas com animações e interações -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
+
     <!-- Styles -->
     <link rel="stylesheet" href="styles.css" />
   </head>
@@ -26,8 +29,9 @@
     <script src="data.js"></script>
     <!-- URL base da API: ajuste para o domínio de produção se necessário -->
     <script>
-      window.API_BASE_URL = "https://api.maiorais.com/api";
+      window.API_BASE_URL = window.API_BASE_URL || "http://127.0.0.1:8000/api";
     </script>
+    <script src="runtime-config.js"></script>
     <!-- Cliente HTTP para o backend FastAPI -->
     <script src="api.js"></script>
 
@@ -78,14 +82,10 @@
 
       var App = function () {
         // Página ativa. Possíveis valores: "dashboard" | "gerar" | "resultados" | "clientes"
-        var s1 = React.useState("dashboard");
-        var page = s1[0];
-        var setPage = s1[1];
+        var [page, setPage] = React.useState("dashboard");
 
         // Controla a abertura do modal de configurações
-        var s2 = React.useState(false);
-        var cfgOpen = s2[0];
-        var setCfgOpen = s2[1];
+        var [cfgOpen, setCfgOpen] = React.useState(false);
 
         // Renderiza a página correspondente à chave ativa.
         // key={page} no ErrorBoundary garante que o componente é remontado a

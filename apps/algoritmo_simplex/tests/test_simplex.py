@@ -51,6 +51,42 @@ class SimplexTestCase(unittest.TestCase):
         self.assertAlmostEqual(z, 8.0)
         self.assertLessEqual(x[0] + 2 * x[1], 4.0)
 
+    def test_simplex_nao_muta_o_problema(self) -> None:
+        problema = Problema(
+            c=[1.0, 1.0],
+            A=[[1.0, 0.0], [0.0, 1.0]],
+            b=[5.0, 7.0],
+        )
+        b_antes = list(problema.b)
+
+        simplex(problema)
+
+        self.assertEqual(problema.b, b_antes)
+
+    def test_tableau_inicial_tem_folgas_identidade_e_base_correspondente(self) -> None:
+        from simplex import construir_tableau_inicial
+
+        problema = Problema(
+            c=[1.0, 2.0],
+            A=[[1.0, 0.0], [3.0, 4.0], [0.0, 5.0]],
+            b=[10.0, 20.0, 30.0],
+        )
+        tableau = construir_tableau_inicial(problema)
+
+        n = len(problema.c)
+        m = len(problema.b)
+
+        # base inicial = variáveis de folga
+        self.assertEqual(tableau.base, list(range(n, n + m)))
+        self.assertEqual(tableau.contributions, [0.0] * m)
+        self.assertEqual(tableau.values, problema.b)
+
+        # matriz de folga é identidade (em formato de colunas)
+        for col in range(m):
+            esperado = [0.0] * m
+            esperado[col] = 1.0
+            self.assertEqual(tableau.s[col], esperado)
+
 
 if __name__ == "__main__":
     unittest.main()

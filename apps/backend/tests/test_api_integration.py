@@ -6,6 +6,7 @@ import unittest
 from datetime import datetime, timezone
 from pathlib import Path
 from unittest.mock import AsyncMock, patch
+from urllib import response
 from uuid import uuid4
 
 
@@ -140,6 +141,28 @@ class ApiIntegrationTestCase(unittest.TestCase):
             finally:
                 upload_service.UPLOAD_DIR = original_upload_dir
                 upload_service.CHUNKS_DIR = original_chunks_dir
+    
+    def test_upload_em_chunks_retorna_404_quando_upload_id_nao_existe(self) -> None:
+        response = self.client.post(
+            "/api/uploads/id-inexistente/chunk?index=0",
+            files={"file": ("chunk", b"AAAA", "application/octet-stream")},
+        )
+        self.assertEqual(response.status_code, 404)
+
+    def test_upload_direto_recusa_nome_de_arquivo_com_caminho(self) -> None:
+        response = self.client.post(
+            "/api/consultas",
+            files={"file": ("../base.parquet", b"parquet-bytes", "application/octet-stream")},
+        )
+        self.assertEqual(response.status_code, 400)
+        self.assertIn("Nome de arquivo", response.json()["detail"])
+
+    def test_validacao_query_param_retorna_422_quando_LGD_invalido(self) -> None:
+        response = self.client.post(
+            "/api/consultas?LGD=1.5",
+            files={"file": ("base.parquet", b"parquet-bytes", "application/octet-stream")},
+        )
+        self.assertEqual(response.status_code, 422)
 
 
 if __name__ == "__main__":

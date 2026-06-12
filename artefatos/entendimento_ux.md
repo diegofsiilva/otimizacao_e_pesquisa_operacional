@@ -96,11 +96,11 @@ As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir 
 
 - Se n_clusters > nº de clientes elegíveis (flag_filtros == 0), bloqueia e exibe erro.
 
-- Ao executar, gera cluster_id para 100% dos elegíveis, com valores entre 0 e n_clusters-1.
+- Ao executar, gera segmento_id para 100% dos elegíveis, com valores entre 0 e n_clusters-1.
 
-- Com mesma base + mesmos parâmetros (incluindo random_state), gera o mesmo resultado de cluster_id (reprodutibilidade).
+- Com mesma base + mesmos parâmetros (incluindo random_state), gera o mesmo resultado de segmento_id (reprodutibilidade).
 
-- Gera também a tabela agregada por cluster com colunas n_k, PD_k, pi_k, CP_k, m_k (1 linha por cluster_id).
+- Gera também a tabela agregada por cluster com colunas n_k, PD_k, pi_k, CP_k, m_k (1 linha por segmento_id).
 
 ---
 
@@ -148,7 +148,7 @@ As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir 
 
 **Critérios de aceitação:**
 
-- Retorna um limite sugerido para cada cluster_id existente na base agregada.
+- Retorna um limite sugerido para cada segmento_id existente na base agregada.
 
 - Aplica regra de padronização: limite final é múltiplo de R$50 e é 0 ou ≥ R$200 (se < R$200, retorna 0).
 
@@ -176,11 +176,11 @@ As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir 
 
 **Critérios de aceitação:**
 
-- Para um cluster_id consultado, retorna: limite sugerido e lista de restrições que ficaram ativas/limitantes.
+- Para um segmento_id consultado, retorna: limite sugerido e lista de restrições que ficaram ativas/limitantes.
 
 - Considera como restrições do modelo: teto de inadimplência da carteira (R1) e restrições por cluster (capacidade/alavancagem R2 e teto máximo R3).
 
-- Permite busca por cluster_id e retorna erro claro para cluster inexistente.
+- Permite busca por segmento_id e retorna erro claro para cluster inexistente.
 
 - Retorna até 10.000 registros em até 3 segundos (em base mock definida para testes).
 - Exibe também o status da otimização associado ao resultado consultado.
@@ -207,7 +207,7 @@ As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir 
 
 - Permite visualizar em tabela e em gráfico, com os mesmos valores.
 
-- Permite ordenar a tabela por limite e por cluster_id.
+- Permite ordenar a tabela por limite e por segmento_id.
 
 - Funciona com dataset mock.
 
@@ -233,7 +233,7 @@ As _User Stories_ também buscam seguir o _framework_ INVEST. Ele visa garantir 
 
 - Exporta os resultados em CSV e/ou objeto Python (conforme o modo de uso definido).
 
-- O CSV contém, no mínimo: cluster_id, limite_sugerido (final) e status_otimizacao.
+- O CSV contém, no mínimo: segmento_id, limite_sugerido (final) e status_otimizacao.
   Bloqueia exportação se não existir resultado gerado para o cenário atual e exibe mensagem clara.
 
 - Exporta com sucesso a partir de um resultado já existente (sem reexecutar solver).

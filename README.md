@@ -17,7 +17,7 @@
     <img src="https://img.shields.io/badge/Inteli-Ciência_da_Computação-6B2FBF?style=flat-square" alt="Curso">
   </a>
   <img src="https://img.shields.io/badge/Módulo-6-6B2FBF?style=flat-square" alt="Módulo">
-  <img src="https://img.shields.io/badge/Sprint-2_de_5-blue?style=flat-square" alt="Sprint">
+  <img src="https://img.shields.io/badge/Sprint-4_de_5-blue?style=flat-square" alt="Sprint">
   <img src="https://img.shields.io/badge/Status-Em_desenvolvimento-yellow?style=flat-square" alt="Status">
   <img src="https://img.shields.io/badge/Linguagem-Python-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Parceiro-Banco_Pan-E8440A?style=flat-square" alt="Parceiro">
@@ -96,6 +96,7 @@ g04/
 │   ├── frontend.md               # documentacao do frontend
 │   ├── entendimento_negocio.md
 │   ├── entendimento_ux.md
+│   ├── aplicacao.md
 │   ├── modelagem_matematica.md
 │   ├── prototipo_frontend.md
 │   └── comparacao_simplex.md
@@ -223,6 +224,10 @@ python -m unittest discover -s apps/backend/tests -p "test_*.py"
 
 Os testes cobrem o Simplex, contratos das rotas, upload em chunks, integração HTTP e execução do worker em background.
 
+#### 6. Testar API via Bruno
+
+As instruções para a utilização do Bruno estão presentes no arquivo README.md na pasta apps/backend/bruno/backend/.
+
 ### Pipeline do otimizador via terminal
 
 ### Pré-requisitos
@@ -295,7 +300,9 @@ Os arquivos JSON de parâmetros devem estar em `apps/algoritmo_simplex/input/`.
 
 - 0.3.0 - 29/05/2026
   - Sprint 3 - Clusterização do algoritmo, desenvolvimento do front-end, back-end e artigo
-- 0.4.0 - xx/xx/xxxx
+
+- 0.4.0 - 12/06/2026
+  - Sprint 4 - Refinamento da aplicação, artigo e corretude do algoritmo
 
 - 0.5.0 - xx/xx/xxxx
 

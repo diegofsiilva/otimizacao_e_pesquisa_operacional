@@ -1,5 +1,5 @@
 // pages/Clientes.js
-// Deps globais: Api (api.js), fmt, fmtZ (data.js), LineChartSVG (Resultados.js)
+// Deps globais: Api (api.js), fmt, fmtZ (data.js), LineChartP5 (Resultados.js)
 //
 // Permite ao analista buscar um cliente por token e visualizar sua evolução
 // entre safras: limite otimizado, PD calibrada, cluster atribuído e demais
@@ -409,7 +409,7 @@ var Clientes = function (props) {
                       <div className="flex justify-between text-xs">
                         <span className="text-[#9C9C9F]">Cluster</span>
                         <span className="font-semibold text-[#2E6DA4]">
-                          CLU-{h.cluster_id}
+                          CLU-{h.segmento_id}
                         </span>
                       </div>
                     </div>
@@ -429,7 +429,7 @@ var Clientes = function (props) {
                 <div className="text-xs text-[#9C9C9F] mb-4">
                   Limite otimizado (R$) por safra
                 </div>
-                <LineChartSVG data={lineData} />
+                <LineChartP5 data={lineData} />
               </div>
               <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
                 <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
@@ -438,7 +438,7 @@ var Clientes = function (props) {
                 <div className="text-xs text-[#9C9C9F] mb-4">
                   Probabilidade de inadimplência (%) por safra
                 </div>
-                <LineChartSVG data={pdData} />
+                <LineChartP5 data={pdData} />
               </div>
             </div>
           )}
@@ -496,7 +496,7 @@ var Clientes = function (props) {
                           </span>
                         </td>
                         <td className="px-3 py-2.5 font-mono font-semibold text-[#2E6DA4]">
-                          CLU-{h.cluster_id}
+                          CLU-{h.segmento_id}
                         </td>
                         <td
                           className={
