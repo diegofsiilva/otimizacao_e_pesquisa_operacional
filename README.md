@@ -17,7 +17,7 @@
     <img src="https://img.shields.io/badge/Inteli-Ciência_da_Computação-6B2FBF?style=flat-square" alt="Curso">
   </a>
   <img src="https://img.shields.io/badge/Módulo-6-6B2FBF?style=flat-square" alt="Módulo">
-  <img src="https://img.shields.io/badge/Sprint-2_de_5-blue?style=flat-square" alt="Sprint">
+  <img src="https://img.shields.io/badge/Sprint-4_de_5-blue?style=flat-square" alt="Sprint">
   <img src="https://img.shields.io/badge/Status-Em_desenvolvimento-yellow?style=flat-square" alt="Status">
   <img src="https://img.shields.io/badge/Linguagem-Python-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Parceiro-Banco_Pan-E8440A?style=flat-square" alt="Parceiro">
