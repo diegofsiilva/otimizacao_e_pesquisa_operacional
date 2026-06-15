@@ -279,6 +279,28 @@ var Api = {
     });
   },
 
+  // GET /api/consultas/{id}/clientes/export-pulp
+  // Retorna: Blob (text/csv) com coluna limite_otimizado_pulp adicionada.
+  exportClientesPulp: function (consultaId) {
+    return fetch(
+      API_BASE_URL +
+        "/consultas/" +
+        encodeURIComponent(consultaId) +
+        "/clientes/export-pulp",
+    ).then(function (res) {
+      if (!res.ok) throw new Error("Erro ao exportar clientes PuLP.");
+      return res.blob();
+    });
+  },
+
+  // GET /api/consultas/{id}/z-banco
+  // Retorna: { z_banco: float, n_com_oferta: int, n_total: int }
+  getZBanco: function (consultaId) {
+    return Api.request(
+      "/consultas/" + encodeURIComponent(consultaId) + "/z-banco",
+    );
+  },
+
   // -------------------------------------------------------------------------
   // Histórico de cliente individual
   // -------------------------------------------------------------------------

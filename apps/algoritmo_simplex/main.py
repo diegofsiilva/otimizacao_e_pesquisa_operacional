@@ -15,6 +15,7 @@ Arquivos JSON devem estar em apps/algoritmo_simplex/input/
 
 import sys
 import json
+import traceback
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -201,10 +202,12 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
     problema = montar_problema(clusters, params, df)
     x, z, status = simplex(copy.deepcopy(problema))
 
-    # comparação com PuLP — falha silenciosa para não bloquear o pipeline
+    # comparação com PuLP — falha não bloqueia o pipeline mas é logada
     try:
         x_pulp, z_pulp, status_pulp = simplex_pulp(copy.deepcopy(problema))
-    except Exception:
+    except Exception as _pulp_err:
+        print("[PuLP] ERRO ao resolver — usando fallback z_pulp=0:")
+        traceback.print_exc()
         x_pulp = [0.0] * len(x)
         z_pulp = 0.0
         status_pulp = "erro"

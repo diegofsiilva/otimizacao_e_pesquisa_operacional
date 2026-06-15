@@ -29,8 +29,10 @@ from model.schemas import (
     SafraResponse,
 )
 from services.credit_service import (
+    calcular_z_banco,
     criar_consulta,
     exportar_clientes_csv,
+    exportar_clientes_pulp_csv,
     get_clientes,
     get_clusters,
     get_config,
@@ -175,6 +177,28 @@ async def exportar_clientes(consulta_id: UUID) -> Response:
             "Content-Disposition": f'attachment; filename="clientes_{consulta_id}.csv"'
         },
     )
+
+
+@router.get("/consultas/{consulta_id}/clientes/export-pulp")
+async def exportar_clientes_pulp(consulta_id: UUID) -> Response:
+    csv = await exportar_clientes_pulp_csv(consulta_id)
+    if csv is None:
+        raise HTTPException(status_code=404, detail="Consulta não encontrada.")
+    return Response(
+        content=csv,
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="clientes_pulp_{consulta_id}.csv"'
+        },
+    )
+
+
+@router.get("/consultas/{consulta_id}/z-banco")
+async def z_banco(consulta_id: UUID) -> dict:
+    resultado = await calcular_z_banco(consulta_id)
+    if resultado is None:
+        raise HTTPException(status_code=404, detail="Consulta não encontrada.")
+    return resultado
 
 
 # ---------------------------------------------------------------------------

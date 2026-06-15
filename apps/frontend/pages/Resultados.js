@@ -1805,6 +1805,10 @@ var Resultados = function (props) {
   var showParams = s8[0];
   var setShowParams = s8[1];
 
+  var s9 = React.useState(null);
+  var zBanco = s9[0];
+  var setZBanco = s9[1];
+
   // -------------------------------------------------------------------------
   // Carrega consultas + safras ao montar
   // -------------------------------------------------------------------------
@@ -1829,6 +1833,9 @@ var Resultados = function (props) {
         if (concluidas.length > 0) {
           setSelectedId(concluidas[0].id);
           setLoadingClusters(true);
+          Api.getZBanco(concluidas[0].id)
+            .then(function (res) { setZBanco(res); })
+            .catch(function () {});
           return Api.getClusters(concluidas[0].id).then(function (cls) {
             setClusters(cls || []);
             setLoadingClusters(false);
@@ -1848,10 +1855,17 @@ var Resultados = function (props) {
   // Troca de consulta selecionada
   // -------------------------------------------------------------------------
 
+  function carregarZBanco(id) {
+    Api.getZBanco(id)
+      .then(function (res) { setZBanco(res); })
+      .catch(function () { setZBanco(null); });
+  }
+
   function handleSelectConsulta(id) {
     if (id === selectedId) return;
     setSelectedId(id);
     setClusters([]);
+    setZBanco(null);
     setLoadingClusters(true);
     Api.getClusters(id)
       .then(function (cls) {
@@ -1861,32 +1875,40 @@ var Resultados = function (props) {
       .catch(function () {
         setLoadingClusters(false);
       });
+    carregarZBanco(id);
   }
 
   // -------------------------------------------------------------------------
   // Export CSV de clientes
   // -------------------------------------------------------------------------
 
+  function _downloadBlob(blob, filename) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   function handleExportar() {
     if (!selectedId) return;
+    var safra = selectedConsulta ? safraMap[selectedConsulta.safra_id] : null;
+    var suffix = safra ? safra.nome : selectedId.slice(0, 8);
     Api.exportClientes(selectedId)
-      .then(function (blob) {
-        var c = selectedConsulta;
-        var safra = c ? safraMap[c.safra_id] : null;
-        var filename =
-          "clientes_" + (safra ? safra.nome : selectedId.slice(0, 8)) + ".csv";
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement("a");
-        a.href = url;
-        a.download = filename;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      })
-      .catch(function (err) {
-        alert("Erro ao exportar: " + err.message);
-      });
+      .then(function (blob) { _downloadBlob(blob, "clientes_" + suffix + ".csv"); })
+      .catch(function (err) { alert("Erro ao exportar: " + err.message); });
+  }
+
+  function handleExportarPulp() {
+    if (!selectedId) return;
+    var safra = selectedConsulta ? safraMap[selectedConsulta.safra_id] : null;
+    var suffix = safra ? safra.nome : selectedId.slice(0, 8);
+    Api.exportClientesPulp(selectedId)
+      .then(function (blob) { _downloadBlob(blob, "clientes_pulp_" + suffix + ".csv"); })
+      .catch(function (err) { alert("Erro ao exportar PuLP: " + err.message); });
   }
 
   // -------------------------------------------------------------------------
@@ -2164,19 +2186,25 @@ var Resultados = function (props) {
             onClick={handleExportar}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-[#E8EFF7] bg-white text-[#3B4049] hover:bg-[#E2EAF4] transition-colors shadow-sm"
           >
-            <svg
-              width="12"
-              height="12"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth="2"
-            >
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
               <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
               <polyline points="7 10 12 15 17 10" />
               <line x1="12" y1="15" x2="12" y2="3" />
             </svg>
             Exportar clientes CSV
+          </button>
+
+          {/* Exportar clientes PuLP */}
+          <button
+            onClick={handleExportarPulp}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold border border-[#FAE95D] bg-white text-[#7A6010] hover:bg-[#FAE95D]/20 transition-colors shadow-sm"
+          >
+            <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            Exportar PuLP CSV
           </button>
         </div>
       </div>
@@ -2321,7 +2349,7 @@ var Resultados = function (props) {
               </span>
             )}
           </div>
-          <div className="grid grid-cols-3 gap-px bg-[#E8EFF7]">
+          <div className="grid grid-cols-4 gap-px bg-[#E8EFF7]">
             {[
               {
                 label: "z · Simplex (projeto)",
@@ -2346,6 +2374,13 @@ var Resultados = function (props) {
                   selectedConsulta.delta_z_pct < 0.01
                     ? "✓ dentro da tolerância"
                     : "⚠ verificar",
+              },
+              {
+                label: "z · Limites do banco",
+                value: zBanco != null ? fmtZ(zBanco.z_banco) : "—",
+                sub: zBanco != null
+                  ? zBanco.n_com_oferta + " clientes com limite_ofertado"
+                  : "calculando...",
               },
             ].map(function (k) {
               return (
