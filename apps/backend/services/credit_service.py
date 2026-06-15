@@ -710,12 +710,17 @@ async def calcular_z_banco(consulta_id: UUID) -> dict | None:
             return None
 
         params = json.loads(consulta["parametros"])
-        t, LGD, u_bar, T = params["t"], params["LGD"], params["u_bar"], params["T"]
+        # float() explícito para garantir que valores JSON inteiros (ex: T=22)
+        # sejam enviados ao asyncpg como float8, evitando AmbiguousFunctionError
+        t = float(params["t"])
+        LGD = float(params["LGD"])
+        u_bar = float(params["u_bar"])
+        T = float(params["T"])
 
         row = await conn.fetchrow(
             """
             SELECT
-                SUM(pi_normalizado * ($2 * $3 * $4 - pd_calibrada * $5)
+                SUM(pi_normalizado * ($2::float8 * $3::float8 * $4::float8 - pd_calibrada * $5::float8)
                     * COALESCE(limite_ofertado, 0))        AS z_banco,
                 COUNT(*) FILTER (WHERE limite_ofertado > 0) AS n_com_oferta,
                 COUNT(*)                                    AS n_total
