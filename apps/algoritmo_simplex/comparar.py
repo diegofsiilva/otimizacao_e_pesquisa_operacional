@@ -17,6 +17,7 @@ montagem do problema usada em `main.py`.
 """
 
 import copy
+import math
 import sys
 from pathlib import Path
 
@@ -25,8 +26,13 @@ from simplex import simplex
 from simplex_pulp import simplex_pulp
 
 
-# tolerância absoluta para considerar dois valores iguais na comparação
-TOLERANCIA = 1e-6
+# Tolerâncias para considerar dois valores de z equivalentes.
+# Uma tolerância puramente absoluta (1e-6) falha em problemas de grande
+# magnitude: com z ~ 3e5, o acúmulo de ponto flutuante entre dois solvers
+# distintos passa de 1e-6 com facilidade mesmo quando a solução x é idêntica.
+# Por isso usamos math.isclose com tolerância relativa + piso absoluto.
+TOL_REL = 1e-6  # tolerância relativa (1 ppm de z)
+TOL_ABS = 1e-6  # piso absoluto, para z próximos de zero
 
 
 def comparar_resultados(
@@ -77,7 +83,12 @@ def comparar_resultados(
     # erro absoluto entre os valores ótimos da função objetivo
     if resultado["nosso"]["z"] is not None and resultado["pulp"]["z"] is not None:
         resultado["delta_z"] = abs(resultado["nosso"]["z"] - resultado["pulp"]["z"])
-        resultado["coincidem"] = resultado["delta_z"] <= TOLERANCIA
+        resultado["coincidem"] = math.isclose(
+            resultado["nosso"]["z"],
+            resultado["pulp"]["z"],
+            rel_tol=TOL_REL,
+            abs_tol=TOL_ABS,
+        )
     else:
         resultado["delta_z"] = None
         # se ambos falharam pelo mesmo motivo (ex.: ilimitado), consideramos coincidentes
@@ -112,7 +123,7 @@ def imprimir_resultado(resultado: dict) -> None:
     if resultado["delta_z"] is not None:
         print(f"  |Δz|  = {resultado['delta_z']:.2e}")
     coinc = "SIM" if resultado["coincidem"] else "NÃO"
-    print(f"  Coincidem (tol={TOLERANCIA:.0e}): {coinc}")
+    print(f"  Coincidem (rel={TOL_REL:.0e}, abs={TOL_ABS:.0e}): {coinc}")
 
 
 def problemas_didaticos() -> list[tuple[str, Problema]]:
@@ -195,7 +206,8 @@ def main() -> None:
     print("\n" + "=" * 60)
     total = len(resultados)
     iguais = sum(1 for r in resultados if r["coincidem"])
-    print(f"Resumo: {iguais}/{total} casos com resultado equivalente (tol={TOLERANCIA:.0e})")
+    print(f"Resumo: {iguais}/{total} casos com resultado equivalente "
+          f"(rel={TOL_REL:.0e}, abs={TOL_ABS:.0e})")
 
 
 if __name__ == "__main__":

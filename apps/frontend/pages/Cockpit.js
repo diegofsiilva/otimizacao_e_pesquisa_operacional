@@ -130,6 +130,8 @@ var Cockpit = function (props) {
 
   function getLimitePulp(c) {
     if (!c) return null;
+    if (c.limite_otimizado_pulp != null) return c.limite_otimizado_pulp; // campo real da API
+    // fallbacks legados (compat com versões antigas):
     if (c.limite_pulp != null) return c.limite_pulp;
     if (c.limite_pulp_otimizado != null) return c.limite_pulp_otimizado;
     if (c.pulp_limite_otimizado != null) return c.pulp_limite_otimizado;

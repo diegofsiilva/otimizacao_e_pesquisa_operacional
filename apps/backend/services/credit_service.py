@@ -712,10 +712,15 @@ async def calcular_z_banco(consulta_id: UUID) -> dict | None:
         params = json.loads(consulta["parametros"])
         t, LGD, u_bar, T = params["t"], params["LGD"], params["u_bar"], params["T"]
 
+        # casts ::float8 nos parâmetros são obrigatórios: sem eles o trecho
+        # $2 * $3 * $4 (três parâmetros multiplicados entre si, sem coluna que
+        # ancore o tipo) é inferido como unknown*unknown e o Postgres levanta
+        # AmbiguousFunctionError ("operator is not unique") no momento do prepare.
         row = await conn.fetchrow(
             """
             SELECT
-                SUM(pi_normalizado * ($2 * $3 * $4 - pd_calibrada * $5)
+                SUM(pi_normalizado * ($2::float8 * $3::float8 * $4::float8
+                    - pd_calibrada * $5::float8)
                     * COALESCE(limite_ofertado, 0))        AS z_banco,
                 COUNT(*) FILTER (WHERE limite_ofertado > 0) AS n_com_oferta,
                 COUNT(*)                                    AS n_total
