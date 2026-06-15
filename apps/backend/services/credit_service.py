@@ -5,6 +5,9 @@ Lógica de negócio da API. Funções chamadas pelas rotas.
 
 from __future__ import annotations
 
+import csv
+import io
+import json
 import sys
 import uuid
 from datetime import datetime, timezone
@@ -650,6 +653,88 @@ async def exportar_clientes_csv(consulta_id: UUID) -> str | None:
         writer.writerows([dict(row) for row in rows])
 
     return buffer.getvalue()
+
+
+async def exportar_clientes_pulp_csv(consulta_id: UUID) -> str | None:
+    """
+    Retorna todos os clientes de uma consulta serializados como CSV,
+    com a coluna limite_otimizado_pulp (vinda de clusters_resultado) adicionada.
+    Retorna None se a consulta não existir.
+    """
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        existe = await conn.fetchval(
+            "SELECT 1 FROM consultas WHERE id = $1", str(consulta_id)
+        )
+        if not existe:
+            return None
+
+        rows = await conn.fetch(
+            """
+            SELECT cr.*, cr2.limite_otimizado_pulp
+            FROM clientes_resultado cr
+            JOIN clusters_resultado cr2
+              ON cr2.consulta_id = cr.consulta_id
+             AND cr2.segmento_id = cr.segmento_id
+            WHERE cr.consulta_id = $1
+            ORDER BY cr.token ASC
+            """,
+            str(consulta_id),
+        )
+
+    buffer = io.StringIO()
+    if rows:
+        writer = csv.DictWriter(buffer, fieldnames=rows[0].keys())
+        writer.writeheader()
+        writer.writerows([dict(row) for row in rows])
+
+    return buffer.getvalue()
+
+
+async def calcular_z_banco(consulta_id: UUID) -> dict | None:
+    """
+    Calcula o valor da função objetivo usando os limites já concedidos pelo banco
+    (coluna limite_ofertado). Clientes sem limite_ofertado (nulo) são tratados como 0.
+
+    Fórmula (nível de cliente):
+        z_banco = Σ_i [ π_i · (ū·t·T − PD_i·LGD) · limite_ofertado_i ]
+
+    Retorna None se a consulta não existir.
+    """
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        consulta = await conn.fetchrow(
+            "SELECT parametros FROM consultas WHERE id = $1", str(consulta_id)
+        )
+        if not consulta:
+            return None
+
+        params = json.loads(consulta["parametros"])
+        t, LGD, u_bar, T = params["t"], params["LGD"], params["u_bar"], params["T"]
+
+        # casts ::float8 nos parâmetros são obrigatórios: sem eles o trecho
+        # $2 * $3 * $4 (três parâmetros multiplicados entre si, sem coluna que
+        # ancore o tipo) é inferido como unknown*unknown e o Postgres levanta
+        # AmbiguousFunctionError ("operator is not unique") no momento do prepare.
+        row = await conn.fetchrow(
+            """
+            SELECT
+                SUM(pi_normalizado * ($2::float8 * $3::float8 * $4::float8
+                    - pd_calibrada * $5::float8)
+                    * COALESCE(limite_ofertado, 0))        AS z_banco,
+                COUNT(*) FILTER (WHERE limite_ofertado > 0) AS n_com_oferta,
+                COUNT(*)                                    AS n_total
+            FROM clientes_resultado
+            WHERE consulta_id = $1
+            """,
+            str(consulta_id), u_bar, t, T, LGD,
+        )
+
+    return {
+        "z_banco": float(row["z_banco"] or 0.0),
+        "n_com_oferta": int(row["n_com_oferta"]),
+        "n_total": int(row["n_total"]),
+    }
 
 
 async def get_historico_cliente(token: int) -> ClienteHistoricoResponse | None:

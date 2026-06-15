@@ -15,6 +15,7 @@ Arquivos JSON devem estar em apps/algoritmo_simplex/input/
 
 import sys
 import json
+import traceback
 from pathlib import Path
 import numpy as np
 import pandas as pd
@@ -167,6 +168,15 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
     Executa o pipeline completo de otimização a partir de um parquet e um
     dicionário de parâmetros. Retorna um dicionário estruturado com o resultado.
 
+    NÃO grava arquivos de saída além do que o clustering já produz em cache
+    (_calibrado, _com_cluster, _clusters). A persistência dos limites é
+    responsabilidade do chamador:
+      - a CLI (main) grava os parquets _clusters_resultado e _resultado_final
+        via escrever_resultados_finais();
+      - o backend persiste tudo no Postgres a partir de parquet_com_cluster.
+    Manter executar_pipeline como cálculo puro evita I/O desnecessário no
+    caminho do backend (que não usaria os arquivos de resultado).
+
     Usado pelo backend para chamar o otimizador sem depender de sys.argv
     nem de arquivo JSON em disco.
 
@@ -201,10 +211,12 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
     problema = montar_problema(clusters, params, df)
     x, z, status = simplex(copy.deepcopy(problema))
 
-    # comparação com PuLP — falha silenciosa para não bloquear o pipeline
+    # comparação com PuLP — falha não bloqueia o pipeline mas é logada
     try:
         x_pulp, z_pulp, status_pulp = simplex_pulp(copy.deepcopy(problema))
-    except Exception:
+    except Exception as _pulp_err:
+        print("[PuLP] ERRO ao resolver — usando fallback z_pulp=0:")
+        traceback.print_exc()
         x_pulp = [0.0] * len(x)
         z_pulp = 0.0
         status_pulp = "erro"
@@ -236,16 +248,65 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
     cache_dir = Path(__file__).resolve().parent.parent.parent / "data" / "cache"
     stem = parquet_calibrado.stem
     parquet_com_cluster = cache_dir / f"{stem}_com_cluster.parquet"
+    parquet_clusters = cache_dir / f"{stem}_clusters.parquet"
+
+    # grava os dois limites (nosso Simplex e PuLP) DENTRO dos arquivos que o
+    # clustering já produziu (_com_cluster e _clusters), sem criar arquivos
+    # novos. Feito aqui dentro para que QUALQUER chamador (CLI ou backend/front)
+    # deixe os limites em disco de forma idêntica.
+    gravar_limites_nos_arquivos(
+        parquet_com_cluster, parquet_clusters, resultado_clusters
+    )
 
     return {
         "status": status,
         "z": z,
         "clusters": resultado_clusters,
         "parquet_com_cluster": parquet_com_cluster,
+        "parquet_clusters": parquet_clusters,
         "z_pulp": z_pulp,
         "status_pulp": status_pulp,
         "delta_z_pct": delta_z_pct,
     }
+
+
+def gravar_limites_nos_arquivos(
+    parquet_com_cluster: Path,
+    parquet_clusters: Path,
+    resultado_clusters: list[dict],
+) -> None:
+    """
+    Adiciona as colunas limite_otimizado e limite_otimizado_pulp DENTRO dos
+    arquivos que o clustering já produziu, regravando-os no mesmo caminho:
+
+      - {stem}_com_cluster.parquet : por cliente (cada cliente recebe os dois
+        limites do seu cluster) -> entregável por cliente.
+      - {stem}_clusters.parquet    : agregado por cluster, com os dois limites.
+
+    Não cria arquivos novos: os limites entram nos próprios arquivos existentes.
+    O join é por segmento_id (chave), robusto a reordenação. Idempotente: se as
+    colunas já existirem (re-execução), são sobrescritas com os mesmos valores.
+    """
+    map_nosso = {c["segmento_id"]: c["limite_otimizado"] for c in resultado_clusters}
+    map_pulp = {c["segmento_id"]: c["limite_otimizado_pulp"] for c in resultado_clusters}
+
+    df_clusters = pd.read_parquet(parquet_clusters)
+    df_clusters["limite_otimizado"] = (
+        df_clusters["segmento_id"].astype(int).map(map_nosso)
+    )
+    df_clusters["limite_otimizado_pulp"] = (
+        df_clusters["segmento_id"].astype(int).map(map_pulp)
+    )
+    df_clusters.to_parquet(parquet_clusters, index=False)
+
+    df_clientes = pd.read_parquet(parquet_com_cluster)
+    df_clientes["limite_otimizado"] = (
+        df_clientes["segmento_id"].astype(int).map(map_nosso)
+    )
+    df_clientes["limite_otimizado_pulp"] = (
+        df_clientes["segmento_id"].astype(int).map(map_pulp)
+    )
+    df_clientes.to_parquet(parquet_com_cluster, index=False)
 
 
 def main() -> None:
@@ -289,6 +350,12 @@ def main() -> None:
         clusters = pd.read_parquet(cache_dir / f"{stem}_calibrado_clusters.parquet")
         x = [c["limite_otimizado"] for c in resultado["clusters"]]
         exibir_resultado(x, resultado["z"], resultado["status"], clusters)
+
+        # os limites já foram gravados dentro de executar_pipeline,
+        # nos próprios arquivos _com_cluster e _clusters
+        print(f"\nLimites gravados nos arquivos em data/cache/:")
+        print(f"  {resultado['parquet_com_cluster'].name}  (por cliente, + limite_otimizado / _pulp)")
+        print(f"  {resultado['parquet_clusters'].name}  (por cluster, + limite_otimizado / _pulp)")
     except FileNotFoundError as e:
         print(f"Erro: {e}")
         sys.exit(1)

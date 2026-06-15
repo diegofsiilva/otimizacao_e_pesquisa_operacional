@@ -65,7 +65,11 @@ def _obter_solver() -> tuple[object, str]:
 
     # 1. CBC com tmpDir sem espaços - funciona na maioria dos Windows com nome de usuário com espaço
     def _tentar_cbc():
-        return pulp.PULP_CBC_CMD(msg=0, keepFiles=False, tmpDir=tmpdir)
+        # PuLP >= 2.0 NÃO aceita tmpDir no construtor (era válido só no PuLP 1.x).
+        # A forma correta hoje é instanciar e setar o atributo tmpDir depois.
+        solver = pulp.PULP_CBC_CMD(msg=0, keepFiles=False)
+        solver.tmpDir = tmpdir
+        return solver
 
     # 2. HiGHS via highspy (pip install highspy)
     def _tentar_highs_py():
