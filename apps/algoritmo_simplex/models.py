@@ -3,6 +3,7 @@ algoritmo_simplex/models.py
 Estruturas de dados para o algoritmo Simplex.
 """
 
+from __future__ import annotations
 from dataclasses import dataclass
 
 
