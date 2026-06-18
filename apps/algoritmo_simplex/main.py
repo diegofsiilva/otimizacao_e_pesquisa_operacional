@@ -15,6 +15,7 @@ Arquivos JSON devem estar em apps/algoritmo_simplex/input/
 
 import sys
 import json
+import copy
 import traceback
 from pathlib import Path
 import numpy as np
@@ -205,8 +206,6 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
     finally:
         if json_temp.exists():
             json_temp.unlink()
-
-    import copy
 
     problema = montar_problema(clusters, params, df)
     x, z, status = simplex(copy.deepcopy(problema))
