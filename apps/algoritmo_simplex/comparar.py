@@ -17,9 +17,12 @@ montagem do problema usada em `main.py`.
 """
 
 import copy
+import json
 import math
 import sys
 from pathlib import Path
+
+import pandas as pd
 
 from models import Problema
 from simplex import simplex
@@ -168,8 +171,6 @@ def problema_real(arquivo_parquet_nome: str, arquivo_json_nome: str) -> Problema
         arquivo_json_nome    : nome do JSON de parâmetros em algoritmo_simplex/input/
                                (ex: parametros.json)
     """
-    import json
-    import pandas as pd
     from main import garantir_clusters, montar_problema
 
     arquivo_parquet = (
