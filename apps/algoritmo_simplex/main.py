@@ -119,7 +119,8 @@ def montar_problema(clusters: pd.DataFrame, params: dict, df: pd.DataFrame) -> P
     n = len(clusters)
 
     # vetor de coeficientes da função objetivo
-    c = (n_k * pi_k * (u_bar * t * T - PD_k * LGD)).tolist()
+    retorno_esperado = (n_k * pi_k * (u_bar * t * T - PD_k * LGD))
+    c = retorno_esperado.tolist()
 
     # R1: teto de inadimplência financeira (uma restrição para a carteira inteira)
     r1 = (n_k * (PD_k - pd_fin_atual)).tolist()
