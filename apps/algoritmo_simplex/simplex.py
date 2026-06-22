@@ -107,11 +107,7 @@ def simplex(problema: Problema) -> tuple[list[float], float, str]:
         todos_cj_zj = cj_zj_x + cj_zj_s
 
         # se todos os valores forem não-positivos, não há mais ponto de melhoria
-        todos_nao_positivos = True
-        for valor in todos_cj_zj:
-            if valor > 0:
-                todos_nao_positivos = False
-                break
+        todos_nao_positivos = not any(valor > 0 for valor in todos_cj_zj)
 
         if todos_nao_positivos:
             # verifica se há múltiplas soluções: alguma variável fora da base tem cj_zj == 0
