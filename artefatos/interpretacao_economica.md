@@ -7,6 +7,24 @@ _Diretrizes de escrita: ancorar cada afirmação em número, com a fonte no pró
 
 ## 1. Interpretação Econômica da Função Objetivo
 
+Esta seção lê a função objetivo como uma decisão de negócio, não como uma equação. Antes de interpretar, vale fixar o objeto: a FO condensa o trade-off central do projeto (quanto limite dar a cada perfil para capturar receita sem assumir perda excessiva) em uma única expressão monetária que o otimizador maximiza (formulação completa em `modelagem_matematica.md §1.6`):
+
+$$\max_{L_k}\; Z \;=\; \sum_{k=1}^{K} n_k \,\pi_k \,\Big(\underbrace{T\,\bar{u}\,t}_{\text{receita unitária}} \;-\; \underbrace{PD_k\,\gamma_{d(k)}\,\text{LGD}}_{\text{perda unitária}}\Big)\,L_k$$
+
+Cada símbolo, e o que significa em termos de negócio:
+
+- **$L_k$**: variável de decisão, o limite (R\$) ofertado a todos os clientes do cluster $k$ e que o modelo escolhe.
+- **$k$, $K$**: cada um dos $K \geq 100$ clusters (perfis) de clientes elegíveis.
+- **$n_k$**: número de clientes no cluster; dá a cada perfil peso proporcional ao seu tamanho.
+- **$\pi_k$**: propensão à contratação (0 a 1), a chance de o cliente aceitar a oferta; pondera receita e perda, que só ocorrem se ele contratar.
+- **$T = 22$ meses**: horizonte de uso do limite.
+- **$\bar{u} = 0{,}75$**: utilização, a fração do limite efetivamente gasta (75%).
+- **$t = 0{,}0175$**: taxa de interchange, o que o banco ganha por real transacionado (1,75%).
+- **$PD_k$**: probabilidade de default do perfil.
+- **$\gamma_{d(k)}$**: fator que calibra a PD do scoring ao default efetivamente observado, por decil de risco.
+- **$\text{LGD} = 0{,}80$**: *Loss Given Default*, a fração perdida em caso de default (recupera-se ~20%).
+- **$c_k = \pi_k\,(T\bar{u}t - PD_k\gamma_{d(k)}\,\text{LGD})$**: retorno líquido por real de limite no cluster, o "spread de risco" do perfil e o que de fato orienta a decisão.
+
 ### 1.1 O que a função objetivo representa economicamente?
 [Descrever o que o modelo está maximizando em termos de valor econômico — aqui, o retorno líquido esperado da carteira (receita de interchange menos perda esperada por inadimplência), e não receita bruta. Explicar se a lógica central é margem, retorno esperado, preservação de carteira, conversão, ou combinação desses elementos.]
 
