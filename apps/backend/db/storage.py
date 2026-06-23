@@ -25,6 +25,7 @@ MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
 
 # pool de conexões compartilhado pela aplicação - inicializado no lifespan
 _pool: asyncpg.Pool | None = None
+_pool_error: Exception | None = None
 
 
 async def init_pool() -> None:
@@ -32,26 +33,31 @@ async def init_pool() -> None:
     Cria o pool de conexões com o PostgreSQL e executa as migrations pendentes.
     Deve ser chamado uma única vez na startup da aplicação.
     """
-    global _pool
+    global _pool, _pool_error
 
     pool_options = {
         "min_size": DB_POOL_MIN_SIZE,
         "max_size": DB_POOL_MAX_SIZE,
     }
 
-    if DB_URL:
-        _pool = await asyncpg.create_pool(dsn=DB_URL, **pool_options)
-    else:
-        _pool = await asyncpg.create_pool(
-            host=DB_HOST,
-            port=DB_PORT,
-            database=DB_DATABASE,
-            user=DB_USER,
-            password=DB_PASSWORD,
-            **pool_options,
-        )
+    try:
+        if DB_URL:
+            _pool = await asyncpg.create_pool(dsn=DB_URL, **pool_options)
+        else:
+            _pool = await asyncpg.create_pool(
+                host=DB_HOST,
+                port=DB_PORT,
+                database=DB_DATABASE,
+                user=DB_USER,
+                password=DB_PASSWORD,
+                **pool_options,
+            )
 
-    await _run_migrations()
+        await _run_migrations()
+        _pool_error = None
+    except Exception as exc:
+        _pool = None
+        _pool_error = exc
 
 
 async def close_pool() -> None:
@@ -72,9 +78,8 @@ def get_pool() -> asyncpg.Pool:
     Lança RuntimeError se chamado antes de init_pool().
     """
     if _pool is None:
-        raise RuntimeError(
-            "Pool de conexões não inicializado. Chame init_pool() primeiro."
-        )
+        detail = f" Erro original: {_pool_error}" if _pool_error else ""
+        raise RuntimeError(f"Pool de conexões não inicializado.{detail}")
     return _pool
 
 
