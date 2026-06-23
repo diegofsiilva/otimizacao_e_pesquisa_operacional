@@ -36,14 +36,20 @@ O valor não vem de conceder mais crédito, e sim de **alocar melhor o limite en
 Puxam a rentabilidade para cima a propensão $\pi_k$, a taxa de interchange $t$ (1,75%), o horizonte $T$ (22 meses) e a utilização $\bar{u}$ (75%); puxam para baixo a PD, a calibração $\gamma_d$ e a LGD (80%). O ganho frente à política vigente é medido por backtesting (rentabilidade do `limite_ofertado` atual contra o limite otimizado nas safras M1–M3), e é aí que se comprova geração de valor, não apenas números diferentes.
 
 ### 1.3 Quais distorções econômicas a função objetivo pode induzir?
-[Analisar incentivos perversos estruturais da própria FO: ela é monótona crescente em $L_k$ — sozinha, "empurraria" o limite ao infinito (é cega ao risco; quem segura são as restrições); não desconta custo de capital nem funding; e embute miopia temporal (capta só 22 meses). As distorções que vêm de premissas/parâmetros (LGD uniforme etc.) ficam na Seção 6, para não repetir.]
+A própria forma da FO embute incentivos que **as restrições conseguem conter**:
 
-[Indicar se a função objetivo favorece volume, margem ou segurança, e em que cenário isso é um problema.]
+- **Cega ao risco.** É crescente em $L_k$ e não tem ponderador de risco ($\lambda$): sozinha, empurraria o limite ao infinito. Todo o controle de risco é delegado a R1–R6, ou seja, o objetivo isolado incentiva exposição máxima.
+- **Margem acima de tudo.** Por maximizar $c_k$ por real, tende a concentrar nos clusters mais rentáveis; numa base cuja PD mediana é 0,71, isso seria perigoso sem o freio de R1/R4/R5.
 
-[Ir além: reler a FO sob a ótica de métricas de valor do cliente — ela maximiza margem de 22 meses, não o LTV. Um limite baixo demais frustra e gera churn (LTV perdido que a FO não enxerga); um alto demais gera superendividamento. Esboçar como uma FO madura incorporaria LTV − CAC líquido de churn.]
+Há ainda **duas simplificações que as restrições não corrigem**, e que mudariam não o valor de $Z$, mas *quem* recebe limite:
+
+- **Custo de capital (RAROC).** Cada real de limite consome capital regulatório (ativo ponderado pelo risco, sob Basileia), e a FO não o desconta. O objetivo economicamente correto seria o retorno sobre o capital alocado (RAROC), e não o retorno bruto: por essa ótica, um cluster de margem alta porém PD alta, que prende muito capital, vale menos do que a FO atual sugere.
+- **Horizonte (LTV).** A margem de interchange de 22 meses é uma fatia do LTV. Como ignora CAC e churn (um limite baixo demais frustra e empurra ao concorrente; um alto demais superendivida), a FO supervaloriza perfis de margem alta agora porém churn alto e subvaloriza os de margem fina mas fiéis. Um objetivo em LTV − CAC líquido de churn deslocaria limite para quem vale mais ao longo do tempo (Instrução 3).
+
+Nenhuma das duas invalida a FO atual: ela é uma v1 deliberadamente simples (tudo em R\$, na mesma unidade, auditável), e essas são a sua evolução natural. As distorções que vêm de premissas/parâmetros (como a LGD uniforme) estão na Seção 6.
 
 ### 1.4 Leitura executiva da função objetivo
-[Fechar com uma frase de negócio: o que o modelo está tentando fazer pela carteira, em linguagem de decisão executiva.]
+O modelo transforma a definição de limite de uma regra fixa em uma **otimização de margem ajustada ao risco**: aloca cada real de limite onde ele rende mais, líquido de perda esperada, sem piorar o risco da carteira, qualificando a decisão do analista de crédito em vez de substituí-la.
 
 ## 2. Interpretação das Restrições como Políticas de Negócio
 
