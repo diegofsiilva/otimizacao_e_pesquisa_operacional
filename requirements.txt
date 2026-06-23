@@ -1,7 +1,7 @@
 fastapi
 pulp
 highspy
-uvicorn[standard]
+uvicorn
 pandas
 python-multipart
 openpyxl
