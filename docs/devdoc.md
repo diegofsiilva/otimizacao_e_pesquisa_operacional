@@ -113,3 +113,85 @@ python -m http.server 5500
 
 ---
 
+## 5. Estrutura dos módulos principais
+
+```
+apps/
+├── algoritmo_simplex/     # otimizador e pipeline de otimização
+│   ├── main.py            # orquestra clustering + Simplex
+│   ├── simplex.py         # implementação própria do algoritmo
+│   ├── clustering.py      # clusterização CART por perfil de cliente
+│   ├── models.py          # estruturas Problema e Tableau
+│   └── input/             # arquivos JSON de parâmetros
+├── backend/
+│   ├── main.py            # aplicação FastAPI
+│   ├── config.py          # variáveis de ambiente e configuração
+│   ├── api/               # rotas REST (routes.py, upload_routes.py)
+│   ├── db/                # pool asyncpg e migrations SQL
+│   ├── model/             # schemas Pydantic
+│   └── services/          # lógica de negócio e integração com o otimizador
+└── frontend/              # SPA React via CDN/Babel (arquivos estáticos)
+```
+
+---
+
+## 6. Parâmetros do modelo
+
+Os parâmetros padrão do modelo de otimização ficam em `apps/algoritmo_simplex/input/parametros.json`:
+
+```json
+{
+  "T": 22,
+  "t": 0.0175,
+  "LGD": 0.8,
+  "u_bar": 0.75,
+  "L_max": 25000.0,
+  "alpha": 0.05
+}
+```
+
+Em ambiente de desenvolvimento, os parâmetros também podem ser sobrescritos por consulta via query params na rota `POST /api/consultas` ou persistidos via `PUT /api/config`.
+
+---
+
+## 7. Pipeline do otimizador via terminal
+
+Para executar o pipeline de otimização diretamente, sem a interface web, prepare os dados primeiro (veja a seção "Preparação dos dados" no [README.md](README.md)) e então execute a partir da raiz do projeto:
+
+```bash
+python apps/algoritmo_simplex/main.py clientes_calibrado.csv parametros.json
+```
+
+---
+
+## 8. Rodar os testes
+
+Execute a partir da **raiz do repositório** (`g04/`), com o ambiente virtual ativado:
+
+```bash
+# Testes do otimizador (algoritmo Simplex)
+python -m unittest discover -s apps/algoritmo_simplex/tests -p "test_*.py"
+
+# Testes do backend (contratos de rotas, upload, integração HTTP e worker)
+python -m unittest discover -s apps/backend/tests -p "test_*.py"
+```
+
+Os testes do backend não exigem um banco ativo: as rotas que dependem do banco são mockadas nos testes de contrato e integração HTTP.
+
+---
+
+## 9. Testar a API com o Bruno
+
+As coleções de requisições para o Bruno estão em `apps/backend/bruno/backend/`. O README da pasta descreve como importar e executar as chamadas.
+
+---
+
+## 10. Variáveis de ambiente adicionais
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `FRONTEND_ORIGINS` | derivado de `APP_HOST:FRONTEND_PORT` | Origens CORS permitidas (separe múltiplas por vírgula) |
+| `LOCAL_DATA_DIR` | `apps/backend/db/local_data` | Diretório de estado local (state.json, params.json) |
+| `UPLOAD_DIR` | `apps/backend/uploads` | Diretório de uploads de parquet |
+
+
