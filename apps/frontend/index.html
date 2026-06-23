@@ -15,6 +15,13 @@
     <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script>
+      Babel.registerPreset("react-classic", function () {
+        return {
+          presets: [[Babel.availablePresets.react, { runtime: "classic" }]],
+        };
+      });
+    </script>
 
     <!-- p5.js: renderização dos gráficos em canvas com animações e interações -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
@@ -39,15 +46,39 @@
     <!-- Ordem importa: Resultados.js define BarChartSVG/DonutChart usados em GerarLimites.js,
          mas como os componentes são referenciados só em tempo de render (não de parse),
          a ordem abaixo é suficiente. -->
-    <script type="text/babel" src="pages/Navbar.js"></script>
-    <script type="text/babel" src="pages/Cockpit.js"></script>
-    <script type="text/babel" src="pages/GerarLimites.js"></script>
-    <script type="text/babel" src="pages/Resultados.js"></script>
-    <script type="text/babel" src="pages/Clientes.js"></script>
-    <script type="text/babel" src="pages/ConfigModal.js"></script>
+    <script
+      type="text/babel"
+      data-presets="react-classic"
+      src="pages/Navbar.js"
+    ></script>
+    <script
+      type="text/babel"
+      data-presets="react-classic"
+      src="pages/Cockpit.js"
+    ></script>
+    <script
+      type="text/babel"
+      data-presets="react-classic"
+      src="pages/GerarLimites.js"
+    ></script>
+    <script
+      type="text/babel"
+      data-presets="react-classic"
+      src="pages/Resultados.js"
+    ></script>
+    <script
+      type="text/babel"
+      data-presets="react-classic"
+      src="pages/Clientes.js"
+    ></script>
+    <script
+      type="text/babel"
+      data-presets="react-classic"
+      src="pages/ConfigModal.js"
+    ></script>
 
     <!-- App raiz -->
-    <script type="text/babel">
+    <script type="text/babel" data-presets="react-classic">
       // Captura erros de render e exibe mensagem legível em vez de tela branca.
       class ErrorBoundary extends React.Component {
         constructor(props) {
