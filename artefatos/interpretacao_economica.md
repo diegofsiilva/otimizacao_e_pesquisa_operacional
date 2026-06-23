@@ -53,40 +53,60 @@ O modelo transforma a definição de limite de uma regra fixa em uma **otimizaç
 
 ## 2. Interpretação das Restrições como Políticas de Negócio
 
-### 2.1 Restrição R1 — Teto de inadimplência financeira
-[Política representada: o apetite de risco da instituição — a carteira otimizada não pode ter PD ponderada por exposição maior que a da carteira aprovada vigente.]
+Cada restrição traduz uma política de crédito do Banco Pan em um corte no espaço de soluções factíveis. Para cada uma, respondemos três perguntas:
 
-[Risco controlado: deterioração da qualidade financeira da carteira (risco ponderado pelo valor exposto).]
+- qual política representa
+- qual risco controla
+- o que acontece economicamente se for relaxada ou apertada
 
-[Se relaxada: mais retorno, mais inadimplência e provisão. Ancorar no preço-sombra — cada ponto percentual adicional de tolerância vale ≈ R\$ 1,2 M/ano de retorno.]
+As respostas se apoiam nos preços-sombra do LP resolvido sobre a base real, agregada em 10 clusters por decil de `pd_produto` (`modelagem_matematica.md §4.3`).
 
-[Se apertada: carteira mais sã, porém menos volume rentável e menor receita.]
+### 2.1 Restrição R1: Teto de inadimplência financeira
 
-### 2.2 Restrição R2 — Capacidade de pagamento (alavancagem diferenciada)
-[Política representada: crédito responsável — o limite de cada perfil é amarrado à capacidade de pagamento ($L_k \leq m_k \cdot CP_k$), com alavancagem $m_k$ crescente no score.]
+R1 representa o apetite de risco financeiro da instituição: a carteira otimizada não pode ter PD ponderada pela exposição ($\sum n_k PD_k L_k / \sum n_k L_k$) acima da carteira aprovada vigente, com teto $\overline{PD}_{fin}^{atual} = 0{,}32$ no cenário resolvido. O risco que ela controla é a deterioração da qualidade financeira da carteira ponderada pelo valor exposto: diferentemente de contar clientes inadimplentes, R1 pesa cada default pelo limite em risco e captura a perda esperada em reais.
 
-[Risco controlado: superendividamento individual e exposição além do que o cliente suporta — é o freio prudencial por cliente da carteira.]
+É a restrição ativa no nível agregado, com preço-sombra de 0,1964 por unidade do termo de excesso. Relaxá-la de 0,32 para 0,33 equivale a elevar o RHS em $0{,}01 \cdot \sum n_k L_k^* \approx \text{R\$ 6,1 M}$ e rende cerca de R\$ 1,2 M/ano de retorno adicional, ao custo de mais provisão e capital regulatório sobre a inadimplência incremental. Apertá-la empurra a alocação para os clusters mais seguros e de menor margem, deixando a carteira mais sã e com menor provisão, porém com menos volume rentável e menor receita.
 
-[Impacto econômico de mudar a rigidez: é o maior gargalo de retorno marginal do modelo (preço-sombra de até ≈ R\$ 67,6 mil). Relaxar (elevar $m_k$ ou melhorar a medição de $CP_k$) aumenta retorno, mas deve ser lido junto de R1.]
+### 2.2 Restrição R2: Capacidade de pagamento (alavancagem diferenciada)
 
-### 2.3 Restrição R3 — Teto máximo de limite
-[Política representada: teto absoluto definido pelo parceiro (R\$ 25 mil) — salvaguarda prudencial/operacional.]
+R2 traduz a política de crédito responsável: o limite de cada perfil é amarrado à capacidade de pagamento ($L_k \leq m_k \cdot CP_k$), com a alavancagem $m_k$ crescente no score e $CP_k$ medido no percentil 5, uma escolha prudencial sobre o p50/p90 (`§1.5`). O risco controlado é o superendividamento individual, isto é, conceder acima do que o cliente comprovadamente sustenta, causa-raiz do default no nível do cliente. É o freio prudencial por cliente da carteira.
 
-[Risco controlado: exposição unitária extrema. Na prática quase nunca é ativa, porque R2 já limita os $L_k$ bem abaixo do teto; atua como rede de segurança.]
+É também o maior gargalo de retorno marginal do modelo: está ativa em seis dos dez clusters, com preço-sombra de até R\$ 67.633 por R\$ 1 de $m_k \cdot CP_k$ em D2 (R\$ 63.064 em D3 e R\$ 54.333 em D4). Relaxá-la, seja elevando $m_k$ ou medindo melhor $CP_k$, é a alavanca de maior retorno, mas deve ser lida junto de R1, pois mais limite a perfis de PD alta pressiona o teto agregado; apertá-la reduz diretamente o retorno por cluster. Há ainda uma fragilidade do próprio modelo: 42–43% dos registros em M2/M3 têm `capacidade_pagamento` nula e usam o proxy `renda_estimada × 0,30` (`§6`), de modo que o gargalo mais caro repousa sobre uma medição imperfeita.
 
-### 2.4 Demais restrições do modelo
-[**R4 — Teto de inadimplência física (headcount):** controla a fração de clientes inadimplentes, independentemente do limite; protege custo de cobrança, reputação e compliance (CMN 4.966/2021). Apertar reduz a base atendida; relaxar aumenta clientes e custo operacional.]
+### 2.3 Restrição R3: Teto máximo de limite
 
-[**R5 — Concentração máxima por cluster:** política de diversificação — nenhum perfil pode concentrar mais que $\alpha$ da exposição. Controla risco sistêmico/setorial. Relaxar eleva retorno mas fragiliza a carteira (preço-sombra de R5 em D1 ≈ 0,1052).]
+R3 é o teto absoluto definido pelo parceiro ($L^{max} = \text{R\$ 25 mil}$), uma salvaguarda prudencial e operacional que controla a exposição unitária extrema e funciona como rede de segurança caso R2 falhe ou seja mal calibrada.
 
-[**R6 — Meta de produção mínima:** piso comercial de volume. Evita uma solução ótima em margem mas inviável comercialmente; se o LP fica infactível com $V^{min}$, isso sinaliza negociação entre as áreas comercial e de risco.]
+Na prática, nunca é ativa no cenário atual: o preço-sombra é zero porque R2 já limita os $L_k$ à casa das centenas de reais, bem abaixo dos R\$ 25 mil. Relaxá-la ou apertá-la não altera a solução; só passaria a morder num cenário hipotético de R2 muito frouxa.
 
-### 2.5 Trade-offs econômicos explícitos
-[Explicar, com número dos dois lados, os trade-offs que o modelo resolve: rentabilidade vs inadimplência (R1); conversão/atratividade vs risco (R2); escala vs precisão — servir ~1,8M elegíveis por clusters de limite único em vez do limite individual ótimo, inviável com ~1,8M variáveis; escala/volume vs seletividade (R6 vs R1/R4); e proteção/diversificação vs agressividade comercial (R5).]
+### 2.4 Restrição R4: Teto de inadimplência física
 
-[Indicar qual lado o modelo privilegia e em que condições isso é justificável.]
+R4 representa o apetite de risco por headcount: limita a fração de clientes inadimplentes entre os clusters com oferta, independentemente do limite concedido, em linha com a CMN 4.966/2021. Complementa R1, que olha os reais expostos enquanto R4 olha o número de clientes, e controla o risco operacional e reputacional, isto é, custo de cobrança, compliance e imagem, que escalam com a quantidade de inadimplentes e não com o valor exposto.
 
-[Ir além: como R1 e R4 estão ancoradas na carteira *atual*, a política é pró-cíclica (Minsky — "a estabilidade gera instabilidade"): em bonança o teto afrouxa e o modelo concede mais justamente antes de uma virada de ciclo. Usar o cenário de estresse já calculado (Selic ↑ → R2 e R1 apertam, ≈ −R\$ 4,3 M no retorno) e propor um teto dinâmico indexado ao ciclo.]
+Por envolver indicadoras de cluster ativo, opera em pós-otimização, removendo iterativamente os clusters de maior $PD_k$ e menor $c_k$ até satisfazer o teto. Apertá-la reduz a base atendida e a receita; relaxá-la amplia a base e, com ela, o custo operacional de cobrança.
+
+### 2.5 Restrição R5: Concentração máxima por cluster
+
+R5 traduz a política de diversificação da carteira: nenhum perfil pode concentrar mais que $\alpha$ da exposição total ($n_k L_k \leq \alpha \sum n_j L_j$). Controla o risco sistêmico e de concentração, já que uma carteira rentável porém dependente de um único perfil fica vulnerável a choques setoriais ou regionais que atinjam justamente aquele cluster.
+
+No cenário resolvido, R5 é ativa em D1, no teto de concentração, com preço-sombra de 0,1052: cada R\$ 1 adicional de concentração em D1 vale +R\$ 0,1052 de $Z$. Relaxá-la rende retorno e fragiliza a carteira; apertá-la dispersa o limite e protege contra choques.
+
+### 2.6 Restrição R6: Meta de produção mínima
+
+R6 é o piso comercial de volume ($\sum n_k L_k \geq V^{min}$), que garante que a solução ótima em margem também seja viável comercialmente. Controla o risco de subprodução, isto é, o de o modelo entregar uma carteira matematicamente ótima mas pequena demais para sustentar as metas do negócio.
+
+Não é ativa no cenário-base ($V^{min} = 0$). Com um $V^{min}$ operacional, da ordem de R\$ 100–500 M, apertá-la pode tornar o LP infactível, sinalizando que R1 e R4 estão restritivas demais para o volume desejado e informando diretamente uma negociação entre as áreas comercial e de risco; relaxá-la devolve ao solver a liberdade de priorizar margem sobre volume.
+
+### 2.7 Trade-offs econômicos explícitos
+
+As restrições materializam dois trade-offs centrais da gestão de crédito, cada um com número dos dois lados:
+
+- **Rentabilidade vs inadimplência** (R1): cada ponto percentual de apetite de risco vale ≈ R\$ 1,2 M/ano de retorno, contra a provisão e o capital regulatório sobre a inadimplência incremental.
+- **Conversão vs risco** (R2): relaxar o freio de capacidade rende até R\$ 67,6 mil de retorno marginal por cluster e torna a oferta mais atrativa, contra o risco de superendividamento do cliente.
+
+No cenário-base o modelo **pende para a segurança**: prefere abrir mão de retorno a piorar a qualidade da carteira vigente.
+
+**Pró-ciclicidade.** Como R1 e R4 estão ancoradas na carteira *atual*, a política é estruturalmente pró-cíclica (Minsky: "a estabilidade gera instabilidade"). Geralmente, a inadimplência vigente é baixa, o teto afrouxa e o modelo concede mais limite justamente antes de uma virada de ciclo. O cenário de estresse já calculado confirma o risco: uma alta de Selic que reduz $CP_k$ em 10% e eleva $PD_k$ em 5% aperta R2 e R1 ao mesmo tempo e custa ≈ **−R\$ 4,3 M** de retorno (`§4.4`). A mitigação é um **teto dinâmico indexado ao ciclo** — ancorar $\overline{PD}_{fin}^{atual}$ em uma média de ciclo ou fator macro, e não no nível corrente, para que o apetite de risco não se expanda no pior momento.
 
 ## 3. Leitura Econômica das Decisões do Modelo
 
