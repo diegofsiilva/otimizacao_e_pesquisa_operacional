@@ -111,9 +111,12 @@ No cenário-base o modelo **pende para a segurança**: prefere abrir mão de ret
 ## 3. Leitura Econômica das Decisões do Modelo
 
 ### 3.1 Que tipo de cliente recebe mais limite?
-[Descrever o perfil favorecido: maior capacidade de pagamento, menor PD e score mais alto (que dá alavancagem $m_k$ maior). Explicar que a decisão de "quanto" é governada principalmente por R2, não pela FO pura — o modelo dá mais limite a quem comprovadamente pode pagar.]
 
-[Ir além: tratar os clusters atendidos (decis D1–D7) como o ICP revelado pelo modelo e defini-lo explicitamente.]
+O cliente que recebe mais limite é aquele que combina **baixo risco calibrado, capacidade de pagamento comprovada e retorno líquido positivo por real de exposição**. Em termos operacionais, isso aparece em três sinais: $PD_k$ menor, $CP_k$ maior e multiplicador de alavancagem $m_k$ suficiente para permitir que R2 não estrangule o limite. Na solução por decis, o maior limite individual aparece em D1, com $PD_k = 0{,}156$, $CP_{p5} = \text{R\$ 800}$ e $L_1^* \approx \text{R\$ 258}$; depois o limite cai para D2 ($L_2^* = \text{R\$ 162{,}75}$), D3 ($\text{R\$ 135}$), D4 ($\text{R\$ 132{,}75}$), D5 ($\text{R\$ 106{,}84}$), D6 ($\text{R\$ 62{,}50}$) e D7 ($\text{R\$ 9{,}17}$), zerando em D8-D10 (`modelagem_matematica.md §4`).
+
+O ponto econômico central é que o modelo não dá mais limite apenas para quem tem maior margem $c_k$. D4, por exemplo, tem o maior coeficiente unitário entre os decis atendidos ($c_k = 0{,}06323$), mas recebe menos limite que D1 porque sua capacidade de pagamento prudencial é menor e sua alavancagem é mais restrita. A decisão de "quanto" é governada principalmente por R2: na execução com 800 segmentos da safra M1, a restrição de capacidade de pagamento ficou ativa em 677 de 800 segmentos, e o limite recomendado teve correlação de 0,996 com o teto $m_k \cdot CP_k$ (`artigo.md §4.1`). Assim, o modelo favorece o cliente que **pode pagar**, não apenas o cliente que parece rentável.
+
+Essa leitura revela o ICP (*Ideal Customer Profile*) implícito do modelo: correntistas elegíveis com PD calibrada abaixo do limiar de destruição de valor, capacidade de pagamento mensurável, score de crédito suficiente para sustentar alavancagem e propensão positiva à contratação. No recorte por decis, esse ICP corresponde a D1-D7; na execução completa de M1, ele se materializa em 382 de 800 segmentos com oferta efetiva, cobrindo 876.520 clientes, ou 47,7% dos elegíveis (`artigo.md §4.1`). D8-D10 ficam fora não por uma regra fixa de score, mas porque incluir esses perfis consome orçamento de risco e reduz o retorno esperado da carteira.
 
 ### 3.2 O modelo prioriza volume, margem ou segurança?
 [Interpretar a partir dos resultados: a FO é margem-orientada, mas a solução é governada por segurança (R1/R4/R5) e tem piso de volume (R6). No cenário-base pende para seletividade.]
