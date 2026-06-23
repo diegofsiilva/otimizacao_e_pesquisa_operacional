@@ -1,0 +1,12 @@
+fastapi
+pulp
+highspy
+uvicorn[standard]
+pandas
+python-multipart
+openpyxl
+pyarrow
+scikit-learn
+numpy
+asyncpg
+httpx

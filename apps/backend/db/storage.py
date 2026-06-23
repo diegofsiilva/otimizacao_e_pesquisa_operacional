@@ -5,12 +5,20 @@ Gerenciamento da conexão com o PostgreSQL e execução das migrations.
 
 from __future__ import annotations
 
-import os
 from pathlib import Path
 
 import asyncpg
 
-from config import DB_DATABASE, DB_HOST, DB_PASSWORD, DB_PORT, DB_USER
+from config import (
+    DB_DATABASE,
+    DB_HOST,
+    DB_PASSWORD,
+    DB_POOL_MAX_SIZE,
+    DB_POOL_MIN_SIZE,
+    DB_PORT,
+    DB_URL,
+    DB_USER,
+)
 
 # diretório onde ficam os arquivos .sql de migration
 MIGRATIONS_DIR = Path(__file__).resolve().parent / "migrations"
@@ -26,15 +34,22 @@ async def init_pool() -> None:
     """
     global _pool
 
-    _pool = await asyncpg.create_pool(
-        host=DB_HOST,
-        port=DB_PORT,
-        database=DB_DATABASE,
-        user=DB_USER,
-        password=DB_PASSWORD,
-        min_size=2,
-        max_size=10,
-    )
+    pool_options = {
+        "min_size": DB_POOL_MIN_SIZE,
+        "max_size": DB_POOL_MAX_SIZE,
+    }
+
+    if DB_URL:
+        _pool = await asyncpg.create_pool(dsn=DB_URL, **pool_options)
+    else:
+        _pool = await asyncpg.create_pool(
+            host=DB_HOST,
+            port=DB_PORT,
+            database=DB_DATABASE,
+            user=DB_USER,
+            password=DB_PASSWORD,
+            **pool_options,
+        )
 
     await _run_migrations()
 

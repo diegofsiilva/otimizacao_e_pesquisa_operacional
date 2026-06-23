@@ -87,8 +87,17 @@ else:
 # Persistencia local
 # ---------------------------------------------------------------------------
 
-LOCAL_DATA_DIR = _path_env("LOCAL_DATA_DIR", BASE_DIR / "db" / "local_data")
-UPLOAD_DIR = _path_env("UPLOAD_DIR", BASE_DIR / "uploads")
+_IS_VERCEL = bool(os.getenv("VERCEL"))
+_DEFAULT_RUNTIME_DIR = Path("/tmp/g04") if _IS_VERCEL else BASE_DIR
+
+LOCAL_DATA_DIR = _path_env(
+    "LOCAL_DATA_DIR",
+    _DEFAULT_RUNTIME_DIR / ("local_data" if _IS_VERCEL else "db/local_data"),
+)
+UPLOAD_DIR = _path_env(
+    "UPLOAD_DIR",
+    _DEFAULT_RUNTIME_DIR / ("uploads" if _IS_VERCEL else "uploads"),
+)
 STATE_PATH = _path_env("STATE_PATH", LOCAL_DATA_DIR / "state.json")
 PARAMS_PATH = _path_env("PARAMS_PATH", LOCAL_DATA_DIR / "params.json")
 
@@ -96,8 +105,11 @@ PARAMS_PATH = _path_env("PARAMS_PATH", LOCAL_DATA_DIR / "params.json")
 # PostgreSQL
 # ---------------------------------------------------------------------------
 
+DB_URL = os.getenv("DATABASE_URL") or os.getenv("POSTGRES_URL") or ""
 DB_HOST = os.getenv("DB_HOST", "localhost")
 DB_PORT = int(os.getenv("DB_PORT", "5432"))
 DB_DATABASE = os.getenv("DB_DATABASE", "")
 DB_USER = os.getenv("DB_USER", "")
 DB_PASSWORD = os.getenv("DB_PASSWORD", "")
+DB_POOL_MIN_SIZE = int(os.getenv("DB_POOL_MIN_SIZE", "1" if _IS_VERCEL else "2"))
+DB_POOL_MAX_SIZE = int(os.getenv("DB_POOL_MAX_SIZE", "3" if _IS_VERCEL else "10"))

@@ -36,6 +36,7 @@ build/
 # ==============================
 .env
 .env.*
+!.env.example
 !apps/backend/.env.example
 .env.local
 .env.development.local
@@ -58,6 +59,7 @@ results/
 node_modules/
 
 # Builds gerados - nomes variam por ferramenta, mas estes cobrem a maioria
+public/
 dist/
 build/
 out/
