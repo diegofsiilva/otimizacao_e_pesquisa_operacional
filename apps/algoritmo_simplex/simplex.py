@@ -31,12 +31,7 @@ def construir_tableau_inicial(problema: Problema) -> Tableau:
     x = [[problema.A[j][i] for j in range(m)] for i in range(n)]
 
     # constrói as colunas s1, s2, ... como matriz identidade (cada folga aparece em apenas uma restrição)
-    s = []
-
-    for i in range(m):
-        coluna = [0.0] * m
-        coluna[i] = 1.0
-        s.append(coluna)
+    s = [[1.0 if j == i else 0.0 for j in range(m)] for i in range(m)]
 
     return Tableau(
         contributions=contribuicao_variaveis_folga,
