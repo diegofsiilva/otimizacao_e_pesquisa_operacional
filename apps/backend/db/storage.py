@@ -13,9 +13,11 @@ from config import (
     DB_DATABASE,
     DB_HOST,
     DB_PASSWORD,
+    DB_CONNECT_TIMEOUT,
     DB_POOL_MAX_SIZE,
     DB_POOL_MIN_SIZE,
     DB_PORT,
+    DB_STATEMENT_CACHE_SIZE,
     DB_URL,
     DB_USER,
 )
@@ -38,6 +40,8 @@ async def init_pool() -> None:
     pool_options = {
         "min_size": DB_POOL_MIN_SIZE,
         "max_size": DB_POOL_MAX_SIZE,
+        "timeout": DB_CONNECT_TIMEOUT,
+        "statement_cache_size": DB_STATEMENT_CACHE_SIZE,
     }
 
     try:
@@ -58,6 +62,7 @@ async def init_pool() -> None:
     except Exception as exc:
         _pool = None
         _pool_error = exc
+        print(f"[warn] PostgreSQL startup unavailable: {exc}", flush=True)
 
 
 async def close_pool() -> None:
