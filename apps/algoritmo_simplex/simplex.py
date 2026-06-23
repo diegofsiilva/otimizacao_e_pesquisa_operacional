@@ -54,9 +54,8 @@ def calcular_cj_zj(coluna: list[float], cj: float, contributions: list[float]) -
     Retorna:
         cj - zj : ganho líquido da variável
     """
-    zj = 0.0
-    for i in range(len(coluna)):
-        zj += coluna[i] * contributions[i]
+    zj = sum(coef * contrib for coef, contrib in zip(coluna, contributions))
+    
     return cj - zj
 
 
