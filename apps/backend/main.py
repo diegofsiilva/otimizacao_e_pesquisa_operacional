@@ -10,7 +10,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response
+from fastapi.responses import FileResponse, JSONResponse, Response
 
 from api.routes import router
 from api.upload_routes import router as upload_router
@@ -47,6 +47,13 @@ app.add_middleware(
 
 app.include_router(router, prefix="/api")
 app.include_router(upload_router, prefix="/api")
+
+
+@app.exception_handler(RuntimeError)
+async def runtime_error_handler(request, exc: RuntimeError):
+    message = str(exc)
+    status_code = 503 if "Pool de conex" in message else 500
+    return JSONResponse(status_code=status_code, content={"detail": message})
 
 
 def _safe_frontend_path(path: str) -> Path | None:

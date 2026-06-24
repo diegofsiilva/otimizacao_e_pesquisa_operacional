@@ -37,26 +37,8 @@ async def init_pool() -> None:
     """
     global _pool, _pool_error
 
-    pool_options = {
-        "min_size": DB_POOL_MIN_SIZE,
-        "max_size": DB_POOL_MAX_SIZE,
-        "timeout": DB_CONNECT_TIMEOUT,
-        "statement_cache_size": DB_STATEMENT_CACHE_SIZE,
-    }
-
     try:
-        if DB_URL:
-            _pool = await asyncpg.create_pool(dsn=DB_URL, **pool_options)
-        else:
-            _pool = await asyncpg.create_pool(
-                host=DB_HOST,
-                port=DB_PORT,
-                database=DB_DATABASE,
-                user=DB_USER,
-                password=DB_PASSWORD,
-                **pool_options,
-            )
-
+        _pool = await _create_pool()
         await _run_migrations()
         _pool_error = None
     except Exception as exc:
@@ -86,6 +68,43 @@ def get_pool() -> asyncpg.Pool:
         detail = f" Erro original: {_pool_error}" if _pool_error else ""
         raise RuntimeError(f"Pool de conexões não inicializado.{detail}")
     return _pool
+
+
+def get_pool_status() -> dict[str, str | bool]:
+    """Retorna um diagnostico seguro do estado do pool de conexoes."""
+    return {
+        "ok": _pool is not None,
+        "error": str(_pool_error) if _pool_error else "",
+    }
+
+
+async def ping_pool() -> dict[str, str | bool]:
+    """Testa a conexao atual com o PostgreSQL."""
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        await conn.fetchval("SELECT 1")
+    return {"ok": True, "error": ""}
+
+
+async def _create_pool() -> asyncpg.Pool:
+    pool_options = {
+        "min_size": DB_POOL_MIN_SIZE,
+        "max_size": DB_POOL_MAX_SIZE,
+        "timeout": DB_CONNECT_TIMEOUT,
+        "statement_cache_size": DB_STATEMENT_CACHE_SIZE,
+    }
+
+    if DB_URL:
+        return await asyncpg.create_pool(dsn=DB_URL, **pool_options)
+
+    return await asyncpg.create_pool(
+        host=DB_HOST,
+        port=DB_PORT,
+        database=DB_DATABASE,
+        user=DB_USER,
+        password=DB_PASSWORD,
+        **pool_options,
+    )
 
 
 async def _run_migrations() -> None:

@@ -42,6 +42,7 @@ from services.credit_service import (
     get_safras,
     update_config,
 )
+from db.storage import get_pool_status, ping_pool
 
 router = APIRouter()
 
@@ -49,6 +50,17 @@ router = APIRouter()
 @router.get("/health")
 def health() -> dict[str, str]:
     return {"status": "ok"}
+
+
+@router.get("/db-health")
+async def db_health() -> dict[str, str | bool]:
+    status = get_pool_status()
+    if not status["ok"]:
+        return status
+    try:
+        return await ping_pool()
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)}
 
 
 # ---------------------------------------------------------------------------
