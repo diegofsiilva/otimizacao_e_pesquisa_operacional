@@ -8,6 +8,7 @@ from __future__ import annotations
 import csv
 import io
 import json
+import os
 import sys
 import uuid
 from datetime import datetime, timezone
@@ -128,6 +129,31 @@ _spec = _importlib_util.spec_from_file_location(
 _mod = _importlib_util.module_from_spec(_spec)
 _spec.loader.exec_module(_mod)
 _executar_pipeline = _mod.executar_pipeline
+
+
+async def _disparar_pipeline(
+    background_tasks: BackgroundTasks,
+    consulta_id: str,
+    parquet_path: Path,
+    params: dict,
+) -> None:
+    """
+    Dispara o pipeline respeitando o ambiente de execucao.
+
+    Em servidores tradicionais, o FastAPI BackgroundTasks e suficiente. Na Vercel,
+    a funcao serverless pode ser congelada depois da resposta HTTP, entao o
+    processamento precisa acontecer antes do retorno da requisicao.
+    """
+    if os.getenv("VERCEL"):
+        await _pipeline_background(consulta_id, parquet_path, params)
+        return
+
+    background_tasks.add_task(
+        _pipeline_background,
+        consulta_id,
+        parquet_path,
+        params,
+    )
 
 
 async def _pipeline_background(
@@ -530,8 +556,8 @@ async def criar_consulta(
             _agora(),
         )
 
-    background_tasks.add_task(
-        _pipeline_background,
+    await _disparar_pipeline(
+        background_tasks,
         consulta_id,
         destino,
         payload.parametros.model_dump(),
@@ -811,8 +837,8 @@ async def criar_consulta_de_path(
             _agora(),
         )
 
-    background_tasks.add_task(
-        _pipeline_background,
+    await _disparar_pipeline(
+        background_tasks,
         consulta_id,
         parquet_path,
         payload.parametros.model_dump(),
