@@ -17,6 +17,7 @@ Arquivos parquet de entrada devem estar em data/parquet/
 Arquivos parquet de saida serao salvos em data/cache/ com o sufixo _calibrado
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -27,6 +28,12 @@ ROOT = Path(__file__).resolve().parent.parent
 TABELA_GAMMA = ROOT / "data" / "csv" / "tabela_gamma_decil.csv"
 INPUT_DIR = ROOT / "data" / "parquet"
 CACHE_DIR = ROOT / "data" / "cache"
+CACHE_DIR = Path(
+    os.getenv(
+        "SIMPLEX_CACHE_DIR",
+        "/tmp/g04/cache" if os.getenv("VERCEL") else str(CACHE_DIR),
+    )
+)
 
 
 def calibrar(parquet_path: Path) -> Path:

@@ -21,6 +21,7 @@ Arquivos parquet de saida serao gerados em data/cache/
 """
 
 import json
+import os
 import sys
 import time
 from pathlib import Path
@@ -32,6 +33,8 @@ from sklearn.tree import DecisionTreeRegressor
 ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = ROOT / "data" / "cache"
 JSON_DIR = Path(__file__).resolve().parent / "input"
+DATA_DIR = Path(os.getenv("SIMPLEX_CACHE_DIR", str(DATA_DIR)))
+JSON_DIR = Path(os.getenv("SIMPLEX_INPUT_DIR", str(JSON_DIR)))
 
 
 def normalize_propensao(score: pd.Series) -> pd.Series:

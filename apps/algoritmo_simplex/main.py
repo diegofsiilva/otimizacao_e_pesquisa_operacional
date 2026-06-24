@@ -14,6 +14,7 @@ Arquivos JSON devem estar em apps/algoritmo_simplex/input/
 """
 
 import sys
+import os
 import json
 import traceback
 from pathlib import Path
@@ -28,6 +29,24 @@ _SCRIPTS_DIR = str(Path(__file__).resolve().parent.parent.parent / "scripts")
 if _SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, _SCRIPTS_DIR)
 from calibrar_pd import calibrar as _calibrar_pd
+
+ROOT = Path(__file__).resolve().parent.parent.parent
+SIMPLEX_CACHE_DIR = Path(
+    os.getenv(
+        "SIMPLEX_CACHE_DIR",
+        "/tmp/g04/cache" if os.getenv("VERCEL") else str(ROOT / "data" / "cache"),
+    )
+)
+SIMPLEX_INPUT_DIR = Path(
+    os.getenv(
+        "SIMPLEX_INPUT_DIR",
+        "/tmp/g04/simplex_input"
+        if os.getenv("VERCEL")
+        else str(Path(__file__).resolve().parent / "input"),
+    )
+)
+os.environ.setdefault("SIMPLEX_CACHE_DIR", str(SIMPLEX_CACHE_DIR))
+os.environ.setdefault("SIMPLEX_INPUT_DIR", str(SIMPLEX_INPUT_DIR))
 
 
 def calcular_pd_fin_atual(df: pd.DataFrame) -> float:
@@ -46,7 +65,7 @@ def garantir_calibrado(parquet_path: Path) -> Path:
     Se não existir, roda a calibração.
     Retorna o path do parquet calibrado.
     """
-    cache_dir = Path(__file__).resolve().parent.parent.parent / "data" / "cache"
+    cache_dir = SIMPLEX_CACHE_DIR
     stem = parquet_path.stem
     arquivo_calibrado = cache_dir / f"{stem}_calibrado.parquet"
 
@@ -71,12 +90,7 @@ def garantir_clusters(
         clusters : DataFrame com os parâmetros agregados por cluster
     """
     stem = Path(parquet_calibrado_nome).stem
-    arquivo_clusters = (
-        Path(__file__).resolve().parent.parent.parent
-        / "data"
-        / "cache"
-        / f"{stem}_clusters.parquet"
-    )
+    arquivo_clusters = SIMPLEX_CACHE_DIR / f"{stem}_clusters.parquet"
 
     if not arquivo_clusters.exists():
         print(f"Gerando clusters para {arquivo_clusters.name}...")
@@ -192,7 +206,8 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
         status_pulp         : status retornado pelo PuLP
         delta_z_pct         : diferença relativa entre z e z_pulp em % (0.0 se z_pulp == 0)
     """
-    json_dir = Path(__file__).resolve().parent / "input"
+    json_dir = SIMPLEX_INPUT_DIR
+    json_dir.mkdir(parents=True, exist_ok=True)
     json_temp = json_dir / "_params_temp.json"
 
     try:
@@ -245,7 +260,7 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
         for i in range(len(clusters))
     ]
 
-    cache_dir = Path(__file__).resolve().parent.parent.parent / "data" / "cache"
+    cache_dir = SIMPLEX_CACHE_DIR
     stem = parquet_calibrado.stem
     parquet_com_cluster = cache_dir / f"{stem}_com_cluster.parquet"
     parquet_clusters = cache_dir / f"{stem}_clusters.parquet"
@@ -345,7 +360,7 @@ def main() -> None:
         resultado = executar_pipeline(arquivo_parquet, params)
 
         # lê os clusters do cache para exibição no terminal
-        cache_dir = Path(__file__).resolve().parent.parent.parent / "data" / "cache"
+        cache_dir = SIMPLEX_CACHE_DIR
         stem = Path(sys.argv[1]).stem
         clusters = pd.read_parquet(cache_dir / f"{stem}_calibrado_clusters.parquet")
         x = [c["limite_otimizado"] for c in resultado["clusters"]]
