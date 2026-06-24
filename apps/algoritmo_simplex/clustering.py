@@ -171,7 +171,7 @@ def main(
     folhas_raw = arvore.apply(X)
     folhas_unicas = np.unique(folhas_raw)
     mapa_folha = {folha: idx for idx, folha in enumerate(folhas_unicas)}
-    df["segmento_id"] = np.vectorize(mapa_folha.get)(folhas_raw)
+    df["segmento_id"] = pd.Series(folhas_raw).map(mapa_folha).to_numpy()
 
     print("\nAgregando parametros por cluster...")
 
