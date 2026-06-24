@@ -31,6 +31,14 @@ from model.schemas import (
 )
 
 
+# Diretório onde cada consulta grava seu snapshot de clientes (parquet). Usa a
+# MESMA raiz data/ que o otimizador usa para data/cache (parents[3] a partir de
+# services/credit_service.py chega na raiz do repo). É persistente, NÃO é cache:
+# é a fonte de verdade do detalhe por cliente, substituindo a antiga tabela
+# clientes_resultado (que custava minutos de COPY a cada execução).
+_RESULTADOS_DIR = Path(__file__).resolve().parents[3] / "data" / "resultados"
+
+
 def _agora() -> str:
     """Retorna o timestamp atual em UTC no formato ISO 8601."""
     return datetime.now(timezone.utc).isoformat()
@@ -106,6 +114,92 @@ def _row_para_cliente(row) -> ClienteResultadoResponse:
     )
 
 
+def _cliente_de_serie(consulta_id, s) -> ClienteResultadoResponse:
+    """Constrói um ClienteResultadoResponse a partir de uma linha (Series) do
+    parquet de resultado. Mapeia a coluna 'pi' do parquet para pi_normalizado e
+    converte NaN -> None nas colunas anuláveis."""
+
+    def _i(v):
+        return None if pd.isna(v) else int(v)
+
+    def _f(v):
+        return None if pd.isna(v) else float(v)
+
+    return ClienteResultadoResponse(
+        token=int(s["token"]),
+        consulta_id=consulta_id,
+        safra_ref_uso=str(s["safra_ref_uso"]),
+        score_interno=int(s["score_interno"]),
+        pd_produto=float(s["pd_produto"]),
+        score_generico_1=_i(s["score_generico_1"]),
+        score_generico_2=_i(s["score_generico_2"]),
+        capacidade_pagamento=_f(s["capacidade_pagamento"]),
+        delta_capacidade_pagamento=_f(s["delta_capacidade_pagamento"]),
+        score_propensao_contrato=float(s["score_propensao_contrato"]),
+        score_credito_cross=int(s["score_credito_cross"]),
+        renda_estimada=_f(s["renda_estimada"]),
+        fx_idade=str(s["fx_idade"]),
+        limite_ofertado=_f(s["limite_ofertado"]),
+        flag_contrato=int(s["flag_contrato"]),
+        flag_ativacao=int(s["flag_ativacao"]),
+        over30mob3=_i(s["over30mob3"]),
+        pd_calibrada=float(s["pd_calibrada"]),
+        pi_normalizado=float(s["pi"]),
+        cp_proxy=float(s["cp_proxy"]),
+        segmento_id=int(s["segmento_id"]),
+        limite_otimizado=int(s["limite_otimizado"]),
+    )
+
+
+async def _carregar_clientes_consulta(consulta_id):
+    """Carrega o snapshot de clientes de uma consulta como DataFrame.
+
+    Fonte primária: data/resultados/<consulta_id>.parquet (gravado pelo
+    pipeline). Fallback: a tabela clientes_resultado (consultas antigas,
+    anteriores à migração para parquet). As colunas seguem a convenção do
+    parquet (coluna 'pi'); o fallback renomeia pi_normalizado -> pi. Retorna
+    None se não houver dados em lugar nenhum."""
+    p = _RESULTADOS_DIR / f"{consulta_id}.parquet"
+    if p.exists():
+        return pd.read_parquet(p)
+
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        rows = await conn.fetch(
+            "SELECT * FROM clientes_resultado WHERE consulta_id = $1 "
+            "ORDER BY token ASC",
+            str(consulta_id),
+        )
+    if not rows:
+        return None
+    df = pd.DataFrame([dict(r) for r in rows])
+    if "pi" not in df.columns and "pi_normalizado" in df.columns:
+        df = df.rename(columns={"pi_normalizado": "pi"})
+    return df
+
+
+_COLS_CSV = [
+    "consulta_id", "token", "safra_ref_uso", "score_interno", "pd_produto",
+    "score_generico_1", "score_generico_2", "capacidade_pagamento",
+    "delta_capacidade_pagamento", "score_propensao_contrato",
+    "score_credito_cross", "renda_estimada", "fx_idade", "limite_ofertado",
+    "flag_contrato", "flag_ativacao", "over30mob3", "pd_calibrada",
+    "pi_normalizado", "cp_proxy", "segmento_id", "limite_otimizado",
+]
+
+
+def _clientes_para_csv(consulta_id, df, incluir_pulp=False) -> str:
+    """Serializa o DataFrame de clientes como CSV, na mesma ordem de colunas que
+    a tela espera. Renomeia 'pi' -> pi_normalizado e injeta consulta_id."""
+    out = df.rename(columns={"pi": "pi_normalizado"}).copy()
+    out["consulta_id"] = str(consulta_id)
+    cols = list(_COLS_CSV)
+    if incluir_pulp:
+        cols = cols + ["limite_otimizado_pulp"]
+    cols = [c for c in cols if c in out.columns]
+    return out[cols].to_csv(index=False)
+
+
 # ---------------------------------------------------------------------------
 # Pipeline em background
 # ---------------------------------------------------------------------------
@@ -174,9 +268,16 @@ async def _pipeline_background(
             params = {**params, "comparar_pulp": False}
 
         # 2. executa o pipeline numa thread para não bloquear a event loop
+        import time as _time
+
+        _t = _time.perf_counter()
         loop = asyncio.get_running_loop()
         resultado = await loop.run_in_executor(
             None, _executar_pipeline, parquet_path, params
+        )
+        print(
+            f"[TIMING] pipeline (calib+CART+simplex): "
+            f"{_time.perf_counter() - _t:.1f}s"
         )
 
         clusters = resultado["clusters"]
@@ -212,8 +313,14 @@ async def _pipeline_background(
                 ],
             )
 
-        # 4. persiste clientes_resultado via bulk insert
+        # 4. persiste o resultado por cliente como snapshot parquet por consulta
+        #    (antes era um COPY de ~1.8M linhas em clientes_resultado, ~5 min)
+        _t = _time.perf_counter()
         df_cc = pd.read_parquet(parquet_cc)
+        print(
+            f"[TIMING] read _com_cluster ({len(df_cc):,} linhas): "
+            f"{_time.perf_counter() - _t:.1f}s"
+        )
 
         # mapa de limite por segmento_id para desnormalizar em clientes_resultado
         limite_por_cluster = {c["segmento_id"]: c["limite_otimizado"] for c in clusters}
@@ -221,76 +328,30 @@ async def _pipeline_background(
             df_cc["segmento_id"].map(limite_por_cluster).fillna(0).astype(int)
         )
 
-        # funções de conversão explícita para cada tipo esperado pelo asyncpg.
-        # evitam falhas com pandas nullable integers (Int32/Int64) e float NaN.
-        def _si(v):
-            return None if pd.isna(v) else int(v)  # nullable int
+        # Persistência por consulta como PARQUET (substitui o COPY de ~1.8M
+        # linhas no Postgres, que levava minutos). O que é único por consulta e
+        # importa de verdade — o limite por segmento — já vai para
+        # clusters_resultado (800 linhas). Aqui gravamos um snapshot por consulta
+        # em data/resultados/<consulta_id>.parquet: escrita em frações de
+        # segundo, histórico preservado e EXATO (captura pi/pd/limite no momento
+        # do run). As telas de cliente leem esse arquivo sob demanda — ver
+        # _carregar_clientes_consulta.
+        mp_pulp = {
+            c["segmento_id"]: c["limite_otimizado_pulp"] for c in clusters
+        }
+        df_cc["limite_otimizado_pulp"] = df_cc["segmento_id"].map(mp_pulp)
+        # ordena por token p/ as telas paginarem sem reordenar a cada request
+        df_cc = df_cc.sort_values("token")
 
-        def _sf(v):
-            return None if pd.isna(v) else float(v)  # nullable float
-
-        def _ri(v):
-            return int(v)  # required int
-
-        def _rf(v):
-            return float(v)  # required float
-
-        registros = list(
-            zip(
-                [consulta_id] * len(df_cc),
-                [_ri(v) for v in df_cc["token"]],
-                [str(v) for v in df_cc["safra_ref_uso"]],
-                [_ri(v) for v in df_cc["score_interno"]],
-                [_rf(v) for v in df_cc["pd_produto"]],
-                [_si(v) for v in df_cc["score_generico_1"]],
-                [_si(v) for v in df_cc["score_generico_2"]],
-                [_sf(v) for v in df_cc["capacidade_pagamento"]],
-                [_sf(v) for v in df_cc["delta_capacidade_pagamento"]],
-                [_rf(v) for v in df_cc["score_propensao_contrato"]],
-                [_ri(v) for v in df_cc["score_credito_cross"]],
-                [_sf(v) for v in df_cc["renda_estimada"]],
-                [str(v) for v in df_cc["fx_idade"]],
-                [_sf(v) for v in df_cc["limite_ofertado"]],
-                [_ri(v) for v in df_cc["flag_contrato"]],
-                [_ri(v) for v in df_cc["flag_ativacao"]],
-                [_si(v) for v in df_cc["over30mob3"]],
-                [_rf(v) for v in df_cc["pd_calibrada"]],
-                [_rf(v) for v in df_cc["pi"]],
-                [_rf(v) for v in df_cc["cp_proxy"]],
-                [_ri(v) for v in df_cc["segmento_id"]],
-                [_ri(v) for v in df_cc["limite_otimizado"]],
-            )
+        _t = _time.perf_counter()
+        _RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
+        df_cc.to_parquet(
+            _RESULTADOS_DIR / f"{consulta_id}.parquet", index=False
         )
-
-        async with pool.acquire() as conn:
-            await conn.copy_records_to_table(
-                "clientes_resultado",
-                records=registros,
-                columns=[
-                    "consulta_id",
-                    "token",
-                    "safra_ref_uso",
-                    "score_interno",
-                    "pd_produto",
-                    "score_generico_1",
-                    "score_generico_2",
-                    "capacidade_pagamento",
-                    "delta_capacidade_pagamento",
-                    "score_propensao_contrato",
-                    "score_credito_cross",
-                    "renda_estimada",
-                    "fx_idade",
-                    "limite_ofertado",
-                    "flag_contrato",
-                    "flag_ativacao",
-                    "over30mob3",
-                    "pd_calibrada",
-                    "pi_normalizado",
-                    "cp_proxy",
-                    "segmento_id",
-                    "limite_otimizado",
-                ],
-            )
+        print(
+            f"[TIMING] write resultado parquet ({len(df_cc):,} linhas): "
+            f"{_time.perf_counter() - _t:.1f}s"
+        )
 
         # 5. atualiza a consulta como concluída
         n_elegiveis = len(df_cc)
@@ -628,20 +689,12 @@ async def get_clientes(
         if not existe:
             return None
 
-        rows = await conn.fetch(
-            """
-            SELECT *
-            FROM clientes_resultado
-            WHERE consulta_id = $1
-            ORDER BY token ASC
-            LIMIT $2 OFFSET $3
-            """,
-            str(consulta_id),
-            limit,
-            offset,
-        )
+    df = await _carregar_clientes_consulta(consulta_id)
+    if df is None:
+        return []
 
-    return [_row_para_cliente(row) for row in rows]
+    pagina = df.iloc[offset : offset + limit]
+    return [_cliente_de_serie(consulta_id, s) for _, s in pagina.iterrows()]
 
 
 async def exportar_clientes_csv(consulta_id: UUID) -> str | None:
@@ -649,9 +702,6 @@ async def exportar_clientes_csv(consulta_id: UUID) -> str | None:
     Retorna todos os clientes de uma consulta serializados como CSV.
     Retorna None se a consulta não existir.
     """
-    import io
-    import csv
-
     pool = get_pool()
     async with pool.acquire() as conn:
         existe = await conn.fetchval(
@@ -660,18 +710,10 @@ async def exportar_clientes_csv(consulta_id: UUID) -> str | None:
         if not existe:
             return None
 
-        rows = await conn.fetch(
-            "SELECT * FROM clientes_resultado WHERE consulta_id = $1 ORDER BY token ASC",
-            str(consulta_id),
-        )
-
-    buffer = io.StringIO()
-    if rows:
-        writer = csv.DictWriter(buffer, fieldnames=rows[0].keys())
-        writer.writeheader()
-        writer.writerows([dict(row) for row in rows])
-
-    return buffer.getvalue()
+    df = await _carregar_clientes_consulta(consulta_id)
+    if df is None:
+        return ""
+    return _clientes_para_csv(consulta_id, df, incluir_pulp=False)
 
 
 async def exportar_clientes_pulp_csv(consulta_id: UUID) -> str | None:
@@ -688,26 +730,23 @@ async def exportar_clientes_pulp_csv(consulta_id: UUID) -> str | None:
         if not existe:
             return None
 
-        rows = await conn.fetch(
-            """
-            SELECT cr.*, cr2.limite_otimizado_pulp
-            FROM clientes_resultado cr
-            JOIN clusters_resultado cr2
-              ON cr2.consulta_id = cr.consulta_id
-             AND cr2.segmento_id = cr.segmento_id
-            WHERE cr.consulta_id = $1
-            ORDER BY cr.token ASC
-            """,
-            str(consulta_id),
-        )
-
-    buffer = io.StringIO()
-    if rows:
-        writer = csv.DictWriter(buffer, fieldnames=rows[0].keys())
-        writer.writeheader()
-        writer.writerows([dict(row) for row in rows])
-
-    return buffer.getvalue()
+    df = await _carregar_clientes_consulta(consulta_id)
+    if df is None:
+        return ""
+    # Consultas antigas (fallback na tabela) podem não ter limite_otimizado_pulp
+    # no DataFrame; nesse caso buscamos por segmento em clusters_resultado.
+    if "limite_otimizado_pulp" not in df.columns:
+        pool = get_pool()
+        async with pool.acquire() as conn:
+            crows = await conn.fetch(
+                "SELECT segmento_id, limite_otimizado_pulp "
+                "FROM clusters_resultado WHERE consulta_id = $1",
+                str(consulta_id),
+            )
+        mp = {r["segmento_id"]: r["limite_otimizado_pulp"] for r in crows}
+        df = df.copy()
+        df["limite_otimizado_pulp"] = df["segmento_id"].map(mp)
+    return _clientes_para_csv(consulta_id, df, incluir_pulp=True)
 
 
 async def calcular_z_banco(consulta_id: UUID) -> dict | None:
@@ -725,34 +764,29 @@ async def calcular_z_banco(consulta_id: UUID) -> dict | None:
         consulta = await conn.fetchrow(
             "SELECT parametros FROM consultas WHERE id = $1", str(consulta_id)
         )
-        if not consulta:
-            return None
+    if not consulta:
+        return None
 
-        params = json.loads(consulta["parametros"])
-        t, LGD, u_bar, T = params["t"], params["LGD"], params["u_bar"], params["T"]
+    params = json.loads(consulta["parametros"])
+    t, LGD, u_bar, T = params["t"], params["LGD"], params["u_bar"], params["T"]
 
-        # casts ::float8 nos parâmetros são obrigatórios: sem eles o trecho
-        # $2 * $3 * $4 (três parâmetros multiplicados entre si, sem coluna que
-        # ancore o tipo) é inferido como unknown*unknown e o Postgres levanta
-        # AmbiguousFunctionError ("operator is not unique") no momento do prepare.
-        row = await conn.fetchrow(
-            """
-            SELECT
-                SUM(pi_normalizado * ($2::float8 * $3::float8 * $4::float8
-                    - pd_calibrada * $5::float8)
-                    * COALESCE(limite_ofertado, 0))        AS z_banco,
-                COUNT(*) FILTER (WHERE limite_ofertado > 0) AS n_com_oferta,
-                COUNT(*)                                    AS n_total
-            FROM clientes_resultado
-            WHERE consulta_id = $1
-            """,
-            str(consulta_id), u_bar, t, T, LGD,
-        )
+    df = await _carregar_clientes_consulta(consulta_id)
+    if df is None:
+        return {"z_banco": 0.0, "n_com_oferta": 0, "n_total": 0}
 
+    # z_banco = Σ_i [ pi_i · (ū·t·T − pd_calibrada_i·LGD) · limite_ofertado_i ],
+    # com limite_ofertado nulo tratado como 0 (mesma fórmula da versão SQL).
+    import numpy as _np
+
+    pi = df["pi"].to_numpy(dtype="float64")
+    pdc = df["pd_calibrada"].to_numpy(dtype="float64")
+    lof = df["limite_ofertado"].to_numpy(dtype="float64")
+    lof = _np.where(_np.isnan(lof), 0.0, lof)
+    z_banco = float(_np.sum(pi * (u_bar * t * T - pdc * LGD) * lof))
     return {
-        "z_banco": float(row["z_banco"] or 0.0),
-        "n_com_oferta": int(row["n_com_oferta"]),
-        "n_total": int(row["n_total"]),
+        "z_banco": z_banco,
+        "n_com_oferta": int((lof > 0).sum()),
+        "n_total": int(len(df)),
     }
 
 
@@ -761,27 +795,41 @@ async def get_historico_cliente(token: int) -> ClienteHistoricoResponse | None:
     Retorna o histórico de um cliente em todas as consultas em que apareceu,
     ordenado cronologicamente pela data de criação da consulta.
     Retorna None se o token não existir em nenhuma consulta.
+
+    Fonte de verdade por cliente é o snapshot parquet de cada consulta
+    (_RESULTADOS_DIR/{consulta_id}.parquet). Para consultas antigas sem
+    snapshot, cai no fallback da tabela clientes_resultado.
     """
     pool = get_pool()
     async with pool.acquire() as conn:
-        rows = await conn.fetch(
-            """
-            SELECT cr.*
-            FROM clientes_resultado cr
-            JOIN consultas c ON c.id = cr.consulta_id
-            WHERE cr.token = $1
-            ORDER BY c.criado_em ASC
-            """,
-            token,
+        consultas = await conn.fetch(
+            "SELECT id FROM consultas ORDER BY criado_em ASC"
         )
 
-    if not rows:
+    historico: list[ClienteResultadoResponse] = []
+    for c in consultas:
+        cid = c["id"]
+        p = _RESULTADOS_DIR / f"{cid}.parquet"
+        if p.exists():
+            # filtro empurrado pro parquet (lê só row groups com o token)
+            sub = pd.read_parquet(p, filters=[("token", "==", int(token))])
+            if len(sub) > 0:
+                historico.append(_cliente_de_serie(UUID(str(cid)), sub.iloc[0]))
+        else:
+            async with pool.acquire() as conn:
+                row = await conn.fetchrow(
+                    "SELECT * FROM clientes_resultado "
+                    "WHERE consulta_id = $1 AND token = $2",
+                    cid,
+                    token,
+                )
+            if row is not None:
+                historico.append(_row_para_cliente(row))
+
+    if not historico:
         return None
 
-    return ClienteHistoricoResponse(
-        token=token,
-        historico=[_row_para_cliente(row) for row in rows],
-    )
+    return ClienteHistoricoResponse(token=token, historico=historico)
 
 
 """

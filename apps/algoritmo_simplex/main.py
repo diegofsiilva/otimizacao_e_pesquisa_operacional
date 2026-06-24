@@ -19,6 +19,9 @@ import traceback
 from pathlib import Path
 import numpy as np
 import pandas as pd
+
+import time
+
 from models import Problema
 from simplex import simplex
 from simplex_pulp import simplex_pulp
@@ -32,11 +35,36 @@ from calibrar_pd import calibrar as _calibrar_pd
 
 def calcular_pd_fin_atual(df: pd.DataFrame) -> float:
     """
-    Calcula a inadimplência financeira atual da carteira
-    como média de pd_calibrada dos clientes elegíveis (flag_filtros == 0).
+    Inadimplência financeira ATUAL da carteira — é o teto de referência de R1
+    (doc 1.7: PD média da carteira vigente).
+
+    O ideal documentado é a PD ponderada por limite da carteira vigente, mas
+    `limite_ofertado` é ~97-99% nulo na base (ver migration 004), então não há
+    como ponderar por limite. A melhor aproximação computável é a média simples
+    de `pd_calibrada` da CARTEIRA VIGENTE — os clientes que hoje têm o produto
+    (`flag_contrato == 1`). Isso corrige a versão anterior, que usava a média dos
+    ELEGÍVEIS a uma nova oferta (`flag_filtros == 0`) — população diferente e, por
+    incluir candidatos de alto risco, sistematicamente mais alta.
+
+    Fallback seguro: se `flag_contrato` faltar ou não houver carteira vigente com
+    PD válida, cai para a média dos elegíveis (comportamento anterior) com aviso.
     """
-    pd_fin_atual = df.query("flag_filtros == 0")["pd_calibrada"].mean()
-    print(f"PD_fin_atual: {pd_fin_atual:.4f}")
+    if "flag_contrato" in df.columns:
+        carteira = df.query("flag_contrato == 1")["pd_calibrada"].dropna()
+        if len(carteira) > 0:
+            pd_fin_atual = float(carteira.mean())
+            ref_eleg = float(df.query("flag_filtros == 0")["pd_calibrada"].mean())
+            print(
+                f"PD_fin_atual (carteira vigente, flag_contrato==1): {pd_fin_atual:.4f} "
+                f"| antes (elegíveis): {ref_eleg:.4f}"
+            )
+            return pd_fin_atual
+        print("[PD_fin_atual] carteira vigente vazia; usando elegíveis (fallback).")
+    else:
+        print("[PD_fin_atual] coluna flag_contrato ausente; usando elegíveis (fallback).")
+
+    pd_fin_atual = float(df.query("flag_filtros == 0")["pd_calibrada"].mean())
+    print(f"PD_fin_atual (elegíveis, fallback): {pd_fin_atual:.4f}")
     return pd_fin_atual
 
 
@@ -96,12 +124,15 @@ def montar_problema(clusters: pd.DataFrame, params: dict, df: pd.DataFrame) -> P
     """
     Monta o problema de programação linear a partir dos parâmetros dos clusters.
 
-    Restrições:
-        R1: teto de inadimplência financeira (uma restrição para a carteira inteira)
-        R2: capacidade de pagamento com alavancagem (uma restrição por cluster)
-        R3: teto máximo de limite (uma restrição por cluster)
-
-        As demais restrições serão pós-otimização
+    Restrições (conforme modelagem_matematica.md, seção 1.7):
+        R1: teto de inadimplência financeira — 1 linha (carteira inteira).
+        R2: capacidade de pagamento (L_k <= m_k·CP_k) — bound por variável.
+        R3: teto máximo (L_k <= L_max) — bound por variável.
+        R5: concentração máxima por cluster (n_k·L_k <= α·Σ n_j·L_j) — K linhas.
+        R6: meta de produção mínima (Σ n_k·L_k >= V_min) — 1 linha; inativa
+            quando V_min = 0 (cenário de referência).
+        R4: teto de inadimplência física — pós-otimização (depende de um teto
+            PD_fis ainda não parametrizado; não aplicada aqui).
     """
     pd_fin_atual = calcular_pd_fin_atual(df)
     t = params["t"]
@@ -120,21 +151,48 @@ def montar_problema(clusters: pd.DataFrame, params: dict, df: pd.DataFrame) -> P
     # vetor de coeficientes da função objetivo
     c = (n_k * pi_k * (u_bar * t * T - PD_k * LGD)).tolist()
 
-    # R1: teto de inadimplência financeira (uma restrição para a carteira inteira)
+    # R1: teto de inadimplência financeira — ÚNICA restrição de acoplamento,
+    # vale para a carteira inteira (uma linha de A).
     r1 = (n_k * (PD_k - pd_fin_atual)).tolist()
 
-    # R2: capacidade de pagamento com alavancagem (uma restrição por cluster)
-    A_r2 = np.eye(n).tolist()
-    b_r2 = (m_k * CP_k).tolist()
+    # R2 (capacidade de pagamento, L_k <= m_k·CP_k) e R3 (teto, L_k <= L_max)
+    # são limites por variável, NÃO restrições de acoplamento. Em vez de
+    # virarem 2K linhas com matrizes identidade (que faziam m saltar de 1 para
+    # 1+2K e inflavam o tableau), entram como o upper bound de cada L_k:
+    #     0 <= L_k <= min(m_k·CP_k, L_max)
+    # O simplex de variáveis limitadas trata isso nativamente.
+    upper = np.minimum(m_k * CP_k, float(L_max)).tolist()
+    lower = [0.0] * n
 
-    # R3: teto máximo de limite (uma restrição por cluster)
-    A_r3 = np.eye(n).tolist()
-    b_r3 = np.full(n, float(L_max)).tolist()
+    # Linhas de acoplamento do LP: R1 e, conforme o doc, R5 e R6.
+    A_rows = [r1]
+    b_rows = [0.0]
+
+    # R5 — concentração máxima por cluster: n_k·L_k <= α·Σ_j n_j·L_j.
+    # Linearizado (doc 1.7): Σ_j n_j·(1[j=k] − α)·L_j <= 0, ∀k.
+    # Coef. de L_j na linha k: n_j·(1−α) se j==k; −α·n_j se j≠k.
+    # α vem dos parâmetros (sugerido 0,05); α<=0 desliga R5.
+    alpha = float(params.get("alpha", 0.05))
+    if alpha > 0.0:
+        A_r5 = -alpha * np.tile(n_k.astype(float), (n, 1))
+        A_r5[np.diag_indices(n)] += n_k
+        A_rows.extend(A_r5.tolist())
+        b_rows.extend([0.0] * n)
+
+    # R6 — meta de produção mínima: Σ_k n_k·L_k >= V_min, escrito como
+    # −Σ n_k·L_k <= −V_min. No cenário de referência V_min = 0 (R6 inativa);
+    # só entra quando V_min > 0. (V_min > 0 exige Fase I no simplex — ver nota lá.)
+    V_min = float(params.get("V_min", 0.0))
+    if V_min > 0.0:
+        A_rows.append((-n_k.astype(float)).tolist())
+        b_rows.append(-V_min)
 
     return Problema(
         c=c,
-        A=[r1] + A_r2 + A_r3,
-        b=[0.0] + b_r2 + b_r3,
+        A=A_rows,
+        b=b_rows,
+        lower=lower,
+        upper=upper,
     )
 
 
@@ -199,17 +257,36 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
         # escreve os parâmetros num JSON temporário para o clustering
         json_temp.write_text(json.dumps(params), encoding="utf-8")
 
+        _t = time.perf_counter()
         parquet_calibrado = garantir_calibrado(parquet_path)
-        df = pd.read_parquet(parquet_calibrado)
+        print(f"[TIMING] calibração: {time.perf_counter() - _t:.1f}s")
+        # O df só é usado por calcular_pd_fin_atual (3 colunas). Ler a base
+        # calibrada inteira (~14M linhas x ~20 colunas) só pra isso era o maior
+        # custo do estágio; aqui lemos apenas as colunas necessárias. Usamos
+        # só pandas (sem depender de pyarrow no import) e com fallback caso a
+        # coluna opcional flag_contrato não exista no parquet.
+        _cols_pd_fin = ["flag_contrato", "pd_calibrada", "flag_filtros"]
+        _t = time.perf_counter()
+        try:
+            df = pd.read_parquet(parquet_calibrado, columns=_cols_pd_fin)
+        except (ValueError, KeyError):
+            df = pd.read_parquet(
+                parquet_calibrado, columns=["pd_calibrada", "flag_filtros"]
+            )
+        print(f"[TIMING] read df p/ pd_fin ({len(df.columns)} cols): {time.perf_counter() - _t:.1f}s")
+        _t = time.perf_counter()
         clusters = garantir_clusters(parquet_calibrado.name, json_temp.name)
+        print(f"[TIMING] segmentação (CART): {time.perf_counter() - _t:.1f}s")
     finally:
         if json_temp.exists():
             json_temp.unlink()
 
-    import copy
-
     problema = montar_problema(clusters, params, df)
-    x, z, status = simplex(copy.deepcopy(problema))
+    # O simplex reescrito não muta a entrada (faz cópias NumPy internas; ver
+    # test_nao_muta_b), então o deepcopy da matriz R5 (800x800) era desperdício.
+    _t = time.perf_counter()
+    x, z, status = simplex(problema)
+    print(f"[TIMING] simplex: {time.perf_counter() - _t:.1f}s")
 
     x_arr = np.array(x)
     limites = np.where(x_arr >= 200, (x_arr / 50).round().astype(int) * 50, 0)
@@ -222,7 +299,7 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
 
     if comparar_pulp:
         try:
-            x_pulp, z_pulp, status_pulp = simplex_pulp(copy.deepcopy(problema))
+            x_pulp, z_pulp, status_pulp = simplex_pulp(problema)
         except Exception:
             print("[PuLP] ERRO ao resolver — usando fallback z_pulp=0:")
             traceback.print_exc()
@@ -267,9 +344,11 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
     # clustering já produziu (_com_cluster e _clusters), sem criar arquivos
     # novos. Feito aqui dentro para que QUALQUER chamador (CLI ou backend/front)
     # deixe os limites em disco de forma idêntica.
+    _t = time.perf_counter()
     gravar_limites_nos_arquivos(
         parquet_com_cluster, parquet_clusters, resultado_clusters
     )
+    print(f"[TIMING] gravar limites (agregado): {time.perf_counter() - _t:.1f}s")
 
     return {
         "status": status,
@@ -289,16 +368,11 @@ def gravar_limites_nos_arquivos(
     resultado_clusters: list[dict],
 ) -> None:
     """
-    Adiciona as colunas limite_otimizado e limite_otimizado_pulp DENTRO dos
-    arquivos que o clustering já produziu, regravando-os no mesmo caminho:
-
-      - {stem}_com_cluster.parquet : por cliente (cada cliente recebe os dois
-        limites do seu cluster) -> entregável por cliente.
-      - {stem}_clusters.parquet    : agregado por cluster, com os dois limites.
-
-    Não cria arquivos novos: os limites entram nos próprios arquivos existentes.
-    O join é por segmento_id (chave), robusto a reordenação. Idempotente: se as
-    colunas já existirem (re-execução), são sobrescritas com os mesmos valores.
+    Grava limite_otimizado e limite_otimizado_pulp apenas no arquivo agregado
+    por segmento ({stem}_clusters.parquet). O arquivo por cliente (_com_cluster)
+    NÃO é reescrito: o limite é por segmento e qualquer consumidor o obtém
+    mapeando segmento_id -> limite (ver credit_service), então regravar ~1,8M
+    linhas aqui seria redundante. Idempotente.
     """
     map_nosso = {c["segmento_id"]: c["limite_otimizado"] for c in resultado_clusters}
     map_pulp = {c["segmento_id"]: c["limite_otimizado_pulp"] for c in resultado_clusters}
@@ -312,14 +386,11 @@ def gravar_limites_nos_arquivos(
     )
     df_clusters.to_parquet(parquet_clusters, index=False)
 
-    df_clientes = pd.read_parquet(parquet_com_cluster)
-    df_clientes["limite_otimizado"] = (
-        df_clientes["segmento_id"].astype(int).map(map_nosso)
-    )
-    df_clientes["limite_otimizado_pulp"] = (
-        df_clientes["segmento_id"].astype(int).map(map_pulp)
-    )
-    df_clientes.to_parquet(parquet_com_cluster, index=False)
+    # O arquivo por cliente (_com_cluster) NÃO recebe mais os limites: o limite é
+    # por segmento e todo consumidor (inclusive o backend, em credit_service) já o
+    # obtém mapeando segmento_id -> limite. Reescrever ~1,8M linhas aqui era
+    # redundante e caro, então foi removido.
+    _ = parquet_com_cluster  # mantido na assinatura por compatibilidade
 
 
 def main() -> None:
@@ -364,10 +435,11 @@ def main() -> None:
         x = [c["limite_otimizado"] for c in resultado["clusters"]]
         exibir_resultado(x, resultado["z"], resultado["status"], clusters)
 
-        # os limites já foram gravados dentro de executar_pipeline,
-        # nos próprios arquivos _com_cluster e _clusters
-        print(f"\nLimites gravados nos arquivos em data/cache/:")
-        print(f"  {resultado['parquet_com_cluster'].name}  (por cliente, + limite_otimizado / _pulp)")
+        # os limites já foram gravados dentro de executar_pipeline. Apenas o
+        # arquivo agregado por cluster (_clusters) recebe limite_otimizado /
+        # _pulp; o _com_cluster (por cliente) não é mais reescrito (limite é por
+        # segmento, obtido via segmento_id).
+        print("\nLimites gravados em data/cache/:")
         print(f"  {resultado['parquet_clusters'].name}  (por cluster, + limite_otimizado / _pulp)")
     except FileNotFoundError as e:
         print(f"Erro: {e}")
