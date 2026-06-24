@@ -211,23 +211,34 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
     problema = montar_problema(clusters, params, df)
     x, z, status = simplex(copy.deepcopy(problema))
 
-    # comparação com PuLP — falha não bloqueia o pipeline mas é logada
-    try:
-        x_pulp, z_pulp, status_pulp = simplex_pulp(copy.deepcopy(problema))
-    except Exception as _pulp_err:
-        print("[PuLP] ERRO ao resolver — usando fallback z_pulp=0:")
-        traceback.print_exc()
-        x_pulp = [0.0] * len(x)
-        z_pulp = 0.0
-        status_pulp = "erro"
-
-    delta_z_pct = abs(z - z_pulp) / abs(z_pulp) * 100 if z_pulp != 0.0 else 0.0
-
     x_arr = np.array(x)
     limites = np.where(x_arr >= 200, (x_arr / 50).round().astype(int) * 50, 0)
 
-    x_pulp_arr = np.array(x_pulp)
-    limites_pulp = np.where(x_pulp_arr >= 200, (x_pulp_arr / 50).round().astype(int) * 50, 0)
+    # Comparação com PuLP é OPCIONAL (toggle "comparar_pulp" no config). Por
+    # padrão fica DESLIGADA: rodar um segundo solver (CBC/HiGHS via PuLP) dobra
+    # o tempo do pipeline e serve apenas como validação cruzada do nosso simplex.
+    # Quando ligada, resolve o MESMO problema (com os mesmos bounds) via PuLP.
+    comparar_pulp = bool(params.get("comparar_pulp", False))
+
+    if comparar_pulp:
+        try:
+            x_pulp, z_pulp, status_pulp = simplex_pulp(copy.deepcopy(problema))
+        except Exception:
+            print("[PuLP] ERRO ao resolver — usando fallback z_pulp=0:")
+            traceback.print_exc()
+            x_pulp = [0.0] * len(x)
+            z_pulp = 0.0
+            status_pulp = "erro"
+        delta_z_pct = abs(z - z_pulp) / abs(z_pulp) * 100 if z_pulp != 0.0 else 0.0
+        x_pulp_arr = np.array(x_pulp)
+        limites_pulp = np.where(
+            x_pulp_arr >= 200, (x_pulp_arr / 50).round().astype(int) * 50, 0
+        )
+    else:
+        z_pulp = None
+        status_pulp = "desativado"
+        delta_z_pct = None
+        limites_pulp = None
 
     resultado_clusters = [
         {
@@ -240,7 +251,9 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
             "ck_medio": float(clusters["ck_medio"].iloc[i]),
             "fator_alavancagem": float(clusters["m_k"].iloc[i]),
             "limite_otimizado": int(limites[i]),
-            "limite_otimizado_pulp": int(limites_pulp[i]),
+            "limite_otimizado_pulp": (
+                int(limites_pulp[i]) if limites_pulp is not None else None
+            ),
         }
         for i in range(len(clusters))
     ]

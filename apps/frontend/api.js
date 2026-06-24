@@ -219,6 +219,8 @@ var Api = {
     if (p.u_bar != null) query.append("u_bar", String(p.u_bar));
     if (p.L_max != null) query.append("L_max", String(p.L_max));
     if (p.T != null) query.append("T", String(p.T));
+    if (p.taxa_conversao != null)
+      query.append("taxa_conversao", String(p.taxa_conversao));
 
     var qs = query.toString();
     return Api.request(

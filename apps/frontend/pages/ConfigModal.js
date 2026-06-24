@@ -64,7 +64,12 @@ var ConfigModal = function (props) {
   // Formata o valor exibido no card de cada parâmetro.
   function formatVal(key, v) {
     if (key === "L_max") return "R$ " + Number(v).toLocaleString("pt-BR");
-    if (key === "t" || key === "LGD" || key === "u_bar")
+    if (
+      key === "t" ||
+      key === "LGD" ||
+      key === "u_bar" ||
+      key === "taxa_conversao"
+    )
       return (Number(v) * 100).toFixed(2) + "%";
     if (key === "T") return Number(v) + " meses";
     return v;
@@ -100,6 +105,8 @@ var ConfigModal = function (props) {
       u_bar: params.u_bar,
       L_max: params.L_max,
       T: params.T,
+      taxa_conversao: params.taxa_conversao,
+      comparar_pulp: !!params.comparar_pulp,
     };
 
     Api.updateConfig(payload)
@@ -120,6 +127,43 @@ var ConfigModal = function (props) {
       });
   }
 
+  // Liga/desliga a comparação com o PuLP e persiste imediatamente.
+  // Envia também os demais parâmetros para não sobrescrevê-los no backend.
+  function handleTogglePulp() {
+    var novo = !params.comparar_pulp;
+    setParams(function (prev) {
+      return Object.assign({}, prev, { comparar_pulp: novo });
+    });
+    setSaving(true);
+    setApiError(null);
+
+    var payload = {
+      t: params.t,
+      LGD: params.LGD,
+      u_bar: params.u_bar,
+      L_max: params.L_max,
+      T: params.T,
+      taxa_conversao: params.taxa_conversao,
+      comparar_pulp: novo,
+    };
+
+    Api.updateConfig(payload)
+      .then(function (data) {
+        setParams(function (prev) {
+          return Object.assign({}, prev, data);
+        });
+        setSavedParams(function (prev) {
+          return Object.assign({}, prev, data);
+        });
+      })
+      .catch(function (err) {
+        setApiError(err.message || "Erro ao salvar configuração.");
+      })
+      .finally(function () {
+        setSaving(false);
+      });
+  }
+
   // Restaura os valores de fábrica definidos em PARAMS_EDITAVEIS.value
   // e persiste no banco via PUT /api/config.
   function handleReset() {
@@ -132,6 +176,7 @@ var ConfigModal = function (props) {
       acc[p.key] = p.value;
       return acc;
     }, {});
+    defaults.comparar_pulp = false;
 
     setResetting(true);
     setApiError(null);
@@ -303,6 +348,43 @@ var ConfigModal = function (props) {
                   </div>
                 );
               })}
+            </div>
+          </div>
+
+          {/* Validação cruzada — toggle da comparação com PuLP */}
+          <div>
+            <p className="text-[11px] font-semibold text-[#9C9C9F] uppercase tracking-wide mb-3">
+              Validação
+            </p>
+            <div className="flex items-center justify-between gap-4 border border-[#E8EFF7] bg-[#E2EAF4] p-4">
+              <div>
+                <div className="text-xs font-medium text-[#3B4049]">
+                  Comparar com PuLP (solver de referência)
+                </div>
+                <div className="text-[11px] text-[#9C9C9F] mt-0.5 leading-snug">
+                  Resolve o mesmo problema com o PuLP para validar o nosso
+                  Simplex. Dobra o tempo do cálculo — deixe ligado apenas para
+                  conferência.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={handleTogglePulp}
+                disabled={saving || resetting}
+                aria-pressed={!!params.comparar_pulp}
+                title="Ligar/desligar comparação com PuLP"
+                className={
+                  "relative w-11 h-6 flex-shrink-0 transition-colors disabled:opacity-50 disabled:cursor-not-allowed " +
+                  (params.comparar_pulp ? "bg-[#2E6DA4]" : "bg-[#B8C4D4]")
+                }
+              >
+                <span
+                  className={
+                    "absolute top-0.5 w-5 h-5 bg-white transition-all " +
+                    (params.comparar_pulp ? "left-[22px]" : "left-0.5")
+                  }
+                />
+              </button>
             </div>
           </div>
 

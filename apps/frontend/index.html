@@ -86,13 +86,31 @@
 
         // Controla a abertura do modal de configurações
         var [cfgOpen, setCfgOpen] = React.useState(false);
+        // Callback opcional disparado quando o ConfigModal fecha. O GerarLimites
+        // usa isso pra reabrir o popup de confirmação já com o config atualizado.
+        var cfgAfterCloseRef = React.useRef(null);
+
+        function openConfig(afterClose) {
+          cfgAfterCloseRef.current =
+            typeof afterClose === "function" ? afterClose : null;
+          setCfgOpen(true);
+        }
+        function closeConfig() {
+          setCfgOpen(false);
+          var cb = cfgAfterCloseRef.current;
+          cfgAfterCloseRef.current = null;
+          if (cb) cb();
+        }
 
         // Renderiza a página correspondente à chave ativa.
         // key={page} no ErrorBoundary garante que o componente é remontado a
         // cada navegação, recarregando dados frescos da API automaticamente.
         function renderPage(p) {
           if (p === "dashboard") return <Cockpit setPage={setPage} />;
-          if (p === "gerar") return <GerarLimites setPage={setPage} />;
+          if (p === "gerar")
+            return (
+              <GerarLimites setPage={setPage} onOpenConfig={openConfig} />
+            );
           if (p === "resultados") return <Resultados setPage={setPage} />;
           if (p === "clientes") return <Clientes setPage={setPage} />;
           return null;
@@ -104,7 +122,7 @@
               page={page}
               setPage={setPage}
               onConfig={function () {
-                setCfgOpen(true);
+                openConfig();
               }}
             />
             <main className="pt-14">
@@ -112,13 +130,7 @@
                 <ErrorBoundary key={page}>{renderPage(page)}</ErrorBoundary>
               </div>
             </main>
-            {cfgOpen && (
-              <ConfigModal
-                onClose={function () {
-                  setCfgOpen(false);
-                }}
-              />
-            )}
+            {cfgOpen && <ConfigModal onClose={closeConfig} />}
           </div>
         );
       };

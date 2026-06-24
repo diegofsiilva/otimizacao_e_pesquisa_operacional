@@ -44,6 +44,8 @@ def _row_para_parametros(row) -> ParametrosModelo:
         u_bar=row["u_bar"],
         L_max=row["L_max"],
         T=row["T"],
+        comparar_pulp=row["comparar_pulp"],
+        taxa_conversao=row["taxa_conversao"],
     )
 
 
@@ -161,6 +163,15 @@ async def _pipeline_background(
     try:
         # lê o total de linhas do parquet raw sem carregar os dados em memória
         n_total = pq.read_metadata(parquet_path).num_rows
+
+        # o toggle de comparação com PuLP é uma configuração GLOBAL (tela de
+        # configurações), não um parâmetro por consulta. Lê do banco e injeta
+        # no dict de parâmetros que o otimizador recebe.
+        try:
+            cfg = await get_config()
+            params = {**params, "comparar_pulp": bool(cfg.comparar_pulp)}
+        except Exception:
+            params = {**params, "comparar_pulp": False}
 
         # 2. executa o pipeline numa thread para não bloquear a event loop
         loop = asyncio.get_running_loop()
@@ -364,7 +375,8 @@ async def get_config() -> ParametrosModelo:
     pool = get_pool()
     async with pool.acquire() as conn:
         row = await conn.fetchrow(
-            'SELECT "t", "LGD", "u_bar", "L_max", "T" FROM parametros_modelo LIMIT 1'
+            'SELECT "t", "LGD", "u_bar", "L_max", "T", "comparar_pulp", "taxa_conversao" '
+            "FROM parametros_modelo LIMIT 1"
         )
     if row is None:
         return ParametrosModelo()
@@ -376,21 +388,28 @@ async def update_config(payload: ParametrosModelo) -> ParametrosModelo:
     pool = get_pool()
     async with pool.acquire() as conn:
         status = await conn.execute(
-            'UPDATE parametros_modelo SET "t" = $1, "LGD" = $2, "u_bar" = $3, "L_max" = $4, "T" = $5',
+            'UPDATE parametros_modelo SET "t" = $1, "LGD" = $2, "u_bar" = $3, '
+            '"L_max" = $4, "T" = $5, "comparar_pulp" = $6, "taxa_conversao" = $7',
             payload.t,
             payload.LGD,
             payload.u_bar,
             payload.L_max,
             payload.T,
+            payload.comparar_pulp,
+            payload.taxa_conversao,
         )
         if status == "UPDATE 0":
             await conn.execute(
-                'INSERT INTO parametros_modelo ("t", "LGD", "u_bar", "L_max", "T") VALUES ($1, $2, $3, $4, $5)',
+                'INSERT INTO parametros_modelo '
+                '("t", "LGD", "u_bar", "L_max", "T", "comparar_pulp", "taxa_conversao") '
+                "VALUES ($1, $2, $3, $4, $5, $6, $7)",
                 payload.t,
                 payload.LGD,
                 payload.u_bar,
                 payload.L_max,
                 payload.T,
+                payload.comparar_pulp,
+                payload.taxa_conversao,
             )
     return payload
 
