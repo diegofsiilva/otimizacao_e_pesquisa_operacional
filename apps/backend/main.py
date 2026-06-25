@@ -45,4 +45,10 @@ app.include_router(upload_router, prefix="/api")
 
 @app.get("/")
 def root() -> dict[str, str]:
+    """Endpoint raiz da API.
+
+    Returns:
+        ``dict`` com uma mensagem de identificação e o caminho da documentação
+        interativa (``/docs``).
+    """
     return {"message": "Sistema de Credito API", "docs": "/docs"}

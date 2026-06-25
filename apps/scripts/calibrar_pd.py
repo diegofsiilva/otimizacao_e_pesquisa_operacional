@@ -83,6 +83,15 @@ def calibrar(parquet_path: Path) -> Path:
 
 
 def main() -> None:
+    """Ponto de entrada CLI: calibra a PD do parquet informado em argumento.
+
+    Espera exatamente um argumento — o nome do arquivo ``.parquet`` em
+    ``INPUT_DIR`` — e delega para :func:`calibrar`. Sem o argumento, imprime o
+    uso e encerra com código 1.
+
+    Returns:
+        None.
+    """
     if len(sys.argv) != 2:
         print("Uso:")
         print("    python calibrar_pd.py <arquivo.parquet>")

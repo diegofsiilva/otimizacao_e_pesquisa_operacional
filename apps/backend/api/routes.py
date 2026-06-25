@@ -48,6 +48,13 @@ router = APIRouter()
 
 @router.get("/health")
 def health() -> dict[str, str]:
+    """Health check da API.
+
+    Não depende de banco nem de estado; serve para liveness/readiness probes.
+
+    Returns:
+        ``{"status": "ok"}`` com HTTP 200 sempre que a aplicação está no ar.
+    """
     return {"status": "ok"}
 
 
@@ -58,6 +65,12 @@ def health() -> dict[str, str]:
 
 @router.get("/safras", response_model=list[SafraResponse])
 async def listar_safras() -> list[SafraResponse]:
+    """Lista as safras já carregadas no sistema.
+
+    Returns:
+        Lista de ``SafraResponse`` (número e metadados de cada safra), possivelmente
+        vazia quando nenhuma base foi carregada ainda.
+    """
     return await get_safras()
 
 
@@ -68,6 +81,12 @@ async def listar_safras() -> list[SafraResponse]:
 
 @router.get("/consultas", response_model=list[ConsultaResponse])
 async def listar_consultas() -> list[ConsultaResponse]:
+    """Lista todas as consultas (jobs de otimização) registradas.
+
+    Returns:
+        Lista de ``ConsultaResponse`` com status e metadados de cada consulta,
+        usada pelo frontend para localizar a consulta concluída mais recente.
+    """
     return await get_consultas()
 
 
@@ -137,6 +156,17 @@ async def upload_e_criar_consulta(
 
 @router.get("/consultas/{consulta_id}", response_model=ConsultaResponse)
 async def detalhe_consulta(consulta_id: UUID) -> ConsultaResponse:
+    """Retorna os detalhes e o status de uma consulta específica.
+
+    Args:
+        consulta_id: Identificador (UUID) da consulta.
+
+    Returns:
+        O ``ConsultaResponse`` correspondente.
+
+    Raises:
+        HTTPException: 404 quando a consulta não existe.
+    """
     consulta = await get_consulta(consulta_id)
     if consulta is None:
         raise HTTPException(status_code=404, detail="Consulta não encontrada.")
@@ -147,6 +177,18 @@ async def detalhe_consulta(consulta_id: UUID) -> ConsultaResponse:
     "/consultas/{consulta_id}/clusters", response_model=list[ClusterResultadoResponse]
 )
 async def listar_clusters(consulta_id: UUID) -> list[ClusterResultadoResponse]:
+    """Lista os resultados agregados por cluster de uma consulta.
+
+    Args:
+        consulta_id: Identificador (UUID) da consulta.
+
+    Returns:
+        Lista de ``ClusterResultadoResponse`` com limite otimizado, PD e demais
+        métricas por cluster.
+
+    Raises:
+        HTTPException: 404 quando a consulta não existe.
+    """
     clusters = await get_clusters(consulta_id)
     if clusters is None:
         raise HTTPException(status_code=404, detail="Consulta não encontrada.")
@@ -161,6 +203,19 @@ async def listar_clientes(
     limit: int = Query(default=100, ge=1, le=1000),
     offset: int = Query(default=0, ge=0),
 ) -> list[ClienteResultadoResponse]:
+    """Lista os clientes de uma consulta, de forma paginada.
+
+    Args:
+        consulta_id: Identificador (UUID) da consulta.
+        limit: Tamanho da página (1 a 1000; padrão 100).
+        offset: Quantidade de registros a pular (>= 0; padrão 0).
+
+    Returns:
+        Lista de ``ClienteResultadoResponse`` com o resultado por cliente.
+
+    Raises:
+        HTTPException: 404 quando a consulta não existe.
+    """
     clientes = await get_clientes(consulta_id, limit=limit, offset=offset)
     if clientes is None:
         raise HTTPException(status_code=404, detail="Consulta não encontrada.")
@@ -169,6 +224,20 @@ async def listar_clientes(
 
 @router.get("/consultas/{consulta_id}/clientes/export")
 async def exportar_clientes(consulta_id: UUID) -> Response:
+    """Exporta os clientes de uma consulta como CSV para download.
+
+    Usa os limites otimizados pelo Simplex próprio do projeto.
+
+    Args:
+        consulta_id: Identificador (UUID) da consulta.
+
+    Returns:
+        ``Response`` ``text/csv`` com cabeçalho ``Content-Disposition`` de
+        attachment (``clientes_<id>.csv``).
+
+    Raises:
+        HTTPException: 404 quando a consulta não existe.
+    """
     csv = await exportar_clientes_csv(consulta_id)
     if csv is None:
         raise HTTPException(status_code=404, detail="Consulta não encontrada.")
@@ -183,6 +252,20 @@ async def exportar_clientes(consulta_id: UUID) -> Response:
 
 @router.get("/consultas/{consulta_id}/clientes/export-pulp")
 async def exportar_clientes_pulp(consulta_id: UUID) -> Response:
+    """Exporta os clientes de uma consulta como CSV, na versão PuLP.
+
+    Equivalente a :func:`exportar_clientes`, mas usando os limites calculados
+    pelo solver de referência PuLP, para comparação.
+
+    Args:
+        consulta_id: Identificador (UUID) da consulta.
+
+    Returns:
+        ``Response`` ``text/csv`` como attachment (``clientes_pulp_<id>.csv``).
+
+    Raises:
+        HTTPException: 404 quando a consulta não existe.
+    """
     csv = await exportar_clientes_pulp_csv(consulta_id)
     if csv is None:
         raise HTTPException(status_code=404, detail="Consulta não encontrada.")
@@ -197,6 +280,20 @@ async def exportar_clientes_pulp(consulta_id: UUID) -> Response:
 
 @router.get("/consultas/{consulta_id}/z-banco")
 async def z_banco(consulta_id: UUID) -> dict:
+    """Calcula o ``z`` da política atual do banco para a consulta (baseline).
+
+    Serve de comparação contra o ``z`` otimizado: quanto o banco ganharia
+    mantendo os limites vigentes versus os limites propostos pelo modelo.
+
+    Args:
+        consulta_id: Identificador (UUID) da consulta.
+
+    Returns:
+        ``dict`` com o valor de ``z`` do banco e métricas associadas.
+
+    Raises:
+        HTTPException: 404 quando a consulta não existe.
+    """
     resultado = await calcular_z_banco(consulta_id)
     if resultado is None:
         raise HTTPException(status_code=404, detail="Consulta não encontrada.")
@@ -210,6 +307,18 @@ async def z_banco(consulta_id: UUID) -> dict:
 
 @router.get("/clientes/{token}", response_model=ClienteHistoricoResponse)
 async def historico_cliente(token: int) -> ClienteHistoricoResponse:
+    """Retorna a evolução de um cliente ao longo das safras.
+
+    Args:
+        token: Token (identificador anonimizado) do cliente.
+
+    Returns:
+        ``ClienteHistoricoResponse`` com limite, PD, cluster e demais campos por
+        safra em que o cliente aparece.
+
+    Raises:
+        HTTPException: 404 quando o cliente não é encontrado.
+    """
     historico = await get_historico_cliente(token)
     if historico is None:
         raise HTTPException(status_code=404, detail="Cliente não encontrado.")
@@ -223,9 +332,23 @@ async def historico_cliente(token: int) -> ClienteHistoricoResponse:
 
 @router.get("/config", response_model=ParametrosModelo)
 async def get_parametros() -> ParametrosModelo:
+    """Retorna os parâmetros de modelo atualmente configurados.
+
+    Returns:
+        ``ParametrosModelo`` com os valores vigentes (usados como padrão em novas
+        consultas e exibidos no modal de configuração do frontend).
+    """
     return await get_config()
 
 
 @router.put("/config", response_model=ParametrosModelo)
 async def atualizar_parametros(payload: ParametrosModelo) -> ParametrosModelo:
+    """Atualiza e persiste os parâmetros de modelo.
+
+    Args:
+        payload: Novo conjunto de parâmetros (``ParametrosModelo``) a persistir.
+
+    Returns:
+        Os parâmetros efetivamente gravados.
+    """
     return await update_config(payload)

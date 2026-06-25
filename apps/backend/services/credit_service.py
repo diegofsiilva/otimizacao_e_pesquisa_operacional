@@ -120,9 +120,11 @@ def _cliente_de_serie(consulta_id, s) -> ClienteResultadoResponse:
     converte NaN -> None nas colunas anuláveis."""
 
     def _i(v):
+        """Converte ``v`` para ``int``, ou ``None`` quando o valor é NaN."""
         return None if pd.isna(v) else int(v)
 
     def _f(v):
+        """Converte ``v`` para ``float``, ou ``None`` quando o valor é NaN."""
         return None if pd.isna(v) else float(v)
 
     return ClienteResultadoResponse(

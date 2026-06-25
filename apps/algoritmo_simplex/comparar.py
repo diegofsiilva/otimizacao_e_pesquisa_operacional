@@ -28,6 +28,12 @@ from models import Problema
 from simplex import simplex
 from simplex_pulp import simplex_pulp
 
+# Garante saída em UTF-8 no console. O terminal padrão do Windows usa cp1252,
+# que não codifica símbolos como "Δ" (usado em "|Δz|") e dispara
+# UnicodeEncodeError. reconfigure() existe em TextIOWrapper (Python 3.7+).
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
+
 
 # Tolerâncias para considerar dois valores de z equivalentes.
 # Uma tolerância puramente absoluta (1e-6) falha em problemas de grande
@@ -187,6 +193,16 @@ def problema_real(arquivo_parquet_nome: str, arquivo_json_nome: str) -> Problema
 
 
 def main() -> None:
+    """Roda a comparação e imprime a tabela de resultados.
+
+    Executa sempre os problemas didáticos e, se forem passados os dois
+    argumentos CLI (``<parquet> <json>``), também o caso real. Para cada
+    problema, compara o Simplex próprio contra o PuLP e imprime z, status e o
+    erro entre eles, terminando com um resumo de quantos casos coincidem.
+
+    Returns:
+        None.
+    """
     print("Comparação: Simplex do projeto vs. PuLP (CBC)")
     print("=" * 60)
 

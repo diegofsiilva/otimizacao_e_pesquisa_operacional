@@ -384,6 +384,16 @@ def gravar_limites_nos_arquivos(
 
 
 def main() -> None:
+    """Ponto de entrada CLI do pipeline de otimização.
+
+    Lê dois argumentos de linha de comando — o parquet da safra (em
+    ``data/parquet/``) e o JSON de parâmetros (em ``input/``) — executa a
+    pipeline completa (calibração, clustering e Simplex) e imprime/salva os
+    resultados. Sem os argumentos, imprime o uso e encerra com código 1.
+
+    Returns:
+        None.
+    """
     if len(sys.argv) < 3:
         print("Uso:")
         print("    python main.py <arquivo.parquet> <parametros.json>")

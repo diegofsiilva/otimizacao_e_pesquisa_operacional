@@ -39,10 +39,27 @@ FAIL = "\033[91mFALHOU\033[0m"
 
 
 def _aprox(a, b, tol=1e-6):
+    """Compara dois números com tolerância relativa/absoluta.
+
+    Args:
+        a: Primeiro valor.
+        b: Segundo valor.
+        tol: Tolerância relativa (escalada pela maior magnitude entre 1, |a|, |b|).
+
+    Returns:
+        ``True`` se ``a`` e ``b`` são equivalentes dentro da tolerância.
+    """
     return abs(a - b) <= tol * max(1.0, abs(a), abs(b))
 
 
 def casos_canonicos() -> bool:
+    """Roda os casos didáticos de validação do Simplex (solução única, ilimitado etc.).
+
+    Executa o solver sobre problemas com resultado conhecido e confere ``z``/``x``.
+
+    Returns:
+        ``True`` se todos os casos canônicos passaram; ``False`` caso contrário.
+    """
     ok = True
 
     # solução única -> x=[18,8], z=1000
@@ -117,6 +134,15 @@ def _montar_lp_de_clusters(clusters, params):
 
 
 def equivalencia_e_tempo() -> bool:
+    """Compara Simplex próprio vs. PuLP nos parquets reais e mede tempos.
+
+    Para cada base de clusters em cache, monta o problema, resolve com os dois
+    solvers, verifica a equivalência dos valores de ``z`` e reporta os tempos.
+
+    Returns:
+        ``True`` se todos os casos reais coincidiram dentro da tolerância;
+        ``False`` caso algum divirja.
+    """
     import pandas as pd
 
     parquets = sorted(CACHE.glob("*_clusters.parquet"))

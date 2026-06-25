@@ -206,6 +206,7 @@ def main(
     print("\nAgregando parametros por cluster...")
 
     def p5(x: pd.Series) -> float:
+        """Retorna o 5º percentil da série ``x`` (ignorando NaN), como ``float``."""
         return float(np.nanquantile(x.astype(float), 0.05))
 
     clusters = df.groupby("segmento_id", as_index=False).agg(

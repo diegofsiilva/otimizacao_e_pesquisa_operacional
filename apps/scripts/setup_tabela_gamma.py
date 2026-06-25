@@ -267,6 +267,20 @@ print(f"\nSalvo: {tabela_path}")
 
 # backtesting economico
 def apply_decil(pd_arr, gamma_arr=gamma_final, ed=edges):
+    """Aplica o fator gamma por decil sobre um array de PD.
+
+    Para cada valor de ``pd_arr``, localiza o decil correspondente (via
+    ``np.digitize`` nas bordas internas ``ed[1:-1]``) e multiplica a PD pelo
+    gamma daquele decil.
+
+    Args:
+        pd_arr: Array de ``pd_produto`` a calibrar.
+        gamma_arr: Fatores gamma por decil (default: ``gamma_final`` estimado).
+        ed: Bordas dos decis (default: ``edges`` calculado sobre a população).
+
+    Returns:
+        Array de PD calibrada (``pd_arr * gamma_do_decil``).
+    """
     bins = np.digitize(pd_arr, ed[1:-1])
     return pd_arr * gamma_arr[bins]
 

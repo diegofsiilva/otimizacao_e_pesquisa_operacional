@@ -84,6 +84,19 @@ def construir_tableau_inicial(problema: Problema) -> Tableau:
 # Leitura dos bounds do problema
 # ---------------------------------------------------------------------------
 def _ler_bounds(problema: Problema, n: int) -> tuple[np.ndarray, np.ndarray]:
+    """Extrai os vetores de limite inferior e superior das variáveis.
+
+    Normaliza os bounds do problema para arrays NumPy de tamanho ``n``: ausência
+    de ``lower`` vira 0.0 (e ``None`` por variável também vira 0.0); ausência de
+    ``upper`` vira ``+infinito`` (``_INF``), assim como ``None`` por variável.
+
+    Args:
+        problema: Instância do problema com os atributos ``lower``/``upper``.
+        n: Número de variáveis de decisão.
+
+    Returns:
+        Tupla ``(lo, hi)`` de arrays ``float`` com os limites inferior e superior.
+    """
     if problema.lower is None:
         lo = np.zeros(n, dtype=float)
     else:
@@ -180,6 +193,28 @@ def _resolver_sem_restricoes(
 def _resolver_bounded(
     c: np.ndarray, A: np.ndarray, b: np.ndarray, lo: np.ndarray, hi: np.ndarray
 ) -> tuple[np.ndarray, str]:
+    """Resolve ``min cᵀx s.a. Ax <= b, lo <= x <= hi`` (simplex primal limitado).
+
+    Motor central do solver: monta o tableau denso ``M = [A | I]`` com variáveis
+    de folga, parte da base de folgas e itera pivôs com variáveis não-básicas em
+    seus limites (lower/upper). Inclui anti-ciclagem via regra de Bland após
+    estagnação.
+
+    Args:
+        c: Vetor de custos das variáveis estruturais (minimização).
+        A: Matriz de restrições (``<=``), forma ``(m, n)``.
+        b: Lado direito das restrições, tamanho ``m``.
+        lo: Limites inferiores das ``n`` variáveis estruturais.
+        hi: Limites superiores (``_INF`` quando ilimitado).
+
+    Returns:
+        Tupla ``(x, status)`` onde ``x`` é o vetor solução das variáveis
+        estruturais e ``status`` é ``"otimo"`` ou ``"ilimitado"``. O caso sem
+        restrições é delegado a :func:`_resolver_sem_restricoes`.
+
+    Raises:
+        ValueError: se o simplex não convergir dentro do limite de iterações.
+    """
     m, n = A.shape
 
     if m == 0:
@@ -329,6 +364,24 @@ def _resolver_bounded(
 
 
 def _extrair_x(n, N, base, xB, valor_nb, no_upper, lo_all, hi_all) -> np.ndarray:
+    """Reconstrói o vetor solução completo a partir do estado do tableau.
+
+    As variáveis não-básicas já carregam seu valor (em lower ou upper) em
+    ``valor_nb``; as básicas recebem o valor corrente ``xB``.
+
+    Args:
+        n: Número de variáveis estruturais (mantido por simetria de assinatura).
+        N: Número total de variáveis (estruturais + folgas).
+        base: Índices das variáveis básicas.
+        xB: Valores das variáveis básicas.
+        valor_nb: Valores correntes de todas as variáveis não-básicas.
+        no_upper: Máscara indicando não-básicas fixadas no limite superior.
+        lo_all: Limites inferiores de todas as variáveis.
+        hi_all: Limites superiores de todas as variáveis.
+
+    Returns:
+        O vetor ``x`` (tamanho ``N``) com o valor de todas as variáveis.
+    """
     x = valor_nb.copy()
     x[base] = xB
     return x
