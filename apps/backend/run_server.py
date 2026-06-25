@@ -2,18 +2,19 @@ from __future__ import annotations
 
 import atexit
 import json
+import socket
 import subprocess
 import sys
+import time
 from pathlib import Path
 from urllib.parse import urlsplit, urlunsplit
-
-import uvicorn
 
 from config import APP_HOST, APP_HOST_BIND, APP_PORT, FRONTEND_PORT
 
 BACKEND_DIR = Path(__file__).resolve().parent
 FRONTEND_DIR = BACKEND_DIR.parent / "frontend"
 RUNTIME_CONFIG_PATH = FRONTEND_DIR / "runtime-config.js"
+FRONTEND_STARTUP_TIMEOUT_SECONDS = 0.5
 
 
 def _backend_api_url() -> str:
@@ -33,12 +34,37 @@ def _write_frontend_runtime_config() -> None:
     )
 
 
+def _frontend_url() -> str:
+    return f"{APP_HOST}:{FRONTEND_PORT}"
+
+
+def _is_port_available(host: str, port: int) -> bool:
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.bind((host, port))
+    except OSError:
+        return False
+    return True
+
+
 def _start_frontend() -> subprocess.Popen | None:
     if not FRONTEND_DIR.exists():
         print(f"[warn] frontend directory not found: {FRONTEND_DIR}")
         return None
 
-    _write_frontend_runtime_config()
+    if not _is_port_available(APP_HOST_BIND, FRONTEND_PORT):
+        print(
+            f"[warn] frontend not started: port {FRONTEND_PORT} is already in use "
+            f"on {APP_HOST_BIND}."
+        )
+        print("       Change FRONTEND_PORT in apps/backend/.env or stop the other process.")
+        return None
+
+    try:
+        _write_frontend_runtime_config()
+    except OSError as exc:
+        print(f"[warn] frontend runtime config could not be written: {exc}")
+        return None
 
     proc = subprocess.Popen(
         [
@@ -52,8 +78,14 @@ def _start_frontend() -> subprocess.Popen | None:
             str(FRONTEND_DIR),
         ],
         stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
+        stderr=None,
     )
+
+    time.sleep(FRONTEND_STARTUP_TIMEOUT_SECONDS)
+    if proc.poll() is not None:
+        print(f"[warn] frontend server exited during startup: {_frontend_url()}")
+        return None
+
     atexit.register(proc.terminate)
     return proc
 
@@ -63,13 +95,15 @@ def _print_urls(frontend_ok: bool) -> None:
     print("  Sistema de Credito Banco PAN")
     print()
     if frontend_ok:
-        print(f"  Frontend: {APP_HOST}:{FRONTEND_PORT}")
+        print(f"  Frontend: {_frontend_url()}")
     print(f"  Backend:  {APP_HOST}:{APP_PORT}")
     print(f"  Docs:     {APP_HOST}:{APP_PORT}/docs")
     print()
 
 
 if __name__ == "__main__":
+    import uvicorn
+
     frontend_proc = _start_frontend()
     _print_urls(frontend_ok=frontend_proc is not None)
 
