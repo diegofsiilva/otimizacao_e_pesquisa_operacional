@@ -268,16 +268,9 @@ async def _pipeline_background(
             params = {**params, "comparar_pulp": False}
 
         # 2. executa o pipeline numa thread para não bloquear a event loop
-        import time as _time
-
-        _t = _time.perf_counter()
         loop = asyncio.get_running_loop()
         resultado = await loop.run_in_executor(
             None, _executar_pipeline, parquet_path, params
-        )
-        print(
-            f"[TIMING] pipeline (calib+CART+simplex): "
-            f"{_time.perf_counter() - _t:.1f}s"
         )
 
         clusters = resultado["clusters"]
@@ -315,12 +308,7 @@ async def _pipeline_background(
 
         # 4. persiste o resultado por cliente como snapshot parquet por consulta
         #    (antes era um COPY de ~1.8M linhas em clientes_resultado, ~5 min)
-        _t = _time.perf_counter()
         df_cc = pd.read_parquet(parquet_cc)
-        print(
-            f"[TIMING] read _com_cluster ({len(df_cc):,} linhas): "
-            f"{_time.perf_counter() - _t:.1f}s"
-        )
 
         # mapa de limite por segmento_id para desnormalizar em clientes_resultado
         limite_por_cluster = {c["segmento_id"]: c["limite_otimizado"] for c in clusters}
@@ -343,14 +331,9 @@ async def _pipeline_background(
         # ordena por token p/ as telas paginarem sem reordenar a cada request
         df_cc = df_cc.sort_values("token")
 
-        _t = _time.perf_counter()
         _RESULTADOS_DIR.mkdir(parents=True, exist_ok=True)
         df_cc.to_parquet(
             _RESULTADOS_DIR / f"{consulta_id}.parquet", index=False
-        )
-        print(
-            f"[TIMING] write resultado parquet ({len(df_cc):,} linhas): "
-            f"{_time.perf_counter() - _t:.1f}s"
         )
 
         # 5. atualiza a consulta como concluída

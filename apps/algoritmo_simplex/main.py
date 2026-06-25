@@ -20,8 +20,6 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import time
-
 from models import Problema
 from simplex import simplex
 from simplex_pulp import simplex_pulp
@@ -257,26 +255,20 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
         # escreve os parâmetros num JSON temporário para o clustering
         json_temp.write_text(json.dumps(params), encoding="utf-8")
 
-        _t = time.perf_counter()
         parquet_calibrado = garantir_calibrado(parquet_path)
-        print(f"[TIMING] calibração: {time.perf_counter() - _t:.1f}s")
         # O df só é usado por calcular_pd_fin_atual (3 colunas). Ler a base
         # calibrada inteira (~14M linhas x ~20 colunas) só pra isso era o maior
         # custo do estágio; aqui lemos apenas as colunas necessárias. Usamos
         # só pandas (sem depender de pyarrow no import) e com fallback caso a
         # coluna opcional flag_contrato não exista no parquet.
         _cols_pd_fin = ["flag_contrato", "pd_calibrada", "flag_filtros"]
-        _t = time.perf_counter()
         try:
             df = pd.read_parquet(parquet_calibrado, columns=_cols_pd_fin)
         except (ValueError, KeyError):
             df = pd.read_parquet(
                 parquet_calibrado, columns=["pd_calibrada", "flag_filtros"]
             )
-        print(f"[TIMING] read df p/ pd_fin ({len(df.columns)} cols): {time.perf_counter() - _t:.1f}s")
-        _t = time.perf_counter()
         clusters = garantir_clusters(parquet_calibrado.name, json_temp.name)
-        print(f"[TIMING] segmentação (CART): {time.perf_counter() - _t:.1f}s")
     finally:
         if json_temp.exists():
             json_temp.unlink()
@@ -284,9 +276,7 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
     problema = montar_problema(clusters, params, df)
     # O simplex reescrito não muta a entrada (faz cópias NumPy internas; ver
     # test_nao_muta_b), então o deepcopy da matriz R5 (800x800) era desperdício.
-    _t = time.perf_counter()
     x, z, status = simplex(problema)
-    print(f"[TIMING] simplex: {time.perf_counter() - _t:.1f}s")
 
     x_arr = np.array(x)
     limites = np.where(x_arr >= 200, (x_arr / 50).round().astype(int) * 50, 0)
@@ -344,11 +334,9 @@ def executar_pipeline(parquet_path: Path, params: dict) -> dict:
     # clustering já produziu (_com_cluster e _clusters), sem criar arquivos
     # novos. Feito aqui dentro para que QUALQUER chamador (CLI ou backend/front)
     # deixe os limites em disco de forma idêntica.
-    _t = time.perf_counter()
     gravar_limites_nos_arquivos(
         parquet_com_cluster, parquet_clusters, resultado_clusters
     )
-    print(f"[TIMING] gravar limites (agregado): {time.perf_counter() - _t:.1f}s")
 
     return {
         "status": status,
