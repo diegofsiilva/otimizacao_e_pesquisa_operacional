@@ -15,6 +15,7 @@ Arquivos JSON devem estar em apps/algoritmo_simplex/input/
 
 import sys
 import json
+import copy
 import traceback
 from pathlib import Path
 import numpy as np
@@ -147,7 +148,8 @@ def montar_problema(clusters: pd.DataFrame, params: dict, df: pd.DataFrame) -> P
     n = len(clusters)
 
     # vetor de coeficientes da função objetivo
-    c = (n_k * pi_k * (u_bar * t * T - PD_k * LGD)).tolist()
+    retorno_esperado = (n_k * pi_k * (u_bar * t * T - PD_k * LGD))
+    c = retorno_esperado.tolist()
 
     # R1: teto de inadimplência financeira — ÚNICA restrição de acoplamento,
     # vale para a carteira inteira (uma linha de A).
@@ -216,7 +218,7 @@ def exibir_resultado(
         clusters["n_k"].astype(int),
         limites,
     ):
-        print("  Cluster {}: R$ {} (n={})".format(segmento_id, limite, n_clientes))
+        print(f"  Cluster {segmento_id}: R$ {limite} (n={n_clientes})")
 
 
 def executar_pipeline(parquet_path: Path, params: dict) -> dict:
