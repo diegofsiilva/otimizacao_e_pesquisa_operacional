@@ -12,9 +12,9 @@
     </script>
 
     <!-- React 18 + Babel via CDN -->
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://unpkg.com/react@18.2.0/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18.2.0/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
 
     <!-- p5.js: renderização dos gráficos em canvas com animações e interações -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/p5.js/1.9.4/p5.min.js"></script>
@@ -39,15 +39,15 @@
     <!-- Ordem importa: Resultados.js define BarChartSVG/DonutChart usados em GerarLimites.js,
          mas como os componentes são referenciados só em tempo de render (não de parse),
          a ordem abaixo é suficiente. -->
-    <script type="text/babel" src="pages/Navbar.js"></script>
-    <script type="text/babel" src="pages/Cockpit.js"></script>
-    <script type="text/babel" src="pages/GerarLimites.js"></script>
-    <script type="text/babel" src="pages/Resultados.js"></script>
-    <script type="text/babel" src="pages/Clientes.js"></script>
-    <script type="text/babel" src="pages/ConfigModal.js"></script>
+    <script type="text/babel" data-presets="env,react" src="pages/Navbar.js"></script>
+    <script type="text/babel" data-presets="env,react" src="pages/Cockpit.js"></script>
+    <script type="text/babel" data-presets="env,react" src="pages/GerarLimites.js"></script>
+    <script type="text/babel" data-presets="env,react" src="pages/Resultados.js"></script>
+    <script type="text/babel" data-presets="env,react" src="pages/Clientes.js"></script>
+    <script type="text/babel" data-presets="env,react" src="pages/ConfigModal.js"></script>
 
     <!-- App raiz -->
-    <script type="text/babel">
+    <script type="text/babel" data-presets="env,react">
       // Captura erros de render e exibe mensagem legível em vez de tela branca.
       class ErrorBoundary extends React.Component {
         constructor(props) {
