@@ -1,5 +1,5 @@
 """
-scripts/calibrar_pd.py
+apps/scripts/calibrar_pd.py
 
 Calibra a pd_produto de cada cliente usando os fatores gamma por decil,
 calculados pelo script setup_tabela_gamma.py.
@@ -42,7 +42,7 @@ def calibrar(parquet_path: Path) -> Path:
     if not TABELA_GAMMA.exists():
         raise FileNotFoundError(
             "[calibracao] tabela_gamma_decil.csv nao encontrada em data/csv/. "
-            "Rode primeiro: python scripts/setup_tabela_gamma.py"
+            "Rode primeiro: python apps/scripts/setup_tabela_gamma.py"
         )
 
     print(f"[INFO] Lendo: {parquet_path.name}")

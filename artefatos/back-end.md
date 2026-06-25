@@ -140,10 +140,10 @@ apps/algoritmo_simplex/
     └── parametros.json    # parâmetros padrão do modelo
 ```
 
-Os scripts de suporte estão em `scripts/`:
+Os scripts de suporte estão em `apps/scripts/`:
 
 ```
-scripts/
+apps/scripts/
 ├── calibrar_pd.py         # aplica gammas por decil sobre o parquet bruto
 ├── setup_tabela_gamma.py  # setup único: estima gammas das safras históricas
 └── utils/

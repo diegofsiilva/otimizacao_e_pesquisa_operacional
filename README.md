@@ -84,6 +84,7 @@ g04/
 │   │   ├── run_server.py         # sobe backend e frontend estatico juntos
 │   │   ├── requirements.txt      # dependencias do backend
 │   │   └── start.sh              # inicializacao no ambiente de deploy
+│   ├── scripts/                  # utilitarios de preparacao, calibracao e analise
 │   └── frontend/                 # SPA React via CDN/Babel
 │       ├── pages/                # telas Cockpit, Gerar Limites, Resultados, Clientes e Config
 │       ├── assets/               # logo e fontes
@@ -105,7 +106,6 @@ g04/
 │   ├── parquet/                  # arquivos Parquet de entrada
 │   ├── csv/                      # tabelas intermediarias e auxiliares
 │   └── cache/                    # parquets calibrados/clusterizados gerados
-├── scripts/                      # utilitarios de preparacao, calibracao e analise
 ├── .gitlab-ci.yml                # pipeline de teste e deploy
 └── README.md
 ```
@@ -240,10 +240,10 @@ pip install -r apps/algoritmo_simplex/requirements.txt
 
 ### Preparação dos dados
 
-Os arquivos `.parquet` fornecidos pelo parceiro devem ser colocados em `data/parquet/`. Todos os scripts abaixo devem ser executados a partir do diretório `scripts/`.
+Os arquivos `.parquet` fornecidos pelo parceiro devem ser colocados em `data/parquet/`. Todos os scripts abaixo devem ser executados a partir do diretório `apps/scripts/`.
 
 ```bash
-cd scripts
+cd apps/scripts
 ```
 
 **Passo 1 - Calcular os fatores de calibração da PD**

@@ -1,5 +1,5 @@
 """
-scripts/analise_sanidade_clusters.py
+apps/scripts/analise_sanidade_clusters.py
 
 Verifica se o LP esta otimizando corretamente apos a clusterizacao:
   1. Clusters com limite alto tem PD_k baixo e pi_k alto?

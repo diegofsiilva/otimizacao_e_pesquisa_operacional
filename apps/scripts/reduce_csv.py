@@ -1,5 +1,5 @@
 """
-scripts/reduce_csv.py
+apps/scripts/reduce_csv.py
 Reduz um arquivo .csv para uma porcentagem das primeiras linhas.
 
 Uso:

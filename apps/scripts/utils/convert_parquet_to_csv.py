@@ -1,5 +1,5 @@
 """
-scripts/convert_parquet_to_csv.py
+apps/scripts/utils/convert_parquet_to_csv.py
 Converte um arquivo .parquet em data/parquet e salva como .csv em data/csv/
 
 Uso:

@@ -25,8 +25,8 @@ from models import Problema
 from simplex import simplex
 from simplex_pulp import simplex_pulp
 
-# calibrar_pd está em scripts/ - adicionado ao path uma única vez no nível do módulo
-_SCRIPTS_DIR = str(Path(__file__).resolve().parent.parent.parent / "scripts")
+# calibrar_pd está em apps/scripts/ - adicionado ao path uma única vez no nível do módulo
+_SCRIPTS_DIR = str(Path(__file__).resolve().parent.parent / "scripts")
 if _SCRIPTS_DIR not in sys.path:
     sys.path.insert(0, _SCRIPTS_DIR)
 from calibrar_pd import calibrar as _calibrar_pd

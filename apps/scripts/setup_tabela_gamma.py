@@ -1,5 +1,5 @@
 """
-scripts/setup_tabela_gamma.py
+apps/scripts/setup_tabela_gamma.py
 
 Calibracao da PD por decil usando a base completa de elegiveis.
 

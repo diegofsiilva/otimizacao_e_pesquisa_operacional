@@ -1,12 +1,12 @@
 """
-scripts/analise_z_vs_k.py
+apps/scripts/analise_z_vs_k.py
 
 Varredura de K usando paralelismo nos 24 cores do servidor.
 Todo output vai para logs/z_vs_k.log.
 Resultados parciais sao salvos em CSV apos cada K concluido.
 
 Uso:
-    nohup python scripts/analise_z_vs_k.py <arquivo_calibrado.csv> <parametros.json> &
+    nohup python apps/scripts/analise_z_vs_k.py <arquivo_calibrado.csv> <parametros.json> &
     tail -f logs/z_vs_k.log
 
 Entrada:
