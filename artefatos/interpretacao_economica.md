@@ -13,9 +13,9 @@ $$\max_{L_k}\; Z \;=\; \sum_{k=1}^{K} n_k \,\pi_k \,\Big(\underbrace{T\,\bar{u}\
 
 Cada símbolo, e o que significa em termos de negócio:
 
-- **$L_k$**: variável de decisão, o limite (R\$) ofertado a todos os clientes do cluster $k$ e que o modelo escolhe.
-- **$k$, $K$**: cada um dos $K \geq 100$ clusters (perfis) de clientes elegíveis.
-- **$n_k$**: número de clientes no cluster; dá a cada perfil peso proporcional ao seu tamanho.
+- **$L_k$**: variável de decisão, o limite (R\$) ofertado a todos os clientes do segmento $k$ e que o modelo escolhe.
+- **$k$, $K$**: cada um dos $K \geq 100$ segmentos (perfis) de clientes elegíveis.
+- **$n_k$**: número de clientes no segmento; dá a cada perfil peso proporcional ao seu tamanho.
 - **$\pi_k$**: propensão à contratação (0 a 1), a chance de o cliente aceitar a oferta; pondera receita e perda, que só ocorrem se ele contratar.
 - **$T = 22$ meses**: horizonte de uso do limite.
 - **$\bar{u} = 0{,}75$**: utilização, a fração do limite efetivamente gasta (75%).
@@ -23,27 +23,32 @@ Cada símbolo, e o que significa em termos de negócio:
 - **$PD_k$**: probabilidade de default do perfil.
 - **$\gamma_{d(k)}$**: fator que calibra a PD do scoring ao default efetivamente observado, por decil de risco.
 - **$\text{LGD} = 0{,}80$**: *Loss Given Default*, a fração perdida em caso de default (recupera-se ~20%).
-- **$c_k = \pi_k\,(T\bar{u}t - PD_k\gamma_{d(k)}\,\text{LGD})$**: retorno líquido por real de limite no cluster, o "spread de risco" do perfil e o que de fato orienta a decisão.
+- **$c_k = \pi_k\,(T\bar{u}t - PD_k\gamma_{d(k)}\,\text{LGD})$**: retorno líquido por real de limite no segmento, o "spread de risco" do perfil e o que de fato orienta a decisão.
 
 ### 1.1 O que a função objetivo representa economicamente?
 A função objetivo escolhe os limites que maximizam o **retorno líquido esperado da carteira** de cartão pré-aprovado: a receita de interchange que o banco ganha sobre o volume transacionado, menos a perda esperada quando o cliente entra em default. Não é maximizar receita bruta nem minimizar risco, e sim **margem ajustada à perda esperada**. Como o produto é mono-produto, receita e risco moram no mesmo lugar: o limite. Tanto a receita quanto a perda só se concretizam se o cliente aceitar a oferta, por isso entram ponderadas pela propensão à contratação $\pi_k$: a FO é, no fundo, um valor esperado sobre a conversão.
 
-A unidade econômica é **R\$ de retorno acumulado no horizonte de uso do limite (22 meses)**: como $L_k$ é um estoque rotativo (sem dimensão temporal), o ótimo $Z^*$ é o retorno da carteira nesse horizonte: ≈ R\$ 30,1 M em 22 meses, ou ≈ R\$ 16,4 M/ano (`modelagem_matematica.md §4`). Na margem, cada real adicional de limite a um perfil rende o seu $c_k$.
+A unidade econômica é **R\$ de retorno acumulado no horizonte de uso do limite (22 meses)**: como $L_k$ é um estoque rotativo (sem dimensão temporal), o ótimo $Z^*$ é o retorno da carteira nesse horizonte: ≈ R\$ 36,2 M no ótimo contínuo da safra M1, ou ≈ R\$ 32,9 M na carteira efetivamente recomendada após a discretização operacional (`artigo.md §4.1`). Na margem, cada real adicional de limite a um perfil rende o seu $c_k$.
 
 ### 1.2 Qual é a lógica de geração de valor?
-O valor não vem de conceder mais crédito, e sim de **alocar melhor o limite entre perfis**. No lugar da régua fixa atual, o modelo direciona cada real para os clusters de spread líquido positivo ($c_k > 0$) e o retira de onde destrói valor. É a lógica de **perda esperada (PD × LGD × exposição)** descontada da receita, a mesma adotada por FICO (2021), Experian (2024) e Moody's (2020) (`modelagem_matematica.md §1.1`). Na solução de referência isso se traduz em ≈ R\$ 16,4 M/ano de retorno líquido sobre ≈ R\$ 613 M de volume ofertado.
+O valor não vem de conceder mais crédito, e sim de **alocar melhor o limite entre perfis**. No lugar da régua fixa atual, o modelo direciona cada real para os segmentos de spread líquido positivo ($c_k > 0$) e o retira de onde destrói valor. É a lógica de **perda esperada (PD × LGD × exposição)** descontada da receita, a mesma adotada por FICO (2021), Experian (2024) e Moody's (2020) (`modelagem_matematica.md §1.1`). Na solução de referência da safra M1 isso se traduz em ≈ R\$ 32,9 M de retorno líquido no horizonte sobre uma exposição total recomendada de ≈ R\$ 1,12 bilhão (`artigo.md §4.1`).
 
-Puxam a rentabilidade para cima a propensão $\pi_k$, a taxa de interchange $t$ (1,75%), o horizonte $T$ (22 meses) e a utilização $\bar{u}$ (75%); puxam para baixo a PD, a calibração $\gamma_d$ e a LGD (80%). O ganho frente à política vigente é medido por backtesting (rentabilidade do `limite_ofertado` atual contra o limite otimizado nas safras M1–M3), e é aí que se comprova geração de valor, não apenas números diferentes.
+Os parâmetros se dividem em dois grupos quanto ao efeito no retorno:
+
+- **Puxam a rentabilidade para cima:** a propensão $\pi_k$, a taxa de interchange $t$ (1,75%), o horizonte $T$ (22 meses) e a utilização $\bar{u}$ (75%).
+- **Puxam para baixo:** a PD, a calibração $\gamma_d$ e a LGD (80%).
+
+O ganho frente à política vigente é medido por backtesting (rentabilidade do `limite_ofertado` atual contra o limite otimizado nas safras M1–M3), e é aí que se comprova geração de valor, não apenas números diferentes.
 
 ### 1.3 Quais distorções econômicas a função objetivo pode induzir?
 A própria forma da FO embute incentivos que **as restrições conseguem conter**:
 
-- **Cega ao risco.** É crescente em $L_k$ e não tem ponderador de risco ($\lambda$): sozinha, empurraria o limite ao infinito. Todo o controle de risco é delegado a R1–R6, ou seja, o objetivo isolado incentiva exposição máxima.
-- **Margem acima de tudo.** Por maximizar $c_k$ por real, tende a concentrar nos clusters mais rentáveis; numa base cuja PD mediana é 0,71, isso seria perigoso sem o freio de R1/R4/R5.
+- **Cega ao risco.** É crescente em $L_k$ e não tem ponderador de risco ($\lambda$): sozinha, empurraria o limite ao infinito. O controle de risco é delegado às restrições R1–R3 e à regra de concentração, ou seja, o objetivo isolado incentiva exposição máxima.
+- **Margem acima de tudo.** Por maximizar $c_k$ por real, tende a concentrar nos perfis mais rentáveis; numa base elegível cuja PD calibrada média é 0,197, isso seria perigoso sem o freio de R1, R2 e da diversificação.
 
 Há ainda **duas simplificações que as restrições não corrigem**, e que mudariam não o valor de $Z$, mas *quem* recebe limite:
 
-- **Custo de capital (RAROC).** Cada real de limite consome capital regulatório (ativo ponderado pelo risco, sob Basileia), e a FO não o desconta. O objetivo economicamente correto seria o retorno sobre o capital alocado (RAROC), e não o retorno bruto: por essa ótica, um cluster de margem alta porém PD alta, que prende muito capital, vale menos do que a FO atual sugere.
+- **Custo de capital (RAROC).** Cada real de limite consome capital regulatório (ativo ponderado pelo risco, sob Basileia), e a FO não o desconta. O objetivo economicamente correto seria o retorno sobre o capital alocado (RAROC), e não o retorno bruto: por essa ótica, um segmento de margem alta porém PD alta, que prende muito capital, vale menos do que a FO atual sugere.
 - **Horizonte (LTV).** A margem de interchange de 22 meses é uma fatia do LTV. Como ignora CAC e churn (um limite baixo demais frustra e empurra ao concorrente; um alto demais superendivida), a FO supervaloriza perfis de margem alta agora porém churn alto e subvaloriza os de margem fina mas fiéis. Um objetivo em LTV − CAC líquido de churn deslocaria limite para quem vale mais ao longo do tempo (Instrução 3).
 
 Nenhuma das duas invalida a FO atual: ela é uma v1 deliberadamente simples (tudo em R\$, na mesma unidade, auditável), e essas são a sua evolução natural. As distorções que vêm de premissas/parâmetros (como a LGD uniforme) estão na Seção 6.
@@ -53,126 +58,134 @@ O modelo transforma a definição de limite de uma regra fixa em uma **otimizaç
 
 ## 2. Interpretação das Restrições como Políticas de Negócio
 
-Cada restrição traduz uma política de crédito do Banco Pan em um corte no espaço de soluções factíveis. Para cada uma, respondemos três perguntas:
-
-- qual política representa
-- qual risco controla
-- o que acontece economicamente se for relaxada ou apertada
-
-As respostas se apoiam nos preços-sombra do LP resolvido sobre a base real, agregada em 10 clusters por decil de `pd_produto` (`modelagem_matematica.md §4.3`).
+Cada restrição traduz uma política de crédito do Banco Pan em um corte no espaço de soluções factíveis. O modelo implementado tem três restrições no LP, R1 (teto de inadimplência financeira), R2 (capacidade de pagamento) e R3 (teto operacional), além da não-negatividade, e uma regra de diversificação verificada após a otimização (`artigo.md §2.3`). Para cada uma respondemos três perguntas: qual política representa, qual risco controla e o que acontece economicamente se for relaxada ou apertada. As respostas se apoiam na execução do pipeline sobre a base real da safra M1, com 1.836.085 clientes elegíveis agregados em 800 segmentos (`artigo.md §4.1`).
 
 ### 2.1 Restrição R1: Teto de inadimplência financeira
 
-R1 representa o apetite de risco financeiro da instituição: a carteira otimizada não pode ter PD ponderada pela exposição ($\sum n_k PD_k L_k / \sum n_k L_k$) acima da carteira aprovada vigente, com teto $\overline{PD}_{fin}^{atual} = 0{,}32$ no cenário resolvido. O risco que ela controla é a deterioração da qualidade financeira da carteira ponderada pelo valor exposto: diferentemente de contar clientes inadimplentes, R1 pesa cada default pelo limite em risco e captura a perda esperada em reais.
+R1 representa o apetite de risco financeiro da instituição: a carteira otimizada não pode ter PD ponderada pela exposição ($\sum n_k PD_k L_k / \sum n_k L_k$) acima do teto $\overline{PD}_{fin}^{atual}$, calculado como a inadimplência da base elegível vigente. O risco que ela controla é a deterioração da qualidade financeira da carteira ponderada pelo valor exposto: diferentemente de contar clientes inadimplentes, R1 pesa cada default pelo limite em risco e captura a perda esperada em reais.
 
-É a restrição ativa no nível agregado, com preço-sombra de 0,1964 por unidade do termo de excesso. Relaxá-la de 0,32 para 0,33 equivale a elevar o RHS em $0{,}01 \cdot \sum n_k L_k^* \approx \text{R\$ 6,1 M}$ e rende cerca de R\$ 1,2 M/ano de retorno adicional, ao custo de mais provisão e capital regulatório sobre a inadimplência incremental. Apertá-la empurra a alocação para os clusters mais seguros e de menor margem, deixando a carteira mais sã e com menor provisão, porém com menos volume rentável e menor receita.
+Na solução, R1 fica com folga: a PD ponderada da carteira otimizada é 0,067, bem abaixo do teto de 0,197 (`artigo.md §4.1`). Ela não morde porque a própria função objetivo já elimina o risco que destrói valor, antes que o teto agregado precise atuar: o coeficiente $c_k$ fica negativo quando $PD_k$ ultrapassa 0,361, e 123 dos 800 segmentos caíram nessa faixa e receberam limite zero naturalmente. A consequência econômica é que relaxar R1 hoje não rende nada, porque ela não está limitando a solução; apertá-la teria efeito só se descesse abaixo de 0,067, ponto em que passaria a forçar a saída dos segmentos rentáveis mas de maior PD, reduzindo retorno em troca de uma carteira ainda mais conservadora.
 
 ### 2.2 Restrição R2: Capacidade de pagamento (alavancagem diferenciada)
 
-R2 traduz a política de crédito responsável: o limite de cada perfil é amarrado à capacidade de pagamento ($L_k \leq m_k \cdot CP_k$), com a alavancagem $m_k$ crescente no score e $CP_k$ medido no percentil 5, uma escolha prudencial sobre o p50/p90 (`§1.5`). O risco controlado é o superendividamento individual, isto é, conceder acima do que o cliente comprovadamente sustenta, causa-raiz do default no nível do cliente. É o freio prudencial por cliente da carteira.
+R2 traduz a política de crédito responsável: o limite de cada perfil é amarrado à capacidade de pagamento ($L_k \leq m_k \cdot CP_k$), com a alavancagem $m_k$ crescente no score e $CP_k$ medido no percentil 5, uma escolha prudencial sobre a média. O risco controlado é o superendividamento individual, isto é, conceder acima do que o cliente comprovadamente sustenta, causa-raiz do default no nível do cliente. É o freio prudencial por cliente da carteira.
 
-É também o maior gargalo de retorno marginal do modelo: está ativa em seis dos dez clusters, com preço-sombra de até R\$ 67.633 por R\$ 1 de $m_k \cdot CP_k$ em D2 (R\$ 63.064 em D3 e R\$ 54.333 em D4). Relaxá-la, seja elevando $m_k$ ou medindo melhor $CP_k$, é a alavanca de maior retorno, mas deve ser lida junto de R1, pois mais limite a perfis de PD alta pressiona o teto agregado; apertá-la reduz diretamente o retorno por cluster. Há ainda uma fragilidade do próprio modelo: 42–43% dos registros em M2/M3 têm `capacidade_pagamento` nula e usam o proxy `renda_estimada × 0,30` (`§6`), de modo que o gargalo mais caro repousa sobre uma medição imperfeita.
+É a restrição que de fato governa a solução: fica ativa em 677 dos 800 segmentos, e nos segmentos rentáveis o limite recomendado coincide com o teto $m_k \cdot CP_k$ (correlação de 0,996), confirmando que é a capacidade de pagamento, e não o teto de risco agregado, que define quanto cada perfil recebe (`artigo.md §4.1`). Por isso é também a alavanca de maior retorno: relaxá-la, elevando $m_k$ ou medindo melhor $CP_k$, é o que mais aumenta o retorno da carteira; apertá-la reduz diretamente o limite por perfil. Há aqui uma fragilidade do próprio modelo: 42–43% dos registros em M2/M3 têm `capacidade_pagamento` nula e usam o proxy `renda_estimada × 0,30` (Seção 6 deste documento), de modo que o gargalo mais caro do modelo repousa sobre uma medição imperfeita.
 
 ### 2.3 Restrição R3: Teto máximo de limite
 
 R3 é o teto absoluto definido pelo parceiro ($L^{max} = \text{R\$ 25 mil}$), uma salvaguarda prudencial e operacional que controla a exposição unitária extrema e funciona como rede de segurança caso R2 falhe ou seja mal calibrada.
 
-Na prática, nunca é ativa no cenário atual: o preço-sombra é zero porque R2 já limita os $L_k$ à casa das centenas de reais, bem abaixo dos R\$ 25 mil. Relaxá-la ou apertá-la não altera a solução; só passaria a morder num cenário hipotético de R2 muito frouxa.
+Na prática, nenhum segmento atinge o teto (`artigo.md §4.1`): R2 já limita os limites à casa das centenas de reais (limite médio recomendado de R\$ 607 por cliente), bem abaixo dos R\$ 25 mil. Relaxá-la ou apertá-la não altera a solução; só passaria a morder num cenário hipotético de R2 muito frouxa.
 
-### 2.4 Restrição R4: Teto de inadimplência física
+### 2.4 Regra de concentração (pós-otimização)
 
-R4 representa o apetite de risco por headcount: limita a fração de clientes inadimplentes entre os clusters com oferta, independentemente do limite concedido, em linha com a CMN 4.966/2021. Complementa R1, que olha os reais expostos enquanto R4 olha o número de clientes, e controla o risco operacional e reputacional, isto é, custo de cobrança, compliance e imagem, que escalam com a quantidade de inadimplentes e não com o valor exposto.
+A diversificação da carteira é tratada como uma regra de pós-otimização, e não como restrição do LP: por incidir sobre os limites já discretizados, ela é verificada após a otimização (`artigo.md §2.3`). A diretriz é que nenhum segmento concentre mais que $\alpha = 5\%$ da exposição total. A política que ela representa é a de evitar uma carteira rentável porém dependente de um único perfil, vulnerável a choques setoriais ou regionais que atinjam justamente aquele segmento.
 
-Por envolver indicadoras de cluster ativo, opera em pós-otimização, removendo iterativamente os clusters de maior $PD_k$ e menor $c_k$ até satisfazer o teto. Apertá-la reduz a base atendida e a receita; relaxá-la amplia a base e, com ela, o custo operacional de cobrança.
+Na solução da M1, a concentração máxima de um segmento ficou em 3,6%, dentro do limite de 5%, então a regra não precisou ser acionada (`artigo.md §4.1`). Caso fosse violada, a abordagem do pipeline é sinalizar para revisão de parâmetros e reexecução, mantendo o LP estritamente linear. Apertar $\alpha$ forçaria mais dispersão e protegeria contra choques; afrouxá-lo permitiria carteiras mais concentradas e potencialmente mais rentáveis, ao custo de diversificação.
 
-### 2.5 Restrição R5: Concentração máxima por cluster
+### 2.5 Trade-offs econômicos explícitos
 
-R5 traduz a política de diversificação da carteira: nenhum perfil pode concentrar mais que $\alpha$ da exposição total ($n_k L_k \leq \alpha \sum n_j L_j$). Controla o risco sistêmico e de concentração, já que uma carteira rentável porém dependente de um único perfil fica vulnerável a choques setoriais ou regionais que atinjam justamente aquele cluster.
+A solução expõe dois trade-offs centrais da gestão de crédito, e a leitura econômica importante é que apenas um deles está ativo hoje:
 
-No cenário resolvido, R5 é ativa em D1, no teto de concentração, com preço-sombra de 0,1052: cada R\$ 1 adicional de concentração em D1 vale +R\$ 0,1052 de $Z$. Relaxá-la rende retorno e fragiliza a carteira; apertá-la dispersa o limite e protege contra choques.
+- **Conversão vs risco** (R2): é o trade-off que governa a solução. O limite atrelado à capacidade de pagamento contém o superendividamento, mas é também o que mais segura o retorno; relaxá-lo aumentaria limite, conversão e receita, ao custo de mais risco por cliente. Por estar ativo em 677 de 800 segmentos, é aqui que mora o retorno marginal do modelo.
+- **Rentabilidade vs inadimplência** (R1): é o trade-off latente. O teto de risco existe, mas hoje não morde, porque a própria função objetivo já descarta os segmentos que destroem valor (PD acima de 0,361). Só voltaria a ser tensão se o apetite de risco fosse apertado abaixo da PD atual da carteira (0,067) ou se o perfil de risco da base piorasse.
 
-### 2.6 Restrição R6: Meta de produção mínima
+No conjunto, o modelo pende para a segurança: amplia a cobertura de 6,4% para 47,7% dos elegíveis, mas mantém a PD ponderada (0,067) muito abaixo do teto e subordina cada limite à capacidade de pagamento.
 
-R6 é o piso comercial de volume ($\sum n_k L_k \geq V^{min}$), que garante que a solução ótima em margem também seja viável comercialmente. Controla o risco de subprodução, isto é, o de o modelo entregar uma carteira matematicamente ótima mas pequena demais para sustentar as metas do negócio.
-
-Não é ativa no cenário-base ($V^{min} = 0$). Com um $V^{min}$ operacional, da ordem de R\$ 100–500 M, apertá-la pode tornar o LP infactível, sinalizando que R1 e R4 estão restritivas demais para o volume desejado e informando diretamente uma negociação entre as áreas comercial e de risco; relaxá-la devolve ao solver a liberdade de priorizar margem sobre volume.
-
-### 2.7 Trade-offs econômicos explícitos
-
-As restrições materializam dois trade-offs centrais da gestão de crédito, cada um com número dos dois lados:
-
-- **Rentabilidade vs inadimplência** (R1): cada ponto percentual de apetite de risco vale ≈ R\$ 1,2 M/ano de retorno, contra a provisão e o capital regulatório sobre a inadimplência incremental.
-- **Conversão vs risco** (R2): relaxar o freio de capacidade rende até R\$ 67,6 mil de retorno marginal por cluster e torna a oferta mais atrativa, contra o risco de superendividamento do cliente.
-
-No cenário-base o modelo **pende para a segurança**: prefere abrir mão de retorno a piorar a qualidade da carteira vigente.
-
-**Pró-ciclicidade.** Como R1 e R4 estão ancoradas na carteira *atual*, a política é estruturalmente pró-cíclica (Minsky: "a estabilidade gera instabilidade"). Geralmente, a inadimplência vigente é baixa, o teto afrouxa e o modelo concede mais limite justamente antes de uma virada de ciclo. O cenário de estresse já calculado confirma o risco: uma alta de Selic que reduz $CP_k$ em 10% e eleva $PD_k$ em 5% aperta R2 e R1 ao mesmo tempo e custa ≈ **−R\$ 4,3 M** de retorno (`§4.4`). A mitigação é um **teto dinâmico indexado ao ciclo** — ancorar $\overline{PD}_{fin}^{atual}$ em uma média de ciclo ou fator macro, e não no nível corrente, para que o apetite de risco não se expanda no pior momento.
+**Pró-ciclicidade (ir além).** Como o teto de R1 é ancorado na inadimplência da carteira *vigente*, a política é estruturalmente pró-cíclica (Minsky: "a estabilidade gera instabilidade"): em bonança, a inadimplência observada é baixa, o teto afrouxa e o modelo se autoriza a conceder mais justamente antes de uma virada de ciclo. O próprio backtest evidencia que o teto flutua com a carteira, subindo de 0,197 na M1 para 0,209 na M3 (`artigo.md §4.3`). A mitigação é um teto dinâmico indexado ao ciclo: ancorar $\overline{PD}_{fin}^{atual}$ em uma média de ciclo ou fator macro, e não no nível corrente, para que o apetite de risco não se expanda no pior momento.
 
 ## 3. Leitura Econômica das Decisões do Modelo
 
 ### 3.1 Que tipo de cliente recebe mais limite?
 
-O perfil que recebe maior limite é aquele que combina **baixo risco calibrado, capacidade de pagamento observável e retorno líquido positivo por real de exposição**. Em termos operacionais, essa combinação se expressa em três variáveis: menor $PD_k$, maior $CP_k$ e multiplicador de alavancagem $m_k$ compatível com a política prudencial de R2. Na solução por decis, o maior limite individual aparece em D1, com $PD_k = 0{,}156$, $CP_{p5} = \text{R\$ 800}$ e $L_1^* \approx \text{R\$ 258}$. À medida que o risco cresce e a capacidade prudencial diminui, o limite se reduz: D2 recebe $\text{R\$ 162{,}75}$, D3 recebe $\text{R\$ 135}$, D4 recebe $\text{R\$ 132{,}75}$, D5 recebe $\text{R\$ 106{,}84}$, D6 recebe $\text{R\$ 62{,}50}$ e D7 recebe apenas $\text{R\$ 9{,}17}$; D8-D10 recebem limite zero (`modelagem_matematica.md §4`).
+O perfil que recebe maior limite é aquele que combina **baixo risco calibrado, capacidade de pagamento observável e retorno líquido positivo por real de exposição**. Em termos operacionais, essa combinação se expressa em três variáveis: menor $PD_k$, maior $CP_k$ e multiplicador de alavancagem $m_k$ compatível com a política prudencial de R2. O limite médio recomendado é de R\$ 607 por cliente elegível, subindo para cerca de R\$ 1.272 entre os que efetivamente recebem oferta (`artigo.md §4.1`). A Figura 3 do artigo mostra o padrão: tanto a política vigente quanto o modelo reduzem o limite à medida que o risco do perfil aumenta, mas o modelo diferencia de forma mais acentuada, ampliando o limite sobretudo nos decis de risco baixo e intermediário (D3 a D6) e mantendo limites contidos nos perfis de maior risco (`artigo.md §4.2`).
 
-Essa distribuição mostra que a concessão não é determinada apenas pela margem unitária $c_k$. D4, por exemplo, apresenta o maior coeficiente unitário entre os decis atendidos ($c_k = 0{,}06323$), mas recebe menos limite que D1 porque sua capacidade de pagamento prudencial é menor e sua alavancagem permitida é mais restrita. A decisão sobre o **valor** do limite é, portanto, fortemente condicionada por R2: na execução com 800 segmentos da safra M1, a restrição de capacidade de pagamento ficou ativa em 677 segmentos, e o limite recomendado apresentou correlação de 0,996 com o teto $m_k \cdot CP_k$ (`artigo.md §4.1`). Em termos econômicos, o modelo favorece clientes com capacidade verificável de absorver a exposição, e não apenas perfis com maior retorno esperado.
+Essa distribuição mostra que a concessão não é determinada apenas pela margem unitária $c_k$. A decisão sobre o **valor** do limite é fortemente condicionada por R2: na execução com 800 segmentos da safra M1, a restrição de capacidade de pagamento ficou ativa em 677 segmentos, e o limite recomendado apresentou correlação de 0,996 com o teto $m_k \cdot CP_k$ (`artigo.md §4.1`). Em termos econômicos, o modelo favorece clientes com capacidade verificável de absorver a exposição, e não apenas perfis com maior retorno esperado.
 
-Essa leitura permite inferir o ICP (*Ideal Customer Profile*) revelado pelo próprio modelo: correntistas elegíveis com PD calibrada abaixo do limiar de destruição de valor, capacidade de pagamento mensurável, score de crédito suficiente para sustentar alavancagem e propensão positiva à contratação. No recorte por decis, esse perfil corresponde a D1-D7; na execução completa de M1, materializa-se em 382 de 800 segmentos com oferta efetiva, cobrindo 876.520 clientes, ou 47,7% dos elegíveis (`artigo.md §4.1`). D8-D10 ficam fora não por uma regra fixa de score, mas porque sua inclusão consumiria orçamento de risco e reduziria o retorno esperado da carteira.
+Essa leitura permite inferir o ICP (*Ideal Customer Profile*) revelado pelo próprio modelo: correntistas elegíveis com PD calibrada abaixo do limiar de destruição de valor ($PD_k < 0{,}361$, ponto em que $c_k$ se torna negativo), capacidade de pagamento mensurável, score de crédito suficiente para sustentar alavancagem e propensão positiva à contratação. Na execução completa de M1, esse perfil se materializa em 382 de 800 segmentos com oferta efetiva, cobrindo 876.520 clientes, ou 47,7% dos elegíveis (`artigo.md §4.1`). Os segmentos acima do limiar de risco ficam fora não por uma regra fixa de score, mas porque sua inclusão consumiria orçamento de risco e reduziria o retorno esperado da carteira: 123 dos 800 segmentos foram zerados pela própria otimização nessa faixa.
 
 ### 3.2 O modelo prioriza volume, margem ou segurança?
 
-O modelo não prioriza volume bruto. Se esse fosse o critério dominante, a solução tenderia a ampliar a base atendida independentemente da qualidade do risco. O resultado observado indica o oposto: há expansão relevante de alcance, mas condicionada à viabilidade econômica da exposição. Na safra M1, a política vigente alcança 117.367 clientes com `limite_ofertado` registrado, equivalentes a 6,4% dos elegíveis; o modelo recomenda oferta para 876.520 clientes, ou 47,7% dos elegíveis, mantendo a PD ponderada da carteira otimizada em 0,067, abaixo do teto de 0,197 (`artigo.md §4.1-4.2`).
+O modelo não prioriza volume bruto. Se esse fosse o critério dominante, a solução tenderia a ampliar a base atendida independentemente da qualidade do risco. O resultado observado indica o oposto: há expansão relevante de alcance, mas condicionada à viabilidade econômica da exposição. Na safra M1, a política vigente alcança 117.367 clientes com `limite_ofertado` registrado, equivalentes a 6,4% dos elegíveis; o modelo recomenda oferta para 876.520 clientes, ou 47,7% dos elegíveis, mantendo a PD ponderada da carteira otimizada em 0,067, abaixo do teto de R1 de 0,197 (`artigo.md §4.1-4.2`).
 
 A função objetivo, por construção, é orientada por margem, pois maximiza o retorno líquido esperado da carteira: receita de interchange menos perda esperada. Essa orientação aparece no backtesting comparável da safra M1: sobre os mesmos 117.367 clientes já atendidos pelo parceiro, o retorno líquido esperado aumenta de R\$ 4,90 milhões para R\$ 5,06 milhões (+3,4%), enquanto a PD ponderada por exposição varia apenas de 0,0467 para 0,0486 (+0,2 p.p.) (`artigo.md §4.2`). Portanto, o ganho econômico decorre de uma realocação mais eficiente dos limites, e não de uma expansão indiscriminada da exposição.
 
-Apesar disso, a solução final é governada por critérios de segurança. A principal evidência é R2: em M1, a capacidade de pagamento fica ativa em 677 de 800 segmentos, e nenhum segmento atinge o teto operacional de R\$ 25 mil (`artigo.md §4.1`). Na leitura por decis, D1-D7 recebem algum limite, mas o valor cai de aproximadamente R\$ 258 em D1 para R\$ 9 em D7 e zera em D8-D10 (`modelagem_matematica.md §4`). Assim, a classificação mais adequada é **solução balanceada com viés conservador**: o modelo busca margem e amplia cobertura, mas subordina a concessão à capacidade de pagamento e ao risco calibrado.
+Apesar disso, a solução final é governada por critérios de segurança. A principal evidência é R2: em M1, a capacidade de pagamento fica ativa em 677 de 800 segmentos, e nenhum segmento atinge o teto operacional de R\$ 25 mil (`artigo.md §4.1`). O limite recomendado acompanha de perto o teto de capacidade de cada perfil (correlação de 0,996) e cai à medida que o risco sobe, zerando nos segmentos acima do limiar de rentabilidade. Assim, a classificação mais adequada é **solução balanceada com viés conservador**: o modelo busca margem e amplia cobertura, mas subordina a concessão à capacidade de pagamento e ao risco calibrado.
 
 ### 3.3 Há evidência de seleção adversa ou exclusão de perfis?
 
-Há evidência de exclusão econômica de perfis de maior risco, embora essa exclusão seja coerente com a função objetivo e com as restrições de política de crédito. Na solução por decis, D8, D9 e D10 recebem $L_k^* = 0$, mesmo apresentando propensão à contratação superior à dos decis de menor risco ($\pi_k$ de 0,455, 0,479 e 0,498). A razão é que, nesses grupos, a perda esperada cresce mais do que a receita esperada: os decis têm $PD_k$ de 0,716, 0,774 e 0,840, com custos reduzidos negativos de −R\$ 12.310,50, −R\$ 24.264,67 e −R\$ 37.201,42, respectivamente (`modelagem_matematica.md §4`). Forçar a entrada de D10, por exemplo, reduziria o retorno total da carteira.
+Há evidência de exclusão econômica de perfis de maior risco, embora essa exclusão seja coerente com a função objetivo e com as restrições de política de crédito. Na safra M1, 123 dos 800 segmentos recebem $L_k^* = 0$ porque sua PD calibrada ultrapassa o limiar de rentabilidade ($PD_k > 0{,}361$), ponto em que o coeficiente $c_k$ se torna negativo e cada real de limite passa a destruir valor (`artigo.md §4.1`). Forçar a entrada desses segmentos reduziria o retorno total da carteira.
 
-Essa combinação sugere um padrão de **seleção adversa potencial**: os perfis mais arriscados são também os que apresentam maior propensão estimada à contratação. Em D1, $\pi_k = 0{,}158$; em D10, $\pi_k = 0{,}498$. Caso a decisão considerasse apenas conversão, a carteira tenderia a concentrar novas ofertas justamente em perfis de maior risco. A contribuição econômica do modelo é mitigar esse mecanismo, pois a propensão só se converte em limite quando o spread líquido ajustado por PD, LGD e $\gamma_d$ permanece positivo.
+Essa dinâmica sugere um padrão de **seleção adversa potencial**: os perfis mais arriscados tendem a ser também os de maior propensão estimada à contratação, de modo que uma decisão guiada apenas por conversão concentraria oferta justamente onde o risco é maior. A contribuição econômica do modelo é mitigar esse mecanismo, pois a propensão só se converte em limite quando o spread líquido ajustado por PD, LGD e $\gamma_d$ permanece positivo.
 
-Do ponto de vista de inclusão financeira, essa exclusão requer governança específica. D8-D10 reúnem maior PD e menor capacidade prudencial ($CP_{p5}$ de R\$ 125, R\$ 100 e R\$ 75), ficando fora da oferta ou abaixo do limite mínimo operacional. Assim, o modelo protege a carteira, mas também restringe o acesso ao crédito para perfis economicamente mais frágeis. A recomendação não é impor limite nesses decis dentro do produto tradicional, mas desenhar uma política complementar: limites educativos, produto garantido, régua de entrada gradual ou campanhas de redução de risco antes de elegê-los ao cartão pré-aprovado.
+Do ponto de vista de inclusão financeira, essa exclusão requer governança específica. Os segmentos de maior PD ficam fora da oferta ou abaixo do limite mínimo operacional (R\$ 200), o que protege a carteira, mas também restringe o acesso ao crédito para perfis economicamente mais frágeis. A recomendação não é impor limite a esses perfis dentro do produto tradicional, mas desenhar uma política complementar: limites educativos, produto garantido, régua de entrada gradual ou campanhas de redução de risco antes de elegê-los ao cartão pré-aprovado.
 
-Também há viés de seleção nos dados que alimentam a calibração do risco. A inadimplência observada (`over30mob3`) existe apenas para clientes que contrataram e ativaram o produto; em M1, isso corresponde a 4.966 observações válidas e 377 eventos, dentro de uma base total de 14,6 milhões de clientes (`modelagem_matematica.md §1.2`). Nos decis de maior risco, a evidência é ainda mais limitada: D8 e D9 têm zero observações de default observado, D10 tem apenas uma, e $\gamma_d$ precisa ser extrapolado (`modelagem_matematica.md §1.5.1`). Portanto, o modelo mitiga a seleção adversa na decisão operacional, mas pode herdar parte do viés da política vigente: como clientes de alto risco foram pouco aprovados historicamente, há baixa evidência empírica para distinguir risco efetivo de risco apenas pouco observado.
+Também há viés de seleção nos dados que alimentam a calibração do risco. A inadimplência observada (`over30mob3`) existe apenas para clientes que contrataram e ativaram o produto, e a própria base que recebe oferta na política vigente é fortemente selecionada: sua PD calibrada média é 0,060, contra 0,197 da base elegível completa (`artigo.md §4.2`). Nos perfis de maior risco a evidência empírica é escassa, e o fator $\gamma_d$ precisa ser extrapolado. Portanto, o modelo mitiga a seleção adversa na decisão operacional, mas pode herdar parte do viés da política vigente: como clientes de alto risco foram pouco aprovados historicamente, há baixa evidência empírica para distinguir risco efetivo de risco apenas pouco observado.
 
 ## 4. Implicações Estratégicas para o Banco Pan
 
 ### 4.1 O modelo é conservador, agressivo ou balanceado?
-[Classificar (sugestão: balanceado com viés conservador) e provar com 2–3 números: FO agressiva, mas R1/R4 não pioram a carteira atual, R5 diversifica, R2 usa percentil 5 e $m_k$ prudente, e 3 de 10 decis ficam sem oferta.]
+
+O modelo é **balanceado com viés conservador**, e a melhor forma de enxergar isso é separar duas dimensões: alcance e risco. Em alcance, ele é ousado: amplia a oferta de 6,4% dos elegíveis sob a política vigente (117.367 clientes na M1) para 47,7% (876.520 clientes), quase oito vezes mais gente atendida (`artigo.md §4.1`). Em risco por cliente, é deliberadamente cauteloso. Essa combinação, expandir cobertura sem afrouxar o crivo de risco, é o que caracteriza um modelo balanceado, e não simplesmente agressivo ou tímido.
+
+Três números provam o viés conservador:
+
+- **A qualidade da carteira não piora.** A PD ponderada da carteira otimizada fica em 0,067, bem abaixo do teto de R1 (0,197), e no backtesting comparável sobre os mesmos clientes a PD sobe apenas 0,2 p.p. (0,0467 para 0,0486) enquanto o retorno cresce 3,4% (`artigo.md §4.2`).
+- **O freio de capacidade de pagamento domina a solução.** R2 fica ativa em 677 de 800 segmentos da M1, usando o percentil 5 de $CP_k$ (e não a média) e alavancagem $m_k$ prudente, de modo que nenhum segmento sequer se aproxima do teto operacional de R\$ 25 mil (`artigo.md §4.1`).
+- **O modelo recusa risco que não se paga.** Os 123 segmentos cuja PD ultrapassa o limiar de rentabilidade (0,361) ficam sem oferta porque destroem valor.
+
+O contraponto honesto é que a função objetivo, isolada, é agressiva: ela é cega ao risco e empurraria o limite ao máximo (Seção 1.3). O perfil conservador não vem do que o modelo quer, e sim do que as restrições impõem. Isso tem uma consequência estratégica direta: o equilíbrio observado é tão robusto quanto a calibração de R1 e R2, e se afrouxa se esses tetos forem relaxados sem critério.
 
 ### 4.2 Em que contexto o modelo deveria ser utilizado?
-[Definir o cenário recomendado: apoio a comitê e calibragem periódica (não decisão automatizada), em macro estável, com recalibração trimestral — o modelo qualifica a decisão do Analista de Estratégia de Crédito, não a substitui.]
 
-[Ir além: propor um Índice de Pressão de Crédito (early-warning, na lógica do GSCPI) que sintetize drift de $\gamma_d$, % de dado faltante, distância dos clusters de fronteira ao zero e um fator macro (Selic), disparando reotimização — e definir no máximo 5 KPIs para o painel do comitê.]
+O contexto certo é como ferramenta de apoio ao comitê de crédito, não como motor de decisão automatizada. O modelo deve gerar a recomendação de limites por perfil e a leitura de quais restrições estão de fato limitando a rentabilidade (no caso, R2), entregando isso ao Analista de Estratégia de Crédito, que valida, ajusta e leva ao comitê. A razão é econômica, não burocrática: o resultado "ótimo" depende de parâmetros calibrados sobre dados imperfeitos (capacidade de pagamento por proxy em 42–43% da base, $\gamma_d$ extrapolado nos perfis de maior risco), então tratá-lo como verdade automática transfere para a produção um risco que a supervisão humana absorve barato.
+
+O regime de uso recomendado é macro relativamente estável e recalibração trimestral. A periodicidade não é arbitrária: ela acompanha a chegada de novas safras, que atualizam $\gamma_d$ e a capacidade de pagamento, mantendo a política aderente ao perfil de risco corrente da base. O backtest da M3 ilustra essa necessidade, já que o teto de risco e a PD da carteira se deslocam de uma safra para outra (`artigo.md §4.3`). Em janelas de instabilidade macro, o ciclo trimestral é insuficiente e a reotimização deve ser disparada por evento, não por calendário, pela razão de pró-ciclicidade discutida na Seção 2.5.
+
+Indo além do solicitado, a forma madura de operacionalizar esse gatilho é um Índice de Pressão de Crédito, um indicador de *early-warning* na lógica do GSCPI, que sintetize em um único número o drift observado de $\gamma_d$ entre safras, o percentual de dado faltante em $CP_k$, a distância dos segmentos de fronteira ao limiar de rentabilidade (0,361) e um fator macro como a Selic. Quando o índice cruza um patamar, dispara a reotimização antes que a política vigente se torne subótima. Para o painel do comitê, bastam no máximo cinco KPIs: retorno líquido esperado da carteira, PD ponderada versus teto de R1, percentual de elegíveis com oferta, número de segmentos de fronteira próximos do zero e o próprio Índice de Pressão de Crédito.
 
 ### 4.3 Quais são os principais riscos estratégicos da adoção?
-[Discutir riscos de adoção em nível executivo — distintos das ressalvas técnicas da Seção 6, que não devem ser repetidas aqui: excesso de conservadorismo no cenário-base (perda de receita e baixa aderência comercial); dependência de uma governança de recalibração disciplinada — se a revisão trimestral falhar, a política vira subótima sem aviso; dificuldade de explicar e defender a decisão em comitê e auditoria; fragilidade estratégica diante de virada de cenário macro (a leitura pró-cíclica da Seção 2.5); e excesso de confiança no resultado "ótimo" — o modelo qualifica, não substitui o decisor.]
+Os riscos de adoção são de governança e de leitura, não de matemática (as ressalvas técnicas estão na Seção 6). São cinco:
+
+- **Conservadorismo excessivo no cenário-base.** O modelo erra deliberadamente para o lado seguro, e a área comercial pode lê-lo como pouco aderente: ao deixar os segmentos de maior risco sem oferta e amarrar tudo à capacidade de pagamento prudencial, renuncia a receita que a concorrência pode capturar. O risco estratégico é o modelo ser arquivado por "não vender", quando o ponto é justamente que ele vende com qualidade de risco.
+- **Dependência de governança de recalibração disciplinada.** Como o teto de R1 é ancorado na carteira vigente, a política só permanece ótima se a revisão trimestral acontecer de fato. Se ela falhar, a degradação é silenciosa: não há erro nem alarme, o modelo continua otimizando para um mundo que mudou. É insidioso porque não se manifesta até a auditoria ou a perda já estarem materializadas.
+- **Fragilidade diante de virada de cenário macro.** É a contrapartida estratégica da pró-ciclicidade da Seção 2.5: o modelo tende a conceder mais no auge do ciclo e a cortar na baixa, e o próprio backtest mostra o teto de risco e a PD da carteira se deslocando entre M1 e M3 (`artigo.md §4.3`).
+- **Dificuldade de explicar e defender a decisão** em comitê e auditoria: dizer a um regulador que certos segmentos não recebem oferta porque destroem valor (coeficiente $c_k$ negativo) exige tradução cuidadosa, sob pena de soar como exclusão arbitrária.
+- **Excesso de confiança no rótulo "ótimo"** (transversal aos demais): a solução é ótima dadas as premissas, e confundir isso com ótima na realidade é o erro que a supervisão humana da Seção 4.2 existe para evitar.
 
 ### 4.4 O modelo deve ser implementado?
-[Responder de forma objetiva e com justificativa econômica.]
+A recomendação é favorável, mas condicional, e exige uma ressalva de método antes de tudo. O Banco Pan já opera um algoritmo de definição de limites, então o contexto é "substituir ou complementar o algoritmo vigente". Responder isso com rigor exige um estudo comparativo mais aprofundado entre os dois, sob os mesmos clientes, parâmetros e janela de tempo, medindo retorno, inadimplência realizada e estabilidade ao longo de várias safras. Não basta o modelo ser bom em absoluto; ele precisa ser comprovadamente melhor que o que já existe.
 
-[Se positiva, dizer em que condições (ex.: recalibração trimestral, LGD diferenciada por perfil, overlay de cenário macro, supervisão humana) e ancorar no ganho (≈ R\$ 16,4 M/ano com risco não superior ao atual) e no ROI de `entendimento_negocio.md §4.6`.]
+A evidência disponível aponta nessa direção, mas ainda é indício, não veredito. O backtesting comparável da safra M1, sobre os mesmos 117.367 clientes já atendidos pela política vigente, mostra retorno líquido esperado 3,4% maior (R\$ 4,90 M para R\$ 5,06 M) com aumento de apenas 0,2 p.p. na PD ponderada (`artigo.md §4.2`): mais lucro ao mesmo risco. É esse $Z$ superior que sustenta a suspeita de que o nosso modelo vale a substituição. Some-se a isso o caso de investimento, que fecha mesmo com premissas conservadoras (ROI de ~96% no primeiro ano, payback de ~12,5 meses, investimento de R\$ 625 mil equivalente a 0,07% do lucro ajustado anual do banco, `entendimento_negocio.md §4.6`) e o retorno de ordem de R\$ 32,9 M no horizonte de 22 meses da carteira otimizada da safra M1 (`artigo.md §4.1`). São medidas distintas: os R\$ 32,9 M são o retorno total da carteira otimizada, enquanto o ROI parte do ganho incremental sobre a política atual. O conjunto indica baixo risco financeiro e retorno positivo, mas a decisão definitiva de troca depende de confirmar essa vantagem em backtesting multissafra contra o algoritmo incumbente.
 
-[Se negativa ou parcial, explicar o que ainda precisa ser ajustado antes da adoção.]
+A recomendação é condicional a quatro salvaguardas, cada uma ligada a uma fragilidade já identificada:
+
+- **Recalibração trimestral** de $\gamma_d$ e da capacidade de pagamento, para conter a degradação silenciosa da Seção 4.3.
+- **LGD diferenciada por perfil**, em lugar do 0,80 uniforme atual, que distorce o retorno unitário entre perfis (Seção 6).
+- **Overlay de cenário macro** sobre o teto de R1, o teto dinâmico da Seção 2.5, para neutralizar a pró-ciclicidade.
+- **Supervisão humana do comitê** sobre a recomendação, especialmente nos segmentos de fronteira e na exclusão dos perfis de alto risco, que pede tradução para o regulador.
+
+Sem essas condições, a implementação ainda é viável, mas migra de um ganho qualificado para uma aposta na estabilidade dos parâmetros, e é precisamente essa aposta que a leitura crítica deste documento desaconselha fazer às cegas.
 
 ## 5. Conclusão
-[Fechar com uma síntese curta e forte.]
 
-[Reforçar a principal contribuição econômica do modelo (decisão de limite ajustada ao risco e à capacidade de pagamento, rastreável e auditável).]
+A contribuição econômica central do modelo é transformar a definição de limite de uma régua fixa em uma decisão de margem ajustada ao risco e à capacidade de pagamento, rastreável e auditável. Ele aloca cada real de limite onde rende mais líquido de perda esperada, amplia a cobertura de 6,4% para 47,7% dos elegíveis sem piorar a qualidade da carteira, e deixa explícito qual restrição limita a rentabilidade (a capacidade de pagamento, R2) e a que preço. Não é um gerador de crédito mais agressivo, mas um instrumento que qualifica a decisão do comitê com números.
 
-[Reforçar a principal limitação ou cuidado estratégico (calibração/dados e leitura pró-cíclica).]
+O cuidado estratégico que acompanha essa contribuição é igualmente claro: o resultado "ótimo" vale o que valem seus parâmetros. A calibração sobre dados imperfeitos (capacidade de pagamento por proxy, $\gamma_d$ extrapolado nos perfis de maior risco) e a ancoragem do teto de risco na carteira vigente tornam o modelo pró-cíclico e dependente de recalibração disciplinada. Implementá-lo como apoio à decisão, com revisão trimestral e overlay macro, captura o ganho; implementá-lo como verdade automática converte uma boa ferramenta em risco silencioso.
 
 ## 6. Limitações e Cuidados
-[LGD uniforme (0,80) para todos os perfis, distorcendo o retorno unitário entre decis.]
 
-[Simplificação da capacidade de pagamento: 42–43% de `capacidade_pagamento` nula em M2/M3, substituída por proxy (`renda_estimada × 0,30`).]
+A LGD é uniforme em 0,80 para todos os perfis. Como a perda em caso de default não varia entre segmentos, o retorno unitário $c_k$ fica distorcido: perfis que na prática recuperam mais (ou menos) do que 20% são avaliados pela mesma régua, e a ordenação de quem recebe limite herda esse erro. Uma LGD diferenciada por perfil é a evolução mais direta do modelo.
 
-[Calibração $\gamma_d$ extrapolada nos decis altos (D6–D10) por escassez de observações; sensível a drift entre safras.]
+A capacidade de pagamento é parcialmente estimada. Em M2 e M3, 42–43% dos registros têm `capacidade_pagamento` nula e usam o proxy `renda_estimada × 0,30`. Como R2 é o gargalo mais caro do modelo (Seção 2.2), parte da decisão de maior impacto repousa sobre uma medição que subestima quem tem múltiplas fontes de renda e superestima quem já tem alto comprometimento.
 
-[Viés de seleção na inadimplência observada; abordagem por clusters (e LP contínuo em vez de MIP) em lugar de limite individual; e diferença entre simulação e produção.]
+A calibração $\gamma_d$ é extrapolada nos decis de maior risco por escassez de observações de default, e é sensível a drift entre safras. É um dos parâmetros de maior sensibilidade do modelo, o que reforça a necessidade do gatilho de recalibração discutido na Seção 4.2.
+
+Há ainda três cuidados de natureza estrutural: o viés de seleção na inadimplência observada (`over30mob3` só existe para quem ativou, então a PD é calibrada sobre um público já filtrado pela régua atual); a abordagem por segmentos com LP contínuo, em vez de limite individual via MIP, que troca precisão por tratabilidade computacional; e a diferença esperada entre o resultado de simulação e o comportamento em produção, que só o backtesting com dados do parceiro fechará.
 
 ## 7. Referências
-[Documentos internos: `modelagem_matematica.md` (função objetivo, restrições, análise de sensibilidade), `back-end.md`, `aplicacao.md` (resultados), `comparacao_simplex.md`, `entendimento_negocio.md`.]
 
-[Fontes externas e do parceiro: TAPI Banco Pan; bases Parquet (safras M1–M3); DFP 2024; Instruções de Negócio I1–I4 (Kloeckner, 2026); FICO (2021), Experian (2024), Moody's Analytics (2020); Resolução CMN 4.966/2021.]
+Documentos internos do projeto: `modelagem_matematica.md` (função objetivo, restrições e análise de sensibilidade), `artigo.md` (resultados das execuções M1), `entendimento_negocio.md` (análise financeira e ROI), `aplicacao.md`, `back-end.md` e `comparacao_simplex.md`.
+
+Fontes do parceiro e externas: TAPI Banco Pan; bases Parquet das safras M1–M3; DFP 2024 do Banco Pan; Instruções de Negócio I1–I4 (Kloeckner, 2026); FICO (2021), Experian (2024) e Moody's Analytics (2020) para a metodologia de perda esperada e otimização de limite; e Resolução CMN nº 4.966/2021, sobre provisões para perdas esperadas associadas ao risco de crédito.
