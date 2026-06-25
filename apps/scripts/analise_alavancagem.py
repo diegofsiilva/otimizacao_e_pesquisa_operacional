@@ -16,8 +16,8 @@ import matplotlib.ticker as mticker
 import pathlib
 
 # ── Configuração ──────────────────────────────────────────────────────────────
-DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
-OUTPUT_DIR = pathlib.Path(__file__).resolve().parent.parent / "artefatos" / "figuras"
+DATA_DIR = pathlib.Path(__file__).resolve().parent.parent.parent / "data"
+OUTPUT_DIR = pathlib.Path(__file__).resolve().parent.parent.parent / "artefatos" / "figuras"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 FAIXAS_SCORE = [100, 600, 700, 800, 850, 900, 960]

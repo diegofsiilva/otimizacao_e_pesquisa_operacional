@@ -135,6 +135,6 @@ ax.spines['right'].set_visible(False)
 plt.tight_layout()
 
 # Salvar
-output_path = Path(__file__).parent.parent / 'artefatos' / 'assets' / 'analise_grafica_otimizacao.png'
+output_path = Path(__file__).parent.parent.parent / 'artefatos' / 'assets' / 'analise_grafica_otimizacao.png'
 plt.savefig(output_path, dpi=200, bbox_inches='tight', facecolor='white')
 print(f"Gráfico salvo em: {output_path}")

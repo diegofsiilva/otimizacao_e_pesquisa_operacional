@@ -26,7 +26,7 @@ import time
 from pathlib import Path
 from datetime import datetime
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 LOG_DIR = ROOT / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 

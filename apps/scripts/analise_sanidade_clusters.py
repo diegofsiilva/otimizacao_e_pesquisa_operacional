@@ -21,7 +21,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = ROOT / "data" / "csv"
 JSON_DIR = ROOT / "apps" / "algoritmo_simplex" / "input"
 FIG_DIR = ROOT / "artefatos" / "figuras"

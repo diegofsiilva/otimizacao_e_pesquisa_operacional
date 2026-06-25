@@ -15,8 +15,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pathlib
 
-DATA_DIR = pathlib.Path(__file__).resolve().parent.parent / "data"
-OUTPUT_DIR = pathlib.Path(__file__).resolve().parent.parent / "artefatos" / "figuras"
+DATA_DIR = pathlib.Path(__file__).resolve().parent.parent.parent / "data"
+OUTPUT_DIR = pathlib.Path(__file__).resolve().parent.parent.parent / "artefatos" / "figuras"
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 SAFRAS = ["M1", "M2", "M3"]

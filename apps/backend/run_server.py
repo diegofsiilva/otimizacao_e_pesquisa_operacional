@@ -170,11 +170,22 @@ if __name__ == "__main__":
     frontend_proc = _start_frontend()
     _print_urls(frontend_ok=frontend_proc is not None)
 
+    # O pipeline importa código de apps/algoritmo_simplex e apps/scripts
+    # (calibração, clustering). Incluí-los no reload garante que edições nesses
+    # módulos reiniciem o servidor — senão o processo segue com a versão antiga
+    # em memória.
+    apps_dir = BACKEND_DIR.parent
+    reload_dirs = [
+        str(BACKEND_DIR),
+        str(apps_dir / "algoritmo_simplex"),
+        str(apps_dir / "scripts"),
+    ]
+
     uvicorn.run(
         "main:app",
         host=APP_HOST_BIND,
         port=APP_PORT,
         reload=True,
-        reload_dirs=[str(BACKEND_DIR)],
+        reload_dirs=reload_dirs,
         app_dir=str(BACKEND_DIR),
     )

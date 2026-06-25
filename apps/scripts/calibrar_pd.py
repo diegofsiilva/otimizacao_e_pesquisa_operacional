@@ -23,7 +23,28 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parent.parent
+
+def _encontrar_raiz() -> Path:
+    """Localiza a raiz do projeto subindo a árvore a partir deste arquivo.
+
+    A raiz do repositório é o diretório que contém a pasta ``apps/``. Como este
+    script vive em ``apps/scripts/``, basta achar o ancestral chamado ``apps`` e
+    devolver o pai dele. Resolver assim — em vez de contar níveis fixos com
+    ``parent.parent...`` — torna o caminho imune a mudanças de profundidade
+    deste script (ex.: mover ``scripts/`` para dentro de ``apps/``).
+
+    Returns:
+        O ``Path`` da raiz do projeto. Como fallback (caso nenhum ancestral
+        ``apps`` exista), retorna o bisavô deste arquivo (``apps/scripts/`` -> raiz).
+    """
+    aqui = Path(__file__).resolve()
+    for ancestral in aqui.parents:
+        if ancestral.name == "apps":
+            return ancestral.parent
+    return aqui.parent.parent.parent
+
+
+ROOT = _encontrar_raiz()
 TABELA_GAMMA = ROOT / "data" / "csv" / "tabela_gamma_decil.csv"
 INPUT_DIR = ROOT / "data" / "parquet"
 CACHE_DIR = ROOT / "data" / "cache"

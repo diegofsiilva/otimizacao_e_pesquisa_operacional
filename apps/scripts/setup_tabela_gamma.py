@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyarrow.parquet as pq
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = ROOT / "data" / "parquet"
 FIG_DIR = ROOT / "artefatos" / "figuras"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
