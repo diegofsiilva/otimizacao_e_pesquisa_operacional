@@ -1763,8 +1763,425 @@ var ScatterSVG = function (props) {
 };
 
 // ============================================================================
+// Collapsible - secao expansivel (fechada por padrao) p/ blocos opcionais
+// ============================================================================
+var Collapsible = function (props) {
+  var st = React.useState(!!props.defaultOpen);
+  var open = st[0];
+  var setOpen = st[1];
+  return (
+    <div className="bg-white border border-[#E8EFF7] shadow-sm">
+      <button
+        type="button"
+        onClick={function () { setOpen(!open); }}
+        className="w-full flex items-center justify-between gap-3 px-5 py-3 text-left hover:bg-[#F7FAFD]"
+      >
+        <div>
+          <div className="text-sm font-semibold text-[#0D1B2A]">{props.title}</div>
+          {props.subtitle && (
+            <div className="text-xs text-[#9C9C9F] mt-0.5">{props.subtitle}</div>
+          )}
+        </div>
+        <div className="flex items-center gap-2 flex-shrink-0">
+          {props.badge}
+          <span className="text-[11px] text-[#6B7785] font-medium">
+            {open ? "ocultar ▲" : "mostrar ▼"}
+          </span>
+        </div>
+      </button>
+      {open && (
+        <div className="px-5 pb-5 border-t border-[#E8EFF7]">{props.children}</div>
+      )}
+    </div>
+  );
+};
+
+// ============================================================================
 // Resultados
 // ============================================================================
+// ============================================================================
+// ResultadosExtras - PD da carteira, Nosso x Banco (ganho), heatmap de perfil
+// e comparador de cenarios. Usa Api (global), fmtZ/fmt (global).
+// ============================================================================
+function _rxMetrics(clusters, consulta, zb) {
+  var num = 0, den = 0, vol = 0, nApr = 0, kApr = 0, pdNumC = 0, denC = 0;
+  (clusters || []).forEach(function (c) {
+    var n = c.n_clientes || 0, L = c.limite_otimizado || 0, pd = c.pd_media || 0;
+    if (L > 0) { num += n * L * pd; den += n * L; vol += n * L; nApr += n; kApr += 1; pdNumC += n * pd; denC += n; }
+  });
+  var z = consulta && consulta.z_otimo != null ? consulta.z_otimo : null;
+  var zban = zb && zb.z_banco != null ? zb.z_banco : null;
+  return {
+    pdFin: den > 0 ? num / den : 0,
+    pdFis: denC > 0 ? pdNumC / denC : 0,
+    volume: vol,
+    limiteMedio: nApr > 0 ? vol / nApr : 0,
+    nOfertados: consulta && consulta.n_clientes_ofertados != null ? consulta.n_clientes_ofertados : nApr,
+    nElegiveis: consulta && consulta.n_clientes_elegiveis != null ? consulta.n_clientes_elegiveis : 0,
+    clustersAprov: kApr,
+    z: z, zBanco: zban,
+    ganho: (z != null && zban && zban > 0) ? z / zban : null,
+    T: consulta && consulta.parametros ? consulta.parametros.T : null,
+  };
+}
+
+function _rxHeat(clusters) {
+  var scoreBands = [[0, 700, "<700"], [700, 800, "700-800"], [800, 850, "800-850"], [850, 900, "850-900"], [900, 99999, "900+"]];
+  var cps = (clusters || []).map(function (c) { return c.cp_percentil5 || 0; }).filter(function (v) { return v > 0; }).sort(function (a, b) { return a - b; });
+  function q(p) { if (!cps.length) return 0; return cps[Math.floor((cps.length - 1) * p)]; }
+  var c1 = q(0.25), c2 = q(0.5), c3 = q(0.75);
+  var capBands = [[c3, 1e15, "capac. alta"], [c2, c3, "média-alta"], [c1, c2, "média-baixa"], [-1, c1, "capac. baixa"]];
+  var grid = capBands.map(function (cb) {
+    return scoreBands.map(function (sb) {
+      var n = 0, nOf = 0;
+      (clusters || []).forEach(function (c) {
+        var sc = c.score_credito_cross_medio || 0, cp = c.cp_percentil5 || 0, nn = c.n_clientes || 0;
+        if (sc >= sb[0] && sc < sb[1] && cp >= cb[0] && cp < cb[1]) { n += nn; if ((c.limite_otimizado || 0) > 0) nOf += nn; }
+      });
+      return { pct: n > 0 ? 100 * nOf / n : null, n: n };
+    });
+  });
+  return { grid: grid, scoreLabels: scoreBands.map(function (b) { return b[2]; }), capLabels: capBands.map(function (b) { return b[2]; }) };
+}
+
+function _rxPct(v) { return v == null ? "–" : v.toFixed(1) + "%"; }
+
+var PerfilHeatmap = function (props) {
+  var ref = React.useRef(null);
+  var clusters = props.clusters || [];
+  var dataKey = JSON.stringify(
+    clusters.map(function (c) {
+      return [c.score_credito_cross_medio, c.cp_percentil5, c.limite_otimizado, c.n_clientes];
+    }),
+  );
+
+  React.useEffect(
+    function () {
+      var node = ref.current;
+      if (!node || clusters.length === 0) return;
+
+      var sketch = function (p) {
+        var h = _rxHeat(clusters);
+        var rows = h.grid.length;
+        var cols = h.scoreLabels.length;
+        var W = 600;
+        var H = 250;
+        var pad = { top: 8, right: 10, bottom: 30, left: 88 };
+        var start = 0;
+        var DUR = 700;
+
+        p.setup = function () {
+          W = node.offsetWidth || 600;
+          p.createCanvas(W, H);
+          start = p.millis();
+          p.textFont("Circular, Arial, sans-serif");
+        };
+        p.windowResized = function () {
+          W = node.offsetWidth || 600;
+          p.resizeCanvas(W, H);
+        };
+        p.draw = function () {
+          p.clear();
+          var gw = W - pad.left - pad.right;
+          var gh = H - pad.top - pad.bottom;
+          var cw = gw / cols;
+          var chh = gh / rows;
+          var t = _easeOutCubic(p.constrain((p.millis() - start) / DUR, 0, 1));
+          var white = p.color("#FFFFFF");
+          var purple = p.color("#6B2FBF");
+          var hov = null;
+
+          for (var r = 0; r < rows; r++) {
+            for (var c = 0; c < cols; c++) {
+              var cell = h.grid[r][c];
+              var x = pad.left + c * cw;
+              var y = pad.top + r * chh;
+              var over =
+                p.mouseX >= x && p.mouseX < x + cw &&
+                p.mouseY >= y && p.mouseY < y + chh;
+              if (over) hov = { r: r, c: c, cell: cell };
+              p.noStroke();
+              if (cell.pct == null) {
+                p.fill("#F4F4F6");
+              } else {
+                p.fill(p.lerpColor(white, purple, (0.12 + 0.88 * (cell.pct / 100)) * t));
+              }
+              p.rect(x + 1.5, y + 1.5, cw - 3, chh - 3, 3);
+              if (over) {
+                p.noFill();
+                p.stroke("#0D1B2A");
+                p.strokeWeight(1.5);
+                p.rect(x + 1.5, y + 1.5, cw - 3, chh - 3, 3);
+                p.noStroke();
+              }
+              if (cell.pct == null) {
+                p.fill("#C9C9CC");
+                p.textAlign(p.CENTER, p.CENTER);
+                p.textSize(11);
+                p.text("–", x + cw / 2, y + chh / 2);
+              } else if (t > 0.55) {
+                p.fill(cell.pct > 50 ? "#FFFFFF" : "#3B4049");
+                p.textAlign(p.CENTER, p.CENTER);
+                p.textSize(12);
+                p.textStyle(p.BOLD);
+                p.text(Math.round(cell.pct) + "%", x + cw / 2, y + chh / 2);
+                p.textStyle(p.NORMAL);
+              }
+            }
+            p.fill("#6B7785");
+            p.noStroke();
+            p.textAlign(p.RIGHT, p.CENTER);
+            p.textSize(9);
+            p.text(h.capLabels[r], pad.left - 8, pad.top + r * chh + chh / 2);
+          }
+
+          for (var c2 = 0; c2 < cols; c2++) {
+            p.fill("#6B7785");
+            p.noStroke();
+            p.textAlign(p.CENTER, p.TOP);
+            p.textSize(9);
+            p.text(h.scoreLabels[c2], pad.left + c2 * cw + cw / 2, pad.top + gh + 7);
+          }
+          p.fill("#9C9C9F");
+          p.textAlign(p.CENTER, p.TOP);
+          p.textSize(8.5);
+          p.text("Score de crédito", pad.left + gw / 2, H - 11);
+
+          if (hov && hov.cell.pct != null) {
+            _drawTooltip(p, [
+              h.capLabels[hov.r] + " · score " + h.scoreLabels[hov.c],
+              Math.round(hov.cell.pct) + "% recebem oferta",
+              hov.cell.n.toLocaleString("pt-BR") + " clientes",
+            ]);
+            p.cursor(p.HAND);
+          } else {
+            p.cursor(p.ARROW);
+          }
+        };
+      };
+
+      var instance = new p5(sketch, node);
+      return function () {
+        instance.remove();
+      };
+    },
+    [dataKey],
+  );
+
+  if (!clusters || clusters.length === 0) return null;
+  return (
+    <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+      <div className="text-sm font-semibold text-[#0D1B2A] mb-1">Perfil que recebe limite — score × capacidade</div>
+      <div className="text-xs text-[#9C9C9F] mb-3">% de clientes com limite ofertado pelo modelo (passe o mouse nas células)</div>
+      <div ref={ref} style={{ width: "100%" }} />
+    </div>
+  );
+};
+
+function _rxData(consulta) {
+  if (!consulta || !consulta.criado_em) return "";
+  try { return new Date(consulta.criado_em).toLocaleDateString("pt-BR"); } catch (e) { return ""; }
+}
+function _rxCenLabel(consulta) {
+  if (!consulta) return "—";
+  var nome = consulta.nome_arquivo_parquet || (consulta.id ? consulta.id.slice(0, 8) : "cenário");
+  var d = _rxData(consulta);
+  return d ? nome + " · " + d : nome;
+}
+
+var CenarioComparador = function (props) {
+  var st = React.useState("");
+  var cmpId = st[0], setCmpId = st[1];
+  var st2 = React.useState(null);
+  var cmp = st2[0], setCmp = st2[1];
+  var st3 = React.useState(false);
+  var loading = st3[0], setLoading = st3[1];
+  var st4 = React.useState("");
+  var filtro = st4[0], setFiltro = st4[1];
+
+  function onPick(e) {
+    var id = e.target.value; setCmpId(id);
+    if (!id) { setCmp(null); return; }
+    setLoading(true);
+    var consulta = null;
+    (props.consultas || []).forEach(function (c) { if (c.id === id) consulta = c; });
+    Promise.all([Api.getClusters(id), Api.getZBanco(id).catch(function () { return null; })])
+      .then(function (r) { setCmp({ clusters: r[0] || [], zBanco: r[1], consulta: consulta }); setLoading(false); })
+      .catch(function () { setLoading(false); setCmp(null); });
+  }
+
+  var A = _rxMetrics(props.clusters, props.selectedConsulta, props.zBanco);
+  var B = cmp ? _rxMetrics(cmp.clusters, cmp.consulta, cmp.zBanco) : null;
+  var outros = (props.consultas || []).filter(function (c) { return c.id !== props.selectedId && c.status_consulta === "concluido"; });
+  var termo = filtro.trim().toLowerCase();
+  var outrosFiltrados = outros.filter(function (c) {
+    if (!termo) return true;
+    var nome = (c.nome_arquivo_parquet || "").toLowerCase();
+    return nome.indexOf(termo) >= 0 || _rxData(c).indexOf(termo) >= 0;
+  });
+
+  function cob(m) { return m.nElegiveis > 0 ? (100 * m.nOfertados / m.nElegiveis) : 0; }
+  var metricas = [
+    { k: "Retorno (z ótimo)", a: A.z != null ? fmtZ(A.z) : "–", b: B ? (B.z != null ? fmtZ(B.z) : "–") : "" },
+    { k: "Ganho vs banco", a: A.ganho != null ? A.ganho.toFixed(1) + "×" : "–", b: B ? (B.ganho != null ? B.ganho.toFixed(1) + "×" : "–") : "" },
+    { k: "PD financeira da carteira", a: _rxPct(A.pdFin * 100), b: B ? _rxPct(B.pdFin * 100) : "" },
+    { k: "Cobertura (elegíveis)", a: _rxPct(cob(A)), b: B ? _rxPct(cob(B)) : "" },
+    { k: "Limite médio", a: fmtZ(A.limiteMedio), b: B ? fmtZ(B.limiteMedio) : "" },
+    { k: "Clusters aprovados", a: String(A.clustersAprov), b: B ? String(B.clustersAprov) : "" },
+  ];
+
+  var pA = (props.selectedConsulta && props.selectedConsulta.parametros) || {};
+  var pB = (cmp && cmp.consulta && cmp.consulta.parametros) || null;
+  function pct(v, d) { return v == null ? "–" : (v * 100).toFixed(d) + "%"; }
+  function brl(v) { return v == null ? "–" : "R$ " + Number(v).toLocaleString("pt-BR"); }
+  function dif(x, y) {
+    if (pB == null || x == null || y == null) return false;
+    var a = Number(x), b = Number(y);
+    return Math.abs(a - b) > 1e-9 * Math.max(1, Math.abs(a), Math.abs(b));
+  }
+  var configs = [
+    { k: "Interchange (t)", a: pct(pA.t, 2), b: pB ? pct(pB.t, 2) : "", diff: dif(pA.t, pB && pB.t) },
+    { k: "LGD", a: pct(pA.LGD, 0), b: pB ? pct(pB.LGD, 0) : "", diff: dif(pA.LGD, pB && pB.LGD) },
+    { k: "Utilização (ū)", a: pct(pA.u_bar, 0), b: pB ? pct(pB.u_bar, 0) : "", diff: dif(pA.u_bar, pB && pB.u_bar) },
+    { k: "Limite máximo (L_max)", a: brl(pA.L_max), b: pB ? brl(pB.L_max) : "", diff: dif(pA.L_max, pB && pB.L_max) },
+    { k: "Horizonte (T)", a: pA.T != null ? pA.T + " meses" : "–", b: pB ? (pB.T != null ? pB.T + " meses" : "–") : "", diff: dif(pA.T, pB && pB.T) },
+    { k: "Taxa de conversão", a: pct(pA.taxa_conversao, 1), b: pB ? pct(pB.taxa_conversao, 1) : "", diff: dif(pA.taxa_conversao, pB && pB.taxa_conversao) },
+  ];
+
+  function linhaMetrica(l, i) {
+    return (
+      <tr key={l.k} className={i % 2 ? "bg-white" : "bg-[#FBFDFF]"}>
+        <td className="px-3 py-2 text-[#3B4049]">{l.k}</td>
+        <td className="px-3 py-2 text-right font-semibold text-[#0D1B2A]">{l.a}</td>
+        <td className="px-3 py-2 text-right font-semibold text-[#6B2FBF]">{l.b}</td>
+      </tr>
+    );
+  }
+  function linhaConfig(c, i) {
+    return (
+      <tr key={c.k} className={c.diff ? "bg-[#FDEEE7]" : (i % 2 ? "bg-white" : "bg-[#FBFDFF]")}>
+        <td className="px-3 py-2 text-[#3B4049]">
+          {c.k}
+          {c.diff && <span className="ml-2 text-[10px] font-semibold text-[#E8440A]">≠ difere</span>}
+        </td>
+        <td className="px-3 py-2 text-right font-semibold text-[#0D1B2A]">{c.a}</td>
+        <td className={"px-3 py-2 text-right font-semibold " + (c.diff ? "text-[#E8440A]" : "text-[#6B2FBF]")}>{c.b}</td>
+      </tr>
+    );
+  }
+  function secao(titulo) {
+    return (
+      <tr className="bg-[#EEF3F9]">
+        <td colSpan={3} className="px-3 py-1.5 text-[11px] font-semibold text-[#6B7785] uppercase tracking-wide">{titulo}</td>
+      </tr>
+    );
+  }
+
+  return (
+    <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+      <div className="flex items-center justify-between gap-3 mb-3 flex-wrap">
+        <div>
+          <div className="text-sm font-semibold text-[#0D1B2A]">Comparar cenários</div>
+          <div className="text-xs text-[#9C9C9F]">Selecione outra simulação concluída — as configurações distintas ficam destacadas</div>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            value={filtro}
+            onChange={function (e) { setFiltro(e.target.value); }}
+            placeholder="filtrar por nome ou data…"
+            className="text-sm border border-[#D8E2EF] px-3 py-1.5 bg-white text-[#0D1B2A] w-[170px]"
+          />
+          <select value={cmpId} onChange={onPick}
+            className="text-sm border border-[#D8E2EF] px-3 py-1.5 bg-white text-[#0D1B2A] min-w-[230px]">
+            <option value="">— escolher cenário —</option>
+            {outrosFiltrados.map(function (c) {
+              var pr = c.parametros || {};
+              var lbl = (c.nome_arquivo_parquet || c.id.slice(0, 8)) + " · " + (_rxData(c) || "?") + " · T=" + (pr.T != null ? pr.T : "?");
+              return <option key={c.id} value={c.id}>{lbl}</option>;
+            })}
+          </select>
+        </div>
+      </div>
+      {loading && <div className="text-xs text-[#9C9C9F] py-4">Carregando cenário…</div>}
+      {!loading && !B && (
+        <div className="text-xs text-[#9C9C9F] py-3">Escolha um cenário acima para ver a comparação lado a lado.</div>
+      )}
+      {B && (
+      <div className="overflow-hidden border border-[#EDF2F8]">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="bg-[#F7FAFD] text-[#6B7785]">
+              <th className="text-left font-medium px-3 py-2">Métrica</th>
+              <th className="text-right font-medium px-3 py-2">{_rxCenLabel(props.selectedConsulta)}</th>
+              <th className="text-right font-medium px-3 py-2 text-[#6B2FBF]">{B ? _rxCenLabel(cmp.consulta) : "—"}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {secao("Resultados")}
+            {metricas.map(linhaMetrica)}
+            {secao("Configurações usadas")}
+            {configs.map(linhaConfig)}
+          </tbody>
+        </table>
+      </div>
+      )}
+    </div>
+  );
+};
+
+var ResultadosExtras = function (props) {
+  var m = _rxMetrics(props.clusters, props.selectedConsulta, props.zBanco);
+  var cobertura = m.nElegiveis > 0 ? (100 * m.nOfertados / m.nElegiveis) : 0;
+  return (
+    <div className="space-y-4">
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+          <div className="text-sm font-semibold text-[#0D1B2A] mb-1">PD da carteira otimizada</div>
+          <div className="text-xs text-[#9C9C9F] mb-4">Inadimplência esperada da carteira resultante</div>
+          <div className="flex items-end gap-8">
+            <div>
+              <div className="text-3xl font-bold text-[#0D1B2A] leading-none">{(m.pdFin * 100).toFixed(1)}%</div>
+              <div className="text-[11px] text-[#6B7785] mt-1">PD financeira (ponderada por exposição)</div>
+            </div>
+            <div>
+              <div className="text-3xl font-bold text-[#0D1B2A] leading-none">{(m.pdFis * 100).toFixed(1)}%</div>
+              <div className="text-[11px] text-[#6B7785] mt-1">PD física (por cliente)</div>
+            </div>
+          </div>
+          <div className="text-[11px] text-[#9C9C9F] mt-4">A restrição do modelo mantém a PD financeira ≤ inadimplência da carteira vigente.</div>
+        </div>
+        <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+          <div className="text-sm font-semibold text-[#0D1B2A] mb-1">Nosso modelo × banco</div>
+          <div className="text-xs text-[#9C9C9F] mb-4">Retorno e alcance vs a política atual, mesmo horizonte</div>
+          <div className="flex items-end gap-3">
+            <div className="text-4xl font-bold text-[#6B2FBF] leading-none">{m.ganho != null ? m.ganho.toFixed(1) + "×" : "–"}</div>
+            <div className="text-[11px] text-[#6B7785] mb-1">o retorno da política atual</div>
+          </div>
+          <div className="grid grid-cols-2 gap-px bg-[#E8EFF7] mt-4">
+            <div className="bg-white px-3 py-2">
+              <div className="text-[10px] text-[#9C9C9F] uppercase tracking-wide">z modelo</div>
+              <div className="text-sm font-bold text-[#6B2FBF]">{m.z != null ? fmtZ(m.z) : "–"}</div>
+            </div>
+            <div className="bg-white px-3 py-2">
+              <div className="text-[10px] text-[#9C9C9F] uppercase tracking-wide">z banco</div>
+              <div className="text-sm font-bold text-[#E8440A]">{m.zBanco != null ? fmtZ(m.zBanco) : "–"}</div>
+            </div>
+            <div className="bg-white px-3 py-2">
+              <div className="text-[10px] text-[#9C9C9F] uppercase tracking-wide">Cobertura</div>
+              <div className="text-sm font-bold text-[#0D1B2A]">{cobertura.toFixed(1)}%</div>
+            </div>
+            <div className="bg-white px-3 py-2">
+              <div className="text-[10px] text-[#9C9C9F] uppercase tracking-wide">Clientes c/ oferta</div>
+              <div className="text-sm font-bold text-[#0D1B2A]">{fmt(m.nOfertados)}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      {props.clusters && props.clusters.length > 0 && <PerfilHeatmap clusters={props.clusters} />}
+    </div>
+  );
+};
+
 var Resultados = function (props) {
   var setPage = props.setPage;
   // hasData mantido por compatibilidade com App, mas não é mais a fonte de verdade.
@@ -2328,13 +2745,12 @@ var Resultados = function (props) {
       )}
 
       {/* Validação PuLP */}
-      {selectedConsulta && selectedConsulta.z_pulp != null && (
-        <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
-          <div className="flex items-center gap-2 mb-4">
-            <div className="text-sm font-semibold text-[#0D1B2A]">
-              Validação PuLP
-            </div>
-            {selectedConsulta.delta_z_pct != null && (
+      {selectedConsulta && selectedConsulta.z_pulp != null && selectedConsulta.status_lp_pulp !== "desativado" && (
+        <Collapsible
+          title="Validação PuLP"
+          subtitle="Conferência cruzada do solver — opcional, só pra auditar"
+          badge={
+            selectedConsulta.delta_z_pct != null ? (
               <span
                 className={
                   "text-xs font-semibold px-2 py-0.5 " +
@@ -2347,9 +2763,10 @@ var Resultados = function (props) {
               >
                 Δz = {selectedConsulta.delta_z_pct.toFixed(4)}%
               </span>
-            )}
-          </div>
-          <div className="grid grid-cols-4 gap-px bg-[#E8EFF7]">
+            ) : null
+          }
+        >
+          <div className="grid grid-cols-4 gap-px bg-[#E8EFF7] mt-4">
             {[
               {
                 label: "z · Simplex (projeto)",
@@ -2396,7 +2813,32 @@ var Resultados = function (props) {
               );
             })}
           </div>
-        </div>
+          {clusters.length > 0 && (
+            <div className="mt-5">
+              <div className="text-xs font-semibold text-[#0D1B2A] mb-1">Simplex vs PuLP por Cluster</div>
+              <div className="text-[11px] text-[#9C9C9F] mb-2">Cada ponto é um cluster — na diagonal = concordância perfeita</div>
+              <ScatterSVG clusters={clusters} />
+            </div>
+          )}
+          {pulpSimplexData.length > 0 && (
+            <div className="mt-5">
+              <div className="text-xs font-semibold text-[#0D1B2A] mb-1">Comparação PuLP × Simplex</div>
+              <div className="text-[11px] text-[#9C9C9F] mb-2">Top 12 clusters com maior diferença de limite</div>
+              <PulpSimplexCompareP5 data={pulpSimplexData} />
+            </div>
+          )}
+        </Collapsible>
+      )}
+
+      {/* Painéis de valor + comparador de cenários */}
+      {selectedConsulta && clusters.length > 0 && (
+        <ResultadosExtras
+          consultas={consultas}
+          selectedId={selectedId}
+          clusters={clusters}
+          selectedConsulta={selectedConsulta}
+          zBanco={zBanco}
+        />
       )}
 
       {/* Gráficos - linha 1 */}
@@ -2417,25 +2859,10 @@ var Resultados = function (props) {
         </div>
       ) : (
         <div className="space-y-4">
+          {/* Distribuições: clientes + risco */}
           <div className="grid grid-cols-2 gap-4">
-            {/* Scatter Simplex vs PuLP */}
-            <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
-              <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
-                Simplex vs PuLP por Cluster
-              </div>
-              <div className="text-xs text-[#9C9C9F] mb-3">
-                Cada ponto é um cluster — na diagonal significa concordância
-                perfeita
-              </div>
-              {clusters.length > 0 ? (
-                <ScatterSVG clusters={clusters} />
-              ) : (
-                <p className="text-xs text-[#9C9C9F]">Sem dados de clusters.</p>
-              )}
-            </div>
-
             {/* Distribuição de clientes */}
-            <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+          <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
               <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
                 Distribuição de Clientes
               </div>
@@ -2472,33 +2899,7 @@ var Resultados = function (props) {
                   Sem dados de distribuição.
                 </p>
               )}
-            </div>
           </div>
-
-          {pulpSimplexData.length > 0 && (
-            <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
-              <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
-                Comparação PuLP x Simplex
-              </div>
-              <div className="text-xs text-[#9C9C9F] mb-4">
-                Top 12 clusters com maior diferença de limite otimizado
-              </div>
-              <PulpSimplexCompareP5 data={pulpSimplexData} />
-            </div>
-          )}
-
-          {/* Gráficos - linha 2 */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Evolução do z entre safras */}
-            <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
-              <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
-                Evolução do Valor Objetivo
-              </div>
-              <div className="text-xs text-[#9C9C9F] mb-4">
-                z ótimo (R$) ao longo das simulações concluídas
-              </div>
-              <LineChartP5 data={evolucaoData} />
-            </div>
 
             {/* Histograma de risco */}
             <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
@@ -2515,7 +2916,28 @@ var Resultados = function (props) {
               )}
             </div>
           </div>
+
+          {/* Evolução do Valor Objetivo */}
+          <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
+            <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
+              Evolução do Valor Objetivo
+            </div>
+            <div className="text-xs text-[#9C9C9F] mb-4">
+              z ótimo (R$) ao longo das simulações concluídas
+            </div>
+            <LineChartP5 data={evolucaoData} />
+          </div>
         </div>
+      )}
+
+      {selectedConsulta && clusters.length > 0 && (
+        <CenarioComparador
+          consultas={consultas}
+          selectedId={selectedId}
+          clusters={clusters}
+          selectedConsulta={selectedConsulta}
+          zBanco={zBanco}
+        />
       )}
 
       {/* Parâmetros utilizados */}
@@ -2590,23 +3012,6 @@ var Resultados = function (props) {
               })}
             </div>
           )}
-        </div>
-      )}
-      {/* Fluxo do pipeline (Sankey) */}
-      {selectedConsulta && clusters && clusters.length > 0 && (
-        <div className="bg-white border border-[#E8EFF7] shadow-sm p-5">
-          <div className="text-sm font-semibold text-[#0D1B2A] mb-1">
-            Fluxo do Pipeline
-          </div>
-          <div className="text-xs text-[#9C9C9F] mb-3">
-            Como a base de clientes flui da elegibilidade aos clusters e às
-            faixas de limite
-          </div>
-          <SankeyPipelineP5
-            total={selectedConsulta.n_clientes_total}
-            elegiveis={selectedConsulta.n_clientes_elegiveis}
-            clusters={clusters}
-          />
         </div>
       )}
     </div>
