@@ -755,23 +755,49 @@ async def calcular_z_banco(consulta_id: UUID) -> dict | None:
     params = json.loads(consulta["parametros"])
     t, LGD, u_bar, T = params["t"], params["LGD"], params["u_bar"], params["T"]
 
-    df = await _carregar_clientes_consulta(consulta_id)
-    if df is None:
-        return {"z_banco": 0.0, "n_com_oferta": 0, "n_total": 0}
-
-    # z_banco = Σ_i [ pi_i · (ū·t·T − pd_calibrada_i·LGD) · limite_ofertado_i ],
-    # com limite_ofertado nulo tratado como 0 (mesma fórmula da versão SQL).
+    # Só precisamos de 3 colunas. Carregamos APENAS elas (em vez de toda a base),
+    # o que evitava o MemoryError em bases grandes.
     import numpy as _np
 
-    pi = df["pi"].to_numpy(dtype="float64")
-    pdc = df["pd_calibrada"].to_numpy(dtype="float64")
-    lof = df["limite_ofertado"].to_numpy(dtype="float64")
-    lof = _np.where(_np.isnan(lof), 0.0, lof)
-    z_banco = float(_np.sum(pi * (u_bar * t * T - pdc * LGD) * lof))
+    coef = u_bar * t * T  # constante da fórmula: z = Σ pi·(coef − pd·LGD)·limite
+
+    # Fonte 1: snapshot parquet — leitura com PROJEÇÃO de colunas (leve).
+    p = _RESULTADOS_DIR / f"{consulta_id}.parquet"
+    if p.exists():
+        d = pd.read_parquet(
+            p, columns=["pi", "pd_calibrada", "limite_ofertado"]
+        )
+        pi = d["pi"].to_numpy(dtype="float64")
+        pdc = d["pd_calibrada"].to_numpy(dtype="float64")
+        lof = _np.nan_to_num(
+            d["limite_ofertado"].to_numpy(dtype="float64"), nan=0.0
+        )
+        z_banco = float(_np.sum(pi * (coef - pdc * LGD) * lof))
+        return {
+            "z_banco": z_banco,
+            "n_com_oferta": int((lof > 0).sum()),
+            "n_total": int(len(d)),
+        }
+
+    # Fonte 2 (fallback consultas antigas, sem parquet): agrega direto no
+    # Postgres — não traz NENHUMA linha para a memória do backend.
+    pool = get_pool()
+    async with pool.acquire() as conn:
+        row = await conn.fetchrow(
+            "SELECT "
+            "COALESCE(SUM(pi_normalizado * ($1 - pd_calibrada * $2) "
+            "* COALESCE(limite_ofertado, 0)), 0) AS z_banco, "
+            "COUNT(*) FILTER (WHERE COALESCE(limite_ofertado, 0) > 0) AS n_com_oferta, "
+            "COUNT(*) AS n_total "
+            "FROM clientes_resultado WHERE consulta_id = $3",
+            coef, LGD, str(consulta_id),
+        )
+    if row is None or (row["n_total"] or 0) == 0:
+        return {"z_banco": 0.0, "n_com_oferta": 0, "n_total": 0}
     return {
-        "z_banco": z_banco,
-        "n_com_oferta": int((lof > 0).sum()),
-        "n_total": int(len(df)),
+        "z_banco": float(row["z_banco"] or 0.0),
+        "n_com_oferta": int(row["n_com_oferta"] or 0),
+        "n_total": int(row["n_total"] or 0),
     }
 
 
