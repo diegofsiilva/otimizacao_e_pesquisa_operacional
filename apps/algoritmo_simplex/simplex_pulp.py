@@ -138,9 +138,19 @@ def simplex_pulp(problema: Problema) -> tuple[list[float], float, str]:
     # cria o modelo de maximização
     modelo = pulp.LpProblem("simplex_referencia", pulp.LpMaximize)
 
-    # variáveis de decisão x_j >= 0
+    # variáveis de decisão com bounds (lower/upper). Os bounds de R2/R3 entram
+    # aqui — e NÃO como linhas de A — para o PuLP resolver o mesmo problema que
+    # o nosso simplex de variáveis limitadas. lowBound padrão 0; upBound None = +inf.
+    lower = problema.lower if problema.lower is not None else [0.0] * n
+    upper = problema.upper if problema.upper is not None else [None] * n
     x_vars = [
-        pulp.LpVariable(f"x_{j}", lowBound=0.0, cat=pulp.LpContinuous) for j in range(n)
+        pulp.LpVariable(
+            f"x_{j}",
+            lowBound=(0.0 if lower[j] is None else float(lower[j])),
+            upBound=(None if upper[j] is None else float(upper[j])),
+            cat=pulp.LpContinuous,
+        )
+        for j in range(n)
     ]
 
     # função objetivo

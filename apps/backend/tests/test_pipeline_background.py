@@ -130,6 +130,9 @@ class PipelineBackgroundTestCase(unittest.TestCase):
                 patch.object(credit_service, "_executar_pipeline", return_value=resultado_pipeline),
                 patch.object(credit_service.pd, "read_parquet", return_value=clientes),
                 patch.object(pq, "read_metadata", return_value=SimpleNamespace(num_rows=1)),
+                patch.object(
+                    credit_service, "_RESULTADOS_DIR", Path(tmp) / "resultados"
+                ),
             ):
                 asyncio.run(
                     credit_service._pipeline_background(
@@ -139,12 +142,20 @@ class PipelineBackgroundTestCase(unittest.TestCase):
                     )
                 )
 
+            # snapshot por consulta gravado como parquet (substitui o COPY de
+            # ~1.8M linhas que ia para clientes_resultado)
+            resultado_parquet = (
+                Path(tmp) / "resultados" / f"{consulta_id}.parquet"
+            )
+            self.assertTrue(resultado_parquet.exists())
+            snap = pd.read_parquet(resultado_parquet)
+            self.assertEqual(int(snap.iloc[0]["limite_otimizado"]), 500)
+            self.assertEqual(int(snap.iloc[0]["limite_otimizado_pulp"]), 500)
+
         executed_sql = "\n".join(sql for sql, _ in fake_pool.conn.executes)
         self.assertIn("status_consulta = $1", executed_sql)
         self.assertIn("z_otimo", executed_sql)
         self.assertEqual(fake_pool.conn.executemany_calls[0][1][0][0], consulta_id)
-        self.assertEqual(fake_pool.conn.copy_calls[0][0], "clientes_resultado")
-        self.assertEqual(fake_pool.conn.copy_calls[0][1][0][-1], 500)
 
 
 if __name__ == "__main__":

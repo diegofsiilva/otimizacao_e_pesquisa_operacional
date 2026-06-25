@@ -13,6 +13,7 @@
 
 var GerarLimites = function (props) {
   var setPage = props.setPage;
+  var onOpenConfig = props.onOpenConfig;
   var setHasData = props.setHasData;
 
   // -------------------------------------------------------------------------
@@ -35,6 +36,14 @@ var GerarLimites = function (props) {
   var su5 = React.useState(null);
   var uploadError = su5[0];
   var setUploadError = su5[1];
+
+  // Popup de confirmação das configurações antes de rodar
+  var scfg1 = React.useState(false);
+  var confirmCfg = scfg1[0];
+  var setConfirmCfg = scfg1[1];
+  var scfg2 = React.useState(null);
+  var pendingCfg = scfg2[0];
+  var setPendingCfg = scfg2[1];
 
   // Modal de envio com progresso de chunks
   var sm1 = React.useState(false);
@@ -256,7 +265,7 @@ var GerarLimites = function (props) {
         setUploadStep("finalizando");
         return Api.finalizarUpload(
           uploadId,
-          null,
+          pendingCfg,
           safraNum,
           usarSafraExistente || false,
         );
@@ -291,8 +300,32 @@ var GerarLimites = function (props) {
       });
   }
 
+  // Ao clicar em Executar: busca o config atual e abre o popup de confirmação.
+  // O run só dispara depois que o usuário confirma (confirmarExecucao).
   function handleExecutar() {
+    if (!file) return;
+    Api.getConfig()
+      .then(function (cfg) {
+        setPendingCfg(cfg);
+        setConfirmCfg(true);
+      })
+      .catch(function () {
+        // sem config (backend fora): segue com defaults, mas avisa no popup
+        setPendingCfg(null);
+        setConfirmCfg(true);
+      });
+  }
+
+  function confirmarExecucao() {
+    setConfirmCfg(false);
     iniciarUpload(false);
+  }
+
+  function abrirConfigDoPopup() {
+    setConfirmCfg(false);
+    // Ao fechar o ConfigModal, reabre o popup de confirmação já com o config
+    // atualizado — assim dá pra "Confirmar e rodar" sem clicar em Executar de novo.
+    if (onOpenConfig) onOpenConfig(handleExecutar);
   }
 
   // -------------------------------------------------------------------------
@@ -526,6 +559,87 @@ var GerarLimites = function (props) {
         </p>
         <div className="mt-1 h-0.5 w-10 bg-[#2E6DA4]" />
       </div>
+
+      {/* Popup de confirmação das configurações antes de rodar */}
+      {confirmCfg && (
+        <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4">
+          <div className="bg-white border border-[#E8EFF7] shadow-2xl w-full max-w-md p-6 space-y-4">
+            <div>
+              <p className="text-base font-semibold text-[#0D1B2A]">
+                Confirmar configurações
+              </p>
+              <p className="text-xs text-[#9C9C9F] mt-1">
+                O modelo vai rodar com os parâmetros abaixo. Confirme ou ajuste
+                antes de seguir.
+              </p>
+            </div>
+
+            {pendingCfg ? (
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  ["Taxa de interchange", (pendingCfg.t * 100).toFixed(2) + "%"],
+                  ["LGD", (pendingCfg.LGD * 100).toFixed(0) + "%"],
+                  ["Utilização do limite", (pendingCfg.u_bar * 100).toFixed(0) + "%"],
+                  [
+                    "Limite máximo",
+                    "R$ " + Number(pendingCfg.L_max).toLocaleString("pt-BR"),
+                  ],
+                  ["Horizonte", pendingCfg.T + " meses"],
+                  [
+                    "Taxa de conversão",
+                    (pendingCfg.taxa_conversao * 100).toFixed(2) + "%",
+                  ],
+                  ["Comparar com PuLP", pendingCfg.comparar_pulp ? "Sim" : "Não"],
+                ].map(function (row, i) {
+                  return (
+                    <div
+                      key={i}
+                      className="bg-[#E2EAF4] border border-[#E8EFF7] px-3 py-2"
+                    >
+                      <div className="text-[10px] text-[#9C9C9F] font-medium">
+                        {row[0]}
+                      </div>
+                      <div className="text-sm font-semibold text-[#3B4049]">
+                        {row[1]}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-xs text-[#DC2F37] bg-[#FF5D5C]/10 border border-[#FF5D5C]/30 px-3 py-2">
+                Não foi possível carregar as configurações (backend indisponível).
+                O modelo usará os valores padrão.
+              </div>
+            )}
+
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <button
+                onClick={abrirConfigDoPopup}
+                className="text-xs font-medium text-[#2E6DA4] hover:underline"
+              >
+                Mudar configurações
+              </button>
+              <div className="flex gap-2">
+                <button
+                  onClick={function () {
+                    setConfirmCfg(false);
+                  }}
+                  className="px-4 py-1.5 text-xs font-semibold bg-[#E8EFF7] text-[#3B4049] hover:bg-[#B8D4EC] transition-colors"
+                >
+                  Cancelar
+                </button>
+                <button
+                  onClick={confirmarExecucao}
+                  className="px-4 py-1.5 text-xs font-semibold bg-[#2E6DA4] text-white hover:bg-[#1B3A5C] transition-colors"
+                >
+                  Confirmar e rodar
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal de envio com progresso de chunks */}
       {envioModal && (

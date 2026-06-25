@@ -41,7 +41,7 @@ FIG_DIR.mkdir(parents=True, exist_ok=True)
 u_bar = 0.75
 t_int = 0.0175
 LGD = 0.80
-T_NEW = 22
+T_NEW = 15
 PI_MIN, PI_MAX = 3, 846
 
 COLS = [

@@ -82,6 +82,7 @@ async def upload_e_criar_consulta(
     u_bar: float | None = Query(default=None, gt=0, le=1),
     L_max: float | None = Query(default=None, gt=0),
     T: float | None = Query(default=None, gt=0),
+    taxa_conversao: float | None = Query(default=None, gt=0, le=1),
 ) -> ConsultaResponse:
     """
     Faz upload do parquet, resolve a safra e dispara o pipeline em background.
@@ -112,6 +113,7 @@ async def upload_e_criar_consulta(
             "u_bar": u_bar,
             "L_max": L_max,
             "T": T,
+            "taxa_conversao": taxa_conversao,
         }.items()
         if v is not None
     }
