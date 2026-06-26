@@ -93,6 +93,7 @@ g04/
 │       ├── index.html            # ponto de entrada da aplicacao
 │       └── styles.css            # estilos globais
 ├── artefatos/                    # documentacao tecnica das entregas
+│   ├──apresentacoes/             # apresentacoes das sprints
 │   ├── back-end.md               # documentacao do backend e otimizador
 │   ├── frontend.md               # documentacao do frontend
 │   ├── entendimento_negocio.md
@@ -104,7 +105,6 @@ g04/
 ├── docs/                         # guias de desenvolvimento e operacao
 │   ├── devdoc.md                 # guia para configurar o ambiente local e rodar os testes
 │   └── opsdoc.md                 # guia de deploy e operacao em producao
-├── apresentacoes/                # apresentacoes das sprints
 ├── data/                         # dados do projeto e caches locais
 │   ├── parquet/                  # arquivos Parquet de entrada
 │   ├── csv/                      # tabelas intermediarias e auxiliares
