@@ -12,7 +12,7 @@ Os testes foram conduzidos em um cenário que simula a rotina operacional do par
 
 # Participantes
 
-Os testes foram realizados com **cinco participantes**, atendendo ao requisito mínimo estabelecido pela disciplina. A seleção buscou reunir pessoas com perfis compatíveis com as personas definidas durante as etapas de UX e entendimento do negócio, privilegiando usuários com experiência em sistemas corporativos, análise de informações e apoio à tomada de decisão.
+Os testes foram realizados com **cinco participantes**, atendendo ao requisito estabelecido pela disciplina. A seleção buscou reunir pessoas com perfis compatíveis com as personas definidas durante as etapas de UX e entendimento do negócio, privilegiando usuários com experiência em sistemas corporativos, análise de informações e apoio à tomada de decisão.
 
 Embora nem todos os participantes atuem diretamente na área de crédito, todos possuem características que permitem reproduzir, em diferentes níveis, o contexto de utilização esperado para a aplicação. Essa diversidade de perfis possibilitou avaliar tanto a aderência da solução ao processo de negócio quanto aspectos relacionados à experiência do usuário e à usabilidade da interface.
 
@@ -44,9 +44,9 @@ Após a realização dos testes, os registros individuais foram consolidados par
 
 A planilha completa contendo os registros individuais dos participantes e a consolidação das ocorrências encontra-se disponível no link abaixo.
 
-**Planilha de tabulação dos testes de usabilidade**
+**Planilha de tabulação dos testes de usabilidade:**
 
-[Veja a tabela completa nesse aqui](https://docs.google.com/spreadsheets/d/1OcvbRqZd_wAdPkaLY5pUgVpFc1TuJq7nZ97pXq-oThE/edit?usp=sharing)
+[Veja a tabela completa aqui](https://docs.google.com/spreadsheets/d/1OcvbRqZd_wAdPkaLY5pUgVpFc1TuJq7nZ97pXq-oThE/edit?usp=sharing)
 
 ---
 
@@ -54,9 +54,9 @@ A planilha completa contendo os registros individuais dos participantes e a cons
 
 Todos os participantes assinaram o Termo de Consentimento Livre e Esclarecido (TCLE) antes da realização dos testes.
 
-Conforme orientação da disciplina, esses documentos não foram armazenados neste repositório, sendo disponibilizados apenas em uma pasta privada no Google Drive da equipe.
+Conforme orientação da disciplina, esses documentos não foram armazenados neste repositório, sendo disponibilizados apenas em uma pasta privada da Instituição no Google Drive da equipe.
 
-**Pasta contendo os termos de consentimento**
+**Pasta contendo os termos de consentimento:**
 
 [Veja a pasta com os termos assinados aqui](https://drive.google.com/drive/folders/1XKvtwb8gIyI493cUNQAVB2EHCXnd_C0y?usp=sharing)
 
