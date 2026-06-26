@@ -1,5 +1,5 @@
 """
-scripts/calibrar_pd.py
+apps/scripts/calibrar_pd.py
 
 Calibra a pd_produto de cada cliente usando os fatores gamma por decil,
 calculados pelo script setup_tabela_gamma.py.
@@ -23,7 +23,28 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parent.parent
+
+def _encontrar_raiz() -> Path:
+    """Localiza a raiz do projeto subindo a árvore a partir deste arquivo.
+
+    A raiz do repositório é o diretório que contém a pasta ``apps/``. Como este
+    script vive em ``apps/scripts/``, basta achar o ancestral chamado ``apps`` e
+    devolver o pai dele. Resolver assim — em vez de contar níveis fixos com
+    ``parent.parent...`` — torna o caminho imune a mudanças de profundidade
+    deste script (ex.: mover ``scripts/`` para dentro de ``apps/``).
+
+    Returns:
+        O ``Path`` da raiz do projeto. Como fallback (caso nenhum ancestral
+        ``apps`` exista), retorna o bisavô deste arquivo (``apps/scripts/`` -> raiz).
+    """
+    aqui = Path(__file__).resolve()
+    for ancestral in aqui.parents:
+        if ancestral.name == "apps":
+            return ancestral.parent
+    return aqui.parent.parent.parent
+
+
+ROOT = _encontrar_raiz()
 TABELA_GAMMA = ROOT / "data" / "csv" / "tabela_gamma_decil.csv"
 INPUT_DIR = ROOT / "data" / "parquet"
 CACHE_DIR = ROOT / "data" / "cache"
@@ -42,7 +63,7 @@ def calibrar(parquet_path: Path) -> Path:
     if not TABELA_GAMMA.exists():
         raise FileNotFoundError(
             "[calibracao] tabela_gamma_decil.csv nao encontrada em data/csv/. "
-            "Rode primeiro: python scripts/setup_tabela_gamma.py"
+            "Rode primeiro: python apps/scripts/setup_tabela_gamma.py"
         )
 
     print(f"[INFO] Lendo: {parquet_path.name}")
@@ -83,6 +104,15 @@ def calibrar(parquet_path: Path) -> Path:
 
 
 def main() -> None:
+    """Ponto de entrada CLI: calibra a PD do parquet informado em argumento.
+
+    Espera exatamente um argumento — o nome do arquivo ``.parquet`` em
+    ``INPUT_DIR`` — e delega para :func:`calibrar`. Sem o argumento, imprime o
+    uso e encerra com código 1.
+
+    Returns:
+        None.
+    """
     if len(sys.argv) != 2:
         print("Uso:")
         print("    python calibrar_pd.py <arquivo.parquet>")

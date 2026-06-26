@@ -1,5 +1,5 @@
 """
-scripts/analise_sanidade_clusters.py
+apps/scripts/analise_sanidade_clusters.py
 
 Verifica se o LP esta otimizando corretamente apos a clusterizacao:
   1. Clusters com limite alto tem PD_k baixo e pi_k alto?
@@ -21,7 +21,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = ROOT / "data" / "csv"
 JSON_DIR = ROOT / "apps" / "algoritmo_simplex" / "input"
 FIG_DIR = ROOT / "artefatos" / "figuras"

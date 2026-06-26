@@ -1,5 +1,5 @@
 """
-scripts/reduce_csv.py
+apps/scripts/reduce_csv.py
 Reduz um arquivo .csv para uma porcentagem das primeiras linhas.
 
 Uso:
@@ -20,7 +20,7 @@ import sys
 from pathlib import Path
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 
 if len(sys.argv) < 2 or len(sys.argv) > 3:
     print("Uso:")

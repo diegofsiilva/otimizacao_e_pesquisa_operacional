@@ -144,7 +144,7 @@ Em termos práticos, o p75 equilibra aderência à política atual e contenção
 
 A variável `pd_produto` é uma PD anual do scoring interno. Como o modelo opera em $T = 22$ meses, ela é calibrada pela razão entre `over30mob3` e `pd_produto`; essa razão, $\gamma$, aproxima a perda efetiva observável e captura o caráter front-loaded do default em cartão.
 
-A análise (detalhada em `scripts/analise_09_calibracao_final.py`, sobre 17.366 clientes com `over30mob3` observado e 5,9M de elegíveis amostrados nas safras M1, M2 e M3) revela três fatos:
+A análise (detalhada em `apps/scripts/analise_09_calibracao_final.py`, sobre 17.366 clientes com `over30mob3` observado e 5,9M de elegíveis amostrados nas safras M1, M2 e M3) revela três fatos:
 
 1. **A razão $\gamma$ não é constante.** Globalmente $\gamma \approx 0{,}24$, mas ela cresce por decil de `pd_produto` (de 0,21 em D1 até 0,24 em D4), então o multiplicador uniforme 0,24 não representa bem os extremos da base.
 

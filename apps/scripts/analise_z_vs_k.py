@@ -1,12 +1,12 @@
 """
-scripts/analise_z_vs_k.py
+apps/scripts/analise_z_vs_k.py
 
 Varredura de K usando paralelismo nos 24 cores do servidor.
 Todo output vai para logs/z_vs_k.log.
 Resultados parciais sao salvos em CSV apos cada K concluido.
 
 Uso:
-    nohup python scripts/analise_z_vs_k.py <arquivo_calibrado.csv> <parametros.json> &
+    nohup python apps/scripts/analise_z_vs_k.py <arquivo_calibrado.csv> <parametros.json> &
     tail -f logs/z_vs_k.log
 
 Entrada:
@@ -26,7 +26,7 @@ import time
 from pathlib import Path
 from datetime import datetime
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 LOG_DIR = ROOT / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -37,14 +37,26 @@ class Logger:
     """Escreve simultaneamente no arquivo de log e no stdout original."""
 
     def __init__(self, filepath):
+        """Abre o arquivo de log em modo append e guarda o stdout original.
+
+        Args:
+            filepath: Caminho do arquivo de log (aberto com ``buffering=1``,
+                line-buffered, para refletir o progresso em tempo real).
+        """
         self.terminal = sys.stdout
         self.log = open(filepath, "a", buffering=1)
 
     def write(self, msg):
+        """Escreve a mensagem no stdout original e no arquivo de log.
+
+        Args:
+            msg: Texto a ser escrito em ambos os destinos.
+        """
         self.terminal.write(msg)
         self.log.write(msg)
 
     def flush(self):
+        """Faz flush dos dois destinos (stdout original e arquivo de log)."""
         self.terminal.flush()
         self.log.flush()
 
@@ -125,11 +137,40 @@ print(f"  pd_fin_atual = {pd_fin_atual:.4f}")
 
 
 def score_to_m(score, s_low=300.0, s_high=900.0, m_low=0.3, m_high=1.8):
+    """Mapeia um score de crédito para um fator de alavancagem ``m``.
+
+    Interpola linearmente o score no intervalo ``[s_low, s_high]`` (com clip nas
+    bordas) para o intervalo de alavancagem ``[m_low, m_high]``.
+
+    Args:
+        score: Score de crédito do cluster (média).
+        s_low: Score mínimo do mapeamento (vira ``m_low``).
+        s_high: Score máximo do mapeamento (vira ``m_high``).
+        m_low: Alavancagem mínima.
+        m_high: Alavancagem máxima.
+
+    Returns:
+        O fator de alavancagem ``m`` (``float``) correspondente ao score.
+    """
     x = float(np.clip((score - s_low) / (s_high - s_low), 0.0, 1.0))
     return m_low + x * (m_high - m_low)
 
 
 def rodar_k(k: int) -> dict:
+    """Executa o pipeline completo (clustering + LP) para um valor de K.
+
+    Treina uma árvore de regressão com até ``k`` folhas para agrupar os
+    elegíveis, agrega as features por cluster, monta o problema de otimização
+    (restrição de inadimplência R1 + bounds por cluster) e resolve com o
+    Simplex próprio do projeto.
+
+    Args:
+        k: Número máximo de folhas (clusters) da árvore.
+
+    Returns:
+        ``dict`` com K, número real de clusters (``n_real``), valor ótimo ``z``,
+        ``status`` do solver e tempos de clustering/simplex/total em segundos.
+    """
     t0 = time.time()
 
     arvore = DecisionTreeRegressor(
@@ -146,6 +187,7 @@ def rodar_k(k: int) -> dict:
     t_clust = time.time() - t0
 
     def p5(arr):
+        """Retorna o 5º percentil de ``arr`` (ignorando NaN), como ``float``."""
         return float(np.nanquantile(arr.astype(float), 0.05))
 
     n_k_arr = np.zeros(n_real)
@@ -213,12 +255,34 @@ csv_parcial = OUT_DIR / "z_vs_k_resultados.csv"
 
 
 def salvar_resultado(resultado: dict) -> None:
+    """Anexa um resultado de K ao CSV parcial (escrita incremental).
+
+    Escreve o cabeçalho apenas quando o arquivo ainda não existe, permitindo
+    acumular resultados conforme cada K termina.
+
+    Args:
+        resultado: Dicionário retornado por :func:`rodar_k`.
+
+    Returns:
+        None. O efeito é a escrita em ``csv_parcial``.
+    """
     df_linha = pd.DataFrame([resultado])
     header = not csv_parcial.exists()
     df_linha.to_csv(csv_parcial, mode="a", header=header, index=False)
 
 
 def rodar_k_com_log(k: int) -> dict:
+    """Executa :func:`rodar_k`, persiste o parcial e loga o progresso.
+
+    Wrapper usado pelas tarefas paralelas: roda o K, salva o resultado
+    incrementalmente e imprime uma linha de log formatada.
+
+    Args:
+        k: Número de clusters a avaliar.
+
+    Returns:
+        O mesmo ``dict`` de resultado retornado por :func:`rodar_k`.
+    """
     resultado = rodar_k(k)
     salvar_resultado(resultado)
     ts = datetime.now().strftime("%H:%M:%S")

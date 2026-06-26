@@ -110,8 +110,14 @@ def main(
     LGD = params["LGD"]
     u_bar = params["u_bar"]
     T = params["T"]
+    # taxa de conversao (take-up) entre os que recebem oferta — ancora o nivel
+    # absoluto de pi. Parceiro: 1,5%. Ver bloco de calibracao de pi abaixo.
+    taxa_conversao = params.get("taxa_conversao", 0.015)
 
-    print(f"Parametros: t={t_param}, LGD={LGD}, u_bar={u_bar}, T={T}")
+    print(
+        f"Parametros: t={t_param}, LGD={LGD}, u_bar={u_bar}, T={T}, "
+        f"taxa_conversao={taxa_conversao}"
+    )
 
     input_path = DATA_DIR / input_parquet_name
     if not input_path.exists():
@@ -129,6 +135,30 @@ def main(
     )
 
     df["pi"] = normalize_propensao(df["score_propensao_contrato"])
+
+    # --- Calibração de conversão (pi) -------------------------------------
+    # score_propensao_contrato normalizado é só um RANKING em [0,1], não uma
+    # probabilidade. Na FO, n_k·pi_k deveria ser "quantos convertem", então pi
+    # precisa ser P(conversão | recebeu oferta). O parceiro forneceu a taxa de
+    # conversão (take-up) entre os que recebem oferta; ancoramos a MÉDIA de pi a
+    # essa taxa por escala uniforme, preservando as diferenças relativas entre
+    # clientes (que vêm do score). Mesmo papel do gamma para a PD.
+    #
+    # Por ser escala uniforme: NÃO altera os clusters (o CART é invariante a
+    # escala por feature/alvo) nem os limites ótimos; torna Z e a comparação com
+    # z_banco monetariamente reais (ambos passam a usar pi calibrado).
+    pi_medio_bruto = df["pi"].mean()
+    if pi_medio_bruto and pi_medio_bruto > 0:
+        fator_conversao = taxa_conversao / pi_medio_bruto
+        df["pi"] = df["pi"] * fator_conversao
+        print(
+            f"  Calibracao de conversao: pi medio {pi_medio_bruto:.4f} "
+            f"-> {df['pi'].mean():.4f} (alvo {taxa_conversao}, fator {fator_conversao:.4f})"
+        )
+    else:
+        print("  [conversao] pi medio <= 0; calibracao de conversao ignorada.")
+    # ---------------------------------------------------------------------
+
     df["cp_proxy"] = build_cp_proxy(df)
     df["ck_guia"] = calcular_ck(
         df["pi"],
@@ -171,11 +201,12 @@ def main(
     folhas_raw = arvore.apply(X)
     folhas_unicas = np.unique(folhas_raw)
     mapa_folha = {folha: idx for idx, folha in enumerate(folhas_unicas)}
-    df["segmento_id"] = np.vectorize(mapa_folha.get)(folhas_raw)
+    df["segmento_id"] = pd.Series(folhas_raw).map(mapa_folha).to_numpy()
 
     print("\nAgregando parametros por cluster...")
 
     def p5(x: pd.Series) -> float:
+        """Retorna o 5º percentil da série ``x`` (ignorando NaN), como ``float``."""
         return float(np.nanquantile(x.astype(float), 0.05))
 
     clusters = df.groupby("segmento_id", as_index=False).agg(

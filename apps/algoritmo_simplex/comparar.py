@@ -17,16 +17,31 @@ montagem do problema usada em `main.py`.
 """
 
 import copy
+import json
+import math
 import sys
 from pathlib import Path
+
+import pandas as pd
 
 from models import Problema
 from simplex import simplex
 from simplex_pulp import simplex_pulp
 
+# Garante saída em UTF-8 no console. O terminal padrão do Windows usa cp1252,
+# que não codifica símbolos como "Δ" (usado em "|Δz|") e dispara
+# UnicodeEncodeError. reconfigure() existe em TextIOWrapper (Python 3.7+).
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(encoding="utf-8")
 
-# tolerância absoluta para considerar dois valores iguais na comparação
-TOLERANCIA = 1e-6
+
+# Tolerâncias para considerar dois valores de z equivalentes.
+# Uma tolerância puramente absoluta (1e-6) falha em problemas de grande
+# magnitude: com z ~ 3e5, o acúmulo de ponto flutuante entre dois solvers
+# distintos passa de 1e-6 com facilidade mesmo quando a solução x é idêntica.
+# Por isso usamos math.isclose com tolerância relativa + piso absoluto.
+TOL_REL = 1e-6  # tolerância relativa (1 ppm de z)
+TOL_ABS = 1e-6  # piso absoluto, para z próximos de zero
 
 
 def comparar_resultados(
@@ -77,7 +92,12 @@ def comparar_resultados(
     # erro absoluto entre os valores ótimos da função objetivo
     if resultado["nosso"]["z"] is not None and resultado["pulp"]["z"] is not None:
         resultado["delta_z"] = abs(resultado["nosso"]["z"] - resultado["pulp"]["z"])
-        resultado["coincidem"] = resultado["delta_z"] <= TOLERANCIA
+        resultado["coincidem"] = math.isclose(
+            resultado["nosso"]["z"],
+            resultado["pulp"]["z"],
+            rel_tol=TOL_REL,
+            abs_tol=TOL_ABS,
+        )
     else:
         resultado["delta_z"] = None
         # se ambos falharam pelo mesmo motivo (ex.: ilimitado), consideramos coincidentes
@@ -112,7 +132,7 @@ def imprimir_resultado(resultado: dict) -> None:
     if resultado["delta_z"] is not None:
         print(f"  |Δz|  = {resultado['delta_z']:.2e}")
     coinc = "SIM" if resultado["coincidem"] else "NÃO"
-    print(f"  Coincidem (tol={TOLERANCIA:.0e}): {coinc}")
+    print(f"  Coincidem (rel={TOL_REL:.0e}, abs={TOL_ABS:.0e}): {coinc}")
 
 
 def problemas_didaticos() -> list[tuple[str, Problema]]:
@@ -157,8 +177,6 @@ def problema_real(arquivo_parquet_nome: str, arquivo_json_nome: str) -> Problema
         arquivo_json_nome    : nome do JSON de parâmetros em algoritmo_simplex/input/
                                (ex: parametros.json)
     """
-    import json
-    import pandas as pd
     from main import garantir_clusters, montar_problema
 
     arquivo_parquet = (
@@ -175,6 +193,16 @@ def problema_real(arquivo_parquet_nome: str, arquivo_json_nome: str) -> Problema
 
 
 def main() -> None:
+    """Roda a comparação e imprime a tabela de resultados.
+
+    Executa sempre os problemas didáticos e, se forem passados os dois
+    argumentos CLI (``<parquet> <json>``), também o caso real. Para cada
+    problema, compara o Simplex próprio contra o PuLP e imprime z, status e o
+    erro entre eles, terminando com um resumo de quantos casos coincidem.
+
+    Returns:
+        None.
+    """
     print("Comparação: Simplex do projeto vs. PuLP (CBC)")
     print("=" * 60)
 
@@ -195,7 +223,8 @@ def main() -> None:
     print("\n" + "=" * 60)
     total = len(resultados)
     iguais = sum(1 for r in resultados if r["coincidem"])
-    print(f"Resumo: {iguais}/{total} casos com resultado equivalente (tol={TOLERANCIA:.0e})")
+    print(f"Resumo: {iguais}/{total} casos com resultado equivalente "
+          f"(rel={TOL_REL:.0e}, abs={TOL_ABS:.0e})")
 
 
 if __name__ == "__main__":

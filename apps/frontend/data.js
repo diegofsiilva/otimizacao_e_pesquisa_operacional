@@ -68,6 +68,14 @@ var PARAMS_EDITAVEIS = [
     max: 60,
     step: 1,
   },
+  {
+    key: "taxa_conversao",
+    label: "Taxa de conversão (take-up)",
+    value: 0.015,
+    min: 0.001,
+    max: 0.1,
+    step: 0.001,
+  },
 ];
 
 // -------------------------------------------------------------------------

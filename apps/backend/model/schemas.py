@@ -13,7 +13,7 @@ from pydantic import BaseModel, Field
 
 StatusConsulta = Literal["pendente", "executando", "concluido", "erro"]
 StatusLP = Literal["otimo", "multiplas_solucoes"]
-StatusLPPulp = Literal["otimo", "ilimitado", "inviavel", "erro"]
+StatusLPPulp = Literal["otimo", "ilimitado", "inviavel", "erro", "desativado"]
 ErroEtapa = Literal["calibracao", "clustering", "otimizacao"]
 
 
@@ -57,7 +57,16 @@ class ParametrosModelo(BaseModel):
     L_max: float = Field(default=25000.0, gt=0)
 
     # horizonte de uso do limite em meses
-    T: float = Field(default=22.0, gt=0)
+    T: float = Field(default=15.0, gt=0)
+
+    # taxa de conversão (take-up) entre os que recebem oferta. Ancora o nível
+    # absoluto de π (propensão) na calibração do clustering. Editável no config.
+    taxa_conversao: float = Field(default=0.015, gt=0, le=1)
+
+    # liga/desliga a comparação cruzada com o solver de referência (PuLP).
+    # Padrão desligado: rodar o PuLP além do nosso simplex dobra o tempo do
+    # pipeline e só serve para validação. Controlado pela tela de configurações.
+    comparar_pulp: bool = Field(default=False)
 
 
 class ConsultaCreate(BaseModel):

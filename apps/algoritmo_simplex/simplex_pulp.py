@@ -65,18 +65,40 @@ def _obter_solver() -> tuple[object, str]:
 
     # 1. CBC com tmpDir sem espaços - funciona na maioria dos Windows com nome de usuário com espaço
     def _tentar_cbc():
-        return pulp.PULP_CBC_CMD(msg=0, keepFiles=False, tmpDir=tmpdir)
+        """Instancia o CBC apontando tmpDir para um caminho sem espaços.
 
-    # 2. HiGHS via highspy (pip install highspy)
+        PuLP >= 2.0 não aceita ``tmpDir`` no construtor (só no PuLP 1.x); por
+        isso o atributo é setado após a instanciação.
+
+        Returns:
+            O solver ``PULP_CBC_CMD`` configurado.
+        """
+        solver = pulp.PULP_CBC_CMD(msg=0, keepFiles=False)
+        solver.tmpDir = tmpdir
+        return solver
+
     def _tentar_highs_py():
+        """Instancia o solver HiGHS via biblioteca ``highspy`` (``pip install highspy``).
+
+        Returns:
+            O solver ``pulp.HiGHS``.
+        """
         return pulp.HiGHS(msg=0)
 
-    # 3. HiGHS_CMD (binário externo)
     def _tentar_highs_cmd():
+        """Instancia o HiGHS via binário externo (``HiGHS_CMD``).
+
+        Returns:
+            O solver ``pulp.HiGHS_CMD``.
+        """
         return pulp.HiGHS_CMD(msg=0)
 
-    # 4. GLPK_CMD (caso o usuário tenha GLPK instalado)
     def _tentar_glpk():
+        """Instancia o GLPK via binário externo (``GLPK_CMD``).
+
+        Returns:
+            O solver ``pulp.GLPK_CMD``.
+        """
         return pulp.GLPK_CMD(msg=0)
 
     candidatos = [
@@ -134,9 +156,19 @@ def simplex_pulp(problema: Problema) -> tuple[list[float], float, str]:
     # cria o modelo de maximização
     modelo = pulp.LpProblem("simplex_referencia", pulp.LpMaximize)
 
-    # variáveis de decisão x_j >= 0
+    # variáveis de decisão com bounds (lower/upper). Os bounds de R2/R3 entram
+    # aqui — e NÃO como linhas de A — para o PuLP resolver o mesmo problema que
+    # o nosso simplex de variáveis limitadas. lowBound padrão 0; upBound None = +inf.
+    lower = problema.lower if problema.lower is not None else [0.0] * n
+    upper = problema.upper if problema.upper is not None else [None] * n
     x_vars = [
-        pulp.LpVariable(f"x_{j}", lowBound=0.0, cat=pulp.LpContinuous) for j in range(n)
+        pulp.LpVariable(
+            f"x_{j}",
+            lowBound=(0.0 if lower[j] is None else float(lower[j])),
+            upBound=(None if upper[j] is None else float(upper[j])),
+            cat=pulp.LpContinuous,
+        )
+        for j in range(n)
     ]
 
     # função objetivo

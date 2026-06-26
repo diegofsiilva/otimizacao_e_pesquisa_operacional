@@ -1,5 +1,5 @@
 """
-scripts/setup_tabela_gamma.py
+apps/scripts/setup_tabela_gamma.py
 
 Calibracao da PD por decil usando a base completa de elegiveis.
 
@@ -33,7 +33,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import pyarrow.parquet as pq
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 DATA_DIR = ROOT / "data" / "parquet"
 FIG_DIR = ROOT / "artefatos" / "figuras"
 FIG_DIR.mkdir(parents=True, exist_ok=True)
@@ -41,7 +41,7 @@ FIG_DIR.mkdir(parents=True, exist_ok=True)
 u_bar = 0.75
 t_int = 0.0175
 LGD = 0.80
-T_NEW = 22
+T_NEW = 15
 PI_MIN, PI_MAX = 3, 846
 
 COLS = [
@@ -267,6 +267,20 @@ print(f"\nSalvo: {tabela_path}")
 
 # backtesting economico
 def apply_decil(pd_arr, gamma_arr=gamma_final, ed=edges):
+    """Aplica o fator gamma por decil sobre um array de PD.
+
+    Para cada valor de ``pd_arr``, localiza o decil correspondente (via
+    ``np.digitize`` nas bordas internas ``ed[1:-1]``) e multiplica a PD pelo
+    gamma daquele decil.
+
+    Args:
+        pd_arr: Array de ``pd_produto`` a calibrar.
+        gamma_arr: Fatores gamma por decil (default: ``gamma_final`` estimado).
+        ed: Bordas dos decis (default: ``edges`` calculado sobre a população).
+
+    Returns:
+        Array de PD calibrada (``pd_arr * gamma_do_decil``).
+    """
     bins = np.digitize(pd_arr, ed[1:-1])
     return pd_arr * gamma_arr[bins]
 

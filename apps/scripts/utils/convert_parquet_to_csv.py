@@ -1,5 +1,5 @@
 """
-scripts/convert_parquet_to_csv.py
+apps/scripts/utils/convert_parquet_to_csv.py
 Converte um arquivo .parquet em data/parquet e salva como .csv em data/csv/
 
 Uso:
@@ -23,7 +23,7 @@ import subprocess
 from pathlib import Path
 import pandas as pd
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent.parent
 
 args = sys.argv[1:]
 

@@ -219,6 +219,8 @@ var Api = {
     if (p.u_bar != null) query.append("u_bar", String(p.u_bar));
     if (p.L_max != null) query.append("L_max", String(p.L_max));
     if (p.T != null) query.append("T", String(p.T));
+    if (p.taxa_conversao != null)
+      query.append("taxa_conversao", String(p.taxa_conversao));
 
     var qs = query.toString();
     return Api.request(
@@ -277,6 +279,28 @@ var Api = {
       if (!res.ok) throw new Error("Erro ao exportar clientes.");
       return res.blob();
     });
+  },
+
+  // GET /api/consultas/{id}/clientes/export-pulp
+  // Retorna: Blob (text/csv) com coluna limite_otimizado_pulp adicionada.
+  exportClientesPulp: function (consultaId) {
+    return fetch(
+      API_BASE_URL +
+        "/consultas/" +
+        encodeURIComponent(consultaId) +
+        "/clientes/export-pulp",
+    ).then(function (res) {
+      if (!res.ok) throw new Error("Erro ao exportar clientes PuLP.");
+      return res.blob();
+    });
+  },
+
+  // GET /api/consultas/{id}/z-banco
+  // Retorna: { z_banco: float, n_com_oferta: int, n_total: int }
+  getZBanco: function (consultaId) {
+    return Api.request(
+      "/consultas/" + encodeURIComponent(consultaId) + "/z-banco",
+    );
   },
 
   // -------------------------------------------------------------------------

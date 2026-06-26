@@ -3,6 +3,7 @@ algoritmo_simplex/models.py
 Estruturas de dados para o algoritmo Simplex.
 """
 
+from __future__ import annotations
 from dataclasses import dataclass
 
 
@@ -19,14 +20,24 @@ class Problema:
         m = número de restrições          = len(b) = número de linhas de A
 
     Atributos:
-        c  : lista de coeficientes da função objetivo        (tamanho n)
-        A  : matriz de coeficientes das restrições           (tamanho m x n)
-        b  : lista dos lados direitos das restrições         (tamanho m)
+        c     : lista de coeficientes da função objetivo        (tamanho n)
+        A     : matriz de coeficientes das restrições           (tamanho m x n)
+        b     : lista dos lados direitos das restrições         (tamanho m)
+        lower : limite inferior de cada variável (opcional, tamanho n).
+                Quando None, assume-se 0 para todas (x >= 0).
+        upper : limite superior de cada variável (opcional, tamanho n).
+                Quando None (ou None numa posição), assume-se +infinito.
+                Bounds por variável (ex.: L_k <= m_k·CP_k, L_k <= L_max) devem
+                vir aqui, NÃO como linhas de A: o simplex trata bounds
+                nativamente (bounded-variable simplex), o que é muito mais
+                barato do que materializá-los como restrições.
     """
 
     c: list[float]
     A: list[list[float]]
     b: list[float]
+    lower: list[float] | None = None
+    upper: list[float] | None = None
 
 
 @dataclass
