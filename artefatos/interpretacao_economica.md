@@ -29,7 +29,7 @@ A função objetivo escolhe os limites que maximizam o **retorno líquido espera
 A unidade econômica é **R\$ de retorno acumulado no horizonte de uso do limite (22 meses)**: como $L_k$ é um estoque rotativo (sem dimensão temporal), o ótimo $Z^*$ é o retorno da carteira nesse horizonte: ≈ R\$ 36,2 M no ótimo contínuo da safra M1, ou ≈ R\$ 32,9 M na carteira efetivamente recomendada após a discretização operacional (`artigo.md §4.1`). Na margem, cada real adicional de limite a um perfil rende o seu $c_k$.
 
 ### 1.2 Qual é a lógica de geração de valor?
-O valor não vem de conceder mais crédito, e sim de **alocar melhor o limite entre perfis**. No lugar da régua fixa atual, o modelo direciona cada real para os segmentos de spread líquido positivo ($c_k > 0$) e o retira de onde destrói valor. É a lógica de **perda esperada (PD × LGD × exposição)** descontada da receita, a mesma adotada por FICO (2021), Experian (2024) e Moody's (2020) (`modelagem_matematica.md §1.1`). Na solução de referência, isso aparece como retorno líquido positivo em escala de carteira, sem deteriorar o risco agregado (`artigo.md §4.1`).
+O valor não vem de conceder mais crédito, e sim de **alocar melhor o limite entre perfis**. No lugar da régua fixa atual, o modelo direciona cada real para os segmentos de spread líquido positivo ($c_k > 0$) e o retira de onde destrói valor. É a lógica de **perda esperada (PD × LGD × exposição)** descontada da receita, a mesma adotada por FICO (2021), Experian (2024) e Moody's (2020) (`modelagem_matematica.md §1.1`). Na solução de referência da safra M1, isso aparece como retorno líquido positivo sobre uma exposição recomendada de ≈ R\$ 1,12 bilhão, sem deteriorar o risco agregado (`artigo.md §4.1`).
 
 Os parâmetros se dividem em dois grupos quanto ao efeito no retorno:
 
@@ -48,7 +48,7 @@ A própria forma da FO embute incentivos que **as restrições precisam discipli
 Há ainda **duas simplificações que as restrições não corrigem**, e que mudariam não o valor de $Z$, mas *quem* recebe limite:
 
 - **Custo de capital (RAROC).** Cada real de limite consome capital regulatório (ativo ponderado pelo risco, sob Basileia), e a FO não o desconta. O objetivo economicamente correto seria o retorno sobre o capital alocado (RAROC), e não o retorno bruto: por essa ótica, um segmento de margem alta porém PD alta, que prende muito capital, vale menos do que a FO atual sugere.
-- **Horizonte (LTV).** A margem de interchange de 22 meses é uma fatia do LTV. Como ignora CAC e churn (um limite baixo demais frustra e empurra ao concorrente; um alto demais superendivida), a FO supervaloriza perfis de margem alta agora porém churn alto e subvaloriza os de margem fina mas fiéis. Um objetivo em LTV − CAC líquido de churn deslocaria limite para quem vale mais ao longo do tempo.
+- **Horizonte (LTV).** A margem de interchange de 22 meses é uma fatia do LTV. Como ignora CAC e churn (um limite baixo demais frustra e empurra ao concorrente; um alto demais superendivida), a FO supervaloriza perfis de margem alta agora porém churn alto e subvaloriza os de margem fina mas fiéis. Um objetivo em LTV − CAC líquido de churn deslocaria limite para quem vale mais ao longo do tempo (Instrução 3).
 
 Nenhuma das duas invalida a FO atual: ela é uma v1 deliberadamente simples (tudo em R\$, na mesma unidade, auditável), e essas são a sua evolução natural. As distorções que vêm de premissas/parâmetros (como a LGD uniforme) estão na Seção 6.
 
@@ -109,7 +109,7 @@ Essa leitura permite inferir o ICP (*Ideal Customer Profile*) revelado pelo pró
 
 O modelo não prioriza volume bruto. Se esse fosse o critério dominante, a solução tenderia a ampliar a base atendida independentemente da qualidade do risco. O resultado observado indica o oposto: há expansão relevante de alcance, mas condicionada à viabilidade econômica da exposição e ao respeito ao teto de risco (`artigo.md §4.1-4.2`).
 
-A função objetivo, por construção, é orientada por margem, pois maximiza o retorno líquido esperado da carteira: receita de interchange menos perda esperada. Essa orientação aparece no backtesting comparável da safra M1, em que o retorno esperado melhora com risco praticamente estável (`artigo.md §4.2`). Portanto, o ganho econômico decorre de uma realocação mais eficiente dos limites, e não de uma expansão indiscriminada da exposição.
+A função objetivo, por construção, é orientada por margem, pois maximiza o retorno líquido esperado da carteira: receita de interchange menos perda esperada. Essa orientação aparece no backtesting comparável da safra M1, sobre os mesmos 117.367 clientes já atendidos pela política vigente: o retorno líquido esperado sobe de R\$ 4,90 M para R\$ 5,06 M (+3,4%), enquanto a PD ponderada por exposição varia apenas de 0,0467 para 0,0486 (+0,2 p.p.) (`artigo.md §4.2`). Portanto, o ganho econômico decorre de uma realocação mais eficiente dos limites, e não de uma expansão indiscriminada da exposição.
 
 Apesar disso, a solução final é governada por critérios de segurança. A principal evidência é R2: a capacidade de pagamento é a restrição que efetivamente limita a maior parte dos segmentos, enquanto o teto operacional não é atingido (`artigo.md §4.1`). Assim, a classificação mais adequada é **margem com postura defensiva**: o modelo busca retorno e amplia cobertura, mas subordina a concessão à capacidade de pagamento e ao risco calibrado.
 
@@ -153,7 +153,7 @@ Os principais riscos estratégicos são de governança e uso gerencial, não de 
 - **Risco de falsa precisão:** o resultado é ótimo dadas as premissas; tratá-lo como verdade automática transforma uma ferramenta de decisão em risco operacional.
 
 ### 4.4 O modelo deve ser implementado?
-Sim, mas como **implementação assistida e condicionada**, não como motor automático de concessão. A justificativa econômica é clara: o modelo aumenta retorno esperado com risco controlado e torna explícito qual restrição limita a rentabilidade. Isso já é valor para o comitê de crédito.
+Sim, mas como **implementação assistida e condicionada**, não como motor automático de concessão. A justificativa econômica é clara: o backtesting comparável mostra mais retorno ao mesmo risco (Seção 3.2), e o caso de investimento fecha mesmo com premissas conservadoras: ROI de ~96% no primeiro ano, payback de ~12,5 meses e investimento de R\$ 625 mil, equivalente a ~0,07% do lucro ajustado anual do banco (`entendimento_negocio.md §4.6`). Vale distinguir as medidas: os ≈ R\$ 32,9 M são o retorno total da carteira otimizada no horizonte de 22 meses (`artigo.md §4.1`), enquanto o ROI parte do ganho incremental sobre a política vigente. O modelo ainda torna explícito qual restrição limita a rentabilidade, o que já é valor para o comitê de crédito.
 
 Ainda assim, a recomendação não deve ser "trocar imediatamente o algoritmo vigente". O Banco Pan já possui uma política em operação, então a decisão correta é comparar os dois motores sob a mesma população, janela temporal e métrica de perda realizada. A adoção deve começar como camada de apoio: geração de cenários, leitura de restrições ativas e proposta de limites para validação humana.
 
