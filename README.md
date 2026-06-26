@@ -17,8 +17,8 @@
     <img src="https://img.shields.io/badge/Inteli-Ciência_da_Computação-6B2FBF?style=flat-square" alt="Curso">
   </a>
   <img src="https://img.shields.io/badge/Módulo-6-6B2FBF?style=flat-square" alt="Módulo">
-  <img src="https://img.shields.io/badge/Sprint-4_de_5-blue?style=flat-square" alt="Sprint">
-  <img src="https://img.shields.io/badge/Status-Em_desenvolvimento-yellow?style=flat-square" alt="Status">
+  <img src="https://img.shields.io/badge/Sprint-5_de_5-blue?style=flat-square" alt="Sprint">
+  <img src="https://img.shields.io/badge/Status-Concluído-yellow?style=flat-square" alt="Status">
   <img src="https://img.shields.io/badge/Linguagem-Python-3776AB?style=flat-square&logo=python&logoColor=white" alt="Python">
   <img src="https://img.shields.io/badge/Parceiro-Banco_Pan-E8440A?style=flat-square" alt="Parceiro">
 </p>
@@ -101,6 +101,9 @@ g04/
 │   ├── modelagem_matematica.md
 │   ├── prototipo_frontend.md
 │   └── comparacao_simplex.md
+├── docs/                         # guias de desenvolvimento e operacao
+│   ├── devdoc.md                 # guia para configurar o ambiente local e rodar os testes
+│   └── opsdoc.md                 # guia de deploy e operacao em producao
 ├── apresentacoes/                # apresentacoes das sprints
 ├── data/                         # dados do projeto e caches locais
 │   ├── parquet/                  # arquivos Parquet de entrada
@@ -109,6 +112,8 @@ g04/
 ├── .gitlab-ci.yml                # pipeline de teste e deploy
 └── README.md
 ```
+
+A pasta `docs/` reúne a documentação técnica de uso do projeto. O arquivo [`docs/devdoc.md`](docs/devdoc.md) é o **guia de desenvolvimento**, com o passo a passo para clonar o repositório, configurar o banco de dados, preparar o ambiente local e executar a aplicação e os testes. Já o [`docs/opsdoc.md`](docs/opsdoc.md) é o **guia de operações**, que descreve a arquitetura de deploy e como implantar e manter a aplicação em produção. Recomenda-se consultar esses documentos para detalhes que vão além do resumo apresentado neste README.
 
 ## 🚀 Como executar
 
@@ -304,7 +309,8 @@ Os arquivos JSON de parâmetros devem estar em `apps/algoritmo_simplex/input/`.
 - 0.4.0 - 12/06/2026
   - Sprint 4 - Refinamento da aplicação, artigo e corretude do algoritmo
 
-- 0.5.0 - xx/xx/xxxx
+- 0.5.0 - 26/06/2026
+  - Sprint 5 - Ajustes finais da aplicação, interpretação econômica e testes de usabilidade.
 
 ## 📋 Licença/License
 
