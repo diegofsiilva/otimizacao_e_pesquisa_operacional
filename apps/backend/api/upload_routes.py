@@ -70,6 +70,7 @@ async def rota_finalizar_upload(
     u_bar: float | None = Query(default=None, gt=0, le=1),
     L_max: float | None = Query(default=None, gt=0),
     T: float | None = Query(default=None, gt=0),
+    taxa_conversao: float | None = Query(default=None, gt=0, le=1),
 ) -> ConsultaResponse:
     """
     Remonta o arquivo a partir dos chunks recebidos e dispara o pipeline.
@@ -85,7 +86,14 @@ async def rota_finalizar_upload(
 
     overrides = {
         k: v
-        for k, v in {"t": t, "LGD": LGD, "u_bar": u_bar, "L_max": L_max, "T": T}.items()
+        for k, v in {
+            "t": t,
+            "LGD": LGD,
+            "u_bar": u_bar,
+            "L_max": L_max,
+            "T": T,
+            "taxa_conversao": taxa_conversao,
+        }.items()
         if v is not None
     }
 

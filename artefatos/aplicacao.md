@@ -182,7 +182,7 @@
 - **apps/frontend/** — Código cliente estático: `index.html`, `styles.css`, componentes de página em `pages/`, wrapper de API em `api.js` e `data.js`.
 - **artefatos/** — Documentação do projeto, imagens de UI em `assets/`, protótipos e registros de alterações.
 - **data/** — Parquets de entrada em `parquet/`, CSVs calibrados em `csv/` e cache de clustering em `cache/`.
-- **scripts/** — Scripts de análise, calibração e utilitários de desenvolvimento.
+- **apps/scripts/** — Scripts de análise, calibração e utilitários de desenvolvimento.
 
 ### 5.3. Banco de Dados
 

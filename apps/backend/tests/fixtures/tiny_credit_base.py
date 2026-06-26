@@ -1,3 +1,12 @@
+"""
+backend/tests/fixtures/tiny_credit_base.py
+
+Fixture de dados: gera um parquet mínimo (3 clientes) com o esquema esperado
+pelo frontend/backend, para testes de upload e pipeline sem depender das safras
+reais do parceiro. Pode ser executado diretamente para materializar o arquivo
+``tiny_credit_base.parquet`` ao lado deste módulo.
+"""
+
 from __future__ import annotations
 
 from pathlib import Path

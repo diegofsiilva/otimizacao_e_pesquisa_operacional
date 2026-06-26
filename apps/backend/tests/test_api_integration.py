@@ -1,3 +1,13 @@
+"""
+backend/tests/test_api_integration.py
+
+Testes de integração HTTP da API, usando o ``TestClient`` do FastAPI (sem subir
+servidor nem banco). Cobrem o health check, o upload direto e o upload em chunks
+(com a camada de serviço mockada), além das validações de formato, nome de
+arquivo e parâmetros de query. Toda a suíte é pulada quando as dependências do
+backend não estão instaladas.
+"""
+
 from __future__ import annotations
 
 import sys
@@ -36,6 +46,14 @@ else:
 
 
 def _consulta_response(nome_arquivo: str = "base.parquet"):
+    """Cria um ``ConsultaResponse`` de exemplo para os mocks de serviço.
+
+    Args:
+        nome_arquivo: Nome do parquet a registrar na resposta.
+
+    Returns:
+        Um ``ConsultaResponse`` com IDs aleatórios e status ``"pendente"``.
+    """
     return ConsultaResponse(
         id=uuid4(),
         safra_id=uuid4(),
@@ -48,22 +66,28 @@ def _consulta_response(nome_arquivo: str = "base.parquet"):
 
 @unittest.skipIf(IMPORT_ERROR is not None, f"dependencias indisponiveis: {IMPORT_ERROR}")
 class ApiIntegrationTestCase(unittest.TestCase):
+    """Testes de integração HTTP das rotas da API via TestClient."""
+
     def setUp(self) -> None:
+        """Monta um app FastAPI com as rotas e cria um TestClient isolado."""
         app = FastAPI()
         app.include_router(routes.router, prefix="/api")
         app.include_router(upload_routes.router, prefix="/api")
         self.client = TestClient(app)
 
     def test_health_endpoint_responde_sem_banco(self) -> None:
+        """O /health deve responder 200 com ``{"status": "ok"}`` sem depender de banco."""
         response = self.client.get("/api/health")
 
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json(), {"status": "ok"})
 
     def test_upload_direto_cria_consulta_e_repassa_safra_existente(self) -> None:
+        """Upload direto deve criar consulta (201) e repassar safra/flags/parâmetros ao serviço."""
         captured = {}
 
         async def fake_criar_consulta(payload, conteudo, background_tasks, usar_safra_existente=False):
+            """Mock de ``criar_consulta``: captura os argumentos e devolve uma resposta fake."""
             captured["payload"] = payload
             captured["conteudo"] = conteudo
             captured["usar_safra_existente"] = usar_safra_existente
@@ -83,6 +107,7 @@ class ApiIntegrationTestCase(unittest.TestCase):
         self.assertAlmostEqual(captured["payload"].parametros.t, 0.02)
 
     def test_upload_direto_recusa_formato_invalido(self) -> None:
+        """Upload de arquivo não-``.parquet`` deve retornar 400 com mensagem sobre parquet."""
         response = self.client.post(
             "/api/consultas",
             files={"file": ("base.csv", b"csv", "text/csv")},
@@ -92,9 +117,11 @@ class ApiIntegrationTestCase(unittest.TestCase):
         self.assertIn("parquet", response.json()["detail"])
 
     def test_fluxo_http_de_upload_em_chunks_dispara_consulta(self) -> None:
+        """Fluxo iniciar→chunks→finalizar deve remontar o arquivo e disparar a consulta (201)."""
         captured = {}
 
         async def fake_criar_consulta_de_path(payload, parquet_path, background_tasks, usar_safra_existente=False):
+            """Mock de ``criar_consulta_de_path``: captura os argumentos e devolve resposta fake."""
             captured["payload"] = payload
             captured["parquet_path"] = parquet_path
             captured["usar_safra_existente"] = usar_safra_existente
@@ -143,6 +170,7 @@ class ApiIntegrationTestCase(unittest.TestCase):
                 upload_service.CHUNKS_DIR = original_chunks_dir
     
     def test_upload_em_chunks_retorna_404_quando_upload_id_nao_existe(self) -> None:
+        """Enviar chunk para um upload_id inexistente deve retornar 404."""
         response = self.client.post(
             "/api/uploads/id-inexistente/chunk?index=0",
             files={"file": ("chunk", b"AAAA", "application/octet-stream")},
@@ -150,6 +178,7 @@ class ApiIntegrationTestCase(unittest.TestCase):
         self.assertEqual(response.status_code, 404)
 
     def test_upload_direto_recusa_nome_de_arquivo_com_caminho(self) -> None:
+        """Upload com nome contendo caminho (``../``) deve retornar 400."""
         response = self.client.post(
             "/api/consultas",
             files={"file": ("../base.parquet", b"parquet-bytes", "application/octet-stream")},
@@ -158,6 +187,7 @@ class ApiIntegrationTestCase(unittest.TestCase):
         self.assertIn("Nome de arquivo", response.json()["detail"])
 
     def test_validacao_query_param_retorna_422_quando_LGD_invalido(self) -> None:
+        """LGD fora do intervalo válido (>1) deve disparar validação 422 do FastAPI."""
         response = self.client.post(
             "/api/consultas?LGD=1.5",
             files={"file": ("base.parquet", b"parquet-bytes", "application/octet-stream")},

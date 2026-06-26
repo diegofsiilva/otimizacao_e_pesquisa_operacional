@@ -1,3 +1,13 @@
+"""
+backend/tests/test_upload_service.py
+
+Testes unitários do serviço de upload em chunks (``services.upload_service``).
+Cobrem a remontagem de chunks na ordem correta, a limpeza dos temporários e as
+validações de segurança/formato do nome de arquivo (extensão ``.parquet``,
+rejeição de caminhos e de separadores do Windows). Cada teste redireciona os
+diretórios de upload para um ``TemporaryDirectory`` isolado.
+"""
+
 from __future__ import annotations
 
 import sys
@@ -14,7 +24,10 @@ from services import upload_service
 
 
 class UploadServiceTestCase(unittest.TestCase):
+    """Casos de teste do serviço de upload em chunks."""
+
     def setUp(self) -> None:
+        """Cria um diretório temporário e aponta os dirs de upload para ele."""
         self.tmp = tempfile.TemporaryDirectory()
         self.base_dir = Path(self.tmp.name)
         self.original_upload_dir = upload_service.UPLOAD_DIR
@@ -23,11 +36,13 @@ class UploadServiceTestCase(unittest.TestCase):
         upload_service.CHUNKS_DIR = upload_service.UPLOAD_DIR / "_chunks"
 
     def tearDown(self) -> None:
+        """Restaura os diretórios originais e remove o temporário."""
         upload_service.UPLOAD_DIR = self.original_upload_dir
         upload_service.CHUNKS_DIR = self.original_chunks_dir
         self.tmp.cleanup()
 
     def test_remonta_chunks_em_ordem_e_limpa_temporarios(self) -> None:
+        """Os chunks devem ser concatenados na ordem do índice e os temporários removidos."""
         sessao = upload_service.iniciar_upload("base.parquet")
         upload_id = sessao["upload_id"]
 
@@ -41,22 +56,27 @@ class UploadServiceTestCase(unittest.TestCase):
         self.assertFalse((upload_service.CHUNKS_DIR / upload_id).exists())
 
     def test_recusa_extensao_nao_parquet(self) -> None:
+        """Iniciar upload de arquivo não-``.parquet`` deve levantar ValueError."""
         with self.assertRaisesRegex(ValueError, "parquet"):
             upload_service.iniciar_upload("base.csv")
 
     def test_recusa_nome_com_caminho(self) -> None:
+        """Nome com componente de caminho (``../``) deve ser rejeitado."""
         with self.assertRaisesRegex(ValueError, "Nome de arquivo"):
             upload_service.iniciar_upload("../base.parquet")
 
     def test_salvar_chunk_upload_inexistente_dispara_file_not_found(self) -> None:
+        """Salvar chunk em upload_id inexistente deve levantar FileNotFoundError."""
         with self.assertRaisesRegex(FileNotFoundError, "não encontrado"):
             upload_service.salvar_chunk("nao-existe", 0, b"AAAA")
 
     def test_finalizar_upload_upload_inexistente_dispara_file_not_found(self) -> None:
+        """Finalizar upload_id inexistente deve levantar FileNotFoundError."""
         with self.assertRaisesRegex(FileNotFoundError, "não encontrado"):
             upload_service.finalizar_upload("nao-existe")
 
     def test_finalizar_upload_sem_chunks_recusa(self) -> None:
+        """Finalizar um upload sem nenhum chunk recebido deve levantar ValueError."""
         sessao = upload_service.iniciar_upload("base.parquet")
         upload_id = sessao["upload_id"]
 
@@ -64,6 +84,7 @@ class UploadServiceTestCase(unittest.TestCase):
             upload_service.finalizar_upload(upload_id)
 
     def test_aceita_extensao_parquet_em_maiusculo(self) -> None:
+        """A validação de extensão deve ser case-insensitive (``.PARQUET`` aceito)."""
         sessao = upload_service.iniciar_upload("BASE.PARQUET")
         upload_id = sessao["upload_id"]
 
@@ -74,6 +95,7 @@ class UploadServiceTestCase(unittest.TestCase):
         self.assertEqual(destino.read_bytes(), b"OK")
 
     def test_recusa_nome_com_barra_invertida_windows(self) -> None:
+        """No Windows, nome com barra invertida (``pastas\\base.parquet``) deve ser rejeitado."""
         if sys.platform != "win32":
             self.skipTest("Separador invertido é específico do Windows")
 

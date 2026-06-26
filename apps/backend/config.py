@@ -1,3 +1,16 @@
+"""
+backend/config.py
+
+Configuração central do backend. Carrega variáveis de ambiente (de um arquivo
+`.env` opcional ou do ambiente do processo) e expõe, como constantes de módulo,
+todos os parâmetros usados pela aplicação: host/porta do backend, origens CORS
+do frontend, diretórios de persistência local e credenciais do PostgreSQL.
+
+Os valores são resolvidos uma única vez, no import do módulo, com defaults
+seguros para desenvolvimento local. As funções auxiliares (`_*`) servem apenas
+a essa resolução e não fazem parte da API pública do módulo.
+"""
+
 from __future__ import annotations
 
 import os
@@ -8,6 +21,20 @@ BASE_DIR = Path(__file__).resolve().parent
 
 
 def _load_env_file(path: Path) -> None:
+    """Carrega um arquivo `.env` para o ambiente do processo, se ele existir.
+
+    Cada linha no formato ``CHAVE=valor`` é adicionada via
+    ``os.environ.setdefault`` — ou seja, variáveis já definidas no ambiente têm
+    precedência e não são sobrescritas. Linhas em branco, comentários (``#``) e
+    linhas sem ``=`` são ignoradas.
+
+    Args:
+        path: Caminho do arquivo `.env`. Se não existir, a função retorna sem
+            efeito algum.
+
+    Returns:
+        None. O efeito é a mutação de ``os.environ``.
+    """
     if not path.exists():
         return
     for raw_line in path.read_text(encoding="utf-8").splitlines():
@@ -22,17 +49,51 @@ _load_env_file(BASE_DIR / ".env")
 
 
 def _csv_env(name: str, default: str) -> list[str]:
+    """Lê uma variável de ambiente com valores separados por vírgula.
+
+    Args:
+        name: Nome da variável de ambiente.
+        default: Valor usado quando a variável não está definida.
+
+    Returns:
+        Lista de itens, já sem espaços nas bordas e sem entradas vazias.
+    """
     raw = os.getenv(name, default)
     parts = raw.split(",")
     return [p.strip() for p in parts if p.strip()]
 
 
 def _path_env(name: str, default: Path) -> Path:
+    """Lê uma variável de ambiente como caminho de filesystem.
+
+    Caminhos relativos são resolvidos a partir de ``BASE_DIR`` (a pasta do
+    backend); caminhos absolutos são usados como estão.
+
+    Args:
+        name: Nome da variável de ambiente.
+        default: Caminho usado quando a variável não está definida.
+
+    Returns:
+        O ``Path`` resolvido (sempre absoluto quando o default também é).
+    """
     p = Path(os.getenv(name, str(default)))
     return p if p.is_absolute() else BASE_DIR / p
 
 
 def _origin_with_port(base_url: str, port: int) -> str:
+    """Monta uma origem CORS (``esquema://host:porta``) a partir de uma URL base.
+
+    Preserva o esquema de ``base_url`` (default ``http``) e o host, trocando a
+    porta pela informada. Usado para derivar a origem do frontend a partir de
+    ``APP_HOST`` e ``FRONTEND_PORT``.
+
+    Args:
+        base_url: URL base do backend (ex.: ``http://127.0.0.1``).
+        port: Porta do frontend a compor a origem.
+
+    Returns:
+        A origem normalizada (ex.: ``http://127.0.0.1:5500``).
+    """
     parsed = urlsplit(base_url)
     scheme = parsed.scheme or "http"
     host = parsed.hostname or base_url.split("://", 1)[-1].split(":", 1)[0]
