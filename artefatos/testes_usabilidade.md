@@ -1,361 +1,165 @@
 # Testes de Usabilidade
 
-## 1. Introdução
+## Objetivo
 
-Os testes de usabilidade têm como objetivo validar se os usuários conseguem utilizar o Sistema de Crédito Banco PAN de forma eficiente, intuitiva e compatível com suas necessidades de negócio.
+Os testes de usabilidade tiveram como objetivo validar se a aplicação desenvolvida atende às necessidades dos usuários finais previstos para o projeto, verificando a facilidade de navegação, a compreensão das funcionalidades implementadas e a eficiência na execução das principais atividades relacionadas ao processo de geração de limites de crédito.
 
-A avaliação foi planejada para reproduzir atividades reais realizadas por analistas e gestores de crédito durante o processo de geração de limites pré-aprovados. Os testes permitem identificar dificuldades de navegação, problemas de compreensão da interface e oportunidades de melhoria na experiência do usuário.
+Além de verificar se os usuários conseguiam concluir as tarefas propostas, os testes buscaram identificar dificuldades de interação, problemas de organização da interface, falhas na comunicação das informações apresentadas e oportunidades de melhoria para futuras versões da aplicação.
 
-### Objetivos dos Testes
-
-* Validar a facilidade de navegação da aplicação;
-* Verificar a compreensão dos parâmetros de configuração do modelo;
-* Avaliar a clareza dos resultados gerados pela otimização;
-* Identificar dificuldades na execução das tarefas principais;
-* Coletar feedback qualitativo dos participantes;
-* Levantar oportunidades de melhoria para futuras versões do sistema.
+Os testes foram conduzidos em um cenário que simula a rotina operacional do parceiro de negócios, permitindo avaliar se a solução atende às expectativas de usuários responsáveis pela análise e definição de limites de crédito.
 
 ---
 
-## 2. Participantes
+# Participantes
 
-Os testes serão realizados com, no mínimo, 10 participantes compatíveis com as personas identificadas durante as etapas de UX e entendimento de negócio.
+Os testes foram realizados com **cinco participantes**, atendendo ao requisito mínimo estabelecido pela disciplina. A seleção buscou reunir pessoas com perfis compatíveis com as personas definidas durante as etapas de UX e entendimento do negócio, privilegiando usuários com experiência em sistemas corporativos, análise de informações e apoio à tomada de decisão.
 
-### Perfis dos Participantes
+Embora nem todos os participantes atuem diretamente na área de crédito, todos possuem características que permitem reproduzir, em diferentes níveis, o contexto de utilização esperado para a aplicação. Essa diversidade de perfis possibilitou avaliar tanto a aderência da solução ao processo de negócio quanto aspectos relacionados à experiência do usuário e à usabilidade da interface.
 
-| Perfil                                                       | Quantidade Mínima |
-| ------------------------------------------------------------ | ----------------- |
-| Analista de Crédito                                          | 6                 |
-| Gestor/Supervisor de Crédito                                 | 2                 |
-| Profissional com experiência em análise de dados financeiros | 2                 |
+| Participante           | Perfil                                              | Aproximação com a persona e contribuição para o projeto                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
+| ---------------------- | --------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Felipe Mosquetta**   | Profissional da área de crédito                     | Felipe é o participante que mais se aproxima da principal persona do projeto, pois atua em atividades relacionadas à análise de crédito e avaliação de informações financeiras. Seu conhecimento do domínio permitiu avaliar se o fluxo da aplicação é compatível com o processo de trabalho esperado por analistas de crédito, além de verificar se os indicadores apresentados são úteis para apoiar a tomada de decisão. Seu feedback foi fundamental para validar a aderência da solução às necessidades do parceiro de negócios. |
+| **Tomaz Mikio Sasaki** | Desenvolvedor de software                           | Apesar de não atuar diretamente no mercado financeiro, Tomaz possui experiência no desenvolvimento e utilização de sistemas corporativos. Esse perfil contribui para identificar inconsistências na navegação, problemas de organização da interface, dificuldades de interação e oportunidades de simplificação do fluxo da aplicação. Seu feedback colaborou principalmente para melhorar a experiência de uso e tornar as funcionalidades mais intuitivas.                                                                         |
+| **Tatiana Namura**     | Usuária com experiência em sistemas administrativos | Tatiana representa usuários que utilizam sistemas corporativos diariamente para apoiar suas atividades, mas que não necessariamente possuem conhecimento técnico sobre desenvolvimento de software ou modelagem matemática. Sua participação permitiu avaliar se as informações apresentadas são claras, se os resultados são compreensíveis e se a interface consegue orientar adequadamente usuários com menor familiaridade com conceitos técnicos.                                                                                |
+| **Felipe Callegaro**   | Desenvolvedor de software                           | Felipe possui experiência no desenvolvimento de aplicações voltadas para usuários finais e sistemas corporativos. Durante os testes, avaliou principalmente a consistência entre telas, a organização visual da interface, a nomenclatura das funcionalidades e a facilidade de navegação. Suas observações contribuíram para identificar melhorias relacionadas à usabilidade e à comunicação da interface.                                                                                                                          |
+| **Rafael Donaire**     | Desenvolvedor de software                           | Rafael atua no desenvolvimento de aplicações empresariais e possui experiência na construção de interfaces para usuários finais. Seu feedback concentrou-se na organização das informações, clareza dos indicadores apresentados, facilidade de utilização do Cockpit e compreensão das funcionalidades disponíveis. Embora não represente diretamente a persona de negócio, suas contribuições auxiliam na construção de uma aplicação mais intuitiva e acessível para futuros usuários.                                             |
 
-### Consentimento dos Participantes
-
-Os termos de consentimento assinados pelos participantes encontram-se armazenados em pasta específica no Google Drive da equipe, conforme orientação da disciplina.
-
-**Link da pasta de consentimentos:**
+A combinação desses perfis permitiu avaliar a aplicação sob diferentes perspectivas. Enquanto o participante da área de crédito validou a aderência da solução ao processo operacional do parceiro, os demais participantes contribuíram para identificar melhorias relacionadas à experiência do usuário, organização da interface e comunicação das funcionalidades. Dessa forma, os testes forneceram evidências tanto da adequação da solução ao contexto de negócio quanto da qualidade da experiência proporcionada aos usuários.
 
 ---
 
-## 3. Ambiente de Teste
+# Registro dos Resultados
 
-Os testes serão conduzidos individualmente em ambiente controlado.
+Todas as sessões de teste foram registradas em uma planilha de tabulação elaborada a partir do modelo disponibilizado pela disciplina. Para cada participante e para cada tarefa executada foram documentados:
 
-### Configuração
+* comportamento observado durante a execução;
+* dificuldades encontradas;
+* erros cometidos;
+* comentários espontâneos;
+* sugestões de melhoria;
+* cumprimento ou não dos objetivos da tarefa;
+* observações do moderador.
 
-* Aplicação executada localmente;
-* Navegador Google Chrome;
-* Base de dados de demonstração fornecida pela equipe;
-* Sessão moderada por um membro da equipe;
-* Duração média entre 30 e 45 minutos por participante.
+Após a realização dos testes, os registros individuais foram consolidados para identificar padrões recorrentes entre os participantes. As ocorrências semelhantes foram agrupadas e classificadas quanto à gravidade e prioridade, servindo como base para a elaboração do plano de melhorias apresentado neste documento.
 
----
+A planilha completa contendo os registros individuais dos participantes e a consolidação das ocorrências encontra-se disponível no link abaixo.
 
-## 4. Cenário de Negócio
+**Planilha de tabulação dos testes de usabilidade**
 
-O participante assume o papel de um Analista de Crédito do Banco PAN.
-
-Uma nova safra de clientes foi recebida e precisa ser processada para gerar limites de crédito otimizados. O participante deverá utilizar a aplicação para realizar todas as etapas do processo, desde o carregamento da base até a análise dos resultados e exportação dos dados.
-
----
-
-## 5. Tarefas Avaliadas
-
-### Tarefa 1 – Localizar uma Consulta Existente
-
-**Objetivo:** Encontrar uma consulta previamente executada.
-
-**Critérios de Sucesso:**
-
-* Localiza a consulta em até 2 minutos;
-* Utiliza filtros ou busca corretamente;
-* Compreende os status apresentados.
-
-**Funcionalidades Avaliadas:**
-
-* Tela Clientes;
-* Busca de consultas;
-* Filtros;
-* Histórico.
+[Veja a tabela completa nesse aqui](https://docs.google.com/spreadsheets/d/1OcvbRqZd_wAdPkaLY5pUgVpFc1TuJq7nZ97pXq-oThE/edit?usp=sharing)
 
 ---
 
-### Tarefa 2 – Criar uma Nova Consulta
+# Termos de Consentimento
 
-**Objetivo:** Realizar o upload de uma nova base de clientes.
+Todos os participantes assinaram o Termo de Consentimento Livre e Esclarecido (TCLE) antes da realização dos testes.
 
-**Critérios de Sucesso:**
+Conforme orientação da disciplina, esses documentos não foram armazenados neste repositório, sendo disponibilizados apenas em uma pasta privada no Google Drive da equipe.
 
-* Seleciona corretamente um arquivo `.parquet`;
-* Inicia a consulta sem auxílio;
-* Compreende as mensagens exibidas pelo sistema.
+**Pasta contendo os termos de consentimento**
 
-**Funcionalidades Avaliadas:**
-
-* Upload de arquivo;
-* Criação de consulta;
-* Validação de formato.
+[Veja a pasta com os termos assinados aqui](https://drive.google.com/drive/folders/1XKvtwb8gIyI493cUNQAVB2EHCXnd_C0y?usp=sharing)
 
 ---
 
-### Tarefa 3 – Configurar os Parâmetros do Modelo
+# Ambiente de Testes
 
-**Objetivo:** Revisar e ajustar os parâmetros da otimização.
+Os testes foram realizados individualmente em ambiente controlado utilizando a versão mais recente da aplicação desenvolvida pela equipe.
 
-**Parâmetros Avaliados:**
+As sessões ocorreram em computadores pessoais utilizando navegador Google Chrome, com uma base de dados de demonstração preparada especificamente para reproduzir um cenário semelhante ao encontrado pelo parceiro de negócios.
 
-* Taxa de Interchange (`t`);
-* Loss Given Default (`LGD`);
-* Utilização Esperada (`u_bar`);
-* Limite Máximo (`L_max`);
-* Horizonte Temporal (`T`).
+Cada sessão foi moderada por um integrante da equipe e teve duração aproximada de 30 minutos. Durante toda a execução, os participantes foram incentivados a verbalizar seus pensamentos, dúvidas e percepções sobre a interface (*Think Aloud*), permitindo registrar não apenas erros de interação, mas também impressões espontâneas sobre a experiência de utilização.
 
-**Critérios de Sucesso:**
-
-* Localiza a configuração;
-* Compreende a finalidade geral dos parâmetros;
-* Salva as alterações corretamente.
-
-**Funcionalidades Avaliadas:**
-
-* Modal de Configuração;
-* Validações de entrada;
-* Salvamento de parâmetros.
+Ao final de cada teste, os participantes responderam perguntas abertas relacionadas à facilidade de uso da aplicação e apresentaram sugestões para futuras melhorias.
 
 ---
 
-### Tarefa 4 – Acompanhar o Processamento
+# Tarefas Executadas
 
-**Objetivo:** Monitorar a execução da otimização.
+As tarefas foram elaboradas para reproduzir o fluxo operacional esperado pelo parceiro de negócios e avaliar as principais funcionalidades implementadas durante o desenvolvimento do MVP.
 
-**Critérios de Sucesso:**
+| Tarefa                 | Funcionalidades Avaliadas                                                                                |
+| ---------------------- | -------------------------------------------------------------------------------------------------------- |
+| Criar nova consulta    | Upload da base de clientes, validação do arquivo `.parquet`, criação da consulta e início da otimização. |
+| Interpretar resultados | Visualização dos indicadores, gráficos, limites calculados e informações da otimização.                  |
+| Exportar resultados    | Download dos resultados gerados pelo algoritmo em formato CSV.                                           |
+| Utilizar o Cockpit     | Consulta dos indicadores consolidados, histórico das execuções e visão geral da operação.                |
 
-* Entende que o sistema está processando;
-* Consegue identificar o status atual;
-* Reconhece quando o processamento foi concluído.
-
-**Funcionalidades Avaliadas:**
-
-* Barra de progresso;
-* Indicadores de status;
-* Atualizações automáticas.
+Essas atividades representam o fluxo completo esperado para um analista de crédito durante a utilização da solução, contemplando desde a entrada dos dados até a análise e utilização dos resultados produzidos pelo modelo matemático.
 
 ---
 
-### Tarefa 5 – Interpretar os Resultados
+# Resultados Gerais
 
-**Objetivo:** Avaliar os resultados gerados pelo algoritmo.
+Os resultados obtidos demonstraram que a aplicação possui um fluxo de utilização consistente e compatível com o processo operacional esperado pelo parceiro de negócios.
 
-**Critérios de Sucesso:**
+Os cinco participantes conseguiram concluir todas as tarefas propostas sem bloqueios críticos, indicando que a organização geral da aplicação permite que novos usuários executem as principais funcionalidades sem necessidade de treinamento específico.
 
-* Identifica os limites gerados para cada cluster;
-* Compreende o valor ótimo obtido;
-* Interpreta corretamente os gráficos e indicadores.
+As tarefas relacionadas à criação de consultas, execução da otimização e exportação dos resultados apresentaram alto índice de sucesso. Os participantes localizaram rapidamente as funcionalidades necessárias e compreenderam o fluxo de navegação entre as diferentes telas da aplicação.
 
-**Funcionalidades Avaliadas:**
+Durante a interpretação dos resultados surgiram as principais oportunidades de melhoria identificadas ao longo dos testes. Parte dos participantes relatou dificuldade para compreender alguns conceitos específicos do domínio financeiro, como *Cluster*, *PD*, *LGD* e *Valor Ótimo*, além de sugerir descrições adicionais para determinados indicadores e parâmetros utilizados pelo sistema.
 
-* Tela de Resultados;
-* Tabelas;
-* Gráficos;
-* Indicadores da otimização.
+Também foram registradas sugestões relacionadas à comunicação da interface, como a revisão da nomenclatura de algumas funcionalidades, reorganização de determinados gráficos e diferenciação mais clara entre as opções de exportação disponíveis.
 
----
+Apesar dessas observações, nenhum participante deixou de concluir qualquer tarefa devido a problemas de usabilidade, indicando que as dificuldades encontradas estão concentradas principalmente na compreensão das informações apresentadas e não no funcionamento da aplicação.
 
-### Tarefa 6 – Exportar os Resultados
-
-**Objetivo:** Baixar os resultados gerados para compartilhamento.
-
-**Critérios de Sucesso:**
-
-* Localiza o botão de exportação;
-* Conclui o download sem auxílio;
-* Confirma que o arquivo foi gerado corretamente.
-
-**Funcionalidades Avaliadas:**
-
-* Exportação CSV;
-* Download dos resultados.
+De maneira geral, os testes validaram que o MVP atende adequadamente às funcionalidades esperadas pelo parceiro de negócios e possui uma interface suficientemente intuitiva para permitir sua utilização por novos usuários.
 
 ---
 
-### Tarefa 7 – Consultar Indicadores Operacionais
+# Principais Ocorrências Identificadas
 
-**Objetivo:** Utilizar o Cockpit para analisar o desempenho das execuções.
+Após a consolidação dos registros individuais foi possível identificar padrões recorrentes entre os participantes. A maior parte das ocorrências esteve relacionada à comunicação das informações apresentadas pela interface e não à execução das funcionalidades.
 
-**Critérios de Sucesso:**
+Isso demonstra que o fluxo operacional da aplicação é consistente e que as oportunidades de evolução concentram-se principalmente na melhoria da experiência do usuário, por meio de ajustes na apresentação das informações, inclusão de ajuda contextual e refinamento da interface.
 
-* Localiza os indicadores principais;
-* Compreende os KPIs apresentados;
-* Identifica execuções recentes e seus status.
+As principais ocorrências identificadas são apresentadas na tabela abaixo.
 
-**Funcionalidades Avaliadas:**
-
-* Cockpit;
-* KPIs operacionais;
-* Histórico de consultas.
-
----
-
-## 6. Roteiro do Teste de Usabilidade
-
-### Instruções ao Participante
-
-Obrigado por participar deste teste.
-
-Estamos avaliando a aplicação, e não o participante. Não existem respostas certas ou erradas.
-
-Durante o teste, pedimos que você verbalize seus pensamentos, dúvidas e percepções sempre que possível.
+| Problema Identificado                                                                | Categoria             | Gravidade | Prioridade |
+| ------------------------------------------------------------------------------------ | --------------------- | --------- | ---------- |
+| Nome da funcionalidade **"Gerar Limites"** pouco intuitivo para novos usuários.      | Usabilidade           | Baixa     | Baixa      |
+| Ausência de instruções resumidas sobre o formato esperado do arquivo `.parquet`.     | Conteúdo              | Alta      | Alta       |
+| Dificuldade para compreender alguns parâmetros técnicos da otimização.               | Conteúdo              | Alta      | Alta       |
+| Diferença pouco clara entre as opções de exportação disponíveis.                     | Usabilidade           | Média     | Média      |
+| Alguns gráficos utilizam terminologia excessivamente técnica.                        | Conteúdo              | Média     | Média      |
+| KPIs poderiam apresentar descrições adicionais para facilitar a interpretação.       | Usabilidade           | Baixa     | Baixa      |
+| Ausência de ajuda contextual para conceitos como *Cluster*, *PD* e *Valor Ótimo*.    | Conteúdo              | Alta      | Alta       |
+| Interesse dos participantes em comparar diferentes execuções diretamente no Cockpit. | Evolução da aplicação | Baixa     | Baixa      |
 
 ---
 
-### Etapa 1 – Exploração Inicial
+# Planos de Melhoria
 
-**Tarefa:**
+As ações de melhoria foram definidas considerando três critérios principais: frequência das ocorrências entre os participantes, impacto causado durante a execução das tarefas e importância da funcionalidade para o fluxo operacional da aplicação.
 
-"Observe a aplicação e descreva o que você acredita que ela faz."
+As melhorias classificadas como **Alta prioridade** correspondem às dificuldades que afetaram diretamente a compreensão do sistema por parte dos usuários e que podem aumentar a curva de aprendizado da aplicação.
 
-**Registrar:**
+As melhorias de **Média prioridade** buscam aperfeiçoar a comunicação da interface e facilitar a interpretação dos resultados produzidos pela otimização.
 
-* Primeira impressão;
-* Clareza da navegação;
-* Comentários espontâneos.
+Por fim, as melhorias classificadas como **Baixa prioridade** representam evoluções que enriquecem a experiência de utilização, mas que não comprometem a execução das tarefas principais.
 
----
-
-### Etapa 2 – Localização de Consulta
-
-**Tarefa:**
-
-"Encontre uma consulta já realizada anteriormente."
-
-**Registrar:**
-
-* Tempo gasto;
-* Número de cliques;
-* Dificuldades encontradas;
-* Comentários do participante.
+| Ação Proposta                                                                       | Justificativa                                                                                                                  |
+| ----------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| Adicionar descrições e *tooltips* para os parâmetros técnicos da otimização.        | Facilitar o entendimento dos conceitos utilizados pelo modelo matemático e reduzir dúvidas durante a configuração da execução. |
+| Disponibilizar instruções resumidas sobre o formato esperado do arquivo de entrada. | Reduzir dúvidas durante o carregamento das bases de clientes e evitar erros de utilização.                                     |
+| Revisar a nomenclatura de algumas funcionalidades.                                  | Tornar a interface mais intuitiva para usuários que estão utilizando o sistema pela primeira vez.                              |
+| Diferenciar visualmente as opções de exportação.                                    | Facilitar a identificação do conteúdo gerado por cada opção de exportação disponível.                                          |
+| Revisar títulos e descrições dos gráficos.                                          | Melhorar a interpretação dos resultados apresentados pela aplicação.                                                           |
+| Inserir ajuda contextual para conceitos técnicos utilizados pelo sistema.           | Reduzir a necessidade de conhecimento prévio sobre conceitos específicos da área de crédito.                                   |
+| Evoluir o Cockpit para permitir comparação entre diferentes execuções.              | Possibilitar análises históricas e facilitar a comparação entre diferentes cenários avaliados pelo modelo.                     |
 
 ---
 
-### Etapa 3 – Nova Consulta
+# Reflexões
 
-**Tarefa:**
+As reflexões apresentadas neste documento foram elaboradas com base na análise consolidada da planilha de tabulação dos testes, considerando tanto a frequência das ocorrências quanto os comentários realizados pelos participantes durante as sessões.
 
-"Você recebeu uma nova base de clientes. Faça o upload e inicie uma nova análise."
+Os testes demonstraram que a aplicação atende ao fluxo operacional esperado para o processo de geração de limites de crédito e que as funcionalidades implementadas são suficientes para apoiar as atividades previstas pelo parceiro de negócios.
 
-**Registrar:**
+A inexistência de bloqueios críticos durante a execução das tarefas evidencia que a arquitetura de navegação está consistente e que a aplicação apresenta boa usabilidade. As dificuldades observadas estiveram relacionadas principalmente à compreensão de conceitos específicos do domínio financeiro e à forma como determinadas informações são apresentadas aos usuários.
 
-* Dificuldades durante o upload;
-* Entendimento das mensagens;
-* Erros cometidos.
+Esse resultado é esperado para um MVP cuja principal complexidade está associada ao modelo matemático utilizado para a otimização. Dessa forma, as melhorias priorizadas concentram-se na comunicação da interface e não na alteração do fluxo operacional da aplicação.
 
----
+Os testes também reforçaram que a solução desenvolvida atende às necessidades funcionais identificadas durante o entendimento do negócio, permitindo que usuários executem todas as etapas do processo de geração de limites de crédito em um único ambiente.
 
-### Etapa 4 – Configuração do Modelo
-
-**Tarefa:**
-
-"Revise os parâmetros disponíveis antes da execução."
-
-**Perguntas ao participante:**
-
-* O que você acredita que cada parâmetro representa?
-* Alguma informação está faltando?
-* Algum campo gerou dúvida?
-
-**Registrar:**
-
-* Dúvidas levantadas;
-* Necessidade de auxílio;
-* Comentários espontâneos.
-
----
-
-### Etapa 5 – Acompanhamento da Execução
-
-**Tarefa:**
-
-"Acompanhe o processamento até sua conclusão."
-
-**Registrar:**
-
-* Clareza dos status;
-* Entendimento do progresso;
-* Percepção sobre o tempo de espera.
-
----
-
-### Etapa 6 – Interpretação dos Resultados
-
-**Tarefa:**
-
-"Analise os resultados e explique o que você apresentaria para um gestor."
-
-**Perguntas:**
-
-* Quais clusters receberam maiores limites?
-* O resultado parece confiável?
-* O que os gráficos indicam?
-
-**Registrar:**
-
-* Acertos de interpretação;
-* Dificuldades encontradas;
-* Comentários espontâneos.
-
----
-
-### Etapa 7 – Exportação
-
-**Tarefa:**
-
-"Exporte os resultados para compartilhamento."
-
-**Registrar:**
-
-* Facilidade de localização;
-* Tempo necessário;
-* Sucesso da operação.
-
----
-
-### Etapa 8 – Análise do Cockpit
-
-**Tarefa:**
-
-"Utilize o Cockpit para entender o histórico e os indicadores da operação."
-
-**Registrar:**
-
-* Interpretação dos KPIs;
-* Clareza das métricas;
-* Sugestões de melhoria.
-
----
-
-## 7. Registro dos Resultados
-
-Os resultados detalhados dos testes, incluindo participantes, ocorrências identificadas, severidade dos problemas, estimativas de correção e priorização das melhorias, serão registrados na planilha de tabulação da equipe.
-
-**Link da planilha de resultados:**
-
-> INSERIR LINK DA PLANILHA
-
----
-
-## 8. Reflexões e Melhorias Identificadas
-
-Após a conclusão dos testes, esta seção será preenchida com:
-
-* Principais dificuldades observadas;
-* Funcionalidades bem avaliadas;
-* Problemas recorrentes;
-* Melhorias priorizadas;
-* Evidências de validação da solução junto aos usuários.
-
-As melhorias serão classificadas segundo:
-
-* Gravidade;
-* Impacto para o usuário;
-* Esforço de implementação;
-* Prioridade de execução.
+Por fim, as observações registradas durante os testes servirão como insumo para o planejamento das próximas versões da aplicação, direcionando os esforços da equipe para melhorias que aumentem a clareza das informações apresentadas, reduzam a curva de aprendizado e proporcionem uma experiência de uso ainda mais intuitiva e eficiente.
